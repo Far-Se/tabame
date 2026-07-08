@@ -16,11 +16,11 @@ The script is the source of truth for the UI: every time you want the launcher t
 
 The complete, authoritative protocol spec lives in the repo. **Read it before writing non-trivial plugins** — do not invent fields or message types not documented there:
 
-- **Full spec:** [example_plugins/TABAME_PLUGIN_SKILL.md](../../../example_plugins/TABAME_PLUGIN_SKILL.md) — every message type, render-frame field, item field, view type, icon name, and pattern.
+- **Full spec:** [plugins/TABAME_PLUGIN_SKILL.md](../../../plugins/TABAME_PLUGIN_SKILL.md) — every message type, render-frame field, item field, view type, icon name, and pattern.
 - **Working examples** to copy from:
-  - `example_plugins/echo/` — Python demo exercising list/grid/detail/preview + actions.
-  - `example_plugins/linear/` — Node.js plugin with an HTTP API and `config.json` secrets.
-  - `example_plugins/caniuse/` — Node.js plugin with fetched data and detail views.
+  - `plugins/echo/` — Python demo exercising list/grid/detail/preview + actions.
+  - `plugins/linear/` — Node.js plugin with an HTTP API and `config.json` secrets.
+  - `plugins/caniuse/` — Node.js plugin with fetched data and detail views.
 
 When a detail isn't covered below, consult the full spec rather than guessing.
 
@@ -28,7 +28,7 @@ When a detail isn't covered below, consult the full spec rather than guessing.
 
 1. **Clarify the shape** (only if unspecified): keyword, runtime, data source, what each item shows, what **Enter** does, what **Ctrl+K** actions to offer, and which view (list / grid / detail / preview pane).
 2. **Pick a runtime** the user has on `PATH`: `python`, `node` (18+), or `bun`. Tabame bundles none.
-3. **Scaffold the folder** with `plugin.json` + entry script. Start from the matching template in §15 of the full spec, or copy the closest `example_plugins/` plugin.
+3. **Scaffold the folder** with `plugin.json` + entry script. Start from the matching template in §15 of the full spec, or copy the closest `plugins/` plugin.
 4. **Implement the event loop** (see contract below).
 5. **Install & test:** drop the folder in `%localappdata%\Tabame\plugins\<id>\`, reopen the launcher (it rescans on every open — no restart), and type the keyword.
 
@@ -36,17 +36,17 @@ When a detail isn't covered below, consult the full spec rather than guessing.
 
 ```json
 {
-  "keyword": "weather",   // required — what the user types; short & unique
-  "runtime": "python",    // required — "python" | "node" | "bun" (on PATH)
-  "entry": "main.py",     // required — script filename in the plugin folder
-  "id": "weather",        // optional — defaults to folder name
-  "name": "Weather",      // optional — shown in the discovery hint
-  "description": "",       // optional
-  "icon": "cloud",         // optional — icon name (see spec §11)
-  "args": [],              // optional — CLI args inserted BEFORE entry
-  "enabled": true          // optional — defaults to true; set false (or toggle
-                           //   from the Launcher Plugins manager) to hide the
-                           //   plugin without deleting it
+  "keyword": "weather", // required — what the user types; short & unique
+  "runtime": "python", // required — "python" | "node" | "bun" (on PATH)
+  "entry": "main.py", // required — script filename in the plugin folder
+  "id": "weather", // optional — defaults to folder name
+  "name": "Weather", // optional — shown in the discovery hint
+  "description": "", // optional
+  "icon": "cloud", // optional — icon name (see spec §11)
+  "args": [], // optional — CLI args inserted BEFORE entry
+  "enabled": true // optional — defaults to true; set false (or toggle
+  //   from the Launcher Plugins manager) to hide the
+  //   plugin without deleting it
 }
 ```
 
@@ -58,18 +58,25 @@ Launch is effectively `<runtime> <args...> <entry>`, started **without a shell**
 
 Messages you receive on **stdin**:
 
-| Message | When | Key fields |
-|---|---|---|
-| `init` | Once at startup | `query` (initial text) |
-| `query` | Every keystroke | `text`, `rev` (generation counter) |
-| `select` | Highlighted item changed | `id`, `rev` |
-| `action` | **Enter** (`action:"default"`) or a **Ctrl+K** pick | `id`, `action` (no `rev`) |
-| `close` | Shutting down | — |
+| Message  | When                                                | Key fields                         |
+| -------- | --------------------------------------------------- | ---------------------------------- |
+| `init`   | Once at startup                                     | `query` (initial text)             |
+| `query`  | Every keystroke                                     | `text`, `rev` (generation counter) |
+| `select` | Highlighted item changed                            | `id`, `rev`                        |
+| `action` | **Enter** (`action:"default"`) or a **Ctrl+K** pick | `id`, `action` (no `rev`)          |
+| `close`  | Shutting down                                       | —                                  |
 
 Minimal render frame you print to **stdout**:
 
 ```json
-{"type":"render","rev":1,"view":"list","items":[{"id":"1","title":"Hello","subtitle":"world","icon":"star"}]}
+{
+  "type": "render",
+  "rev": 1,
+  "view": "list",
+  "items": [
+    { "id": "1", "title": "Hello", "subtitle": "world", "icon": "star" }
+  ]
+}
 ```
 
 Full frame/item fields (views `list`/`grid`/`detail`, `loading`, `emptyText`, `grid`, `detail.markdown`, `preview`, item `accessories`/`actions`/`preview`) are documented in spec §6–§8.
@@ -90,7 +97,7 @@ Full frame/item fields (views `list`/`grid`/`detail`, `loading`, `emptyText`, `g
 
 ## Doing real work
 
-The plugin is an ordinary process: HTTP (`requests`/`urllib`, or global `fetch` in Node 18+/Bun), filesystem, spawning tools. Read secrets from a `config.json` in the plugin folder (the CWD) or env vars — see `example_plugins/linear/config.example.json`. To open a URL or copy to the clipboard on Windows, shell out via `cmd /c start`/`cmd /c clip` (recipes in spec §12). Markdown links in `detail` render but are **not clickable** — expose URLs as item **actions** and open them yourself.
+The plugin is an ordinary process: HTTP (`requests`/`urllib`, or global `fetch` in Node 18+/Bun), filesystem, spawning tools. Read secrets from a `config.json` in the plugin folder (the CWD) or env vars — see `plugins/linear/config.example.json`. To open a URL or copy to the clipboard on Windows, shell out via `cmd /c start`/`cmd /c clip` (recipes in spec §12). Markdown links in `detail` render but are **not clickable** — expose URLs as item **actions** and open them yourself.
 
 ## Deliverables
 

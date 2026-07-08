@@ -196,6 +196,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   late final LauncherPluginHost _pluginHost = LauncherPluginHost(onFrame: _onPluginFrame);
   PluginManifest? _activePlugin;
   PluginRenderFrame? _pluginFrame;
+  Timer? _pluginQueryDebounce;
   bool _pluginWindowWidened = false;
   Timer? _pluginWidthCollapseTimer;
   String? _pendingLauncherQuickAction;
@@ -441,6 +442,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   /// first entry, otherwise just forwards the new query text.
   void _routeToPlugin(PluginManifest plugin, String query) {
     _searchDebounce?.cancel();
+    _pluginQueryDebounce?.cancel();
     final String pluginQuery = PluginRegistry.queryAfterKeyword(query, plugin);
     final bool switching = _activePlugin?.id != plugin.id;
     _activePlugin = plugin;
@@ -455,12 +457,19 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       });
       unawaited(_pluginHost.activate(plugin, initialQuery: pluginQuery));
     } else {
-      _pluginHost.sendQuery(pluginQuery);
+      // Debounce keystrokes before hitting the plugin process — plugins that
+      // call a rate-limited external API on every query can get blocked if we
+      // forward every keystroke immediately.
+      _pluginQueryDebounce = Timer(const Duration(milliseconds: 300), () {
+        if (!mounted || _activePlugin?.id != plugin.id) return;
+        _pluginHost.sendQuery(pluginQuery);
+      });
     }
   }
 
   /// Leaves plugin mode: stops the process and restores the normal layout.
   void _deactivatePlugin() {
+    _pluginQueryDebounce?.cancel();
     if (_activePlugin == null && _pluginFrame == null) return;
     _activePlugin = null;
     unawaited(_pluginHost.deactivate());
@@ -825,6 +834,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     QuickMenuFunctions.removeListener(this);
     _searchToken.dispose();
+    _pluginQueryDebounce?.cancel();
     _pluginHost.dispose();
     _restorePluginWindowWidth();
     _resultKeys.clear();

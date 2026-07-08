@@ -1,0 +1,8 @@
+{
+  "name": "Timezone Converter",
+  "keyword": "tz",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "clock",
+  "description": "Convert times between timezones."
+}

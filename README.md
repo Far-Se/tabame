@@ -113,6 +113,7 @@ Sometimes (2–3 times a week), the app draws incorrectly. To fix this, right-cl
 
 - [🎛️ QuickMenu](#%EF%B8%8F-quickmenu) - the main popup
 - [🚀 Launcher](#-launcher) - type to find anything
+- [🧩 Plugins](#-plugins) - extend the Launcher with your own integrations
 - [⚡ QuickActions](#-quickactions) - one menu for everything Tabame can do
 - [🪟 QuickSnap](#-quicksnap) - snap windows into custom zones
 - [🖱️ QuickClick](#%EF%B8%8F-quickclick) - move the mouse with your keyboard
@@ -215,6 +216,32 @@ For the deep file search you pick which folders to index. You can set how deep e
 
 ---
 
+# 🧩 Plugins
+
+The Launcher isn't limited to what ships in the box - you can extend it with your own **plugins**. A plugin is just a standalone script (Python, Node.js or Bun) that Tabame runs as a small background process and talks to over stdin/stdout. No SDK, no build step, no compiling against Tabame - drop a folder in, reopen the Launcher, and it's live.
+
+## Using a plugin
+
+1. Get a plugin folder (write your own, or grab one someone else made) and drop it into `%localappdata%\Tabame\plugins\<plugin-id>\`.
+2. Reopen the Launcher - it rescans the plugins folder every time it opens, so there's no need to restart Tabame.
+3. Type the plugin's **keyword** to activate it, then keep typing to query it live.
+4. Manage installed plugins (enable/disable, browse a gallery) from the **PluginManager** QuickAction / QuickMenu button.
+
+## Creating a plugin with AI
+
+You don't need to hand-write the protocol plumbing - an AI coding assistant (Claude Code, etc.) can build a plugin for you from a plain description of what you want, because the whole protocol is written down as a spec it can read and follow:
+
+1. Point your assistant at `plugins/TABAME_PLUGIN_SKILL.md` in this repo - it's the full, authoritative spec: every message type, render-frame field, view type and icon name, plus a matching `plugin.json` template.
+2. Look at `plugins/echo/`, `plugins/linear/` and `plugins/caniuse/` for working examples to copy the shape of (Python/Node, list/grid/detail views, calling an external API, reading secrets from `config.json`).
+3. Describe what you want in plain terms - the keyword to type, what each result should show, what Enter should do, what extra actions belong on Ctrl+K - and let the AI scaffold `plugin.json` + the entry script from the spec.
+4. Drop the resulting folder into `%localappdata%\Tabame\plugins\<id>\` and reopen the Launcher to try it.
+
+If you're working inside this repo with Claude Code, the `tbm-plugin` skill wraps this whole workflow for you - just ask it to build, scaffold or debug a plugin.
+
+The protocol itself is simple by design: Tabame sends your script JSON events (`init`, `query`, `select`, `action`, `close`) on stdin, one per line, and your script answers with **render frames** - JSON objects describing what the Launcher should show right now - on stdout. That's the entire contract, which is why an AI assistant (or you) can build one in a single sitting.
+
+---
+
 # ⚡ QuickActions
 
 QuickActions are the building blocks of Tabame. You can put them on the QuickMenu top bar, bind them to a hotkey, or open them from the **QuickActions Menu** (a searchable list of everything Tabame can do). Here's the whole catalog, grouped.
@@ -229,7 +256,10 @@ QuickActions are the building blocks of Tabame. You can put them on the QuickMen
 - **DesktopFiles** - show your desktop files (handy if you keep the desktop hidden for a clean look).
 - **Notion** - browse and search your Notion workspace.
 - **Memos** - quick notes for later.
+- **Obsidian** - search and open notes from your Obsidian vault.
 - **Workspaces** - save and reload window layouts.
+- **WindowLayouts** - snapshot the position/size of a set of windows and restore that layout later in one click.
+- **PluginManager** - browse, install, enable/disable and configure Launcher [plugins](#-plugins).
 
 ### Audio & media
 
@@ -243,8 +273,20 @@ QuickActions are the building blocks of Tabame. You can put them on the QuickMen
 
 - **ScreenDraw** - draw on top of the desktop.
 - **FancyShot** - screen capture, live or frozen.
+- **FancyShotBrowser** - browse and reopen your past FancyShot captures.
+- **PhotoEditor** - open the FancyShot annotation editor on any image file.
+- **ScreenRecording** - record the screen (or a window/region) to `.mp4`.
+- **ScreenRuler** - an on-screen ruler/protractor for measuring pixels and angles.
 - **ColorPicker** - pixel-accurate color picker.
+- **ColorPickerInstant** - grab the color under your cursor instantly, no picker window.
+- **EditColor** - tweak a color's hue/saturation/brightness and copy the result.
+- **ImageConverter** - convert images between formats.
+- **PresentMode** - a distraction-free presentation overlay (dim the desktop, highlight the cursor).
+- **Keystrokes** - show your keypresses on screen, handy for demos and recordings.
+- **QuickSnapStandalone** - open the [QuickSnap](#-quicksnap) zone picker without going through the taskbar.
 - **Spotlight** - dim/blur everything except what you're focused on.
+- **OCR** - grab text off your screen straight into the clipboard.
+- **Emoji** - a searchable emoji picker.
 
 ### Security & privacy
 
@@ -266,6 +308,16 @@ QuickActions are the building blocks of Tabame. You can put them on the QuickMen
 - **HideDesktopFiles** - hide/show desktop icons for a clean desktop.
 - **ToggleHiddenFiles** - show/hide hidden files in Explorer.
 - **AlwaysAwake** - keep the machine awake while you work.
+- **MouseJiggler** - nudge the mouse periodically so the system stays awake/active.
+- **MouseControl** - control the mouse pointer with gestures/keys.
+- **Brightness** - adjust your monitor's brightness.
+- **MonitorInput** - switch a monitor's input source (HDMI/DP/etc.).
+- **HDR** - toggle Windows HDR on/off.
+- **Bluetooth** - manage Bluetooth devices: pair, connect and disconnect.
+- **FolderIcon** - change a folder's icon.
+- **Adb** - quick Android Debug Bridge (`adb`) commands for a connected device.
+- **Steam** - quick access to your Steam library/friends.
+- **YtDlp** - download video/audio from a URL via `yt-dlp`.
 
 ### Utilities & reference
 
@@ -278,11 +330,18 @@ QuickActions are the building blocks of Tabame. You can put them on the QuickMen
 - **Weather** - hourly and daily, for multiple locations.
 - **QrScanner** - scan a QR code straight off your screen.
 - **CustomChars** - accents, currency symbols and math characters to copy.
+- **TextSnippets** - saved snippets of text you paste often.
+- **UniversalConverter** - a general-purpose converter (units, bases, encodings and more) in one box.
+- **DevToolbox** - a grab-bag of dev utilities (formatters, encoders/decoders, generators…).
 - **Wallpapers** - browse wallpapers from a folder you pick.
 - **ChangeTheme** - flip the QuickMenu between light and dark.
 - **QuickMenuDesign** - change the QuickMenu layout and colors.
+- **QuickMenuSettings** - jump straight to the QuickMenu settings panel.
 - **DiskCleanup** - check specific folder sizes and clear them.
 - **ShutDown** - schedule a shutdown at a set time or after a delay; can be persistent.
+- **TrktivityToday** - a quick summary of today's [Trktivity](#-trktivity) activity.
+- **Subscription** - track recurring subscriptions and what they cost you.
+- **ClaudeUsage** - keep an eye on your Claude/Anthropic API usage.
 
 | You can bind the QuickActions Menu to a hotkey and reach almost everything from one place. | <video src="https://user-images.githubusercontent.com/20853986/200881569-5951da57-752f-43a6-9ec4-88463daa2ef8.mp4" width="400px"></video> |
 | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
