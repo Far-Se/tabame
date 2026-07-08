@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
+import '../../../models/win32/win_utils.dart';
+import '../../../pages/launcher/plugins/plugin_gallery.dart';
 import '../../../pages/launcher/plugins/plugin_icons.dart';
 import '../../../pages/launcher/plugins/plugin_manifest.dart';
 import '../../../pages/launcher/plugins/plugin_registry.dart';
@@ -26,9 +28,10 @@ class PluginManagerButton extends StatelessWidget {
   }
 }
 
-/// Lists every installed launcher plugin and lets the user reload the folder or
-/// toggle each plugin on/off. Enabling/disabling flips the `"enabled"` key in
-/// the plugin's `plugin.json`; the launcher only surfaces enabled plugins.
+enum _PanelMode { installed, gallery }
+
+/// Two-mode panel: "Installed" lists every local plugin with on/off toggles;
+/// "Gallery" browses the community index and installs plugins with one click.
 class PluginManagerPanel extends StatefulWidget {
   const PluginManagerPanel({super.key});
 
@@ -37,8 +40,15 @@ class PluginManagerPanel extends StatefulWidget {
 }
 
 class _PluginManagerPanelState extends State<PluginManagerPanel> {
+  _PanelMode _mode = _PanelMode.installed;
   bool _reloading = false;
   String? _busyId;
+
+  List<PluginGalleryEntry>? _galleryEntries;
+  bool _galleryLoading = false;
+  String _galleryError = '';
+  String? _installingId;
+  String _installStatus = '';
 
   @override
   void initState() {
@@ -61,33 +71,153 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
     setState(() => _busyId = null);
   }
 
+  Future<void> _loadGallery({bool force = false}) async {
+    if (_galleryLoading) return;
+    setState(() {
+      _galleryLoading = true;
+      _galleryError = '';
+    });
+    try {
+      final List<PluginGalleryEntry> entries = await PluginGallery.fetchIndex(force: force);
+      if (!mounted) return;
+      setState(() {
+        _galleryEntries = entries;
+        _galleryLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _galleryLoading = false;
+        _galleryError = 'Could not load the gallery — check your connection.';
+      });
+    }
+  }
+
+  Future<void> _install(PluginGalleryEntry entry) async {
+    if (_installingId != null) return;
+    setState(() {
+      _installingId = entry.id;
+      _installStatus = '';
+    });
+    final String? error = await PluginGallery.install(entry);
+    if (!mounted) return;
+    setState(() {
+      _installingId = null;
+      _installStatus = error == null
+          ? 'Installed "${entry.name}" — type "${entry.keyword}" in the launcher'
+          : 'Install failed: $error';
+    });
+  }
+
+  void _switchMode(_PanelMode mode) {
+    if (_mode == mode) return;
+    setState(() => _mode = mode);
+    if (mode == _PanelMode.gallery && _galleryEntries == null) _loadGallery();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final List<PluginManifest> plugins = PluginRegistry.manifests;
-    final int enabledCount = plugins.where((PluginManifest m) => m.enabled).length;
+    final bool gallery = _mode == _PanelMode.gallery;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: C.start,
       children: <Widget>[
         PanelHeader(
-          title: "Launcher Plugins",
-          icon: Icons.extension_rounded,
-          buttonIcon: _reloading ? Icons.hourglass_bottom_rounded : Icons.refresh_rounded,
-          buttonTooltip: "Reload plugins",
-          buttonPressed: _reloading ? null : _reload,
+          title: gallery ? "Plugin Gallery" : "Launcher Plugins",
+          icon: gallery ? Icons.storefront_rounded : Icons.extension_rounded,
+          buttonIcon: (gallery ? _galleryLoading : _reloading) ? Icons.hourglass_bottom_rounded : Icons.refresh_rounded,
+          buttonTooltip: gallery ? "Refresh gallery" : "Reload plugins",
+          buttonPressed: gallery
+              ? (_galleryLoading ? null : () => _loadGallery(force: true))
+              : (_reloading ? null : _reload),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+          child: _buildModeRail(),
         ),
         Flexible(
           child: Material(
             type: MaterialType.transparency,
-            child: plugins.isEmpty ? _buildEmpty() : _buildList(plugins, enabledCount),
+            child: gallery ? _buildGallery() : _buildInstalled(),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildList(List<PluginManifest> plugins, int enabledCount) {
+  Widget _buildModeRail() {
+    return Row(
+      children: <Widget>[
+        _modeChip(
+          label: 'Installed',
+          icon: Icons.extension_rounded,
+          count: PluginRegistry.manifests.length,
+          mode: _PanelMode.installed,
+        ),
+        const SizedBox(width: 6),
+        _modeChip(
+          label: 'Gallery',
+          icon: Icons.storefront_rounded,
+          count: _galleryEntries?.length,
+          mode: _PanelMode.gallery,
+        ),
+      ],
+    );
+  }
+
+  Widget _modeChip({required String label, required IconData icon, required _PanelMode mode, int? count}) {
+    final bool selected = _mode == mode;
+    return InkWell(
+      onTap: () => _switchMode(mode),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? Design.accent.withAlpha(18) : Design.text.withAlpha(7),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: selected ? Design.accent.withAlpha(70) : Design.text.withAlpha(16)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(icon, size: 13, color: selected ? Design.accent : Design.text.withAlpha(130)),
+            const SizedBox(width: 6),
+            Text(
+              label.toUpperCase(),
+              style: TextStyle(
+                fontSize: Design.baseFontSize + 0.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+                color: selected ? Design.accent : Design.text.withAlpha(150),
+              ),
+            ),
+            if (count != null) ...<Widget>[
+              const SizedBox(width: 5),
+              Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: Design.baseFontSize,
+                  fontWeight: FontWeight.w700,
+                  color: (selected ? Design.accent : Design.text).withAlpha(140),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Installed mode
+  // ---------------------------------------------------------------------------
+
+  Widget _buildInstalled() {
+    final List<PluginManifest> plugins = PluginRegistry.manifests;
+    final int enabledCount = plugins.where((PluginManifest m) => m.enabled).length;
+    if (plugins.isEmpty) return _buildInstalledEmpty();
+
     return WindowsScrollView(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
@@ -96,8 +226,8 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
           children: <Widget>[
             _buildSectionLabel(
               label: "Installed",
-              count: plugins.length,
-              enabledCount: enabledCount,
+              countText: "$enabledCount/${plugins.length}",
+              icon: Icons.extension_rounded,
             ),
             const SizedBox(height: 8),
             for (final PluginManifest m in plugins) ...<Widget>[
@@ -114,43 +244,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
     );
   }
 
-  Widget _buildSectionLabel({
-    required String label,
-    required int count,
-    required int enabledCount,
-  }) {
-    return Row(
-      children: <Widget>[
-        Icon(Icons.extension_rounded, size: 14, color: Design.accent),
-        const SizedBox(width: 6),
-        Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            fontSize: Design.baseFontSize + 1,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
-            color: Design.text,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: Design.accent.withAlpha(28),
-            borderRadius: BorderRadius.circular(99),
-          ),
-          child: Text(
-            "$enabledCount/$count",
-            style: TextStyle(fontSize: Design.baseFontSize, color: Design.accent, fontWeight: FontWeight.w700),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(child: Divider(height: 1, color: Design.text.withAlpha(20))),
-      ],
-    );
-  }
-
-  Widget _buildEmpty() {
+  Widget _buildInstalledEmpty() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -169,13 +263,174 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
             ),
             const SizedBox(height: 4),
             Text(
-              "Drop a plugin folder into %localappdata%\\Tabame\\plugins, then reload.",
+              "Install one from the Gallery, or drop a plugin folder into %localappdata%\\Tabame\\plugins.",
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(110)),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Gallery mode
+  // ---------------------------------------------------------------------------
+
+  Widget _buildGallery() {
+    if (_galleryLoading && _galleryEntries == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.5, color: Design.accent),
+          ),
+        ),
+      );
+    }
+
+    if (_galleryError.isNotEmpty && (_galleryEntries == null || _galleryEntries!.isEmpty)) {
+      return _buildGalleryError();
+    }
+
+    final List<PluginGalleryEntry> entries = _galleryEntries ?? <PluginGalleryEntry>[];
+    if (entries.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            "The gallery is empty for now.",
+            style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(140)),
+          ),
+        ),
+      );
+    }
+
+    return WindowsScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+        child: Column(
+          crossAxisAlignment: C.start,
+          children: <Widget>[
+            if (_installStatus.isNotEmpty) ...<Widget>[
+              _buildStatusStrip(_installStatus, error: _installStatus.startsWith('Install failed')),
+              const SizedBox(height: 8),
+            ],
+            _buildSectionLabel(
+              label: "Community Plugins",
+              countText: "${entries.length}",
+              icon: Icons.storefront_rounded,
+            ),
+            const SizedBox(height: 8),
+            for (final PluginGalleryEntry entry in entries) ...<Widget>[
+              _GalleryCard(
+                entry: entry,
+                installed: PluginGallery.isInstalled(entry.id),
+                installing: _installingId == entry.id,
+                onInstall: () => _install(entry),
+                onOpenHomepage: entry.homepage.isEmpty ? null : () => WinUtils.open(entry.homepage),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGalleryError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.cloud_off_rounded, size: 44, color: Design.text.withAlpha(50)),
+            const SizedBox(height: 14),
+            Text(
+              _galleryError,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(150)),
+            ),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () => _loadGallery(force: true),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Design.accent.withAlpha(28),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Design.accent.withAlpha(80)),
+                ),
+                child: Text(
+                  'RETRY',
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize + 0.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    color: Design.accent,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusStrip(String message, {bool error = false}) {
+    final Color color = error ? Colors.red.shade400 : Design.accent;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withAlpha(12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withAlpha(40)),
+      ),
+      child: Text(
+        message,
+        style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  Widget _buildSectionLabel({
+    required String label,
+    required String countText,
+    required IconData icon,
+  }) {
+    return Row(
+      children: <Widget>[
+        Icon(icon, size: 14, color: Design.accent),
+        const SizedBox(width: 6),
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontSize: Design.baseFontSize + 1,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+            color: Design.text,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: Design.accent.withAlpha(28),
+            borderRadius: BorderRadius.circular(99),
+          ),
+          child: Text(
+            countText,
+            style: TextStyle(fontSize: Design.baseFontSize, color: Design.accent, fontWeight: FontWeight.w700),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(child: Divider(height: 1, color: Design.text.withAlpha(20))),
+      ],
     );
   }
 }
@@ -296,6 +551,216 @@ class _PluginCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One gallery row: icon, name + keyword + runtime pills, description,
+/// author/version meta, and the install action.
+class _GalleryCard extends StatelessWidget {
+  const _GalleryCard({
+    required this.entry,
+    required this.installed,
+    required this.installing,
+    required this.onInstall,
+    this.onOpenHomepage,
+  });
+
+  final PluginGalleryEntry entry;
+  final bool installed;
+  final bool installing;
+  final VoidCallback onInstall;
+  final VoidCallback? onOpenHomepage;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = Design.accent;
+    final Color text = Design.text;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
+      decoration: BoxDecoration(
+        color: text.withAlpha(7),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: text.withAlpha(16)),
+      ),
+      child: Row(
+        crossAxisAlignment: C.start,
+        children: <Widget>[
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: accent.withAlpha(20),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(PluginIcons.resolve(entry.icon), size: 16, color: accent),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: C.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Flexible(
+                      child: Text(
+                        entry.name,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: Design.baseFontSize + 1.5,
+                          fontWeight: FontWeight.w700,
+                          color: text.withAlpha(235),
+                        ),
+                      ),
+                    ),
+                    if (entry.keyword.isNotEmpty) ...<Widget>[
+                      const SizedBox(width: 6),
+                      _pill(entry.keyword, accent.withAlpha(22), accent),
+                    ],
+                    if (entry.runtime.isNotEmpty) ...<Widget>[
+                      const SizedBox(width: 4),
+                      _pill(entry.runtime, text.withAlpha(12), text.withAlpha(150)),
+                    ],
+                  ],
+                ),
+                if (entry.description.trim().isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 3),
+                  Text(
+                    entry.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: Design.baseFontSize - 0.5,
+                      height: 1.25,
+                      color: text.withAlpha(140),
+                    ),
+                  ),
+                ],
+                if (entry.author.isNotEmpty || entry.version.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 3),
+                  Text(
+                    <String>[
+                      if (entry.author.isNotEmpty) 'by ${entry.author}',
+                      if (entry.version.isNotEmpty) 'v${entry.version}',
+                    ].join(' · '),
+                    style: TextStyle(fontSize: Design.baseFontSize - 1, color: text.withAlpha(100)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              _buildInstallAction(accent, text),
+              if (onOpenHomepage != null) ...<Widget>[
+                const SizedBox(height: 4),
+                Tooltip(
+                  message: 'Open homepage',
+                  waitDuration: const Duration(milliseconds: 400),
+                  child: InkWell(
+                    onTap: onOpenHomepage,
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(Icons.open_in_new_rounded, size: 13, color: text.withAlpha(110)),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstallAction(Color accent, Color text) {
+    if (installing) {
+      return Padding(
+        padding: const EdgeInsets.all(6),
+        child: SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(strokeWidth: 2, color: accent),
+        ),
+      );
+    }
+    if (installed) {
+      return Tooltip(
+        message: 'Installed — tap to reinstall/update',
+        waitDuration: const Duration(milliseconds: 400),
+        child: InkWell(
+          onTap: entry.installable ? onInstall : null,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            decoration: BoxDecoration(
+              color: text.withAlpha(10),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: text.withAlpha(24)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(Icons.check_rounded, size: 12, color: text.withAlpha(150)),
+                const SizedBox(width: 4),
+                Text(
+                  'INSTALLED',
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize - 0.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4,
+                    color: text.withAlpha(150),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return InkWell(
+      onTap: entry.installable ? onInstall : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: accent.withAlpha(28),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: accent.withAlpha(80)),
+        ),
+        child: Text(
+          'INSTALL',
+          style: TextStyle(
+            fontSize: Design.baseFontSize - 0.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
+            color: accent,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _pill(String label, Color background, Color foreground) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: Design.baseFontSize - 1,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
+          color: foreground,
+        ),
       ),
     );
   }

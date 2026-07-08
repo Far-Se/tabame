@@ -2475,3 +2475,143 @@ class WinBrightness {
     return result ?? false;
   }
 }
+
+/// A connected display along with its DDC-CI input source state (VCP 0x60).
+class MonitorInputDisplay {
+  /// Opaque identity (`"ddc:<monitor>:<physical>"`) used to re-resolve the
+  /// display when switching inputs.
+  final String id;
+
+  /// Friendly monitor description, or "Display".
+  final String name;
+
+  /// Whether the monitor answered the VCP 0x60 query at all.
+  final bool supported;
+
+  /// Current input source code (low byte of the VCP 0x60 value), e.g.
+  /// 0x0F = DisplayPort 1, 0x11 = HDMI 1.
+  final int current;
+
+  /// Input source codes advertised in the MCCS capabilities string. Empty
+  /// when the monitor didn't provide a parsable capabilities reply.
+  final List<int> available;
+
+  const MonitorInputDisplay({
+    required this.id,
+    required this.name,
+    required this.supported,
+    required this.current,
+    required this.available,
+  });
+
+  factory MonitorInputDisplay.fromMap(Map<Object?, Object?> map) {
+    return MonitorInputDisplay(
+      id: (map['id'] as String?) ?? '',
+      name: (map['name'] as String?) ?? 'Display',
+      supported: (map['supported'] as bool?) ?? false,
+      current: (map['current'] as int?) ?? 0,
+      available: ((map['available'] as List<Object?>?) ?? const <Object?>[]).whereType<int>().toList(growable: false),
+    );
+  }
+}
+
+/// Enumerate displays and switch their active input source via DDC-CI
+/// (VESA MCCS VCP code 0x60 — the same mechanism a hardware KVM uses).
+class WinMonitorInput {
+  /// Returns every detected display with its current input and, when the
+  /// monitor advertises one, the list of selectable input codes. Slow
+  /// (capabilities request over DDC-CI); runs on a native background thread.
+  static Future<List<MonitorInputDisplay>> getDisplays() async {
+    final List<Object?>? raw = await tabameWin32MethodChannel.invokeMethod<List<Object?>>('getMonitorInputSources');
+    if (raw == null) return const <MonitorInputDisplay>[];
+    return raw.whereType<Map<Object?, Object?>>().map(MonitorInputDisplay.fromMap).toList(growable: false);
+  }
+
+  /// Switches the display identified by [display] to the input source [code].
+  /// Returns true when the monitor accepted the command. Note that on success
+  /// the monitor usually leaves this PC's signal immediately.
+  static Future<bool> setInput(MonitorInputDisplay display, int code) async {
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
+      'setMonitorInputSource',
+      <String, dynamic>{
+        'id': display.id,
+        'value': code,
+      },
+    );
+    return result ?? false;
+  }
+}
+
+/// A paired (classic) Bluetooth device.
+class BluetoothDeviceInfo {
+  /// Friendly device name.
+  final String name;
+
+  /// Display form of the address, `AA:BB:CC:DD:EE:FF`.
+  final String address;
+
+  /// Raw 48-bit address, used to identify the device in commands.
+  final int addressRaw;
+
+  final bool connected;
+  final bool remembered;
+  final bool authenticated;
+
+  /// Bluetooth Class of Device bitfield (major class in bits 8-12).
+  final int classOfDevice;
+
+  /// Battery percentage as reported by the HFP PnP property, or -1 when the
+  /// device doesn't expose one.
+  final int battery;
+
+  const BluetoothDeviceInfo({
+    required this.name,
+    required this.address,
+    required this.addressRaw,
+    required this.connected,
+    required this.remembered,
+    required this.authenticated,
+    required this.classOfDevice,
+    required this.battery,
+  });
+
+  factory BluetoothDeviceInfo.fromMap(Map<Object?, Object?> map) {
+    return BluetoothDeviceInfo(
+      name: (map['name'] as String?) ?? 'Device',
+      address: (map['address'] as String?) ?? '',
+      addressRaw: (map['addressRaw'] as int?) ?? 0,
+      connected: (map['connected'] as bool?) ?? false,
+      remembered: (map['remembered'] as bool?) ?? false,
+      authenticated: (map['authenticated'] as bool?) ?? false,
+      classOfDevice: (map['classOfDevice'] as int?) ?? 0,
+      battery: (map['battery'] as int?) ?? -1,
+    );
+  }
+}
+
+/// Enumerate paired Bluetooth devices and connect/disconnect them by toggling
+/// their installed service enablement (the reliable Win32 path for audio
+/// devices — no WinRT dependency).
+class WinBluetooth {
+  /// Returns every paired/remembered device with its connection state and
+  /// battery level (when available). Runs on a native background thread.
+  static Future<List<BluetoothDeviceInfo>> getDevices() async {
+    final List<Object?>? raw = await tabameWin32MethodChannel.invokeMethod<List<Object?>>('getBluetoothDevices');
+    if (raw == null) return const <BluetoothDeviceInfo>[];
+    return raw.whereType<Map<Object?, Object?>>().map(BluetoothDeviceInfo.fromMap).toList(growable: false);
+  }
+
+  /// Connects ([connect] = true) or disconnects the device. Blocks (on a
+  /// native background thread) while the radio negotiates — allow a few
+  /// seconds and re-enumerate afterwards to observe the settled state.
+  static Future<bool> setConnection(BluetoothDeviceInfo device, bool connect) async {
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
+      'setBluetoothConnection',
+      <String, dynamic>{
+        'addressRaw': device.addressRaw,
+        'connect': connect,
+      },
+    );
+    return result ?? false;
+  }
+}

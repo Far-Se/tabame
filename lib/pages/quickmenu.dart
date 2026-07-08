@@ -17,6 +17,7 @@ import '../models/clipboard_history.dart';
 import '../models/globals.dart';
 import '../models/settings.dart';
 import '../models/util/hotkey_handler.dart';
+import '../models/util/window_layout_snapshots.dart';
 import '../models/win32/imports.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
@@ -24,6 +25,7 @@ import '../models/win32/win_utils.dart';
 import '../models/win32/window.dart';
 import '../models/window_watcher.dart';
 import '../services/file_indexer.dart';
+import '../services/mouse_gestures_service.dart';
 import '../services/wallpaper_service.dart';
 import 'emoji_page.dart';
 // import '../widgets/itzy/quickmenu/button_quickactions.dart';
@@ -191,6 +193,8 @@ class QuickMenuState extends State<QuickMenu>
     if (user.trktivityEnabled) trk.startTimer();
     WallpaperService.instance.init();
     FileIndexer.instance.init();
+    WindowLayoutSnapshots.rememberCurrentSignature();
+    MouseGesturesService.instance.init();
     WinUtils.deleteOldFiles("${WinUtils.getTabameAppDataFolder()}/cache/icon_cache", days: 4);
     if (kDebugMode) {
       Timer(const Duration(milliseconds: 2000), () async {
@@ -563,6 +567,7 @@ class QuickMenuState extends State<QuickMenu>
 
   void _onDisplayChange(MonitorEvent hotkeyInfo) {
     Monitor.fetchMonitors();
+    WindowLayoutSnapshots.onDisplayChanged();
     Future<void>.delayed(const Duration(milliseconds: 700), () {
       if (user.hideTaskbarOnStartup) WinUtils.toggleTaskbar(visible: false);
     });

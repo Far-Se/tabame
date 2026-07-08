@@ -60,6 +60,7 @@ std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel =
 #include "clipboard_extended.cpp"
 #include "desktop_wallpaper.cpp"
 #include "get_changed_folders.cpp"
+#include "bluetooth_control.cpp"
 #include "brightness_control.cpp"
 #include "hdr_control.cpp"
 #include "text_snippets.cpp"
@@ -316,6 +317,33 @@ EMap BrightnessDisplayToMap(const BrightnessDisplayInfo &d) {
   m[EVal("min")] = EVal(d.minBrightness);
   m[EVal("current")] = EVal(d.curBrightness);
   m[EVal("max")] = EVal(d.maxBrightness);
+  return m;
+}
+
+EMap BtDeviceToMap(const BtDeviceInfo &d) {
+  EMap m;
+  m[EVal("name")] = EVal(Encoding::WideToUtf8(d.name));
+  m[EVal("address")] = EVal(d.address);
+  m[EVal("addressRaw")] = EVal(static_cast<int64_t>(d.addressRaw));
+  m[EVal("connected")] = EVal(d.connected);
+  m[EVal("remembered")] = EVal(d.remembered);
+  m[EVal("authenticated")] = EVal(d.authenticated);
+  m[EVal("classOfDevice")] = EVal(static_cast<int64_t>(d.classOfDevice));
+  m[EVal("battery")] = EVal(d.battery);
+  return m;
+}
+
+EMap MonitorInputToMap(const MonitorInputInfo &d) {
+  EMap m;
+  m[EVal("id")] = EVal(d.id);
+  m[EVal("name")] = EVal(Encoding::WideToUtf8(d.name));
+  m[EVal("supported")] = EVal(d.supported);
+  m[EVal("current")] = EVal(d.current);
+  flutter::EncodableList available;
+  available.reserve(d.available.size());
+  for (int code : d.available)
+    available.push_back(EVal(code));
+  m[EVal("available")] = EVal(std::move(available));
   return m;
 }
 
@@ -1236,6 +1264,71 @@ void SetBrightnessH(Tabamewin32Plugin *, const MethodCall &call,
   OK(result, ok);
 }
 
+// Runs on a background thread: battery PnP lookups add up per device.
+void GetBluetoothDevicesH(Tabamewin32Plugin *, const MethodCall &,
+                          MethodResult result) {
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+
+  std::thread([shared_result]() {
+    flutter::EncodableList list;
+    for (const auto &d : EnumBluetoothDevices())
+      list.push_back(EVal(Encode::BtDeviceToMap(d)));
+    shared_result->Success(EVal(std::move(list)));
+  }).detach();
+}
+
+// Runs on a background thread: service-state changes block while the radio
+// negotiates with the device (can take seconds).
+void SetBluetoothConnectionH(Tabamewin32Plugin *, const MethodCall &call,
+                             MethodResult result) {
+  auto &a = Args::Map(call);
+  const int64_t address = Args::Int64(a, "addressRaw");
+  const bool connect = Args::Bool(a, "connect");
+
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+
+  std::thread([shared_result, address, connect]() {
+    const bool ok = SetBluetoothDeviceConnection(
+        static_cast<unsigned long long>(address), connect);
+    shared_result->Success(EVal(ok));
+  }).detach();
+}
+
+// Runs on a background thread: the DDC-CI capabilities request used to list
+// selectable inputs can take multiple seconds per monitor.
+void GetMonitorInputSourcesH(Tabamewin32Plugin *, const MethodCall &,
+                             MethodResult result) {
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+
+  std::thread([shared_result]() {
+    flutter::EncodableList list;
+    for (const auto &d : GetMonitorInputSources())
+      list.push_back(EVal(Encode::MonitorInputToMap(d)));
+    shared_result->Success(EVal(std::move(list)));
+  }).detach();
+}
+
+void SetMonitorInputSourceH(Tabamewin32Plugin *, const MethodCall &call,
+                            MethodResult result) {
+  auto &a = Args::Map(call);
+  const std::string id = Args::Str(a, "id");
+  const int value = Args::Int(a, "value");
+
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+
+  std::thread([shared_result, id, value]() {
+    shared_result->Success(EVal(SetMonitorInputSourceForDisplay(id, value)));
+  }).detach();
+}
+
 void CaptureMonitorH(Tabamewin32Plugin *, const MethodCall &call,
                      MethodResult result) {
   auto &a = Args::Map(call);
@@ -1799,6 +1892,10 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"setHDRState", Handlers::SetHDRStateH},
       {"getBrightnessDisplays", Handlers::GetBrightnessDisplaysH},
       {"setBrightness", Handlers::SetBrightnessH},
+      {"getMonitorInputSources", Handlers::GetMonitorInputSourcesH},
+      {"setMonitorInputSource", Handlers::SetMonitorInputSourceH},
+      {"getBluetoothDevices", Handlers::GetBluetoothDevicesH},
+      {"setBluetoothConnection", Handlers::SetBluetoothConnectionH},
       {"captureMonitor", Handlers::CaptureMonitorH},
       {"captureMonitorBitmapAlternative",
        Handlers::CaptureMonitorBitmapAlternativeH},

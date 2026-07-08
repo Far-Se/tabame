@@ -955,6 +955,7 @@ class _FancyShotCaptureWidgetState extends State<FancyShotCaptureWidget> {
   @override
   void dispose() {
     appState.removeListener(_handleAppStateChanged);
+    Win32Window.disableClickThrough();
     _monitorTimer?.cancel();
     super.dispose();
   }

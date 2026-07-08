@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "plugins": [
+    {
+      "id": "echo",
+      "name": "Echo Demo",
+      "keyword": "echo",
+      "description": "Demonstrates the launcher plugin protocol (list / grid / detail / preview + actions). A good starting point for writing your own plugin.",
+      "icon": "extension",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/master/example_plugins/echo",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/example_plugins/echo/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/master/example_plugins/echo/main.py"
+      }
+    },
+    {
+      "id": "caniuse",
+      "name": "Can I Use",
+      "keyword": "ciu",
+      "description": "Search caniuse.com for web-platform feature browser compatibility.",
+      "icon": "globe",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/master/example_plugins/caniuse",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/example_plugins/caniuse/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/example_plugins/caniuse/main.js",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/master/example_plugins/caniuse/README.md"
+      }
+    },
+    {
+      "id": "linear",
+      "name": "Linear",
+      "keyword": "lin",
+      "description": "Create, search and manage Linear issues, projects, docs and notifications. Needs an API key in config.json (see config.example.json).",
+      "icon": "list",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/master/example_plugins/linear",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/example_plugins/linear/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/example_plugins/linear/main.js",
+        "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/example_plugins/linear/config.example.json",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/master/example_plugins/linear/README.md"
+      }
+    },
+    {
+      "id": "tailwind",
+      "name": "Tailwind CSS",
+      "keyword": "tw",
+      "description": "Search & inspect Tailwind CSS utilities — see the generated CSS, copy the class, and jump to the docs.",
+      "icon": "palette",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/master/example_plugins/tailwind",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/example_plugins/tailwind/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/example_plugins/tailwind/main.js"
+      }
+    }
+  ]
+}

@@ -11,10 +11,12 @@ enum LauncherSearchMode {
   desktopOnly,
   notionOnly,
   obsidianOnly,
+  recentOnly,
   steamOnly,
   terminalOnly,
   timerCommand,
   functionCommand,
+  mediaCommand,
 }
 
 class LauncherQuery {
@@ -40,8 +42,11 @@ class LauncherQuery {
     );
   }
 
+  static final RegExp _mediaCommandPrefixPattern = RegExp(r'^m[1-5]? ');
+
   static LauncherSearchMode _modeFor(String query) {
     if (query.startsWith('/')) return LauncherSearchMode.actionsOnly;
+    if (_mediaCommandPrefixPattern.hasMatch(query)) return LauncherSearchMode.mediaCommand;
     if (query.startsWith(r'$')) return LauncherSearchMode.functionCommand;
     if (query.startsWith('.')) return LauncherSearchMode.windowsOnly;
     if (query.startsWith(',')) return LauncherSearchMode.browserTabsOnly;
@@ -49,6 +54,7 @@ class LauncherQuery {
     if (query.startsWith('timer ')) return LauncherSearchMode.timerCommand;
     if (query.startsWith('n ')) return LauncherSearchMode.notionOnly;
     if (query.startsWith('o ')) return LauncherSearchMode.obsidianOnly;
+    if (query.startsWith('r ')) return LauncherSearchMode.recentOnly;
     if (query.startsWith('s ')) return LauncherSearchMode.steamOnly;
     if (query.startsWith('t ')) return LauncherSearchMode.terminalOnly;
     if (query.startsWith('cli ')) return LauncherSearchMode.cliOnly;
@@ -62,11 +68,14 @@ class LauncherQuery {
   }
 
   static String _normalizedFor(String query) {
+    final RegExpMatch? mediaMatch = _mediaCommandPrefixPattern.firstMatch(query);
+    if (mediaMatch != null) return query.substring(mediaMatch.end).trimLeft();
     if (query.startsWith('timer ')) return query.substring(6).trimLeft();
     if (query.startsWith('cli ')) return query.substring(4).trimLeft();
     if (query.startsWith('app ')) return query.substring(4).trimLeft();
     if (query.startsWith('n ')) return query.substring(2).trimLeft();
     if (query.startsWith('o ')) return query.substring(2).trimLeft();
+    if (query.startsWith('r ')) return query.substring(2).trimLeft();
     if (query.startsWith('s ')) return query.substring(2).trimLeft();
     if (query.startsWith('t ')) return query.substring(2).trimLeft();
     if (query.startsWith('b ')) return query.substring(2).trimLeft();

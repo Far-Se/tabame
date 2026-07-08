@@ -12,7 +12,6 @@ import '../../models/settings.dart';
 import '../../models/util/main_hotkey.dart';
 import '../../models/win32/keys.dart';
 import '../widgets/custom_tooltip.dart';
-import '../widgets/info_text.dart';
 import '../widgets/mini_switch.dart';
 import '../widgets/text_input.dart';
 import 'hotkeys/hotkey_action_editor.dart';

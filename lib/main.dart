@@ -21,13 +21,13 @@ import 'pages/root_app.dart';
 import 'pages/screen_capture.dart';
 import 'pages/screen_draw.dart';
 import 'pages/screen_recording.dart';
+import 'pages/screen_ruler.dart';
 import 'pages/spotlight.dart';
 import 'pages/run.dart';
 import 'widgets/widgets/focus_fix.dart';
 
 Future<void> main(List<String> arguments) async {
   AppStartup.parseArguments(arguments);
-  // Test.
 
   SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
   // return startScreenCapture();
@@ -38,6 +38,7 @@ Future<void> main(List<String> arguments) async {
   if (arguments.contains("-screenCapture")) return startScreenCapture();
   if (arguments.contains("-screenRecording")) return startScreenRecordingPage();
   if (arguments.contains("-screenDraw")) return startScreenDraw();
+  if (arguments.contains("-screenRuler")) return startScreenRuler();
   if (arguments.contains("-colorPicker")) return startColorPicker();
   if (arguments.contains("-quickSnap")) return startQuickSnap();
   if (arguments.contains("-present")) return startPresentMode();

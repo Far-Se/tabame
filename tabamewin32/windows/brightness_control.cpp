@@ -4,6 +4,7 @@
 #include <windows.h>
 
 #include <highlevelmonitorconfigurationapi.h>
+#include <lowlevelmonitorconfigurationapi.h>
 #include <physicalmonitorenumerationapi.h>
 
 #include <objbase.h>
@@ -270,6 +271,138 @@ std::vector<BrightnessDisplayInfo> GetBrightnessDisplays() {
 
   BrightnessAppendWmi(out);
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Monitor input source switching (DDC-CI VCP code 0x60, "Input Select").
+//
+// Reuses the same physical-monitor enumeration as brightness; displays are
+// identified by the same "ddc:<monitorIndex>:<physicalIndex>" ids. The list of
+// selectable inputs is parsed from the MCCS capabilities string when the
+// monitor provides one (e.g. "... vcp(02 04 60(0F 11 12) ...)").
+// ---------------------------------------------------------------------------
+
+struct MonitorInputInfo {
+  std::string id;
+  std::wstring name;
+  bool supported = false;
+  int current = 0;            // Low byte of the current VCP 0x60 value.
+  std::vector<int> available; // Codes from the capabilities string; may be empty.
+};
+
+// Extracts the value list of VCP code 0x60 from an MCCS capabilities string.
+static std::vector<int> ParseInputSourcesFromCapabilities(
+    const std::string &caps) {
+  std::vector<int> values;
+
+  size_t vcpStart = caps.find("vcp(");
+  if (vcpStart == std::string::npos)
+    vcpStart = caps.find("VCP(");
+  size_t searchFrom = (vcpStart == std::string::npos) ? 0 : vcpStart;
+
+  // Find a "60(" token preceded by a separator so "160(" / "F60(" don't match.
+  size_t pos = caps.find("60(", searchFrom);
+  while (pos != std::string::npos &&
+         !(pos == 0 || caps[pos - 1] == ' ' || caps[pos - 1] == '(')) {
+    pos = caps.find("60(", pos + 1);
+  }
+  if (pos == std::string::npos)
+    return values;
+
+  int cur = -1;
+  for (size_t i = pos + 3; i < caps.size() && caps[i] != ')'; ++i) {
+    const char c = caps[i];
+    int digit = -1;
+    if (c >= '0' && c <= '9')
+      digit = c - '0';
+    else if (c >= 'A' && c <= 'F')
+      digit = c - 'A' + 10;
+    else if (c >= 'a' && c <= 'f')
+      digit = c - 'a' + 10;
+
+    if (digit >= 0) {
+      cur = (cur < 0 ? 0 : cur * 16) + digit;
+    } else {
+      if (cur >= 0)
+        values.push_back(cur);
+      cur = -1;
+    }
+  }
+  if (cur >= 0)
+    values.push_back(cur);
+  return values;
+}
+
+std::vector<MonitorInputInfo> GetMonitorInputSources() {
+  std::vector<MonitorInputInfo> out;
+
+  std::vector<HMONITOR> monitors = BrightnessEnumMonitors();
+  for (size_t mi = 0; mi < monitors.size(); ++mi) {
+    DWORD count = 0;
+    if (!GetNumberOfPhysicalMonitorsFromHMONITOR(monitors[mi], &count) ||
+        count == 0)
+      continue;
+
+    std::vector<PHYSICAL_MONITOR> phys(count);
+    if (!GetPhysicalMonitorsFromHMONITOR(monitors[mi], count, phys.data()))
+      continue;
+
+    for (DWORD pi = 0; pi < count; ++pi) {
+      MonitorInputInfo info;
+      info.id = "ddc:" + std::to_string(mi) + ":" + std::to_string(pi);
+      info.name = phys[pi].szPhysicalMonitorDescription;
+      if (info.name.empty())
+        info.name = L"Display";
+
+      DWORD cur = 0, mx = 0;
+      if (GetVCPFeatureAndVCPFeatureReply(phys[pi].hPhysicalMonitor, 0x60,
+                                          nullptr, &cur, &mx)) {
+        info.supported = true;
+        info.current = static_cast<int>(cur & 0xFF);
+
+        DWORD capsLen = 0;
+        if (GetCapabilitiesStringLength(phys[pi].hPhysicalMonitor, &capsLen) &&
+            capsLen > 1) {
+          std::string caps(capsLen, '\0');
+          if (CapabilitiesRequestAndCapabilitiesReply(
+                  phys[pi].hPhysicalMonitor, &caps[0], capsLen)) {
+            caps.resize(strnlen_s(caps.c_str(), caps.size()));
+            info.available = ParseInputSourcesFromCapabilities(caps);
+          }
+        }
+      }
+      out.push_back(std::move(info));
+    }
+    DestroyPhysicalMonitors(count, phys.data());
+  }
+  return out;
+}
+
+bool SetMonitorInputSourceForDisplay(const std::string &id, int value) {
+  int mi = -1, pi = -1;
+  if (sscanf_s(id.c_str(), "ddc:%d:%d", &mi, &pi) != 2)
+    return false;
+
+  std::vector<HMONITOR> monitors = BrightnessEnumMonitors();
+  if (mi < 0 || mi >= static_cast<int>(monitors.size()))
+    return false;
+
+  DWORD count = 0;
+  if (!GetNumberOfPhysicalMonitorsFromHMONITOR(monitors[mi], &count) ||
+      count == 0)
+    return false;
+
+  std::vector<PHYSICAL_MONITOR> phys(count);
+  if (!GetPhysicalMonitorsFromHMONITOR(monitors[mi], count, phys.data()))
+    return false;
+
+  bool ok = false;
+  if (pi >= 0 && pi < static_cast<int>(count)) {
+    ok = SetVCPFeature(phys[pi].hPhysicalMonitor, 0x60,
+                       static_cast<DWORD>(value)) != 0;
+  }
+  DestroyPhysicalMonitors(count, phys.data());
+  return ok;
 }
 
 bool SetBrightnessForDisplay(const std::string &id, int value) {

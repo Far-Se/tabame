@@ -26,6 +26,7 @@ void main() {
         'cli build': (LauncherSearchMode.cliOnly, 'build'),
         'app figma': (LauncherSearchMode.appsOnly, 'figma'),
         'n roadmap': (LauncherSearchMode.notionOnly, 'roadmap'),
+        'r report': (LauncherSearchMode.recentOnly, 'report'),
         r'$timer 1 stretch': (LauncherSearchMode.functionCommand, 'timer 1 stretch'),
         'timer 1 stretch': (LauncherSearchMode.timerCommand, '1 stretch'),
         'plain': (LauncherSearchMode.mixed, 'plain'),

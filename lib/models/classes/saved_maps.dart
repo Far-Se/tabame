@@ -1390,3 +1390,270 @@ class Workspace extends SavedMap {
   String toJson() => json.encode(toMap());
   factory Workspace.fromJson(String source) => Workspace.fromMap(json.decode(source) as Map<String, dynamic>);
 }
+
+class WindowLayoutEntry {
+  String exePath;
+  String exe;
+  String title;
+  // rcNormalPosition from GetWindowPlacement (workspace coordinates, physical px).
+  int x;
+  int y;
+  int width;
+  int height;
+  int showCmd;
+
+  WindowLayoutEntry({
+    required this.exePath,
+    required this.exe,
+    required this.title,
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+    required this.showCmd,
+  });
+
+  WindowLayoutEntry copyWith({
+    String? exePath,
+    String? exe,
+    String? title,
+    int? x,
+    int? y,
+    int? width,
+    int? height,
+    int? showCmd,
+  }) {
+    return WindowLayoutEntry(
+      exePath: exePath ?? this.exePath,
+      exe: exe ?? this.exe,
+      title: title ?? this.title,
+      x: x ?? this.x,
+      y: y ?? this.y,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      showCmd: showCmd ?? this.showCmd,
+    );
+  }
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+        'exePath': exePath,
+        'exe': exe,
+        'title': title,
+        'x': x,
+        'y': y,
+        'width': width,
+        'height': height,
+        'showCmd': showCmd,
+      };
+
+  factory WindowLayoutEntry.fromMap(Map<String, dynamic> map) => WindowLayoutEntry(
+        exePath: (map['exePath'] ?? '') as String,
+        exe: (map['exe'] ?? '') as String,
+        title: (map['title'] ?? '') as String,
+        x: (map['x'] ?? 0) as int,
+        y: (map['y'] ?? 0) as int,
+        width: (map['width'] ?? 0) as int,
+        height: (map['height'] ?? 0) as int,
+        showCmd: (map['showCmd'] ?? 1) as int,
+      );
+}
+
+class WindowLayoutSnapshot extends SavedMap {
+  String id;
+  String name;
+  int createdAt;
+  // Fingerprint of the monitor arrangement when captured — used to warn about
+  // mismatched setups and to auto-apply on display change.
+  String monitorSignature;
+  bool autoRestore;
+  List<WindowLayoutEntry> entries;
+
+  WindowLayoutSnapshot({
+    required this.id,
+    required this.name,
+    required this.createdAt,
+    required this.monitorSignature,
+    this.autoRestore = false,
+    List<WindowLayoutEntry>? entries,
+  }) : entries = entries ?? <WindowLayoutEntry>[];
+
+  WindowLayoutSnapshot copyWith({
+    String? id,
+    String? name,
+    int? createdAt,
+    String? monitorSignature,
+    bool? autoRestore,
+    List<WindowLayoutEntry>? entries,
+  }) {
+    return WindowLayoutSnapshot(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      createdAt: createdAt ?? this.createdAt,
+      monitorSignature: monitorSignature ?? this.monitorSignature,
+      autoRestore: autoRestore ?? this.autoRestore,
+      entries: entries ?? this.entries.map((WindowLayoutEntry e) => e.copyWith()).toList(),
+    );
+  }
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+        'id': id,
+        'name': name,
+        'createdAt': createdAt,
+        'monitorSignature': monitorSignature,
+        'autoRestore': autoRestore,
+        'entries': entries.map((WindowLayoutEntry e) => e.toMap()).toList(),
+      };
+
+  factory WindowLayoutSnapshot.fromMap(Map<String, dynamic> map) => WindowLayoutSnapshot(
+        id: (map['id'] ?? '') as String,
+        name: (map['name'] ?? 'Layout') as String,
+        createdAt: (map['createdAt'] ?? 0) as int,
+        monitorSignature: (map['monitorSignature'] ?? '') as String,
+        autoRestore: (map['autoRestore'] ?? false) as bool,
+        entries: (map['entries'] as List<dynamic>? ?? <dynamic>[])
+            .map((dynamic e) => WindowLayoutEntry.fromMap(e as Map<String, dynamic>))
+            .toList(),
+      );
+
+  String toJson() => json.encode(toMap());
+  factory WindowLayoutSnapshot.fromJson(String source) =>
+      WindowLayoutSnapshot.fromMap(json.decode(source) as Map<String, dynamic>);
+}
+
+/// What a hot corner or mouse gesture triggers.
+/// [type] is one of: 'none', 'function' (a `HotKeyInfo.tabameFunctionsMap` key),
+/// 'popup' (a `HotKeyInfo.quickMenuPopups` name), 'command' (path/URL to open),
+/// 'keys' (a `WinKeys.send` key sequence).
+class GestureAction {
+  String type;
+  String value;
+
+  GestureAction({this.type = 'none', this.value = ''});
+
+  bool get isSet => type != 'none' && value.isNotEmpty;
+
+  GestureAction copyWith({String? type, String? value}) =>
+      GestureAction(type: type ?? this.type, value: value ?? this.value);
+
+  Map<String, dynamic> toMap() => <String, dynamic>{'type': type, 'value': value};
+
+  factory GestureAction.fromMap(Map<String, dynamic> map) => GestureAction(
+        type: (map['type'] ?? 'none') as String,
+        value: (map['value'] ?? '') as String,
+      );
+}
+
+/// One mouse gesture: a stroke [pattern] (tokens L/R/U/D, e.g. "RD" = right
+/// then down while holding the right mouse button) mapped to a [GestureAction].
+class MouseGestureBinding {
+  String id;
+  String pattern;
+  GestureAction action;
+  bool enabled;
+
+  MouseGestureBinding({
+    required this.id,
+    required this.pattern,
+    GestureAction? action,
+    this.enabled = true,
+  }) : action = action ?? GestureAction();
+
+  MouseGestureBinding copyWith({String? id, String? pattern, GestureAction? action, bool? enabled}) {
+    return MouseGestureBinding(
+      id: id ?? this.id,
+      pattern: pattern ?? this.pattern,
+      action: action ?? this.action.copyWith(),
+      enabled: enabled ?? this.enabled,
+    );
+  }
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+        'id': id,
+        'pattern': pattern,
+        'action': action.toMap(),
+        'enabled': enabled,
+      };
+
+  factory MouseGestureBinding.fromMap(Map<String, dynamic> map) => MouseGestureBinding(
+        id: (map['id'] ?? '') as String,
+        pattern: (map['pattern'] ?? '') as String,
+        action: GestureAction.fromMap((map['action'] as Map<String, dynamic>?) ?? <String, dynamic>{}),
+        enabled: (map['enabled'] ?? true) as bool,
+      );
+}
+
+/// Settings for the hot corners + mouse gestures engine.
+/// Corner keys: 'tl', 'tr', 'bl', 'br' (corners of the primary display).
+class MouseControlConfig extends SavedMap {
+  bool hotCornersEnabled;
+  bool gesturesEnabled;
+  int cornerDwellMs;
+  int cornerSizePx;
+  Map<String, GestureAction> corners;
+  List<MouseGestureBinding> gestures;
+
+  MouseControlConfig({
+    this.hotCornersEnabled = false,
+    this.gesturesEnabled = false,
+    this.cornerDwellMs = 400,
+    this.cornerSizePx = 12,
+    Map<String, GestureAction>? corners,
+    List<MouseGestureBinding>? gestures,
+  })  : corners = corners ?? <String, GestureAction>{},
+        gestures = gestures ?? <MouseGestureBinding>[];
+
+  MouseControlConfig copyWith({
+    bool? hotCornersEnabled,
+    bool? gesturesEnabled,
+    int? cornerDwellMs,
+    int? cornerSizePx,
+    Map<String, GestureAction>? corners,
+    List<MouseGestureBinding>? gestures,
+  }) {
+    return MouseControlConfig(
+      hotCornersEnabled: hotCornersEnabled ?? this.hotCornersEnabled,
+      gesturesEnabled: gesturesEnabled ?? this.gesturesEnabled,
+      cornerDwellMs: cornerDwellMs ?? this.cornerDwellMs,
+      cornerSizePx: cornerSizePx ?? this.cornerSizePx,
+      corners: corners ??
+          this.corners.map((String key, GestureAction value) => MapEntry<String, GestureAction>(key, value.copyWith())),
+      gestures: gestures ?? this.gestures.map((MouseGestureBinding g) => g.copyWith()).toList(),
+    );
+  }
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+        'hotCornersEnabled': hotCornersEnabled,
+        'gesturesEnabled': gesturesEnabled,
+        'cornerDwellMs': cornerDwellMs,
+        'cornerSizePx': cornerSizePx,
+        'corners': corners.map((String key, GestureAction value) => MapEntry<String, dynamic>(key, value.toMap())),
+        'gestures': gestures.map((MouseGestureBinding g) => g.toMap()).toList(),
+      };
+
+  factory MouseControlConfig.fromMap(Map<String, dynamic> map) {
+    final Map<String, GestureAction> corners = <String, GestureAction>{};
+    final Object? rawCorners = map['corners'];
+    if (rawCorners is Map) {
+      for (final MapEntry<dynamic, dynamic> entry in rawCorners.entries) {
+        if (entry.key is String && entry.value is Map) {
+          corners[entry.key as String] =
+              GestureAction.fromMap((entry.value as Map<dynamic, dynamic>).cast<String, dynamic>());
+        }
+      }
+    }
+    return MouseControlConfig(
+      hotCornersEnabled: (map['hotCornersEnabled'] ?? false) as bool,
+      gesturesEnabled: (map['gesturesEnabled'] ?? false) as bool,
+      cornerDwellMs: (map['cornerDwellMs'] ?? 400) as int,
+      cornerSizePx: (map['cornerSizePx'] ?? 12) as int,
+      corners: corners,
+      gestures: (map['gestures'] as List<dynamic>? ?? <dynamic>[])
+          .map((dynamic e) => MouseGestureBinding.fromMap((e as Map<dynamic, dynamic>).cast<String, dynamic>()))
+          .toList(),
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+  factory MouseControlConfig.fromJson(String source) =>
+      MouseControlConfig.fromMap(json.decode(source) as Map<String, dynamic>);
+}

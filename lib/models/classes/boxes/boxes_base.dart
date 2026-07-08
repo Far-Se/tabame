@@ -915,6 +915,53 @@ class Boxes {
     return _workspaces;
   }
 
+  static List<WindowLayoutSnapshot> _windowLayouts = <WindowLayoutSnapshot>[];
+  static set windowLayouts(List<WindowLayoutSnapshot> list) {
+    _windowLayouts = list;
+    Boxes.updateSettings(
+      'WindowLayouts',
+      jsonEncode(list.map((WindowLayoutSnapshot snapshot) => snapshot.toMap()).toList()),
+    );
+  }
+
+  static List<WindowLayoutSnapshot> get windowLayouts {
+    if (_windowLayouts.isNotEmpty) return _windowLayouts;
+
+    final String savedLayoutsJson = pref.getString('WindowLayouts') ?? '';
+    if (savedLayoutsJson.isNotEmpty) {
+      try {
+        _windowLayouts = (jsonDecode(savedLayoutsJson) as List<dynamic>)
+            .map((dynamic layoutEntry) => WindowLayoutSnapshot.fromMap(layoutEntry as Map<String, dynamic>))
+            .toList();
+      } catch (_) {
+        _windowLayouts = <WindowLayoutSnapshot>[];
+      }
+    }
+    return _windowLayouts;
+  }
+
+  static MouseControlConfig? _mouseControl;
+  static set mouseControl(MouseControlConfig config) {
+    _mouseControl = config;
+    Boxes.updateSettings('MouseControl', config.toJson());
+  }
+
+  static MouseControlConfig get mouseControl {
+    if (_mouseControl != null) return _mouseControl!;
+
+    final String savedMouseControlJson = pref.getString('MouseControl') ?? '';
+    if (savedMouseControlJson.isNotEmpty) {
+      try {
+        _mouseControl = MouseControlConfig.fromJson(savedMouseControlJson);
+      } catch (_) {
+        _mouseControl = MouseControlConfig();
+      }
+    } else {
+      _mouseControl = MouseControlConfig();
+    }
+    return _mouseControl!;
+  }
+
   static bool _reloading = false;
 
   /// Live-reloads all settings from disk into memory and re-applies them to the
@@ -972,6 +1019,8 @@ class Boxes {
     _appCategories = <AppCategory>[];
     _quickGrids = <QuickGrid>[];
     _workspaces = <Workspace>[];
+    _windowLayouts = <WindowLayoutSnapshot>[];
+    _mouseControl = null;
     _taskBarRewrites = <String, String>{};
     _iconsRewrite = <String, String>{};
     _taskbarBadges = <String, List<String>>{};

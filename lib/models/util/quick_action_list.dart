@@ -7,6 +7,7 @@ import '../../widgets/itzy/quickmenu/button_app_audio.dart';
 import '../../widgets/itzy/quickmenu/button_apps.dart';
 import '../../widgets/itzy/quickmenu/button_audio.dart';
 import '../../widgets/itzy/quickmenu/button_authenticator.dart';
+import '../../widgets/itzy/quickmenu/button_bluetooth.dart';
 import '../../widgets/itzy/quickmenu/button_bookmarks.dart';
 import '../../widgets/itzy/quickmenu/button_brightness.dart';
 import '../../widgets/itzy/quickmenu/button_calculator.dart';
@@ -38,6 +39,8 @@ import '../../widgets/itzy/quickmenu/button_media_control.dart';
 import '../../widgets/itzy/quickmenu/button_memo.dart';
 import '../../widgets/itzy/quickmenu/button_menu_design.dart';
 import '../../widgets/itzy/quickmenu/button_mic_mute.dart';
+import '../../widgets/itzy/quickmenu/button_monitor_input.dart';
+import '../../widgets/itzy/quickmenu/button_mouse_control.dart';
 import '../../widgets/itzy/quickmenu/button_mouse_jiggler.dart';
 import '../../widgets/itzy/quickmenu/button_music_player.dart';
 import '../../widgets/itzy/quickmenu/button_notion.dart';
@@ -51,8 +54,8 @@ import '../../widgets/itzy/quickmenu/button_quickmenu_settings.dart';
 import '../../widgets/itzy/quickmenu/button_keystrokes.dart';
 import '../../widgets/itzy/quickmenu/button_present_mode.dart';
 import '../../widgets/itzy/quickmenu/button_quicksnap_standalone.dart';
-import '../../widgets/itzy/quickmenu/button_rewindly.dart';
 import '../../widgets/itzy/quickmenu/button_screen_recorder.dart';
+import '../../widgets/itzy/quickmenu/button_screen_ruler.dart';
 import '../../widgets/itzy/quickmenu/button_screendraw.dart';
 import '../../widgets/itzy/quickmenu/button_shutdown.dart';
 import '../../widgets/itzy/quickmenu/button_spotlight.dart';
@@ -73,6 +76,7 @@ import '../../widgets/itzy/quickmenu/button_vault.dart';
 import '../../widgets/itzy/quickmenu/button_virtual_desktop.dart';
 import '../../widgets/itzy/quickmenu/button_wallpapers.dart';
 import '../../widgets/itzy/quickmenu/button_weather.dart';
+import '../../widgets/itzy/quickmenu/button_window_layouts.dart';
 import '../../widgets/itzy/quickmenu/button_workspaces.dart';
 import '../../widgets/itzy/quickmenu/button_ytdlp.dart';
 import '../../widgets/itzy/quickmenu/toggle_windows_theme.dart';
@@ -230,6 +234,14 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.brightness_6_rounded,
     widget: () => const BrightnessButton(),
   ),
+  "MonitorInputButton": QuickAction(
+    icon: Icons.settings_input_hdmi_rounded,
+    widget: () => const MonitorInputButton(),
+  ),
+  "BluetoothButton": QuickAction(
+    icon: Icons.bluetooth_rounded,
+    widget: () => const BluetoothButton(),
+  ),
   "DiskCleanupButton": QuickAction(
     icon: Icons.cleaning_services_rounded,
     widget: () => const DiskCleanupButton(),
@@ -270,6 +282,10 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.draw_outlined,
     widget: () => const ScreenDrawButton(),
   ),
+  "ScreenRulerButton": QuickAction(
+    icon: Icons.straighten_rounded,
+    widget: () => const ScreenRulerButton(),
+  ),
   "PresentModeButton": QuickAction(
     icon: Icons.co_present_outlined,
     widget: () => const PresentModeButton(),
@@ -286,10 +302,10 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.camera,
     widget: () => const ScreenRecordingButton(),
   ),
-  "RewindlyButton": QuickAction(
-    icon: Icons.history_rounded,
-    widget: () => const RewindlyButton(),
-  ),
+  // "RewindlyButton": QuickAction(
+  //   icon: Icons.history_rounded,
+  //   widget: () => const RewindlyButton(),
+  // ),
   "SpotlightButton": QuickAction(
     icon: Icons.featured_video_rounded,
     widget: () => const SpotlightButton(),
@@ -382,6 +398,14 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "WorkspacesButton": QuickAction(
     icon: Icons.dashboard_customize_outlined,
     widget: () => const WorkspacesButton(),
+  ),
+  "WindowLayoutsButton": QuickAction(
+    icon: Icons.view_quilt_outlined,
+    widget: () => const WindowLayoutsButton(),
+  ),
+  "MouseControlButton": QuickAction(
+    icon: Icons.gesture,
+    widget: () => const MouseControlButton(),
   ),
   "QuickMenuDesignButton": QuickAction(
     icon: Icons.palette_rounded,

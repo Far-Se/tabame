@@ -13,12 +13,14 @@ import '../models/util/quickmenu_modal.dart';
 import 'launcher_actions_panel.dart';
 
 import '../models/classes/boxes.dart';
+import '../models/classes/saved_maps.dart';
 import '../models/converter.dart';
 import '../models/db/file_index_db.dart';
 import '../models/globals.dart';
 import '../models/google_translator.dart';
 import '../models/settings.dart';
 import '../models/util/system_power.dart';
+import '../models/win32/keys.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
 import '../models/win32/window.dart';
@@ -40,6 +42,7 @@ import 'launcher/search/bookmarks_search_handler.dart';
 import 'launcher/search/browser_tabs_search_handler.dart';
 import 'launcher/search/desktop_search_handler.dart';
 import 'launcher/search/launcher_search_context.dart';
+import 'launcher/search/recent_search_handler.dart';
 import 'launcher/search/search_handler.dart';
 import 'launcher/search/search_utils.dart';
 import 'launcher/search/windows_search_handler.dart';
@@ -70,6 +73,24 @@ class _ParsedLauncherTimer {
 
   final int minutes;
   final String message;
+}
+
+class _MediaCommandAction {
+  const _MediaCommandAction({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.vk,
+    required this.aliases,
+  });
+
+  final String id;
+  final String label;
+  final IconData icon;
+  final String vk;
+  final List<String> aliases;
+
+  bool matches(String query) => aliases.any((String alias) => alias.startsWith(query));
 }
 
 class _LauncherFunctionCommand {
@@ -317,6 +338,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       caption: 'Obsidian',
       prefix: 'o ',
       icon: Icons.menu_book_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'r ',
+      caption: 'Recent Files',
+      prefix: 'r ',
+      icon: Icons.history_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: 's ',
@@ -1209,6 +1236,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       case LauncherSearchMode.desktopOnly:
         FolderSearchHandler.handle(context);
         break;
+      case LauncherSearchMode.recentOnly:
+        RecentSearchHandler.handle(context);
+        break;
       case LauncherSearchMode.notionOnly:
         _handleNotionSearch(context);
         break;
@@ -1226,6 +1256,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         break;
       case LauncherSearchMode.functionCommand:
         _handleFunctionCommand(context);
+        break;
+      case LauncherSearchMode.mediaCommand:
+        _handleMediaCommand(context);
         break;
       default:
         if (searchMode == LauncherSearchMode.mixed && _isCurrencyShorthand(context.normalizedQuery)) {
@@ -1471,6 +1504,108 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         );
       },
     );
+  }
+
+  /// Matches the `m ` / `m1 ` .. `m5 ` media command prefix. With no digit the
+  /// command controls global media (media keys); with a digit it targets
+  /// `Boxes.appAudioControls[digit - 1]`.
+  static final RegExp _mediaCommandPrefixPattern = RegExp(r'^m([1-5])? ');
+
+  static const List<_MediaCommandAction> _mediaCommandActions = <_MediaCommandAction>[
+    _MediaCommandAction(
+      id: 'stop',
+      label: 'Stop',
+      icon: Icons.stop_rounded,
+      vk: VK.MEDIA_STOP,
+      aliases: <String>['s', 'stop'],
+    ),
+    _MediaCommandAction(
+      id: 'playPause',
+      label: 'Play / Pause',
+      icon: Icons.play_arrow_rounded,
+      vk: VK.MEDIA_PLAY_PAUSE,
+      aliases: <String>['p', 'play', 'pause'],
+    ),
+    _MediaCommandAction(
+      id: 'next',
+      label: 'Next',
+      icon: Icons.skip_next_rounded,
+      vk: VK.MEDIA_NEXT_TRACK,
+      aliases: <String>['n', 'next'],
+    ),
+    _MediaCommandAction(
+      id: 'previous',
+      label: 'Previous',
+      icon: Icons.skip_previous_rounded,
+      vk: VK.MEDIA_PREV_TRACK,
+      aliases: <String>['pr', 'prev', 'previous'],
+    ),
+  ];
+
+  void _handleMediaCommand(LauncherSearchContext context) {
+    final RegExpMatch? prefixMatch = _mediaCommandPrefixPattern.firstMatch(context.query);
+    final int? audioIndex = prefixMatch?.group(1) != null ? int.parse(prefixMatch!.group(1)!) - 1 : null;
+    final String input = context.normalizedQuery.trim().toLowerCase();
+
+    final List<_MediaCommandAction> matches = input.isEmpty
+        ? _mediaCommandActions
+        : _mediaCommandActions.where((_MediaCommandAction action) => action.matches(input)).toList();
+
+    if (matches.isEmpty) {
+      context.setResults(<LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'media-no-match',
+          title: 'No media command found',
+          subtitle: 'Try stop, play/pause, next, or previous',
+          icon: Icons.music_note_rounded,
+        )),
+      ], isSearching: false);
+      return;
+    }
+
+    context.setResults(
+      matches
+          .map((_MediaCommandAction action) => LauncherSearchResultItem.quickAction(
+                _buildMediaCommandAction(action, audioIndex),
+              ))
+          .toList(growable: false),
+      isSearching: false,
+    );
+  }
+
+  QuickActionMenuEntry _buildMediaCommandAction(_MediaCommandAction action, int? audioIndex) {
+    final String subtitle = audioIndex != null && audioIndex < Boxes.appAudioControls.length
+        ? Boxes.appAudioControls[audioIndex].name
+        : 'Global media control';
+    return _buildFunctionAction(
+      id: 'media:${action.id}:${audioIndex ?? 'global'}',
+      title: action.label,
+      subtitle: subtitle,
+      icon: action.icon,
+      searchTerms: <String>[action.label, ...action.aliases],
+      onExecute: () => _executeMediaCommand(action, audioIndex),
+    );
+  }
+
+  void _executeMediaCommand(_MediaCommandAction action, int? audioIndex) {
+    if (audioIndex != null && audioIndex >= 0 && audioIndex < Boxes.appAudioControls.length) {
+      final AppAudioControl ctl = Boxes.appAudioControls[audioIndex];
+      final bool hasWindow = WindowWatcher.list.any((Window w) => w.process.exe == ctl.exe) ||
+          TrayWatcher.trayList.any((TrayBarInfo t) => t.processExe == ctl.exe);
+      final String? appHotkey = switch (action.id) {
+        'next' => ctl.hotkeyNext,
+        'previous' => ctl.hotkeyPrev,
+        'playPause' => ctl.hotkeyPause,
+        _ => null,
+      };
+      if (hasWindow && appHotkey != null && appHotkey.isNotEmpty) {
+        WinKeys.send(appHotkey);
+        _finishLauncherFunctionExecution();
+        return;
+      }
+    }
+    WinKeys.single(action.vk, KeySentMode.normal);
+    _finishLauncherFunctionExecution();
   }
 
   void _createLauncherTimer(_ParsedLauncherTimer timer) {

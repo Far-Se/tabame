@@ -13,6 +13,7 @@ import 'package:window_manager/window_manager.dart';
 import '../logic/app_startup.dart';
 import '../models/classes/boxes.dart';
 import '../models/classes/hotkeys.dart';
+import '../models/win32/keys.dart';
 import '../models/win32/mixed.dart';
 
 /// Presentation Toolkit overlay.
@@ -181,9 +182,15 @@ class _PresentOverlayState extends State<PresentOverlay> with TabameListener {
   }
 
   // ---- Global hotkeys ------------------------------------------------------
+  // Plain hotkeys (no window/region filter) are dispatched natively with an
+  // empty `name`, so events are matched back by their hotkey string instead.
+  final Map<String, String> _hotkeyActions = <String, String>{};
+
   Future<void> _registerHotkeys() async {
+    _hotkeyActions.clear();
     List<Map<String, dynamic>> hk(String name, int vk, String keyLabel) {
       final List<String> mods = Hotkeys.normalizeModifiers(<String>['CTRL', 'ALT']);
+      _hotkeyActions["${mods.join('+')}+$keyLabel".toUpperCase()] = name;
       return <Map<String, dynamic>>[
         <String, dynamic>{
           "name": name,
@@ -212,8 +219,8 @@ class _PresentOverlayState extends State<PresentOverlay> with TabameListener {
       ...hk('present_magnifier', 0x5A, 'Z'), // Ctrl+Alt+Z
       ...hk('present_ruler', 0x52, 'R'), // Ctrl+Alt+R
       ...hk('present_anchor', 0x41, 'A'), // Ctrl+Alt+A
-      ...hk('present_increase', 0xBB, 'OEM_PLUS'), // Ctrl+Alt+Plus
-      ...hk('present_decrease', 0xBD, 'OEM_MINUS'), // Ctrl+Alt+Minus
+      ...hk('present_increase', keyMap["VK_P"]!, 'P'), // Ctrl+Alt+Plus
+      ...hk('present_decrease', keyMap["VK_L"]!, 'L'), // Ctrl+Alt+Minus
       ...hk('present_quit', 0x51, 'Q'), // Ctrl+Alt+Q
     ];
     await NativeHooks.runHotkeys(hotkeys);
@@ -222,7 +229,7 @@ class _PresentOverlayState extends State<PresentOverlay> with TabameListener {
   @override
   void onHotKeyEvent(HotkeyEvent hotkeyInfo) {
     if (hotkeyInfo.action != "releaseKbd") return;
-    switch (hotkeyInfo.name) {
+    switch (_hotkeyActions[hotkeyInfo.hotkey]) {
       case 'present_spotlight':
         setState(() => _tool = _tool == PresentTool.spotlight ? PresentTool.off : PresentTool.spotlight);
       case 'present_magnifier':
@@ -377,7 +384,7 @@ class _PresentHud extends StatelessWidget {
           border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
         ),
         child: const Text(
-          "Ctrl+Alt · S spotlight · Z magnifier · R ruler (A anchor) · +/- size · Q quit",
+          "Ctrl+Alt · S spotlight · Z magnifier · R ruler (A anchor) · P/L size · Q quit",
           style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600),
         ),
       ),
