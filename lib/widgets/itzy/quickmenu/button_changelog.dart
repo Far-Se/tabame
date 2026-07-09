@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
+import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../../pages/quickmenu.dart';
@@ -30,6 +31,7 @@ class CheckChangelogButtonState extends State<CheckChangelogButton> {
     return QuickActionItem(
       message: "See what's new!",
       icon: const Icon(Icons.newspaper),
+      hoverColor: Design.accentHue(58, saturation: 0.92),
       onTap: () {
         if (kReleaseMode) {
           QuickMenuFunctions.hideQuickMenu();

@@ -58,6 +58,7 @@ import '../../widgets/itzy/quickmenu/button_screen_recorder.dart';
 import '../../widgets/itzy/quickmenu/button_screen_ruler.dart';
 import '../../widgets/itzy/quickmenu/button_screendraw.dart';
 import '../../widgets/itzy/quickmenu/button_shutdown.dart';
+import '../../widgets/itzy/quickmenu/button_spotify.dart';
 import '../../widgets/itzy/quickmenu/button_spotlight.dart';
 import '../../widgets/itzy/quickmenu/button_steam.dart';
 import '../../widgets/itzy/quickmenu/button_subscription.dart';
@@ -306,6 +307,10 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   //   icon: Icons.history_rounded,
   //   widget: () => const RewindlyButton(),
   // ),
+  "SpotifyButton": QuickAction(
+    icon: Icons.music_note_rounded,
+    widget: () => const SpotifyButton(),
+  ),
   "SpotlightButton": QuickAction(
     icon: Icons.featured_video_rounded,
     widget: () => const SpotlightButton(),

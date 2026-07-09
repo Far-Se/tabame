@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/settings.dart';
-import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../../pages/launcher/plugins/plugin_gallery.dart';
 import '../../../pages/launcher/plugins/plugin_icons.dart';
 import '../../../pages/launcher/plugins/plugin_manifest.dart';
 import '../../../pages/launcher/plugins/plugin_registry.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 import '../../widgets/windows_scroll.dart';
 
 /// Top-bar entry point for the Launcher Plugins manager.
@@ -17,13 +16,10 @@ class PluginManagerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Launcher Plugins",
+    return ModalButton(
+      actionName: "Launcher Plugins",
       icon: const Icon(Icons.extension_outlined),
-      onTap: () => showQuickMenuModal(
-        context: context,
-        child: const PluginManagerPanel(),
-      ),
+      child: () => const PluginManagerPanel(),
     );
   }
 }
@@ -128,9 +124,8 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
           icon: gallery ? Icons.storefront_rounded : Icons.extension_rounded,
           buttonIcon: (gallery ? _galleryLoading : _reloading) ? Icons.hourglass_bottom_rounded : Icons.refresh_rounded,
           buttonTooltip: gallery ? "Refresh gallery" : "Reload plugins",
-          buttonPressed: gallery
-              ? (_galleryLoading ? null : () => _loadGallery(force: true))
-              : (_reloading ? null : _reload),
+          buttonPressed:
+              gallery ? (_galleryLoading ? null : () => _loadGallery(force: true)) : (_reloading ? null : _reload),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
@@ -615,14 +610,21 @@ class _GalleryCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (entry.keyword.isNotEmpty) ...<Widget>[
-                      const SizedBox(width: 6),
-                      _pill(entry.keyword, accent.withAlpha(22), accent),
-                    ],
-                    if (entry.runtime.isNotEmpty) ...<Widget>[
-                      const SizedBox(width: 4),
-                      _pill(entry.runtime, text.withAlpha(12), text.withAlpha(150)),
-                    ],
+                    if (onOpenHomepage != null) ...<Widget>[
+                      const SizedBox(height: 4),
+                      Tooltip(
+                        message: 'Open homepage',
+                        waitDuration: const Duration(milliseconds: 400),
+                        child: InkWell(
+                          onTap: onOpenHomepage,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(Icons.open_in_new_rounded, size: 13, color: text.withAlpha(110)),
+                          ),
+                        ),
+                      ),
+                    ]
                   ],
                 ),
                 if (entry.description.trim().isNotEmpty) ...<Widget>[
@@ -656,20 +658,13 @@ class _GalleryCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: <Widget>[
               _buildInstallAction(accent, text),
-              if (onOpenHomepage != null) ...<Widget>[
-                const SizedBox(height: 4),
-                Tooltip(
-                  message: 'Open homepage',
-                  waitDuration: const Duration(milliseconds: 400),
-                  child: InkWell(
-                    onTap: onOpenHomepage,
-                    borderRadius: BorderRadius.circular(6),
-                    child: Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: Icon(Icons.open_in_new_rounded, size: 13, color: text.withAlpha(110)),
-                    ),
-                  ),
-                ),
+              const SizedBox(height: 3),
+              if (entry.keyword.isNotEmpty) ...<Widget>[
+                _pill(entry.keyword, accent.withAlpha(22), accent),
+              ],
+              const SizedBox(height: 3),
+              if (entry.runtime.isNotEmpty) ...<Widget>[
+                _pill(entry.runtime, text.withAlpha(12), text.withAlpha(150)),
               ],
             ],
           ),
@@ -707,16 +702,16 @@ class _GalleryCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Icon(Icons.check_rounded, size: 12, color: text.withAlpha(150)),
-                const SizedBox(width: 4),
-                Text(
-                  'INSTALLED',
-                  style: TextStyle(
-                    fontSize: Design.baseFontSize - 0.5,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.4,
-                    color: text.withAlpha(150),
-                  ),
-                ),
+                // const SizedBox(width: 4),
+                // Text(
+                //   'INSTALLED',
+                //   style: TextStyle(
+                //     fontSize: Design.baseFontSize - 0.5,
+                //     fontWeight: FontWeight.w700,
+                //     letterSpacing: 0.4,
+                //     color: text.withAlpha(150),
+                //   ),
+                // ),
               ],
             ),
           ),

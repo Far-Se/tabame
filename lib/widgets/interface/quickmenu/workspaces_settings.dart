@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
@@ -912,6 +913,12 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
   late final TextEditingController _pathController;
   late final TextEditingController _paramsController;
   late final TextEditingController _hookToController;
+  // Geometry is stored as monitor-relative fractions (left/top/right/bottom) but
+  // edited here as integer percentages of position (X/Y) and size (W/H).
+  late final TextEditingController _xController;
+  late final TextEditingController _yController;
+  late final TextEditingController _wController;
+  late final TextEditingController _hController;
   late WorkspaceArea _area;
 
   @override
@@ -922,16 +929,37 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
     _pathController = TextEditingController(text: _area.executable);
     _paramsController = TextEditingController(text: _area.parameters);
     _hookToController = TextEditingController(text: _area.hookTo);
+    _xController = TextEditingController(text: _pct(_area.left));
+    _yController = TextEditingController(text: _pct(_area.top));
+    _wController = TextEditingController(text: _pct(_area.right - _area.left));
+    _hController = TextEditingController(text: _pct(_area.bottom - _area.top));
   }
+
+  String _pct(double fraction) => (fraction * 100).round().toString();
 
   @override
   void didUpdateWidget(covariant _WorkspaceAreaCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.area.windowTitle != widget.area.windowTitle) _titleController.text = widget.area.windowTitle;
-    if (oldWidget.area.executable != widget.area.executable) _pathController.text = widget.area.executable;
-    if (oldWidget.area.parameters != widget.area.parameters) _paramsController.text = widget.area.parameters;
-    if (oldWidget.area.hookTo != widget.area.hookTo) _hookToController.text = widget.area.hookTo;
+    // Compare against the controller's current text (not oldWidget). During typing
+    // the controller already holds the new value, so no reset fires — assigning
+    // `controller.text` would otherwise collapse the selection to offset -1
+    // (select-all), making the next keystroke replace the whole field.
+    if (widget.area.windowTitle != _titleController.text) _titleController.text = widget.area.windowTitle;
+    if (widget.area.executable != _pathController.text) _pathController.text = widget.area.executable;
+    if (widget.area.parameters != _paramsController.text) _paramsController.text = widget.area.parameters;
+    if (widget.area.hookTo != _hookToController.text) _hookToController.text = widget.area.hookTo;
+    _syncPct(_xController, widget.area.left);
+    _syncPct(_yController, widget.area.top);
+    _syncPct(_wController, widget.area.right - widget.area.left);
+    _syncPct(_hController, widget.area.bottom - widget.area.top);
     _area = widget.area.copyWith();
+  }
+
+  // Only rewrite when the underlying percentage actually changed (e.g. geometry
+  // refreshed from a live window or clamped on emit), so typing isn't disrupted.
+  void _syncPct(TextEditingController controller, double fraction) {
+    final int value = (fraction * 100).round();
+    if ((int.tryParse(controller.text) ?? -1) != value) controller.text = value.toString();
   }
 
   @override
@@ -940,16 +968,43 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
     _pathController.dispose();
     _paramsController.dispose();
     _hookToController.dispose();
+    _xController.dispose();
+    _yController.dispose();
+    _wController.dispose();
+    _hController.dispose();
     super.dispose();
   }
 
   void _emit() {
+    // Fall back to the current fraction (not 0) when a field is empty/invalid, so
+    // clearing a box to retype doesn't collapse the window's geometry.
+    final double left = _fracOr(_xController, _area.left);
+    final double top = _fracOr(_yController, _area.top);
+    final double width = _fracOr(_wController, _area.right - _area.left);
+    final double height = _fracOr(_hController, _area.bottom - _area.top);
+    final double right = (left + width).clamp(0.0, 1.0);
+    final double bottom = (top + height).clamp(0.0, 1.0);
     widget.onChanged(_area.copyWith(
       windowTitle: _titleController.text,
       executable: _pathController.text,
       parameters: _paramsController.text,
       hookTo: _hookToController.text,
+      left: left,
+      top: top,
+      right: right,
+      bottom: bottom,
     ));
+  }
+
+  double _fracOr(TextEditingController controller, double fallback) {
+    final double? value = double.tryParse(controller.text.trim());
+    if (value == null) return fallback.clamp(0.0, 1.0);
+    return (value / 100).clamp(0.0, 1.0);
+  }
+
+  void _setMonitor(int monitorNumber) {
+    setState(() => _area = _area.copyWith(monitorNumber: monitorNumber));
+    _emit();
   }
 
   void _toggleHook(String hook) {
@@ -1079,6 +1134,29 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
                   ),
                   const SizedBox(height: 10),
                   Text(
+                    'Position & size',
+                    style: TextStyle(
+                        fontSize: Design.baseFontSize + 1,
+                        fontWeight: FontWeight.w700,
+                        color: widget.onSurface.withValues(alpha: 0.6)),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: <Widget>[
+                      Expanded(child: _numField(label: 'X %', controller: _xController)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _numField(label: 'Y %', controller: _yController)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _numField(label: 'W %', controller: _wController)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _numField(label: 'H %', controller: _hController)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _monitorField(),
+                  const SizedBox(height: 10),
+                  Text(
                     'Hooks',
                     style: TextStyle(
                         fontSize: Design.baseFontSize + 1,
@@ -1160,6 +1238,90 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
               isDense: true,
             ),
             onChanged: (_) => onChanged(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _numField({
+    required String label,
+    required TextEditingController controller,
+  }) {
+    final Color onSurface = widget.onSurface;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          label,
+          style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.6)),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          decoration: BoxDecoration(
+            color: onSurface.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: onSurface.withValues(alpha: 0.10)),
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            inputFormatters: <TextInputFormatter>[
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(3),
+            ],
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: Design.baseFontSize + 2),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              isDense: true,
+            ),
+            onChanged: (_) => _emit(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _monitorField() {
+    final Color onSurface = widget.onSurface;
+    final List<int> numbers = Monitor.monitorIds.values.toSet().toList()..sort();
+    final int current = widget.area.monitorNumber;
+    final List<DropdownMenuItem<int>> items = <DropdownMenuItem<int>>[
+      const DropdownMenuItem<int>(value: -1, child: Text('Auto (cursor monitor)')),
+      for (final int n in numbers) DropdownMenuItem<int>(value: n, child: Text('Monitor $n')),
+      // Keep a disconnected saved monitor selectable so it isn't silently reset.
+      if (current > 0 && !numbers.contains(current))
+        DropdownMenuItem<int>(value: current, child: Text('Monitor $current')),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'Monitor',
+          style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.6)),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: onSurface.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: onSurface.withValues(alpha: 0.10)),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: current <= 0 ? -1 : current,
+              isExpanded: true,
+              isDense: true,
+              icon: Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: widget.accent),
+              style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface),
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              items: items,
+              onChanged: (int? value) => _setMonitor(value ?? -1),
+            ),
           ),
         ),
       ],

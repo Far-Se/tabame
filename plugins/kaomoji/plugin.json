@@ -1,0 +1,8 @@
+{
+  "name": "Kaomoji Search",
+  "keyword": "kao",
+  "runtime": "node",
+  "entry": "main.js",
+  "icon": "emoji",
+  "description": "Search kaomoji library"
+}

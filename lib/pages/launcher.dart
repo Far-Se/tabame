@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sqlite3/sqlite3.dart' hide Row;
-import 'package:tabamewin32/tabamewin32.dart' show BrowserTab, BrowserTabs;
+import 'package:tabamewin32/tabamewin32.dart' show BrowserTab, BrowserTabs, MediaSession;
 import 'package:window_manager/window_manager.dart';
 import '../models/tray_watcher.dart';
 import '../models/util/quickmenu_modal.dart';
@@ -19,6 +19,7 @@ import '../models/db/file_index_db.dart';
 import '../models/globals.dart';
 import '../models/google_translator.dart';
 import '../models/settings.dart';
+import '../models/util/spotify_controller.dart';
 import '../models/util/system_power.dart';
 import '../models/win32/keys.dart';
 import '../models/win32/win32.dart';
@@ -359,6 +360,18 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       icon: Icons.terminal_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'm or m[1-5]',
+      caption: 'Media Control',
+      prefix: 'm ',
+      icon: Icons.music_note,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'sp ',
+      caption: 'Spotify',
+      prefix: 'sp ',
+      icon: Icons.music_note_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: r'$',
       caption: 'Functions',
       prefix: r'$',
@@ -446,6 +459,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     final String pluginQuery = PluginRegistry.queryAfterKeyword(query, plugin);
     final bool switching = _activePlugin?.id != plugin.id;
     _activePlugin = plugin;
+    Globals.isLauncherPluginActive = true;
 
     if (switching) {
       setState(() {
@@ -472,6 +486,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     _pluginQueryDebounce?.cancel();
     if (_activePlugin == null && _pluginFrame == null) return;
     _activePlugin = null;
+    Globals.isLauncherPluginActive = false;
     unawaited(_pluginHost.deactivate());
     _restorePluginWindowWidth();
     if (mounted) setState(() => _pluginFrame = null);
@@ -646,6 +661,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
               activeIndex: activeIndex,
               isRepeating: isRepeating,
               onTapItem: (int i) {
+                print("Tap");
                 _setPluginSelection(i);
                 _submitPluginItem();
               },
@@ -665,11 +681,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       for (final PluginManifest m in PluginRegistry.manifests)
         if (m.enabled)
           LauncherSearchResultItem.shortcut(LauncherShortcut(
-          label: m.keyword,
-          caption: m.name,
-          prefix: '${m.keyword} ',
-          icon: Icons.extension_rounded,
-        )),
+            label: m.keyword,
+            caption: m.name,
+            prefix: '${m.keyword} ',
+            icon: Icons.extension_rounded,
+          )),
     ];
   }
 
@@ -1270,6 +1286,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       case LauncherSearchMode.mediaCommand:
         _handleMediaCommand(context);
         break;
+      case LauncherSearchMode.spotifyCommand:
+        _handleSpotifyCommand(context);
+        break;
       default:
         if (searchMode == LauncherSearchMode.mixed && _isCurrencyShorthand(context.normalizedQuery)) {
           _handleCurrencyShorthand(context);
@@ -1615,6 +1634,174 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       }
     }
     WinKeys.single(action.vk, KeySentMode.normal);
+    _finishLauncherFunctionExecution();
+  }
+
+  // ── Spotify ("sp ") ────────────────────────────────────────────────────────
+  // Drives the Spotify desktop app through SMTC via [SpotifyController]. Shows a
+  // now-playing hero row (Enter toggles play/pause) plus transport controls
+  // filtered by the text after `sp `.
+
+  static const List<({String id, String label, IconData icon, String command, List<String> aliases})>
+      _spotifyControlActions = <({String id, String label, IconData icon, String command, List<String> aliases})>[
+    (
+      id: 'playPause',
+      label: 'Play / Pause',
+      icon: Icons.play_arrow_rounded,
+      command: SpotifyController.cmdTogglePlayPause,
+      aliases: <String>['p', 'play', 'pause', 'toggle'],
+    ),
+    (
+      id: 'next',
+      label: 'Next Track',
+      icon: Icons.skip_next_rounded,
+      command: SpotifyController.cmdNext,
+      aliases: <String>['n', 'next', 'skip', 'forward'],
+    ),
+    (
+      id: 'previous',
+      label: 'Previous Track',
+      icon: Icons.skip_previous_rounded,
+      command: SpotifyController.cmdPrevious,
+      aliases: <String>['pr', 'prev', 'previous', 'back'],
+    ),
+  ];
+
+  Future<void> _handleSpotifyCommand(LauncherSearchContext context) async {
+    context.setSearching(true);
+
+    final MediaSession? session = await SpotifyController.fetchSession();
+    if (!context.isActiveSearch(context.requestId, context.query)) return;
+
+    if (session == null) {
+      context.setResults(<LauncherSearchResultItem>[
+        LauncherSearchResultItem.quickAction(_buildFunctionAction(
+          id: 'spotify:launch',
+          title: 'Open Spotify',
+          subtitle: "Spotify isn't running — launch it",
+          icon: Icons.launch_rounded,
+          searchTerms: <String>['spotify', 'open', 'launch'],
+          onExecute: () {
+            SpotifyController.launchApp();
+            _finishLauncherFunctionExecution();
+          },
+        )),
+      ], isSearching: false);
+      return;
+    }
+
+    final String input = context.normalizedQuery.trim().toLowerCase();
+    final List<({String id, String label, IconData icon, String command, List<String> aliases})> matches =
+        input.isEmpty
+            ? _spotifyControlActions
+            : _spotifyControlActions
+                .where((({String id, String label, IconData icon, String command, List<String> aliases}) a) =>
+                    a.aliases.any((String alias) => alias.startsWith(input)))
+                .toList(growable: false);
+
+    final List<LauncherSearchResultItem> results = <LauncherSearchResultItem>[
+      // Now-playing hero row is always shown; Enter on it toggles play/pause.
+      if (input.isEmpty) LauncherSearchResultItem.quickAction(_buildSpotifyNowPlaying(session)),
+      for (final ({String id, String label, IconData icon, String command, List<String> aliases}) action in matches)
+        LauncherSearchResultItem.quickAction(_buildFunctionAction(
+          id: 'spotify:${action.id}',
+          title: action.label,
+          subtitle: '${session.title} — ${session.artist}',
+          icon: action.icon,
+          searchTerms: <String>[action.label, ...action.aliases],
+          onExecute: () => _executeSpotifyCommand(session, action.command),
+        )),
+    ];
+
+    if (results.isEmpty) {
+      context.setResults(<LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'spotify-no-match',
+          title: 'No Spotify command found',
+          subtitle: 'Try play/pause, next, or previous',
+          icon: Icons.music_note_rounded,
+        )),
+      ], isSearching: false);
+      return;
+    }
+
+    context.setResults(results, isSearching: false);
+  }
+
+  QuickActionMenuEntry _buildSpotifyNowPlaying(MediaSession session) {
+    final ImageProvider? art = session.thumbnailImage;
+    return QuickActionMenuEntry(
+      id: 'spotify:nowPlaying',
+      title: session.title,
+      searchTerms: <String>[session.title, session.artist, 'spotify', 'now playing'],
+      onExecute: () => _executeSpotifyCommand(session, SpotifyController.cmdTogglePlayPause),
+      builder: (BuildContext context) {
+        final ThemeData theme = Theme.of(context);
+        final Color accent = Design.accent;
+        final Color onSurface = theme.colorScheme.onSurface;
+        final String title = session.title.isEmpty ? 'Spotify' : session.title;
+        final String artist = session.artist.isEmpty ? 'Unknown artist' : session.artist;
+        return InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => _executeSpotifyCommand(session, SpotifyController.cmdTogglePlayPause),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: <Widget>[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: art != null
+                        ? Image(image: art, fit: BoxFit.cover)
+                        : Container(
+                            color: accent.withAlpha(24),
+                            child: Icon(Icons.music_note_rounded, size: 20, color: accent),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: onSurface,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        artist,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: onSurface.withAlpha(140),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  session.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  size: 20,
+                  color: accent,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _executeSpotifyCommand(MediaSession session, String command) {
+    unawaited(SpotifyController.command(session, command));
     _finishLauncherFunctionExecution();
   }
 

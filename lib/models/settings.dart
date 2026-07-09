@@ -91,6 +91,13 @@ class Design {
   static bool get hasBackdrop => Design.backdropType.isNotEmpty && user.activeBackdropPath.isNotEmpty;
   static final TextStyle fontSize2Alpha80 =
       TextStyle(fontSize: baseFontSize + 2, color: user.themeColors.text.withAlpha(80));
+  static Color accentHue(int hue, {double saturation = 1.0}) {
+    final HSLColor accentHsl = HSLColor.fromColor(Design.accent);
+    return accentHsl
+        .withHue((accentHsl.hue + hue) % 360)
+        .withSaturation((accentHsl.saturation * saturation).clamp(0.0, 1.0))
+        .toColor();
+  }
 }
 
 class C {

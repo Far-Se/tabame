@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes/quick_menu_box.dart';
+import '../../../models/settings.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/quick_actions_item.dart';
@@ -15,6 +16,7 @@ class ScreenRulerButton extends StatelessWidget {
     return QuickActionItem(
       message: "Screen Ruler",
       icon: const Icon(Icons.straighten_rounded),
+      hoverColor: Design.accentHue(58, saturation: 0.92),
       onTap: () {
         final int windowHwnd = Win32.findWindow("Tabame Screen Ruler");
         if (windowHwnd != 0) {

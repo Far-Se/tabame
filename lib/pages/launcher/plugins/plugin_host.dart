@@ -34,6 +34,12 @@ class LauncherPluginHost {
   int _rev = 0;
   bool _closing = false;
 
+  /// Serializes stdin writes. Each `writeln` + `flush` must fully complete
+  /// before the next starts: `flush()` temporarily marks the sink as "bound to
+  /// a stream", and writing during that window throws `StateError`. Chaining
+  /// through this future guarantees writes never overlap.
+  Future<void> _writeChain = Future<void>.value();
+
   PluginManifest? get activeManifest => _active;
   bool get isActive => _process != null && _active != null;
 
@@ -128,15 +134,19 @@ class LauncherPluginHost {
   void _send(Map<String, Object?> message) {
     final Process? process = _process;
     if (process == null || _closing) return;
-    try {
-      process.stdin.writeln(jsonEncode(message));
-      // Flush so keystroke/select/action events reach the child immediately.
-      // Without this the sink can buffer writes and the plugin appears frozen.
-      // Swallow flush errors (the pipe may close as the plugin exits).
-      unawaited(process.stdin.flush().catchError((Object _) {}));
-    } catch (error, stack) {
+    final String encoded = jsonEncode(message);
+    // Chain behind any in-flight write so `writeln` never runs while a previous
+    // `flush()` is still pending (which throws "StreamSink is bound to a
+    // stream"). Flushing each line keeps keystroke/select/action events
+    // reaching the child immediately instead of sitting in the sink buffer.
+    _writeChain = _writeChain.then((_) async {
+      if (_process != process || _closing) return; // Superseded/shut down.
+      process.stdin.writeln(encoded);
+      await process.stdin.flush();
+    }).catchError((Object error, StackTrace stack) {
+      // The pipe may close as the plugin exits; log but keep the chain alive.
       unawaited(ErrorLogger.log('LauncherPluginHost', 'stdin write failed: $error', stack));
-    }
+    });
   }
 
   /// Gracefully stops the current plugin: send `close`, then kill after a short
@@ -153,6 +163,9 @@ class LauncherPluginHost {
     _stderrSub = null;
 
     if (process == null) return;
+    // Let any in-flight write drain before sending `close`, so the two don't
+    // overlap on the sink (see _send).
+    await _writeChain.catchError((Object _) {});
     try {
       process.stdin.writeln(jsonEncode(<String, Object?>{'type': 'close'}));
       await process.stdin.flush();

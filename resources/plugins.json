@@ -50,6 +50,21 @@
       }
     },
     {
+      "id": "kao",
+      "name": "Kaomoji Search",
+      "keyword": "kao",
+      "description": "Search Kaomoji ♥(ˆ⌣ˆԅ)",
+      "icon": "emoji",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/kaomoji",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/kaomoji/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/kaomoji/main.js"
+      }
+    },
+    {
       "id": "timezone",
       "name": "Timezone Converter",
       "keyword": "tz",

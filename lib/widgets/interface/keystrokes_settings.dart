@@ -65,7 +65,7 @@ class _KeystrokesSettingsPageState extends State<KeystrokesSettingsPage> {
           const SizedBox(height: 6),
           Text(
             "Shows the keys you press and where you click, on top of everything — "
-            "for screencasts, tutorials and live demos. Pairs with the Screen Recorder / Rewindly.",
+            "for screencasts, tutorials and live demos. Pairs with the Screen Recorder.",
             style: TextStyle(color: scheme.onSurface.withValues(alpha: 0.65), fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 20),

@@ -17,6 +17,7 @@ enum LauncherSearchMode {
   timerCommand,
   functionCommand,
   mediaCommand,
+  spotifyCommand,
 }
 
 class LauncherQuery {
@@ -46,6 +47,7 @@ class LauncherQuery {
 
   static LauncherSearchMode _modeFor(String query) {
     if (query.startsWith('/')) return LauncherSearchMode.actionsOnly;
+    if (query == 'sp' || query.startsWith('sp ')) return LauncherSearchMode.spotifyCommand;
     if (_mediaCommandPrefixPattern.hasMatch(query)) return LauncherSearchMode.mediaCommand;
     if (query.startsWith(r'$')) return LauncherSearchMode.functionCommand;
     if (query.startsWith('.')) return LauncherSearchMode.windowsOnly;
@@ -68,6 +70,8 @@ class LauncherQuery {
   }
 
   static String _normalizedFor(String query) {
+    if (query == 'sp') return '';
+    if (query.startsWith('sp ')) return query.substring(3).trimLeft();
     final RegExpMatch? mediaMatch = _mediaCommandPrefixPattern.firstMatch(query);
     if (mediaMatch != null) return query.substring(mediaMatch.end).trimLeft();
     if (query.startsWith('timer ')) return query.substring(6).trimLeft();

@@ -255,17 +255,16 @@ class _WorkspacesPanelState extends State<WorkspacesPanel> {
 
     final String areaExe = area.executable.toLowerCase();
     final String windowExe = window.process.exePath.toLowerCase();
-    final String windowTitle = window.title.toLowerCase();
-    final String areaTitle = area.windowTitle.toLowerCase();
 
-    final bool exeMatch = windowExe == areaExe ||
+    // Reuse is gated on the executable only. The saved title reflects whatever the
+    // window showed at capture time (e.g. "Inbox - Gmail - Chrome") and drifts for
+    // browsers/editors, so it must not decide whether an already-open app counts as
+    // a match — otherwise we'd relaunch an app that is already running. The title
+    // still ranks candidates in _findMatchingWindow when several windows share an exe.
+    return windowExe == areaExe ||
         windowExe.endsWith(areaExe) ||
         areaExe.endsWith(windowExe) ||
         window.process.exe.toLowerCase() == areaExe.split('\\').last;
-    if (!exeMatch) return false;
-
-    if (areaTitle.isEmpty) return true;
-    return windowTitle.contains(areaTitle) || areaTitle.contains(windowTitle);
   }
 
   @override

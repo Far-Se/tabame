@@ -4,7 +4,7 @@
     <p><em>A taskbar replacement that turned into the Windows toolbox I always wanted.</em></p>
 </div>-->
 
-![promote](https://github.com/user-attachments/assets/db32c793-7358-4307-a4b1-3cdbc7167cb7)
+![promote](https://raw.githubusercontent.com/far-se/tabame/main/resources/poster.png)
 
 <!--![promote](https://user-images.githubusercontent.com/20853986/204137435-68a6697c-274a-4c81-807e-5ae4c6a2710f.png#gh-light-mode-only)
 
@@ -343,9 +343,6 @@ QuickActions are the building blocks of Tabame. You can put them on the QuickMen
 - **Subscription** - track recurring subscriptions and what they cost you.
 - **ClaudeUsage** - keep an eye on your Claude/Anthropic API usage.
 
-| You can bind the QuickActions Menu to a hotkey and reach almost everything from one place. | <video src="https://user-images.githubusercontent.com/20853986/200881569-5951da57-752f-43a6-9ec4-88463daa2ef8.mp4" width="400px"></video> |
-| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-
 ---
 
 # 🪟 QuickSnap
@@ -357,7 +354,7 @@ My take on PowerToys FancyZones, for when the built-in Windows snapping isn't fl
 
 You can also **hook windows together**: focus one and the others come up with it. Right click a window in the QuickMenu to set that up - handy for keeping a chat window glued to whatever you're working in.
 
-https://user-images.githubusercontent.com/20853986/200880366-2eaca57c-c4f3-4fe0-8b9c-e5729c3ca80b.mp4
+![quick_snap](https://raw.githubusercontent.com/far-se/tabame/main/resources/quicksnap.gif)
 
 ---
 
@@ -407,7 +404,9 @@ Draw straight on top of the desktop - great for presentations or explaining some
 - Text with font and background control.
 - A toggleable grid and keyboard shortcuts to keep it fast.
 
-## Screen Capture
+![screen_draw](https://raw.githubusercontent.com/far-se/tabame/main/resources/screen_draw.gif)
+
+## Fancyshot
 
 Take a screenshot and edit it right there, no jumping to another app.
 
@@ -415,6 +414,8 @@ Take a screenshot and edit it right there, no jumping to another app.
 - Blur or pixelate sensitive info before you save.
 - Save to disk or copy straight to the clipboard.
 - Markup tools (rulers, arrows, text) for documentation.
+
+![1666548921040895](https://user-images.githubusercontent.com/20853986/197408844-5a706e3f-685d-49ff-b41f-d45f03ef5da4.png)
 
 ## Photo Editor
 
@@ -455,8 +456,6 @@ Dim and blur the whole screen except the part you care about.
 - An 11×11 grid so you can land on the exact pixel.
 - Hex/RGB copied straight to the clipboard.
 - Handy for design work and debugging.
-
-![1666548921040895](https://user-images.githubusercontent.com/20853986/197408844-5a706e3f-685d-49ff-b41f-d45f03ef5da4.png)
 
 ---
 

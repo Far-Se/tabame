@@ -1498,6 +1498,8 @@ class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
   Widget _buildControls(Color accent) {
     return Row(
       mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         if (widget.session.canSkipPrevious)
           _ControlBtn(
@@ -1537,15 +1539,20 @@ class _ControlBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // play_arrow_rounded's glyph sits lower in its em-square than pause_rounded's, so nudge it up to align.
+    final double dy = user.expandedTaskbar ? 0 : (isMain ? -2 : 0);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(4),
       child: Container(
         padding: const EdgeInsets.all(4),
-        child: Icon(
-          icon,
-          size: isMain ? 22 : 18,
-          color: accent.withAlpha(200),
+        child: Transform.translate(
+          offset: Offset(0, dy),
+          child: Icon(
+            icon,
+            size: isMain ? 22 : 18,
+            color: accent.withAlpha(200),
+          ),
         ),
       ),
     );

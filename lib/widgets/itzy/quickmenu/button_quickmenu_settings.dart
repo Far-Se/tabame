@@ -8,12 +8,12 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/tray_watcher.dart';
 import '../../../models/util/quick_action_list.dart';
-import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/extracted_icon.dart';
 import '../../widgets/mini_switch.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 import '../../widgets/windows_scroll.dart';
 
@@ -22,24 +22,10 @@ class QuickMenuSettingsButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomTooltip(
-      message: "QuickMenu Settings",
-      child: SizedBox(
-        width: 25,
-        child: IconButton(
-          padding: EdgeInsets.zero,
-          splashRadius: 25,
-          icon: const Icon(Icons.tune_rounded),
-          onPressed: () {
-            showQuickMenuModal(
-              context: context,
-              heightFactor: 0.92,
-              backdropFilter: false,
-              child: const _QMSettingsPanel(),
-            );
-          },
-        ),
-      ),
+    return ModalButton(
+      actionName: "QuickMenu Settings",
+      icon: const Icon(Icons.tune_rounded),
+      child: () => const _QMSettingsPanel(),
     );
   }
 }

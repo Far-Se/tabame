@@ -213,7 +213,10 @@ class _MouseControlPanelState extends State<MouseControlPanel> {
       decoration: BoxDecoration(
         color: isSet ? Design.accent.withAlpha(10) : Design.text.withAlpha(7),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: expanded ? Design.accent.withAlpha(70) : (isSet ? Design.accent.withAlpha(30) : Design.text.withAlpha(16))),
+        border: Border.all(
+            color: expanded
+                ? Design.accent.withAlpha(70)
+                : (isSet ? Design.accent.withAlpha(30) : Design.text.withAlpha(16))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -532,112 +535,119 @@ class _ActionEditorState extends State<_ActionEditor> {
   Widget build(BuildContext context) {
     final String type = widget.action.type;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            _typeChip('Function', 'function'),
-            const SizedBox(width: 5),
-            _typeChip('Popup', 'popup'),
-            const SizedBox(width: 5),
-            _typeChip('Command', 'command'),
-            const SizedBox(width: 5),
-            _typeChip('Keys', 'keys'),
-            const Spacer(),
-            if (widget.onClear != null)
-              InkWell(
-                onTap: widget.onClear,
-                borderRadius: BorderRadius.circular(6),
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Text(
-                    'CLEAR',
-                    style: TextStyle(
-                      fontSize: Design.baseFontSize - 0.5,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.4,
-                      color: Design.text.withAlpha(120),
+    return Material(
+      type: MaterialType.transparency,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                _typeChip('Function', 'function'),
+                const SizedBox(width: 5),
+                _typeChip('Popup', 'popup'),
+                const SizedBox(width: 5),
+                _typeChip('Command', 'command'),
+                const SizedBox(width: 5),
+                _typeChip('Keys', 'keys'),
+                // const Spacer(),
+                if (widget.onClear != null)
+                  InkWell(
+                    onTap: widget.onClear,
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Text(
+                        'CLEAR',
+                        style: TextStyle(
+                          fontSize: Design.baseFontSize - 0.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
+                          color: Design.text.withAlpha(120),
+                        ),
+                      ),
                     ),
                   ),
+              ],
+            ),
+          ),
+          if (type == 'function' || type == 'popup') ...<Widget>[
+            const SizedBox(height: 7),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: Design.text.withAlpha(8),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Design.text.withAlpha(20)),
+              ),
+              child: DropdownButton<String>(
+                value: widget.action.value.isEmpty ? null : widget.action.value,
+                isDense: true,
+                isExpanded: true,
+                underline: const SizedBox.shrink(),
+                hint: Text('Pick…', style: TextStyle(fontSize: Design.baseFontSize + 1)),
+                style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text),
+                items: <DropdownMenuItem<String>>[
+                  for (final String option
+                      in type == 'function' ? HotKeyInfo.tabameFunctionsMap.keys.toList() : HotKeyInfo.quickMenuPopups)
+                    DropdownMenuItem<String>(value: option, child: Text(option)),
+                ],
+                onChanged: (String? value) {
+                  if (value == null) return;
+                  widget.onChanged(GestureAction(type: type, value: value));
+                },
+              ),
+            ),
+          ],
+          if (type == 'command') ...<Widget>[
+            const SizedBox(height: 7),
+            TextField(
+              controller: _commandController,
+              style: TextStyle(fontSize: Design.baseFontSize + 1),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'Path, URL or command',
+                hintStyle: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(90)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Design.text.withAlpha(30)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Design.text.withAlpha(30)),
                 ),
               ),
+              onChanged: (String value) => widget.onChanged(GestureAction(type: 'command', value: value.trim())),
+            ),
           ],
-        ),
-        if (type == 'function' || type == 'popup') ...<Widget>[
-          const SizedBox(height: 7),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: Design.text.withAlpha(8),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Design.text.withAlpha(20)),
+          if (type == 'keys') ...<Widget>[
+            const SizedBox(height: 7),
+            TextField(
+              controller: _keysController,
+              style: TextStyle(fontSize: Design.baseFontSize + 1),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'e.g. {CTRL}C or {#WIN}{^WIN}',
+                hintStyle: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(90)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Design.text.withAlpha(30)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Design.text.withAlpha(30)),
+                ),
+              ),
+              onChanged: (String value) => widget.onChanged(GestureAction(type: 'keys', value: value.trim())),
             ),
-            child: DropdownButton<String>(
-              value: widget.action.value.isEmpty ? null : widget.action.value,
-              isDense: true,
-              isExpanded: true,
-              underline: const SizedBox.shrink(),
-              hint: Text('Pick…', style: TextStyle(fontSize: Design.baseFontSize + 1)),
-              style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text),
-              items: <DropdownMenuItem<String>>[
-                for (final String option in type == 'function'
-                    ? HotKeyInfo.tabameFunctionsMap.keys.toList()
-                    : HotKeyInfo.quickMenuPopups)
-                  DropdownMenuItem<String>(value: option, child: Text(option)),
-              ],
-              onChanged: (String? value) {
-                if (value == null) return;
-                widget.onChanged(GestureAction(type: type, value: value));
-              },
-            ),
-          ),
+          ],
         ],
-        if (type == 'command') ...<Widget>[
-          const SizedBox(height: 7),
-          TextField(
-            controller: _commandController,
-            style: TextStyle(fontSize: Design.baseFontSize + 1),
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: 'Path, URL or command',
-              hintStyle: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(90)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Design.text.withAlpha(30)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Design.text.withAlpha(30)),
-              ),
-            ),
-            onChanged: (String value) => widget.onChanged(GestureAction(type: 'command', value: value.trim())),
-          ),
-        ],
-        if (type == 'keys') ...<Widget>[
-          const SizedBox(height: 7),
-          TextField(
-            controller: _keysController,
-            style: TextStyle(fontSize: Design.baseFontSize + 1),
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: 'e.g. {CTRL}C or {#WIN}{^WIN}',
-              hintStyle: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(90)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Design.text.withAlpha(30)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Design.text.withAlpha(30)),
-              ),
-            ),
-            onChanged: (String value) => widget.onChanged(GestureAction(type: 'keys', value: value.trim())),
-          ),
-        ],
-      ],
+      ),
     );
   }
 

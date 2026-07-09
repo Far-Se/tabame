@@ -494,6 +494,7 @@ class QuickMenuState extends State<QuickMenu>
     isresizing = false;
     final Size size = await windowManager.getSize();
     if (Globals.quickMenuPage == QuickMenuPage.launcher) {
+      if (Globals.isLauncherPluginActive == true) return;
       Boxes.launcherSizeWidth = size.width;
       Boxes.updateSettings("launcherSizeWidth", size.width);
     } else {

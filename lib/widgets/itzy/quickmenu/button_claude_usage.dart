@@ -1,25 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/settings.dart';
-import '../../../models/util/quickmenu_modal.dart';
 import '../../../services/claude_usage_service.dart';
+import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
-import '../../widgets/quick_actions_item.dart';
 
 class ClaudeUsageButton extends StatelessWidget {
   const ClaudeUsageButton({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "Claude Usage",
+    return ModalButton(
+      actionName: "Claude Usage",
       icon: const Icon(Icons.bar_chart_rounded),
-      onTap: () async {
-        showQuickMenuModal(
-          context: context,
-          child: const ClaudeUsagePanel(),
-        );
-      },
+      child: () => const ClaudeUsagePanel(),
     );
   }
 }
