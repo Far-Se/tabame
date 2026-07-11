@@ -87,7 +87,7 @@ class PluginGalleryEntry {
 /// Fetches the community plugin index and installs plugins into
 /// `%localappdata%\Tabame\plugins\<id>\`.
 abstract final class PluginGallery {
-  static const String indexUrl = 'https://raw.githubusercontent.com/Far-Se/tabame/master/resources/plugins.json';
+  static const String indexUrl = 'https://raw.githubusercontent.com/Far-Se/tabame/main/resources/plugins.json';
 
   static List<PluginGalleryEntry>? _cache;
   static List<PluginGalleryEntry>? get cached => _cache;
@@ -96,9 +96,8 @@ abstract final class PluginGallery {
     if (!force && _cache != null) return _cache!;
 
     // Hour-based cache buster, same trick as the sponsor.json fetch.
-    final http.Response response = await http
-        .get(Uri.parse('$indexUrl?e=${DateTime.now().hour}'))
-        .timeout(const Duration(seconds: 10));
+    final http.Response response =
+        await http.get(Uri.parse('$indexUrl?e=${DateTime.now().hour}')).timeout(const Duration(seconds: 10));
     if (response.statusCode != 200) {
       throw HttpException('Gallery index returned HTTP ${response.statusCode}');
     }

@@ -10,11 +10,11 @@
       "runtime": "node",
       "author": "Far-Se",
       "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/caniuse",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/caniuse",
       "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/caniuse/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/caniuse/main.js",
-        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/caniuse/README.md"
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/caniuse/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/caniuse/main.js",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/caniuse/README.md"
       }
     },
     {
@@ -26,12 +26,12 @@
       "runtime": "node",
       "author": "Far-Se",
       "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/github",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/github",
       "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/github/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/github/main.js",
-        "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/github/config.example.json",
-        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/github/README.md"
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/github/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/github/main.js",
+        "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/github/config.example.json",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/github/README.md"
       }
     },
     {
@@ -43,12 +43,12 @@
       "runtime": "node",
       "author": "Far-Se",
       "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/linear",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/linear",
       "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/linear/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/linear/main.js",
-        "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/linear/config.example.json",
-        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/linear/README.md"
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/linear/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/linear/main.js",
+        "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/linear/config.example.json",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/linear/README.md"
       }
     },
     {
@@ -60,10 +60,10 @@
       "runtime": "node",
       "author": "Far-Se",
       "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/tailwind",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/tailwind",
       "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/tailwind/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/tailwind/main.js"
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/tailwind/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/tailwind/main.js"
       }
     },
     {
@@ -75,10 +75,10 @@
       "runtime": "node",
       "author": "Far-Se",
       "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/kaomoji",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/kaomoji",
       "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/kaomoji/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/kaomoji/main.js"
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/main.js"
       }
     },
     {
@@ -90,10 +90,10 @@
       "runtime": "node",
       "author": "Far-Se",
       "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/symbols",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/symbols",
       "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/symbols/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/symbols/main.js"
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/symbols/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/symbols/main.js"
       }
     },
     {
@@ -105,10 +105,10 @@
       "runtime": "node",
       "author": "Far-Se",
       "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/weather",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/weather",
       "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/weather/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/weather/main.js"
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather/main.js"
       }
     },
     {
@@ -120,10 +120,10 @@
       "runtime": "node",
       "author": "Far-Se",
       "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/font-sniffer",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/font-sniffer",
       "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/font-sniffer/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/font-sniffer/main.js"
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/font-sniffer/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/font-sniffer/main.js"
       }
     },
     {
@@ -135,10 +135,10 @@
       "runtime": "python",
       "author": "Far-Se",
       "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/timezone",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/timezone",
       "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/timezone/plugin.json",
-        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/timezone/main.py"
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/timezone/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/timezone/main.py"
       }
     },
     {
@@ -150,10 +150,10 @@
       "runtime": "python",
       "author": "Far-Se",
       "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/paste.rs",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/paste.rs",
       "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/paste.rs/plugin.json",
-        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/paste.rs/main.py"
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/paste.rs/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/paste.rs/main.py"
       }
     }
   ]

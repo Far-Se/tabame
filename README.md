@@ -4,7 +4,7 @@
     <p><em>A taskbar replacement that turned into the Windows toolbox I always wanted.</em></p>
 </div>-->
 
-![promote](https://raw.githubusercontent.com/far-se/tabame/master/resources/poster.png)
+![promote](https://raw.githubusercontent.com/far-se/tabame/main/resources/poster.png)
 
 <!--![promote](https://user-images.githubusercontent.com/20853986/204137435-68a6697c-274a-4c81-807e-5ae4c6a2710f.png#gh-light-mode-only)
 
@@ -185,27 +185,27 @@ The Launcher is one text box that searches everything. Open it straight from the
 
 By default it blends results from files, windows and apps. If you want to narrow it down, start your query with a prefix:
 
-| Prefix             | What it searches                          |
-| ------------------ | ----------------------------------------- |
-| _(nothing)_        | Mixed results: files, windows, apps       |
-| `/`                | QuickActions                              |
-| `.`                | Active windows                            |
-| `,`                | Browser tabs                              |
-| `>` `?` or a space | Deep file search (your indexed folders)   |
-| `'`                | Apps + bookmarks + CLI together           |
-| `b `               | Bookmarks only                            |
-| `cli `             | Your CLI snippet book                     |
-| `app `             | Apps only                                 |
-| `;`                | Desktop files                             |
-| `n `               | Notion documents                          |
-| `o `               | Obsidian notes                            |
-| `r `               | Recent files                              |
-| `s `               | Steam games                               |
-| `t `               | Terminal profiles                         |
-| `m ` or `m1 `–`m5 `| Media control (generic or per-app slots)  |
-| `sp `              | Spotify commands                          |
-| `$`                | Function commands (see below)             |
-| `timer `           | Make a timer right away                   |
+| Prefix              | What it searches                         |
+| ------------------- | ---------------------------------------- |
+| _(nothing)_         | Mixed results: files, windows, apps      |
+| `/`                 | QuickActions                             |
+| `.`                 | Active windows                           |
+| `,`                 | Browser tabs                             |
+| `>` `?` or a space  | Deep file search (your indexed folders)  |
+| `'`                 | Apps + bookmarks + CLI together          |
+| `b `                | Bookmarks only                           |
+| `cli `              | Your CLI snippet book                    |
+| `app `              | Apps only                                |
+| `;`                 | Desktop files                            |
+| `n `                | Notion documents                         |
+| `o `                | Obsidian notes                           |
+| `r `                | Recent files                             |
+| `s `                | Steam games                              |
+| `t `                | Terminal profiles                        |
+| `m ` or `m1 `–`m5 ` | Media control (generic or per-app slots) |
+| `sp `               | Spotify commands                         |
+| `$`                 | Function commands (see below)            |
+| `timer `            | Make a timer right away                  |
 
 ## Function commands (`$`)
 
@@ -380,7 +380,7 @@ My take on PowerToys FancyZones, for when the built-in Windows snapping isn't fl
 
 You can also **hook windows together**: focus one and the others come up with it. Right click a window in the QuickMenu to set that up - handy for keeping a chat window glued to whatever you're working in.
 
-![quick_snap](https://raw.githubusercontent.com/far-se/tabame/master/resources/quicksnap.gif)
+![quick_snap](https://raw.githubusercontent.com/far-se/tabame/main/resources/quicksnap.gif)
 
 ---
 
@@ -430,7 +430,7 @@ Draw straight on top of the desktop - great for presentations or explaining some
 - Text with font and background control.
 - A toggleable grid and keyboard shortcuts to keep it fast.
 
-![screen_draw](https://raw.githubusercontent.com/far-se/tabame/master/resources/screen_draw.gif)
+![screen_draw](https://raw.githubusercontent.com/far-se/tabame/main/resources/screen_draw.gif)
 
 ## Fancyshot
 

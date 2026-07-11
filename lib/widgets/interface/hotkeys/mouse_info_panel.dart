@@ -286,7 +286,7 @@ Will open Task Manager and navigate tabs.
 *Mouse Commands:* `{LMB}`, `{MMB}`, `{RMB}`, `{MSU}`, `{MSD}`
 ''',
                   onTapLink: (String text, String? href, String title) {
-                    WinUtils.open("https://github.com/Far-Se/tabame/blob/master/lib/models/win32/keys.dart#L188");
+                    WinUtils.open("https://github.com/Far-Se/tabame/blob/main/lib/models/win32/keys.dart#L188");
                   },
                 ),
               ),

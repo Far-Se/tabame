@@ -796,8 +796,7 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
               const SizedBox(height: 8),
               Text(
                 "Running background tasks...",
-                style: TextStyle(
-                    fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6)),
+                style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6)),
               ),
             ],
           ),
@@ -868,9 +867,8 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
                             _folderController.text.isEmpty
                                 ? "No folder selected"
                                 : _folderController.text.truncate(60, suffix: "..."),
-                            style: TextStyle(
-                                fontSize: Design.baseFontSize + 2,
-                                color: onSurface.withValues(alpha: 0.6)),
+                            style:
+                                TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6)),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -1190,10 +1188,8 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
                     value: percentage,
                     color: extColors[lang] ?? Colors.grey,
                     radius: 50,
-                    titleStyle: TextStyle(
-                        fontSize: Design.baseFontSize,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
+                    titleStyle:
+                        TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.bold, color: Colors.white),
                   );
                 }),
               ),
@@ -1230,12 +1226,10 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
         children: <Widget>[
           Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 8),
-          Text(lang,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: Design.baseFontSize + 2)),
+          Text(lang, style: TextStyle(fontWeight: FontWeight.bold, fontSize: Design.baseFontSize + 2)),
           const SizedBox(width: 6),
           Text(lines.decimal,
-              style: TextStyle(
-                  fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.6))),
+              style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.6))),
         ],
       ),
     );
@@ -1250,8 +1244,7 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
             const Text("File Breakdown", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const Spacer(),
             Text("${result!.files.length} files tracked",
-                style: TextStyle(
-                    fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.5))),
+                style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.5))),
           ],
         ),
         const SizedBox(height: 12),
@@ -1284,8 +1277,8 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
         children: <Widget>[
           Expanded(
               flex: 4,
-              child: Text("File Path",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: Design.baseFontSize + 2))),
+              child:
+                  Text("File Path", style: TextStyle(fontWeight: FontWeight.bold, fontSize: Design.baseFontSize + 2))),
           _buildSortableHeader("Lines", 1, 70, onSurface, tooltip: "Total Lines"),
           _buildSortableHeader("Code", 2, 70, onSurface, tooltip: "Lines of code"),
           _buildSortableHeader("Comms.", 3, 70, onSurface, tooltip: "Comments"),
@@ -1315,8 +1308,7 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
                       fontSize: Design.baseFontSize + 2,
                       color: isSelected ? Design.accent : onSurface.withValues(alpha: 0.5))),
               if (isSelected)
-                Icon(sortAscending ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                    size: 16, color: Design.accent),
+                Icon(sortAscending ? Icons.arrow_drop_up : Icons.arrow_drop_down, size: 16, color: Design.accent),
             ],
           ),
         ),
@@ -1349,8 +1341,7 @@ That's roughly **${result!.compactedLines.floor().decimal} compacted lines** (70
                         WinUtils.open("${_folderController.text}\\${file.path}");
                       },
                       child: Text(file.path.lastChars(35, addDots: true),
-                          style: TextStyle(fontSize: Design.baseFontSize + 2),
-                          overflow: TextOverflow.ellipsis)),
+                          style: TextStyle(fontSize: Design.baseFontSize + 2), overflow: TextOverflow.ellipsis)),
                 )),
               ],
             ),
@@ -1486,12 +1477,12 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
     String repoUrl = "";
     if (link.contains("github.com")) {
       final RegExpMatch? reg = RegExp(r'github\.com/(.*?/.*?)(?:\.git|/|$)', caseSensitive: false).firstMatch(link);
-      if (reg != null) repoUrl = "https://github.com/${reg[1]!}/archive/refs/heads/master.zip";
+      if (reg != null) repoUrl = "https://github.com/${reg[1]!}/archive/refs/heads/main.zip";
     } else if (link.contains("gitlab.com")) {
       final RegExpMatch? reg = RegExp(r'gitlab\.com/(.*?/.*?)(?:\.git|/|$)', caseSensitive: false).firstMatch(link);
       if (reg != null) {
         final String repName = reg[1]!.split('/').last;
-        repoUrl = "https://gitlab.com/${reg[1]!}/-/archive/master/$repName.zip";
+        repoUrl = "https://gitlab.com/${reg[1]!}/-/archive/main/$repName.zip";
       }
     }
 
@@ -1566,9 +1557,7 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text(headerMsg,
-            style: TextStyle(
-                fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6))),
+        Text(headerMsg, style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withValues(alpha: 0.6))),
         const SizedBox(height: 12),
         Row(
           children: <Widget>[

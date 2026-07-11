@@ -179,7 +179,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
       sponsorImageDark = File("${WinUtils.getTabameAppDataFolder()}\\sponsorDark.png");
     }
     final http.Response response = await http.get(Uri.parse(
-        "https://raw.githubusercontent.com/Far-Se/tabame/master/resources/sponsor.json?e=${DateTime.now().hour}"));
+        "https://raw.githubusercontent.com/Far-Se/tabame/main/resources/sponsor.json?e=${DateTime.now().hour}"));
     if (response.statusCode == 200) {
       final Map<String, dynamic> json = jsonDecode(response.body);
       if (!json.containsKey("enabled")) return;
