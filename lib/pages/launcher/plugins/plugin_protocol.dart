@@ -401,6 +401,7 @@ class PluginRenderFrame {
     this.detailMetadata = const <PluginMetadataEntry>[],
     this.detailWide = false,
     required this.previewEnabled,
+    this.previewWide = true,
     required this.loading,
     required this.emptyText,
     required this.rev,
@@ -429,6 +430,11 @@ class PluginRenderFrame {
 
   /// Whether the split preview pane is shown (list/grid views only).
   final bool previewEnabled;
+
+  /// Whether an enabled preview should widen the launcher window. From
+  /// `preview.wide` (default true). When false, the preview pane still renders
+  /// but the window keeps its normal size. Ignored unless [previewEnabled].
+  final bool previewWide;
 
   final bool loading;
   final String emptyText;
@@ -459,8 +465,8 @@ class PluginRenderFrame {
   bool get hasPreview => previewEnabled && view != PluginViewType.detail && view != PluginViewType.form;
 
   /// Whether this frame asks for the widened launcher window: a split preview
-  /// pane, or a detail view marked `wide`.
-  bool get wantsWideWindow => hasPreview || (view == PluginViewType.detail && detailWide);
+  /// pane that opted into widening, or a detail view marked `wide`.
+  bool get wantsWideWindow => (hasPreview && previewWide) || (view == PluginViewType.detail && detailWide);
 
   static PluginRenderFrame errorFrame(String message) => PluginRenderFrame(
         view: PluginViewType.detail,
@@ -519,8 +525,12 @@ class PluginRenderFrame {
     }
 
     bool previewEnabled = false;
+    bool previewWide = true;
     if (preview is Map) {
       previewEnabled = preview['enabled'] == true;
+      // Opt out of the widened window with `"wide": false`; anything else
+      // (absent, true) keeps the historical widen-on-preview behavior.
+      previewWide = preview['wide'] != false;
     } else if (preview is bool) {
       previewEnabled = preview;
     }
@@ -560,6 +570,7 @@ class PluginRenderFrame {
       detailMetadata: detailMetadata,
       detailWide: detailWide,
       previewEnabled: previewEnabled,
+      previewWide: previewWide,
       loading: loading,
       loadingProgress: loadingProgress,
       emptyText: emptyText is String ? emptyText : 'No results',
