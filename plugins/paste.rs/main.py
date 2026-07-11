@@ -313,7 +313,7 @@ def render_history(rev=0, query=""):
             "rev": rev,
             "view": "list",
             "canGoBack": True,
-            "preview": {"enabled": True},
+            "preview": {"enabled": True, "wide": False},
             "placeholder": "Filter saved pastes",
             "items": history_items(query),
             "empty": {

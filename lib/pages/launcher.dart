@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -174,6 +175,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   final Map<String, GlobalKey> _resultKeys = <String, GlobalKey>{};
   String? _infoText;
   IconData? _infoIcon;
+  Timer? _infoTimer;
   String? _quickActionSplashId;
   bool _mouseSelectionEnabled = true;
   Offset? _lastMousePosition;
@@ -321,7 +323,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: 'b ',
-      caption: 'Bookmarks',
+      caption: 'Bookmarks  ·  "b add <url>" to save',
       prefix: 'b ',
       icon: Icons.bookmark_rounded,
     )),
@@ -1124,6 +1126,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     Globals.clearQuickMenuSearchInput();
 
     _searchDebounce?.cancel();
+    _infoTimer?.cancel();
     _pluginWidthCollapseTimer?.cancel();
     _quickActionSplashTimer?.cancel();
     _keyRepeatTimer?.cancel();
@@ -1763,12 +1766,193 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   }
 
   void _handleBookmarkKindSearch(LauncherSearchContext context, BookmarkResultKind kind) {
+    // "b add <target>" saves a new bookmark: it lists every category so the user
+    // can pick where the target lands (arrows/click). See _handleBookmarkAddCommand.
+    if (kind == BookmarkResultKind.bookmark) {
+      final String? addTarget = _parseBookmarkAddTarget(context.normalizedQuery);
+      if (addTarget != null) {
+        _handleBookmarkAddCommand(context, addTarget);
+        return;
+      }
+    }
+
     final List<LauncherSearchResultItem> results = findBookmarkMatches(
       context.normalizedQuery,
       includeAllOnEmpty: context.normalizedQuery.isEmpty,
       kinds: <BookmarkResultKind>{kind},
     ).map(LauncherSearchResultItem.bookmark).toList();
     context.setResults(results, isSearching: false);
+  }
+
+  /// Recognises the `add` sub-command of bookmark search (`b add <target>`).
+  /// Returns the (possibly empty) target to save, or null when the query isn't
+  /// an add command so normal bookmark search runs.
+  String? _parseBookmarkAddTarget(String normalizedQuery) {
+    final String trimmed = normalizedQuery.trimRight();
+    final String lower = trimmed.toLowerCase();
+    if (lower == 'add') return '';
+    if (lower.startsWith('add ')) return trimmed.substring(4).trim();
+    return null;
+  }
+
+  /// Builds the category picker for `b add <target>`: one row per bookmark
+  /// category, each of which saves [target] into that category when chosen.
+  void _handleBookmarkAddCommand(LauncherSearchContext context, String target) {
+    final List<BookmarkGroup> groups = Boxes().bookmarks;
+    final List<LauncherSearchResultItem> results = <LauncherSearchResultItem>[];
+
+    if (target.isEmpty) {
+      results.add(const LauncherSearchResultItem.info(LauncherInfoResult(
+        id: 'bookmark-add-hint',
+        title: 'Type what to save',
+        subtitle: "b add https://example.com  —  then pick a category",
+        icon: Icons.add_link_rounded,
+      )));
+    } else {
+      results.add(LauncherSearchResultItem.info(LauncherInfoResult(
+        id: 'bookmark-add-target',
+        title: 'Add "$target"',
+        subtitle: 'Choose a category below',
+        icon: Icons.add_link_rounded,
+      )));
+    }
+
+    // Index of the first category row: the leading info header sits above it.
+    final int firstCategoryIndex = results.length;
+
+    if (groups.isEmpty) {
+      results.add(const LauncherSearchResultItem.info(LauncherInfoResult(
+        id: 'bookmark-add-empty',
+        title: 'No bookmark categories yet',
+        subtitle: 'Create one from the Bookmarks panel first',
+        icon: Icons.folder_off_rounded,
+      )));
+    } else {
+      for (int i = 0; i < groups.length; i++) {
+        results.add(_buildBookmarkAddCategoryRow(groups[i], target));
+      }
+    }
+
+    context.setResults(results, isSearching: false);
+    // Skip past the info header so a category is highlighted and Enter saves
+    // straight away.
+    if (groups.isNotEmpty && firstCategoryIndex < results.length) {
+      _activeIndexNotifier.value = firstCategoryIndex;
+    }
+  }
+
+  /// A single category row in the `b add` picker. Selecting it saves [target]
+  /// into [group].
+  LauncherSearchResultItem _buildBookmarkAddCategoryRow(BookmarkGroup group, String target) {
+    void execute() => unawaited(_addBookmarkToCategory(group.title, target));
+
+    final String emoji = group.emoji.isNotEmpty ? group.emoji : '📁';
+    final int count = group.bookmarks.length;
+    final String name = '$emoji  ${group.title.isEmpty ? 'Untitled' : group.title}  ·  $count';
+
+    return LauncherSearchResultItem.quickAction(
+      QuickActionMenuEntry(
+        id: 'bookmark_add_category:${group.title}',
+        title: 'Add to ${group.title}',
+        searchTerms: <String>['add', 'bookmark', group.title],
+        allowRenderedFallbackExecute: true,
+        onExecute: execute,
+        builder: (BuildContext ctx) {
+          final ThemeData theme = Theme.of(ctx);
+          return QuickActionListItem(
+            name: name,
+            accent: theme.colorScheme.primary,
+            onSurface: theme.colorScheme.onSurface,
+            leading: SizedBox(
+              width: 18,
+              child: Icon(Icons.create_new_folder_rounded, size: 14, color: theme.colorScheme.primary),
+            ),
+            onTap: execute,
+          );
+        },
+      ),
+    );
+  }
+
+  /// Persists a new bookmark holding [rawTarget] under the category titled
+  /// [categoryTitle]. Websites get "Prefer Input Icons" so their favicon shows.
+  Future<void> _addBookmarkToCategory(String categoryTitle, String rawTarget) async {
+    final String target = rawTarget.trim();
+    if (target.isEmpty) {
+      _flashLauncherInfo('Type what to save first', icon: Icons.info_outline_rounded);
+      return;
+    }
+
+    // Re-read the persisted groups so we serialize the whole, current list back
+    // (the settings file is a single whole-file store — see boxes_base).
+    final List<BookmarkGroup> groups = Boxes().bookmarks;
+    final int index = groups.indexWhere((BookmarkGroup g) => g.title == categoryTitle);
+    if (index == -1) {
+      _flashLauncherInfo('Category no longer exists', icon: Icons.error_outline_rounded);
+      return;
+    }
+
+    final bool isWebsite = _looksLikeWebsite(target);
+    groups[index].bookmarks.add(BookmarkInfo(
+      emoji: isWebsite ? '🌐' : '🔖',
+      title: _deriveBookmarkTitle(target, isWebsite),
+      stringToExecute: target,
+      preferInputIcon: isWebsite,
+    ));
+
+    await Boxes.updateSettings('projects', jsonEncode(groups));
+    if (!mounted) return;
+
+    _flashLauncherInfo('Saved to ${groups[index].title}');
+    // Clear the query back to the launcher home so the picker dismisses.
+    _controller.text = '';
+    _controller.selection = const TextSelection.collapsed(offset: 0);
+    _onSearchChanged('');
+    _resetSelection();
+  }
+
+  /// Heuristic for "this target is a web address" (drives favicon icons).
+  bool _looksLikeWebsite(String target) {
+    final String t = target.trim().toLowerCase();
+    if (t.startsWith('http://') || t.startsWith('https://') || t.startsWith('www.')) return true;
+    // Local paths / files are not websites.
+    if (t.contains('\\') || t.contains(':/') || t.startsWith('/') || t.contains(' ')) return false;
+    // domain-like: name.tld optionally followed by a path.
+    return RegExp(r'^[a-z0-9.-]+\.[a-z]{2,}(/.*)?$').hasMatch(t);
+  }
+
+  /// Picks a readable title for the saved bookmark: the host for a website,
+  /// otherwise the last path segment.
+  String _deriveBookmarkTitle(String target, bool isWebsite) {
+    if (isWebsite) {
+      try {
+        final Uri uri = Uri.parse(target.contains('://') ? target : 'https://$target');
+        String host = uri.host;
+        if (host.startsWith('www.')) host = host.substring(4);
+        if (host.isNotEmpty) return host;
+      } catch (_) {}
+    }
+    final List<String> segments =
+        target.replaceAll('\\', '/').split('/').where((String s) => s.trim().isNotEmpty).toList();
+    return segments.isEmpty ? target : segments.last;
+  }
+
+  /// Shows a transient confirmation chip in the launcher's search bar.
+  void _flashLauncherInfo(String text, {IconData icon = Icons.check_circle_outline_rounded}) {
+    _infoTimer?.cancel();
+    setState(() {
+      _infoText = text;
+      _infoIcon = icon;
+    });
+    _infoTimer = Timer(const Duration(milliseconds: 2200), () {
+      _infoTimer = null;
+      if (mounted) {
+        setState(() {
+          _infoText = null;
+          _infoIcon = null;
+        });
+      }
+    });
   }
 
   void _handleAppSearch(LauncherSearchContext context) {

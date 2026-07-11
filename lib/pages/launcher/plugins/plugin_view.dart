@@ -146,11 +146,28 @@ class _PluginViewState extends State<PluginView> {
 
   Widget _buildEmptyOrLoading(PluginRenderFrame frame) {
     if (frame.loading) {
+      final String? caption = frame.loadingText;
       return Center(
-        child: SizedBox(
-          width: 22,
-          height: 22,
-          child: CircularProgressIndicator(strokeWidth: 2, value: frame.loadingProgress),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2, value: frame.loadingProgress),
+            ),
+            if (caption != null && caption.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  caption,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: Design.text.withAlpha(150)),
+                ),
+              ),
+            ],
+          ],
         ),
       );
     }
@@ -341,54 +358,141 @@ class _PluginViewState extends State<PluginView> {
     );
   }
 
-  /// Markdown styling tied to the active theme. The package defaults render
-  /// `inline code` and ```code blocks``` as gray-on-gray, which is unreadable
-  /// against the launcher's backdrop — retint them with [Design] colors.
-  MarkdownConfig get _markdownConfig => MarkdownConfig(
-        configs: <WidgetConfig>[
-          PConfig(textStyle: TextStyle(color: Design.text, fontSize: 13)),
-          // Inline `code`: accent text on a faint accent fill.
-          CodeConfig(
-            style: TextStyle(
-              color: Design.accent,
-              backgroundColor: Design.accent.withAlpha(28),
-              fontFamily: 'Consolas',
-              fontSize: 12.5,
+  /// Markdown styling tied to the active theme. Every block type is retinted
+  /// with [Design] colors — the package defaults render headings, list bullets,
+  /// checkboxes, rules and syntax tokens with hardcoded light-mode grays/blacks
+  /// (e.g. a 32px black `# H1` under a `#d7dde3` underline) that are unreadable
+  /// and visually foreign against the launcher's themed backdrop.
+  MarkdownConfig get _markdownConfig {
+    final Color text = Design.text;
+    final Color accent = Design.accent;
+
+    // Compact heading scale sized for the launcher's density, not the package's
+    // article-page defaults. Level headings share w700 and the theme text
+    // color, stepping down in size/opacity; h1/h2 keep a hairline rule.
+    _MdHeadingConfig heading(
+      MarkdownTag tag,
+      double size, {
+      int alpha = 255,
+      double spacing = 0,
+      HeadingDivider? divider,
+      EdgeInsets padding = const EdgeInsets.only(top: 10, bottom: 3),
+    }) =>
+        _MdHeadingConfig(
+          tag: tag.name,
+          style: TextStyle(
+            color: text.withAlpha(alpha),
+            fontSize: size,
+            height: 1.3,
+            fontWeight: FontWeight.w700,
+            letterSpacing: spacing,
+          ),
+          divider: divider,
+          padding: padding,
+        );
+
+    // Syntax palette derived from the accent hue so highlighted code reads as
+    // part of the theme (and adapts to any accent) instead of GitHub-light
+    // colors. Unlisted tokens fall through to [text] via styleNotMatched.
+    final Map<String, TextStyle> codeTheme = <String, TextStyle>{
+      'root': TextStyle(color: text, backgroundColor: Colors.transparent),
+      'comment': TextStyle(color: text.withAlpha(105), fontStyle: FontStyle.italic),
+      'quote': TextStyle(color: text.withAlpha(105), fontStyle: FontStyle.italic),
+      'meta': TextStyle(color: text.withAlpha(150)),
+      'keyword': TextStyle(color: accent),
+      'selector-tag': TextStyle(color: accent),
+      'built_in': TextStyle(color: accent),
+      'tag': TextStyle(color: accent),
+      'type': TextStyle(color: Design.accentHue(-40)),
+      'number': TextStyle(color: Design.accentHue(-40)),
+      'literal': TextStyle(color: Design.accentHue(-40)),
+      'string': TextStyle(color: Design.accentHue(120, saturation: 0.85)),
+      'attr': TextStyle(color: Design.accentHue(120, saturation: 0.85)),
+      'title': TextStyle(color: Design.accentHue(45)),
+      'section': TextStyle(color: Design.accentHue(45)),
+      'function': TextStyle(color: Design.accentHue(45)),
+    };
+
+    return MarkdownConfig(
+configs: <WidgetConfig>[
+        PConfig(textStyle: TextStyle(color: text, fontSize: 13, height: 1.5)),
+        heading(MarkdownTag.h1, 18,
+            spacing: -0.2,
+            divider: HeadingDivider(color: text.withAlpha(28), space: 6, height: 1),
+            padding: const EdgeInsets.only(top: 12, bottom: 5)),
+        heading(MarkdownTag.h2, 15.5,
+            divider: HeadingDivider(color: text.withAlpha(20), space: 5, height: 1),
+            padding: const EdgeInsets.only(top: 12, bottom: 4)),
+        heading(MarkdownTag.h3, 14),
+        heading(MarkdownTag.h4, 13, alpha: 225),
+        heading(MarkdownTag.h5, 12, alpha: 195),
+        heading(MarkdownTag.h6, 11.5, alpha: 150, spacing: 0.3),
+        // `---` as a launcher hairline rather than the default 2px light bar.
+        HrConfig(height: 1, color: text.withAlpha(28)),
+        // Tighter indent + accent bullets (the default marker inherits a
+        // theme text color that renders near-black on a dark backdrop).
+        const ListConfig(marginLeft: 22, marker: _mdListMarker),
+        // Task lists: accent check / muted empty box instead of a black icon.
+        CheckBoxConfig(
+          builder: (bool checked) => Padding(
+            padding: const EdgeInsets.only(right: 5, top: 1),
+            child: Icon(
+              checked ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+              size: 15,
+              color: checked ? accent : text.withAlpha(120),
             ),
           ),
-          // Fenced code blocks: readable text over a subtle panel.
-          PreConfig(
-            textStyle: TextStyle(color: Design.text, fontFamily: 'Consolas', fontSize: 12.5),
-            styleNotMatched: TextStyle(color: Design.text),
-            decoration: BoxDecoration(
-              color: Design.text.withAlpha(14),
-              border: Border.all(color: Design.accent.withAlpha(30)),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            padding: const EdgeInsets.all(10),
+        ),
+        // Inline `code`: accent text on a faint accent fill.
+        CodeConfig(
+          style: TextStyle(
+            color: accent,
+            backgroundColor: accent.withAlpha(28),
+            fontFamily: 'Consolas',
+            fontSize: 12.5,
           ),
-          BlockquoteConfig(sideColor: Design.accent.withAlpha(120), textColor: Design.text),
-          // Tables: the package default draws full-opacity text-colored grid
-          // lines — soften to the launcher's hairline style.
-          TableConfig(
-            border: TableBorder.all(color: Design.text.withAlpha(40)),
-            headerStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Design.accent),
-            bodyStyle: TextStyle(fontSize: 12, color: Design.text),
-            headPadding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
-            bodyPadding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
+        ),
+        // Fenced code blocks: theme-tinted syntax over a subtle panel.
+        PreConfig(
+          textStyle: const TextStyle(fontFamily: 'Consolas', fontSize: 12.5, height: 1.45),
+          styleNotMatched: TextStyle(color: text),
+          theme: codeTheme,
+          decoration: BoxDecoration(
+            color: text.withAlpha(14),
+            border: Border.all(color: accent.withAlpha(30)),
+            borderRadius: BorderRadius.circular(6),
           ),
-          LinkConfig(
-            style: TextStyle(color: Design.accent, decoration: TextDecoration.underline),
-            onTap: (String url) {
-              final String target = url.trim();
-              if (target.isNotEmpty) WinUtils.open(target);
-            },
-          ),
-          // The package default only loads http rasters / Flutter assets;
-          // plugins reference local `file://` images (including generated SVGs).
-          ImgConfig(builder: (String url, Map<String, String> attributes) => _markdownImage(url)),
-        ],
-      );
+          padding: const EdgeInsets.all(10),
+        ),
+        BlockquoteConfig(
+          sideColor: accent.withAlpha(150),
+          sideWith: 3,
+          textColor: text.withAlpha(205),
+          padding: const EdgeInsets.fromLTRB(12, 2, 0, 2),
+        ),
+        // Tables: the package default draws full-opacity text-colored grid
+        // lines — soften to the launcher's hairline style with a tinted header.
+        TableConfig(
+          border: TableBorder.all(color: text.withAlpha(40)),
+          headerRowDecoration: BoxDecoration(color: accent.withAlpha(18)),
+          headerStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: accent),
+          bodyStyle: TextStyle(fontSize: 12, color: text),
+          headPadding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
+          bodyPadding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
+        ),
+        LinkConfig(
+          style: TextStyle(color: accent, decoration: TextDecoration.underline),
+          onTap: (String url) {
+            final String target = url.trim();
+            if (target.isNotEmpty) WinUtils.open(target);
+          },
+        ),
+        // The package default only loads http rasters / Flutter assets;
+        // plugins reference local `file://` images (including generated SVGs).
+        ImgConfig(builder: (String url, Map<String, String> attributes) => _markdownImage(url)),
+      ],
+    );
+  }
 
   /// Renders a markdown image from a `file://` path or http(s) URL, with SVG
   /// support via flutter_svg, scaled down to the pane width.
@@ -413,6 +517,62 @@ class _PluginViewState extends State<PluginView> {
       return broken;
     });
   }
+}
+
+/// A [HeadingConfig] with a caller-supplied tag, style, divider and padding —
+/// the package's built-in `H1Config`…`H6Config` bake in article-sized styles
+/// and a fixed light-gray underline, none of which suit the launcher.
+class _MdHeadingConfig extends HeadingConfig {
+  const _MdHeadingConfig({
+    required this.tag,
+    required this.style,
+    this.divider,
+    this.padding = const EdgeInsets.only(top: 10, bottom: 3),
+  });
+
+  @override
+  final String tag;
+  @override
+  final TextStyle style;
+  @override
+  final HeadingDivider? divider;
+  @override
+  final EdgeInsets padding;
+}
+
+/// Accent-tinted list markers: a filled dot / hollow ring / small square by
+/// nesting depth for bullets, and dimmed accent numerals for ordered lists.
+/// Vertical offsets are tuned to the 13px/1.5 body line so markers sit on the
+/// first text line.
+Widget _mdListMarker(bool isOrdered, int depth, int index) {
+  if (isOrdered) {
+    return Container(
+      alignment: Alignment.topRight,
+      padding: const EdgeInsets.only(right: 6, top: 1),
+      child: Text(
+        '${index + 1}.',
+        style: TextStyle(
+          fontSize: 12.5,
+          height: 1.5,
+          fontWeight: FontWeight.w600,
+          color: Design.accent.withAlpha(210),
+        ),
+      ),
+    );
+  }
+  final Color color = Design.accent.withAlpha(210);
+  final BoxDecoration decoration = depth == 0
+      ? BoxDecoration(color: color, shape: BoxShape.circle)
+      : depth == 1
+          ? BoxDecoration(border: Border.all(color: color, width: 1.2), shape: BoxShape.circle)
+          : BoxDecoration(color: color.withAlpha(150), borderRadius: BorderRadius.circular(1));
+  return Padding(
+    padding: const EdgeInsets.only(right: 8, top: 7),
+    child: Align(
+      alignment: Alignment.topRight,
+      child: Container(width: 5, height: 5, decoration: decoration),
+    ),
+  );
 }
 
 /// Resolves a plugin icon string to a widget: a `#RRGGBB` color swatch, a

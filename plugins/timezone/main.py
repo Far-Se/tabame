@@ -13,6 +13,7 @@ DST for the generic zones (PT, ET, CET, EET, ...) is computed with built-in
 US/EU/AU rules, so no tzdata package is required. Explicit abbreviations
 (PST, PDT, EEST, ...) are always their fixed offset.
 """
+
 import json
 import re
 import subprocess
@@ -33,6 +34,7 @@ def copy_to_clipboard(text):
 
 
 # --- DST rules (built-in, no tzdata needed) ---------------------------------
+
 
 def _nth_sunday(year, month, n):
     d = date(year, month, 1)
@@ -61,9 +63,16 @@ def _dst_active(rule, d):
 
 # --- zone table ---------------------------------------------------------------
 
+
 def _zone(name, std, std_lbl, dst=None, dst_lbl=None, rule=None):
-    return {"name": name, "std": std, "std_lbl": std_lbl,
-            "dst": dst, "dst_lbl": dst_lbl, "rule": rule}
+    return {
+        "name": name,
+        "std": std,
+        "std_lbl": std_lbl,
+        "dst": dst,
+        "dst_lbl": dst_lbl,
+        "rule": rule,
+    }
 
 
 _UTC = _zone("UTC", 0, "UTC")
@@ -87,42 +96,84 @@ _AET = _zone("Sydney", 600, "AEST", 660, "AEDT", "AU")
 _NZT = _zone("New Zealand", 720, "NZST", 780, "NZDT", "NZ")
 
 ALIASES = {
-    "UTC": _UTC, "GMT": _UTC, "Z": _UTC,
-    "PT": _PT, "PACIFIC": _PT, "LA": _PT, "LOS ANGELES": _PT,
-    "SEATTLE": _PT, "SF": _PT, "SAN FRANCISCO": _PT,
+    "UTC": _UTC,
+    "GMT": _UTC,
+    "Z": _UTC,
+    "PT": _PT,
+    "PACIFIC": _PT,
+    "LA": _PT,
+    "LOS ANGELES": _PT,
+    "SEATTLE": _PT,
+    "SF": _PT,
+    "SAN FRANCISCO": _PT,
     "PST": _zone("Pacific Standard", -480, "PST"),
     "PDT": _zone("Pacific Daylight", -420, "PDT"),
-    "MT": _MT, "MOUNTAIN": _MT, "DENVER": _MT,
+    "MT": _MT,
+    "MOUNTAIN": _MT,
+    "DENVER": _MT,
     "MST": _zone("Mountain Standard", -420, "MST"),
     "MDT": _zone("Mountain Daylight", -360, "MDT"),
-    "CT": _CT, "CENTRAL": _CT, "CHICAGO": _CT,
+    "CT": _CT,
+    "CENTRAL": _CT,
+    "CHICAGO": _CT,
     "CST": _zone("Central Standard (US)", -360, "CST"),
     "CDT": _zone("Central Daylight", -300, "CDT"),
-    "ET": _ET, "EASTERN": _ET, "NYC": _ET, "NEW YORK": _ET,
-    "TORONTO": _ET, "MIAMI": _ET,
+    "ET": _ET,
+    "EASTERN": _ET,
+    "NYC": _ET,
+    "NEW YORK": _ET,
+    "TORONTO": _ET,
+    "MIAMI": _ET,
     "EST": _zone("Eastern Standard", -300, "EST"),
     "EDT": _zone("Eastern Daylight", -240, "EDT"),
-    "UK": _UK, "LONDON": _UK,
+    "UK": _UK,
+    "LONDON": _UK,
     "BST": _zone("British Summer", 60, "BST"),
-    "CET": _CET, "PARIS": _CET, "BERLIN": _CET, "MADRID": _CET,
-    "ROME": _CET, "AMSTERDAM": _CET, "STOCKHOLM": _CET, "WARSAW": _CET,
+    "CET": _CET,
+    "PARIS": _CET,
+    "BERLIN": _CET,
+    "MADRID": _CET,
+    "ROME": _CET,
+    "AMSTERDAM": _CET,
+    "STOCKHOLM": _CET,
+    "WARSAW": _CET,
     "CEST": _zone("Central Europe Summer", 120, "CEST"),
-    "EET": _EET, "BUCHAREST": _EET, "ATHENS": _EET, "HELSINKI": _EET,
-    "KYIV": _EET, "KIEV": _EET,
+    "EET": _EET,
+    "BUCHAREST": _EET,
+    "ATHENS": _EET,
+    "HELSINKI": _EET,
+    "KYIV": _EET,
+    "KIEV": _EET,
     "EEST": _zone("Eastern Europe Summer", 180, "EEST"),
-    "ISTANBUL": _TRT, "TRT": _TRT,
-    "MSK": _MSK, "MOSCOW": _MSK,
-    "GST": _GST, "DUBAI": _GST,
-    "IST": _IST, "INDIA": _IST, "DELHI": _IST, "MUMBAI": _IST,
-    "CHINA": _CN, "BEIJING": _CN, "SHANGHAI": _CN,
-    "SGT": _SGT, "SINGAPORE": _SGT,
-    "HKT": _HKT, "HONG KONG": _HKT,
-    "JST": _JST, "TOKYO": _JST, "JAPAN": _JST,
-    "KST": _KST, "SEOUL": _KST,
-    "AET": _AET, "SYDNEY": _AET, "MELBOURNE": _AET,
+    "ISTANBUL": _TRT,
+    "TRT": _TRT,
+    "MSK": _MSK,
+    "MOSCOW": _MSK,
+    "GST": _GST,
+    "DUBAI": _GST,
+    "IST": _IST,
+    "INDIA": _IST,
+    "DELHI": _IST,
+    "MUMBAI": _IST,
+    "CHINA": _CN,
+    "BEIJING": _CN,
+    "SHANGHAI": _CN,
+    "SGT": _SGT,
+    "SINGAPORE": _SGT,
+    "HKT": _HKT,
+    "HONG KONG": _HKT,
+    "JST": _JST,
+    "TOKYO": _JST,
+    "JAPAN": _JST,
+    "KST": _KST,
+    "SEOUL": _KST,
+    "AET": _AET,
+    "SYDNEY": _AET,
+    "MELBOURNE": _AET,
     "AEST": _zone("Australian Eastern Standard", 600, "AEST"),
     "AEDT": _zone("Australian Eastern Daylight", 660, "AEDT"),
-    "NZ": _NZT, "AUCKLAND": _NZT,
+    "NZ": _NZT,
+    "AUCKLAND": _NZT,
     "NZST": _zone("New Zealand Standard", 720, "NZST"),
     "NZDT": _zone("New Zealand Daylight", 780, "NZDT"),
 }
@@ -163,10 +214,13 @@ def resolve_token(token, on_date):
         return spec_tz(spec, on_date), spec["name"], spec
     if "/" in token:
         # Re-case "europe/london" -> "Europe/London"
-        key = "/".join("_".join(w.capitalize() for w in part.split("_"))
-                       for part in token.split("/"))
+        key = "/".join(
+            "_".join(w.capitalize() for w in part.split("_"))
+            for part in token.split("/")
+        )
         try:
             from zoneinfo import ZoneInfo
+
             return ZoneInfo(key), key, None
         except Exception:
             raise ValueError(
@@ -180,8 +234,12 @@ def resolve_token(token, on_date):
 # --- time parsing -------------------------------------------------------------
 
 TIME_FORMATS = [
-    ("%I:%M:%S %p", True), ("%I:%M %p", False), ("%I %p", False),
-    ("%H:%M:%S", True), ("%H:%M", False), ("%H", False),
+    ("%I:%M:%S %p", True),
+    ("%I:%M %p", False),
+    ("%I %p", False),
+    ("%H:%M:%S", True),
+    ("%H:%M", False),
+    ("%H", False),
 ]
 
 WORD_TIMES = {"NOON": "12:00 PM", "MIDNIGHT": "12:00 AM"}
@@ -204,6 +262,7 @@ def parse_time(text):
 
 
 # --- query parsing --------------------------------------------------------------
+
 
 def parse_query(query):
     """Returns (base_datetime, src_desc, src_spec, dst_target, has_seconds).
@@ -277,7 +336,9 @@ def fmt_offset(dt):
     minutes = int(dt.utcoffset().total_seconds() // 60)
     sign = "+" if minutes >= 0 else "-"
     minutes = abs(minutes)
-    return f"UTC{sign}{minutes // 60}" + (f":{minutes % 60:02d}" if minutes % 60 else "")
+    return f"UTC{sign}{minutes // 60}" + (
+        f":{minutes % 60:02d}" if minutes % 60 else ""
+    )
 
 
 def tz_abbr(dt):
@@ -321,20 +382,29 @@ def render(rev, query):
     try:
         base, src_desc, src_spec, dst_target, has_seconds = parse_query(query)
     except Exception as e:
-        send({
-            "type": "render", "rev": rev, "view": "detail",
-            "detail": {"markdown": f"# Timezone Converter\n\n> {e}\n\n{USAGE_MD}"},
-        })
+        send(
+            {
+                "type": "render",
+                "rev": rev,
+                "view": "detail",
+                "detail": {"markdown": f"# Timezone Converter\n\n> {e}\n\n{USAGE_MD}"},
+            }
+        )
         return
 
-    src_line = (f"{fmt_time(base, has_seconds)} {tz_abbr(base)} ({src_desc}), "
-                f"{base.strftime('%a, %b %d')}")
+    src_line = (
+        f"{fmt_time(base, has_seconds)} {tz_abbr(base)} ({src_desc}), "
+        f"{base.strftime('%a, %b %d')}"
+    )
 
     # Decide which zones to show.
     targets = []
     if dst_target is not None:
         targets.append((dst_target[1], dst_target[0]))
-        if base.astimezone(LOCAL_TZ).utcoffset() != base.astimezone(dst_target[0]).utcoffset():
+        if (
+            base.astimezone(LOCAL_TZ).utcoffset()
+            != base.astimezone(dst_target[0]).utcoffset()
+        ):
             targets.append(("Local", LOCAL_TZ))
     else:
         targets.append(("Local", LOCAL_TZ))
@@ -355,8 +425,10 @@ def render(rev, query):
         copies[item["id"]] = copy_str
 
     frame = {
-        "type": "render", "rev": rev, "view": "list",
-        "preview": {"enabled": True},
+        "type": "render",
+        "rev": rev,
+        "view": "list",
+        "preview": {"enabled": True, "wide": False},
         "emptyText": "Type a time, e.g. 3 PM PT",
         "items": items,
     }
@@ -379,8 +451,9 @@ def handle_action(item_id, action_name):
     frame["rev"] = 0
     for item in frame["items"]:
         if item["id"] == item_id:
-            item["accessories"] = [a for a in item.get("accessories", [])
-                                   if a.get("text") != "✓ copied"]
+            item["accessories"] = [
+                a for a in item.get("accessories", []) if a.get("text") != "✓ copied"
+            ]
             item["accessories"].append({"text": "✓ copied"})
     send(frame)
 

@@ -93,7 +93,8 @@ class _BookmarksPanelState extends State<BookmarksPanel> {
     _closeEditor();
   }
 
-  Future<void> _saveBookmark(String title, String emoji, String target, bool preferInputIcon) async {
+  Future<void> _saveBookmark(
+      String title, String emoji, String target, bool preferInputIcon, BookmarkGroup? targetGroup) async {
     if (title.trim().isEmpty || target.trim().isEmpty) return;
 
     if (_isNew) {
@@ -108,6 +109,12 @@ class _BookmarksPanelState extends State<BookmarksPanel> {
       _editingBookmark!.emoji = emoji.trim();
       _editingBookmark!.stringToExecute = target.trim();
       _editingBookmark!.preferInputIcon = preferInputIcon;
+
+      // Move the bookmark to a different category if one was selected.
+      if (targetGroup != null && targetGroup != _activeParentGroup) {
+        _activeParentGroup!.bookmarks.remove(_editingBookmark);
+        targetGroup.bookmarks.add(_editingBookmark!);
+      }
     }
 
     await _persistBookmarks();
@@ -230,6 +237,7 @@ class _BookmarksPanelState extends State<BookmarksPanel> {
                     group: _editingGroup,
                     bookmark: _editingBookmark,
                     parentGroup: _activeParentGroup,
+                    allGroups: bookmarks,
                     accent: accent,
                     isNew: _isNew,
                     onSaveGroup: _saveGroup,

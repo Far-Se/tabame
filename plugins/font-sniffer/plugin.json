@@ -1,0 +1,10 @@
+{
+  "id": "font-sniffer",
+  "name": "Font Sniffer",
+  "keyword": "fonts",
+  "description": "Load any website in headless Chrome and list every font it actually renders, ranked by usage.",
+  "icon": "language",
+  "runtime": "node",
+  "entry": "main.js",
+  "args": []
+}

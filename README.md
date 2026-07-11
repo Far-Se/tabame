@@ -251,6 +251,21 @@ If you're working inside this repo with Claude Code, the `tbm-plugin` skill wrap
 
 The protocol itself is simple by design: Tabame sends your script JSON events (`init`, `query`, `select`, `action`, `close`) on stdin, one per line, and your script answers with **render frames** - JSON objects describing what the Launcher should show right now - on stdout. That's the entire contract, which is why an AI assistant (or you) can build one in a single sitting.
 
+## Plugins with dependencies
+
+Most plugins need nothing but the runtime. If yours needs a library, Tabame installs it automatically the first time you use the plugin (with an "Installing dependencies…" notice), so there's no manual setup:
+
+- **Python** - list the packages in a `"pip"` array in `plugin.json` (and/or drop a `requirements.txt` next to your script). Tabame installs them into a `.pluginlibs` folder inside the plugin and puts it on `PYTHONPATH`, so you just `import` them.
+- **Node.js / Bun** - ship a `package.json`; Tabame runs `npm install` (or `bun install`) in the plugin folder on first run. You can still install by hand, or bundle everything into one dependency-free file so there's nothing to install:
+
+  ```
+  esbuild main.js --bundle --platform=node --format=cjs --outfile=main.bundle.js
+  ```
+
+  then set `"entry": "main.bundle.js"` in `plugin.json`.
+
+Installs are cached and only re-run when your dependency list changes, so normal launches stay instant. Full details (including the `"env"` key for custom environment variables) are in `plugins/TABAME_PLUGIN_SKILL.md`, §4.1.
+
 ---
 
 # ⚡ QuickActions

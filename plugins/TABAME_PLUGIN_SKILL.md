@@ -29,8 +29,9 @@ to show something different, you print a new render frame. The process stays
 alive the whole time the plugin's keyword owns the query, and is shut down when
 the user leaves it.
 
-There is **no SDK and no dependencies** required — just read lines from stdin and
-print lines to stdout.
+There is **no SDK** — just read lines from stdin and print lines to stdout. No
+third-party packages are needed for the protocol itself; if your plugin's own
+logic wants extra libraries, see §4.1.
 
 ---
 
@@ -105,6 +106,8 @@ Each plugin lives in its own folder under:
 | `description` | no | `""` | One-line description. |
 | `icon` | no | `"extension"` | Icon for the discovery hint (see §11). |
 | `args` | no | `[]` | Extra command-line arguments inserted **before** `entry`. |
+| `pip` | no | `[]` | **Python only.** Packages to auto-install into the plugin's own `.pluginlibs` folder on first run (see §4.1). e.g. `["requests", "pillow>=10"]`. |
+| `env` | no | `{}` | Extra environment variables handed to the process, e.g. `{"API_BASE": "https://…"}`. Merged on top of Tabame's defaults. |
 | `dev` | no | `false` | Development mode: hot reload + on-screen debug console (see below). Turn it off before sharing the plugin. |
 
 The launch command is effectively:
@@ -158,6 +161,74 @@ search for.
 - On Windows, Tabame sets `PYTHONIOENCODING=utf-8` and `PYTHONUTF8=1` so Python
   stdout/stdin is UTF-8. Node/Bun default to UTF-8 already.
 - Use `node` 18+ or `bun` (both provide a global `fetch`), or any Python 3.
+
+### 4.1 Third-party packages (dependencies)
+
+The runtime resolves imports from the plugin folder, so how you add a library
+depends on the runtime.
+
+**Python — declare them and Tabame installs them.** List packages in a `"pip"`
+array in `plugin.json`, and/or drop a `requirements.txt` next to your script:
+
+```json
+{ "keyword": "img", "runtime": "python", "entry": "main.py",
+  "pip": ["requests", "pillow>=10"] }
+```
+
+On the first launch (and again whenever the list or `requirements.txt` changes),
+Tabame runs `pip install --target .pluginlibs …` into a `.pluginlibs` folder
+inside the plugin, shows an "Installing dependencies…" spinner while it works,
+then puts `.pluginlibs` on `PYTHONPATH`. Your script just imports normally:
+
+```python
+import requests          # resolved from .pluginlibs, no sys.path juggling
+```
+
+Notes:
+- Installs are cached — pip only re-runs when your declared set changes, so
+  normal launches stay instant.
+- `.pluginlibs` is self-contained inside the plugin folder, so the plugin stays
+  portable. It's ignored by the dev-mode file watcher (no reload storms).
+- `pip` must be available for your `runtime` (Tabame calls `<runtime> -m pip`).
+  If an install fails, the launcher shows the pip error instead of your UI.
+- No network/opaque-install worries? You can still vendor packages yourself by
+  running `pip install --target .pluginlibs <pkg>` in the plugin folder by hand —
+  Tabame adds `.pluginlibs` to `PYTHONPATH` whenever it exists.
+
+**Node.js / Bun — ship a `package.json` and Tabame installs it for you.** If the
+plugin folder has a `package.json` but no (up-to-date) `node_modules`, Tabame runs
+`npm install` (or `bun install` for the Bun runtime) in the folder on the first
+launch, showing an "Installing dependencies…" spinner, then starts your script.
+Node resolves `require`/`import` from that local `node_modules`, so you just:
+
+```json
+{ "keyword": "fonts", "runtime": "node", "entry": "main.js" }
+```
+
+with a `package.json` listing your deps:
+
+```json
+{ "dependencies": { "puppeteer": "^23.0.0" } }
+```
+
+Notes:
+- The install is cached (keyed on `package.json`) and only re-runs when your
+  `package.json` changes, so normal launches stay instant.
+- `npm`/`bun` must be on `PATH`; on failure the launcher shows the install error.
+  Guard your own `require()` of a heavy dependency (or lazy-load it) so a missing
+  package renders a friendly message rather than crashing the process.
+- You can still `npm install` by hand in the folder, or **bundle to a single
+  dependency-free file** so there's nothing to install at all:
+
+  ```
+  esbuild main.js --bundle --platform=node --format=cjs --outfile=main.bundle.js
+  ```
+
+  Then point `entry` at the bundle: `"entry": "main.bundle.js"`. (Bun users can
+  also `bun build main.js --target=node --outfile=main.bundle.js`.)
+
+**Custom env vars** for any runtime go in the `"env"` object of `plugin.json`
+(e.g. an API base URL), and are readable via `os.environ` / `process.env`.
 
 ---
 
@@ -275,6 +346,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
   "rev": 0,                       // echo the query's rev, or 0 for unsolicited
   "view": "list",                // "list" | "grid" | "detail" | "form"   (default "list")
   "loading": false,               // bool, or {"progress": 0.4} for a determinate spinner
+  "loadingText": "Searching…",   // caption shown under the spinner while loading
   "emptyText": "No results",     // shown when items is empty and not loading
   "empty": { "icon": "cloud", "title": "No issues", "hint": "Try a filter" },  // richer empty state
   "placeholder": "Search issues…",                 // search-field hint while this frame is shown
@@ -291,6 +363,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 |---|---|---|
 | `view` | string | `"list"` (rows), `"grid"` (tiles), `"detail"` (full-width markdown), or `"form"` (inputs). Default `list`. |
 | `loading` | bool or object | When truthy and `items` empty, a spinner is shown. `{"progress": 0..1}` makes it determinate. |
+| `loadingText` | string | Optional caption shown **under the spinner** while `loading`. Use this (not `emptyText`) for "Searching…"-style progress text — `emptyText` is only shown when *not* loading. |
 | `emptyText` | string | Message when there are no items. Default `"No results"`. |
 | `empty` | object | Richer empty state: `{icon?, title?, hint?}` — icon name (§11), bold title, dimmed hint. Overrides `emptyText`. |
 | `placeholder` | string | Replaces the search field's hint text while this frame is shown (good affordance for sub-screens). |
@@ -532,10 +605,12 @@ if os.path.exists("config.json"):
 ### Async loading
 For slow work, echo the rev and show a spinner first, then the result:
 ```python
-send({"type":"render","rev":rev,"view":"list","loading":True,"items":[],"emptyText":"Searching…"})
+send({"type":"render","rev":rev,"view":"list","loading":True,"items":[],"loadingText":"Searching…"})
 results = do_slow_search(text)     # network, etc.
 send({"type":"render","rev":rev,"view":"list","items":[to_item(r) for r in results]})
 ```
+(Use `loadingText` for the caption under the spinner — `emptyText` only shows when
+the frame is *not* loading.)
 Both frames carry the same `rev`, so if the user kept typing, Tabame drops the
 stale result automatically.
 
@@ -596,6 +671,7 @@ except Exception as e:
 - [ ] Only use documented `view` values, message types, and fields.
 - [ ] Use **commands** (§5.2) for clipboard / open / hide / toast — don't shell out to `clip`/`start`.
 - [ ] Remember the working directory is the **plugin folder** (put `config.json` there).
+- [ ] Need libraries? Tabame auto-installs them on first run — **Python:** `"pip"` / `requirements.txt`; **Node/Bun:** a `package.json` (§4.1). Lazy-load heavy deps so a failed install degrades gracefully.
 - [ ] Icons must be a name from §11, a `#RRGGBB` color, or a `file://`/`https://` **raster** image.
 - [ ] Prefer `metadata` rows (§7.1) over markdown tables for structured facts.
 - [ ] Keep items sharing a `section` adjacent — headers appear on value *changes*.

@@ -19,6 +19,8 @@ class PluginManifest {
     required this.directory,
     this.enabled = true,
     this.dev = false,
+    this.pip = const <String>[],
+    this.env = const <String, String>{},
   });
 
   /// Stable identifier — defaults to the containing folder name.
@@ -60,6 +62,19 @@ class PluginManifest {
   /// file changes, and the launcher shows a live debug console under the view.
   final bool dev;
 
+  /// Python packages to install into the plugin's own `.pluginlibs` folder on
+  /// first run (and again whenever this list — or a sibling `requirements.txt` —
+  /// changes). From the optional `"pip"` array in `plugin.json`. The host puts
+  /// `.pluginlibs` on `PYTHONPATH` so `import` resolves them with no `sys.path`
+  /// juggling in the script. Ignored for non-Python runtimes.
+  final List<String> pip;
+
+  /// Extra environment variables handed to the plugin process, merged on top of
+  /// Tabame's defaults (UTF-8 + the computed `PYTHONPATH`). From the optional
+  /// `"env"` object in `plugin.json` — useful for API base URLs or feature flags
+  /// the script reads from `os.environ` / `process.env`.
+  final Map<String, String> env;
+
   bool get isValid => keyword.trim().isNotEmpty && runtime.trim().isNotEmpty && entry.trim().isNotEmpty;
 
   /// The lowercased keyword used for matching.
@@ -83,6 +98,22 @@ class PluginManifest {
       }
     }
 
+    final List<String> pip = <String>[];
+    final Object? rawPip = json['pip'];
+    if (rawPip is List) {
+      for (final Object? package in rawPip) {
+        if (package is String && package.trim().isNotEmpty) pip.add(package.trim());
+      }
+    }
+
+    final Map<String, String> env = <String, String>{};
+    final Object? rawEnv = json['env'];
+    if (rawEnv is Map) {
+      rawEnv.forEach((Object? key, Object? value) {
+        if (key is String && value is String) env[key] = value;
+      });
+    }
+
     final Object? rawEnabled = json['enabled'];
     final Object? rawDev = json['dev'];
 
@@ -99,6 +130,8 @@ class PluginManifest {
       // Absent or non-boolean `enabled` means the plugin is on by default.
       enabled: rawEnabled is bool ? rawEnabled : true,
       dev: rawDev == true,
+      pip: pip,
+      env: env,
     );
   }
 }

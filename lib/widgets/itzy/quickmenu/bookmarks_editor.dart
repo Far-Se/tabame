@@ -16,6 +16,7 @@ class BookmarkEditor extends StatefulWidget {
     this.group,
     this.bookmark,
     this.parentGroup,
+    this.allGroups = const <BookmarkGroup>[],
     required this.accent,
     required this.onSaveGroup,
     required this.onSaveBookmark,
@@ -27,9 +28,11 @@ class BookmarkEditor extends StatefulWidget {
   final BookmarkGroup? group;
   final BookmarkInfo? bookmark;
   final BookmarkGroup? parentGroup;
+  final List<BookmarkGroup> allGroups;
   final Color accent;
   final Function(String title, String emoji, String viewMode) onSaveGroup;
-  final Function(String title, String emoji, String target, bool preferInputIcon) onSaveBookmark;
+  final Function(String title, String emoji, String target, bool preferInputIcon, BookmarkGroup? targetGroup)
+      onSaveBookmark;
   final VoidCallback onCancel;
   final VoidCallback? onDelete;
   final bool isNew;
@@ -44,6 +47,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
   late final TextEditingController _pathCtrl;
   late String _viewMode;
   late bool _preferInputIcon;
+  BookmarkGroup? _selectedGroup;
 
   @override
   void initState() {
@@ -54,6 +58,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
     _pathCtrl = TextEditingController(text: isBookmark ? widget.bookmark!.stringToExecute : "");
     _viewMode = widget.group?.viewMode ?? 'list';
     _preferInputIcon = isBookmark ? (widget.bookmark?.preferInputIcon ?? false) : false;
+    _selectedGroup = widget.parentGroup;
   }
 
   @override
@@ -66,7 +71,7 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
 
   void _handleSave() {
     if (widget.bookmark != null) {
-      widget.onSaveBookmark(_titleCtrl.text, _emojiCtrl.text, _pathCtrl.text, _preferInputIcon);
+      widget.onSaveBookmark(_titleCtrl.text, _emojiCtrl.text, _pathCtrl.text, _preferInputIcon, _selectedGroup);
     } else {
       widget.onSaveGroup(_titleCtrl.text, _emojiCtrl.text, _viewMode);
     }
@@ -205,6 +210,17 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
                         ],
                       ),
                     ),
+                    if (!widget.isNew && widget.allGroups.length > 1) ...<Widget>[
+                      const SizedBox(height: 18),
+                      _buildSectionLabel(
+                        label: "CATEGORY",
+                        accent: Design.accent,
+                        onSurface: onSurface,
+                        icon: Icons.folder_copy_outlined,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildCategoryDropdown(onSurface),
+                    ],
                   ],
                   if (!isBookmark) ...<Widget>[
                     const SizedBox(height: 18),
@@ -436,6 +452,55 @@ class _BookmarkEditorState extends State<BookmarkEditor> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryDropdown(Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: onSurface.withAlpha(8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: onSurface.withAlpha(16)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<BookmarkGroup>(
+          value: _selectedGroup,
+          isExpanded: true,
+          borderRadius: BorderRadius.circular(10),
+          dropdownColor: Color.alphaBlend(onSurface.withAlpha(18), Theme.of(context).colorScheme.surface),
+          icon: Icon(Icons.unfold_more_rounded, size: 18, color: onSurface.withAlpha(150)),
+          style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: onSurface),
+          items: widget.allGroups
+              .map(
+                (BookmarkGroup group) => DropdownMenuItem<BookmarkGroup>(
+                  value: group,
+                  child: Row(
+                    children: <Widget>[
+                      Text(group.emoji.isNotEmpty ? group.emoji : "📂", style: const TextStyle(fontSize: 16)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          group.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: Design.baseFontSize + 1,
+                            fontWeight: FontWeight.w600,
+                            color: onSurface,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (BookmarkGroup? group) {
+            if (group != null) setState(() => _selectedGroup = group);
+          },
         ),
       ),
     );

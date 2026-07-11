@@ -24,6 +24,11 @@ class PluginManagerButton extends StatelessWidget {
   }
 }
 
+/// Where users submit their own plugins for review — opens the pre-filled
+/// "Plugin submission" GitHub issue template. Curated submissions land in
+/// `resources/plugins.json` and show up in everyone's gallery.
+const String _submitPluginUrl = 'https://github.com/Far-Se/tabame/issues/new?template=plugin_submission.md';
+
 enum _PanelMode { installed, gallery }
 
 /// Two-mode panel: "Installed" lists every local plugin with on/off toggles;
@@ -262,6 +267,8 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(110)),
             ),
+            const SizedBox(height: 16),
+            _buildSubmitStrip(),
           ],
         ),
       ),
@@ -295,9 +302,16 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            "The gallery is empty for now.",
-            style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(140)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                "The gallery is empty for now.",
+                style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(140)),
+              ),
+              const SizedBox(height: 12),
+              _buildSubmitStrip(),
+            ],
           ),
         ),
       );
@@ -329,6 +343,52 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
               ),
               const SizedBox(height: 8),
             ],
+            _buildSubmitStrip(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Invitation to contribute a plugin — links to the GitHub submission
+  /// template. Submissions are reviewed manually and added to the gallery.
+  Widget _buildSubmitStrip() {
+    return InkWell(
+      onTap: () => WinUtils.open(_submitPluginUrl),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          color: Design.accent.withAlpha(10),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Design.accent.withAlpha(40)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(Icons.upload_rounded, size: 16, color: Design.accent),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: C.start,
+                children: <Widget>[
+                  Text(
+                    "Built a plugin? Submit it",
+                    style: TextStyle(
+                      fontSize: Design.baseFontSize + 0.5,
+                      fontWeight: FontWeight.w700,
+                      color: Design.text.withAlpha(220),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    "Share it via GitHub — reviewed plugins are added to this gallery.",
+                    style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(120)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(Icons.open_in_new_rounded, size: 13, color: Design.accent.withAlpha(180)),
           ],
         ),
       ),

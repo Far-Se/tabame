@@ -408,6 +408,7 @@ class PluginRenderFrame {
     this.error,
     this.form,
     this.loadingProgress,
+    this.loadingText,
     this.placeholder,
     this.empty,
     this.canGoBack = false,
@@ -451,6 +452,11 @@ class PluginRenderFrame {
   /// 0..1 makes the loading spinner determinate.
   final double? loadingProgress;
 
+  /// Optional caption shown under the spinner while [loading] (e.g. "Searching…",
+  /// "Installing dependencies…"). Distinct from [emptyText], which is only shown
+  /// when there are no items and the frame is *not* loading.
+  final String? loadingText;
+
   /// Replaces the launcher's search-field hint text while this frame is shown.
   final String? placeholder;
 
@@ -479,6 +485,22 @@ class PluginRenderFrame {
         emptyText: '',
         rev: 0,
         error: message,
+      );
+
+  /// A transient host-side status frame (e.g. "Installing dependencies…") shown
+  /// as a spinner with a caption before the plugin process produces its first
+  /// real frame. Uses `rev: 0` so it is never dropped by the staleness guard.
+  static PluginRenderFrame statusFrame(String message) => PluginRenderFrame(
+        view: PluginViewType.list,
+        items: const <PluginItem>[],
+        gridColumns: 4,
+        gridAspectRatio: 1.0,
+        detailMarkdown: null,
+        previewEnabled: false,
+        loading: true,
+        emptyText: '',
+        loadingText: message,
+        rev: 0,
       );
 
   /// Parses one line of stdout. Returns null when the line is not a render
@@ -549,6 +571,7 @@ class PluginRenderFrame {
 
     final Object? rev = json['rev'];
     final Object? emptyText = json['emptyText'];
+    final Object? loadingText = json['loadingText'];
     final Object? placeholder = json['placeholder'];
 
     // `loading` is either a bool or `{"progress": 0..1}` for a determinate bar.
@@ -573,6 +596,7 @@ class PluginRenderFrame {
       previewWide: previewWide,
       loading: loading,
       loadingProgress: loadingProgress,
+      loadingText: loadingText is String && loadingText.trim().isNotEmpty ? loadingText : null,
       emptyText: emptyText is String ? emptyText : 'No results',
       rev: rev is num ? rev.toInt() : 0,
       form: PluginForm.fromJson(json['form']),

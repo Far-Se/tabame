@@ -1,0 +1,10 @@
+{
+  "name": "tabame-font-sniffer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tabame launcher plugin: list the fonts a website renders, via headless Puppeteer.",
+  "main": "main.js",
+  "dependencies": {
+    "puppeteer": "^23.0.0"
+  }
+}

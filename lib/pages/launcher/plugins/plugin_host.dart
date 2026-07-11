@@ -77,15 +77,22 @@ class LauncherPluginHost {
     _closing = false;
     _active = manifest;
     _lastQuery = initialQuery;
+
+    // Install the plugin's dependencies before the first launch (pip for Python,
+    // npm/bun for Node). This can block on the network, so it runs before the
+    // process starts and shows a spinner meanwhile. If the user leaves the plugin
+    // while it runs, bail out.
+    final bool depsReady = await _ensureDependencies(manifest);
+    if (!depsReady) return;
+    if (_active?.id != manifest.id || _closing) return;
+
     try {
       final Process process = await Process.start(
         manifest.runtime,
         <String>[...manifest.args, manifest.entry],
         workingDirectory: manifest.directory,
         runInShell: false,
-        // Force UTF-8 stdout/stderr so JSON with non-ASCII survives on Windows,
-        // where interpreters otherwise default to the legacy code page.
-        environment: <String, String>{'PYTHONIOENCODING': 'utf-8', 'PYTHONUTF8': '1'},
+        environment: _buildEnvironment(manifest),
       );
       _process = process;
 
@@ -134,6 +141,158 @@ class LauncherPluginHost {
     }
   }
 
+  // ── Dependencies & environment ──────────────────────────────────────────────
+
+  /// Folder Tabame installs a plugin's vendored Python packages into. Kept
+  /// inside the plugin folder so the plugin stays self-contained and portable.
+  static String _libsDir(PluginManifest manifest) =>
+      '${manifest.directory}${Platform.pathSeparator}.pluginlibs';
+
+  /// Builds the child process environment: UTF-8 defaults, a `PYTHONPATH` that
+  /// includes the vendored `.pluginlibs` folder (when present), then the
+  /// author's own `env` map on top.
+  Map<String, String> _buildEnvironment(PluginManifest manifest) {
+    final Map<String, String> env = <String, String>{
+      // Force UTF-8 stdout/stdin so JSON with non-ASCII survives on Windows,
+      // where interpreters otherwise default to the legacy code page.
+      'PYTHONIOENCODING': 'utf-8',
+      'PYTHONUTF8': '1',
+    };
+    final Directory libs = Directory(_libsDir(manifest));
+    if (libs.existsSync()) {
+      final String sep = Platform.isWindows ? ';' : ':';
+      final String? existing = Platform.environment['PYTHONPATH'];
+      env['PYTHONPATH'] =
+          existing == null || existing.isEmpty ? libs.path : '${libs.path}$sep$existing';
+    }
+    // Author-declared vars win, so a plugin can override anything above.
+    env.addAll(manifest.env);
+    return env;
+  }
+
+  /// Ensures the plugin's dependencies are installed before launch, dispatching
+  /// by runtime: pip for Python, npm/bun for Node. Returns false only when an
+  /// install was attempted and failed (an error frame is already shown).
+  Future<bool> _ensureDependencies(PluginManifest manifest) async {
+    final String runtime = manifest.runtime.toLowerCase();
+    if (runtime.contains('py')) return _ensurePythonDeps(manifest);
+    if (runtime.contains('node') || runtime.contains('bun')) return _ensureNodeDeps(manifest);
+    return true;
+  }
+
+  /// Runs `npm install` (or `bun install`) in a Node/Bun plugin's folder when it
+  /// ships a `package.json` but its `node_modules` is missing or out of date, so
+  /// the user never has to open a terminal. Skipped when there's no
+  /// `package.json`, or the install signature (the `package.json` contents) is
+  /// unchanged since the last install.
+  Future<bool> _ensureNodeDeps(PluginManifest manifest) async {
+    final String sep = Platform.pathSeparator;
+    final File packageJson = File('${manifest.directory}${sep}package.json');
+    if (!packageJson.existsSync()) return true; // Nothing declared.
+
+    // Reinstall when node_modules is absent or when package.json changed.
+    final String signature = packageJson.readAsStringSync();
+    final Directory modules = Directory('${manifest.directory}${sep}node_modules');
+    final File marker = File('${modules.path}$sep.tabame-install');
+    if (modules.existsSync() && marker.existsSync() && marker.readAsStringSync() == signature) {
+      return true;
+    }
+
+    final bool isBun = manifest.runtime.toLowerCase().contains('bun');
+    final String tool = isBun ? 'bun' : 'npm';
+
+    onFrame(PluginRenderFrame.statusFrame(
+        'Installing dependencies for "${manifest.name}"… (first run can take a minute)'));
+    debugLog.add(PluginDebugKind.info, '$tool install → node_modules');
+    try {
+      final ProcessResult result = await Process.run(
+        tool,
+        <String>['install'],
+        workingDirectory: manifest.directory,
+        // npm/bun are `.cmd`/`.ps1` shims on Windows, not `.exe`, so they must be
+        // launched through a shell.
+        runInShell: true,
+      );
+      if (result.exitCode != 0) {
+        final String detail = '${result.stdout}\n${result.stderr}'.trim();
+        debugLog.add(PluginDebugKind.error, '$tool install failed (exit ${result.exitCode})');
+        unawaited(ErrorLogger.log('LauncherPluginHost', '$tool install for ${manifest.id} failed: $detail', null));
+        _active = null;
+        onFrame(PluginRenderFrame.errorFrame(
+            'Could not install dependencies for "${manifest.name}".\nIs `$tool` on your PATH?\n\n$detail'));
+        return false;
+      }
+      if (modules.existsSync()) marker.writeAsStringSync(signature);
+      debugLog.add(PluginDebugKind.info, 'Dependencies installed into node_modules');
+      return true;
+    } catch (error, stack) {
+      debugLog.add(PluginDebugKind.error, '$tool install error: $error');
+      unawaited(ErrorLogger.log('LauncherPluginHost', '$tool install for ${manifest.id} error: $error', stack));
+      _active = null;
+      onFrame(PluginRenderFrame.errorFrame(
+          'Could not install dependencies for "${manifest.name}".\nIs `$tool` on your PATH?\n$error'));
+      return false;
+    }
+  }
+
+  /// Installs a Python plugin's declared dependencies (`"pip"` array and/or a
+  /// sibling `requirements.txt`) into `.pluginlibs`, but only when the declared
+  /// set has changed since the last install. Returns false only when an install
+  /// was attempted and failed (an error frame is shown); true otherwise —
+  /// including the common "nothing to install" and "non-Python runtime" cases.
+  Future<bool> _ensurePythonDeps(PluginManifest manifest) async {
+    if (!manifest.runtime.toLowerCase().contains('py')) return true;
+
+    final File reqFile = File('${manifest.directory}${Platform.pathSeparator}requirements.txt');
+    final bool hasReqFile = reqFile.existsSync();
+    final List<String> requirementArgs = <String>[
+      if (hasReqFile) ...<String>['-r', 'requirements.txt'],
+      ...manifest.pip,
+    ];
+    if (requirementArgs.isEmpty) return true; // Nothing declared.
+
+    // Reinstall only when the declared dependency set actually changed.
+    final String signature = <String>[
+      manifest.pip.join(''),
+      if (hasReqFile) reqFile.readAsStringSync(),
+    ].join('');
+    final Directory libs = Directory(_libsDir(manifest));
+    final File marker = File('${libs.path}${Platform.pathSeparator}.tabame-install');
+    if (libs.existsSync() && marker.existsSync() && marker.readAsStringSync() == signature) {
+      return true;
+    }
+
+    onFrame(PluginRenderFrame.statusFrame('Installing dependencies for "${manifest.name}"…'));
+    debugLog.add(PluginDebugKind.info, 'pip install ${requirementArgs.join(' ')} → .pluginlibs');
+    try {
+      await libs.create(recursive: true);
+      final ProcessResult result = await Process.run(
+        manifest.runtime,
+        <String>['-m', 'pip', 'install', '--upgrade', '--target', libs.path, ...requirementArgs],
+        workingDirectory: manifest.directory,
+        runInShell: false,
+        environment: <String, String>{'PYTHONIOENCODING': 'utf-8', 'PYTHONUTF8': '1'},
+      );
+      if (result.exitCode != 0) {
+        final String detail = '${result.stdout}\n${result.stderr}'.trim();
+        debugLog.add(PluginDebugKind.error, 'pip install failed (exit ${result.exitCode})');
+        unawaited(ErrorLogger.log('LauncherPluginHost', 'pip install for ${manifest.id} failed: $detail', null));
+        _active = null;
+        onFrame(PluginRenderFrame.errorFrame('Could not install dependencies for "${manifest.name}".\n\n$detail'));
+        return false;
+      }
+      marker.writeAsStringSync(signature);
+      debugLog.add(PluginDebugKind.info, 'Dependencies installed into .pluginlibs');
+      return true;
+    } catch (error, stack) {
+      debugLog.add(PluginDebugKind.error, 'pip install error: $error');
+      unawaited(ErrorLogger.log('LauncherPluginHost', 'pip install for ${manifest.id} error: $error', stack));
+      _active = null;
+      onFrame(PluginRenderFrame.errorFrame('Could not install dependencies for "${manifest.name}".\n$error'));
+      return false;
+    }
+  }
+
   // ── Dev mode: hot reload ────────────────────────────────────────────────────
 
   /// Restarts the plugin process whenever a file inside its folder changes, so
@@ -143,7 +302,12 @@ class LauncherPluginHost {
     try {
       _devWatchSub = Directory(manifest.directory).watch(recursive: true).listen((FileSystemEvent event) {
         final String path = event.path.replaceAll('\\', '/');
-        if (path.contains('/__pycache__/') || path.contains('/node_modules/') || path.contains('/.git/')) return;
+        if (path.contains('/__pycache__/') ||
+            path.contains('/node_modules/') ||
+            path.contains('/.pluginlibs/') ||
+            path.contains('/.git/')) {
+          return;
+        }
         if (path.endsWith('.log') || path.endsWith('.tmp')) return;
         _devReloadDebounce?.cancel();
         // Editors fire several events per save (write + metadata); coalesce
