@@ -33,6 +33,7 @@ import '../widgets/itzy/quickmenu/button_obsidian.dart';
 import '../widgets/itzy/quickmenu/button_quickactions.dart';
 import '../widgets/itzy/quickmenu/button_steam.dart';
 import '../widgets/itzy/quickmenu/button_timers.dart';
+import '../widgets/itzy/quickmenu/button_workspaces.dart';
 import '../widgets/itzy/quickmenu/button_persistent_reminders.dart';
 import 'launcher/result/result_item_app.dart';
 import 'launcher/result/result_item_bookmark.dart';
@@ -53,6 +54,7 @@ import 'launcher/launcher_design.dart';
 import 'launcher/launcher_design_builder.dart';
 import 'launcher/core/launcher_result_executor.dart';
 import 'launcher/plugins/plugin_actions_panel.dart';
+import 'launcher/plugins/plugin_debug_console.dart';
 import 'launcher/plugins/plugin_host.dart';
 import 'launcher/plugins/plugin_manifest.dart';
 import 'launcher/plugins/plugin_protocol.dart';
@@ -194,12 +196,24 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   // When a plugin keyword is active, the launcher hands its results area over to
   // an external script: `_pluginFrame` holds the latest JSON-described UI and
   // `_activePlugin` the running manifest. `_results` is empty in this mode.
-  late final LauncherPluginHost _pluginHost = LauncherPluginHost(onFrame: _onPluginFrame);
+  late final LauncherPluginHost _pluginHost =
+      LauncherPluginHost(onFrame: _onPluginFrame, onCommand: _onPluginCommand);
   PluginManifest? _activePlugin;
   PluginRenderFrame? _pluginFrame;
   Timer? _pluginQueryDebounce;
+
+  /// Set when Enter is pressed while a query is still waiting out its debounce:
+  /// the visible frame predates what the user typed, so the submit is deferred
+  /// until the fresh frame answering the flushed query arrives (see
+  /// [_submitPluginItem] / [_onPluginFrame]).
+  bool _pluginSubmitPending = false;
   bool _pluginWindowWidened = false;
   Timer? _pluginWidthCollapseTimer;
+  String? _pluginToast;
+  Timer? _pluginToastTimer;
+
+  /// Scrolls the detail (markdown document) view from arrow/page keys.
+  final ScrollController _pluginDetailScroll = ScrollController();
   String? _pendingLauncherQuickAction;
   int _pendingLauncherQuickActionAttempt = 0;
 
@@ -372,6 +386,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       icon: Icons.music_note_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'ws ',
+      caption: 'Workspaces',
+      prefix: 'ws ',
+      icon: Icons.dashboard_customize_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: r'$',
       caption: 'Functions',
       prefix: r'$',
@@ -462,6 +482,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     Globals.isLauncherPluginActive = true;
 
     if (switching) {
+      _pluginSubmitPending = false;
       setState(() {
         _searchMode = LauncherSearchMode.mixed;
         _isSearching = true;
@@ -484,12 +505,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   /// Leaves plugin mode: stops the process and restores the normal layout.
   void _deactivatePlugin() {
     _pluginQueryDebounce?.cancel();
+    _pluginSubmitPending = false;
+    _pluginToastTimer?.cancel();
+    _pluginToastTimer = null;
     if (_activePlugin == null && _pluginFrame == null) return;
     _activePlugin = null;
     Globals.isLauncherPluginActive = false;
     unawaited(_pluginHost.deactivate());
     _restorePluginWindowWidth();
-    if (mounted) setState(() => _pluginFrame = null);
+    if (mounted) {
+      setState(() {
+        _pluginFrame = null;
+        _pluginToast = null;
+      });
+    }
   }
 
   /// Exits the plugin and clears the search back to the launcher home.
@@ -503,17 +532,123 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   /// Applies a render frame pushed by the plugin process.
   void _onPluginFrame(PluginRenderFrame frame) {
     if (!mounted || _activePlugin == null) return;
+    final PluginRenderFrame? previous = _pluginFrame;
+    final bool wasForm = previous?.view == PluginViewType.form;
+    // A different item set means a new screen (drill-in) or a fresh search:
+    // snap the selection back to the first row so it matches what's shown and
+    // arrow keys start from there. Same-id re-renders (e.g. a background badge
+    // refresh) keep the cursor where the user left it.
+    final bool sameItemSet = previous != null && _sameItemIds(previous.items, frame.items);
     setState(() {
       _pluginFrame = frame;
       _isSearching = frame.loading;
       final int count = frame.items.length;
-      if (count == 0) {
+      if (count == 0 || !sameItemSet) {
         _activeIndexNotifier.value = 0;
       } else if (_activeIndexNotifier.value >= count) {
         _activeIndexNotifier.value = count - 1;
       }
     });
-    _applyPluginWindowWidth(frame.hasPreview);
+    // An Enter press was deferred until this query's frame arrived. Fire the
+    // first result now — ignoring transient loading frames the plugin emits
+    // before its real results, and never auto-submitting a form.
+    if (_pluginSubmitPending && !frame.loading && frame.view != PluginViewType.form) {
+      _pluginSubmitPending = false;
+      if (frame.items.isNotEmpty) {
+        _activeIndexNotifier.value = 0;
+        _pluginHost.sendAction(frame.items.first.id, 'default');
+      }
+    }
+    // Leaving a form view: the form's field held focus, hand it back to the
+    // search box so typing works again.
+    if (wasForm && frame.view != PluginViewType.form) _requestLauncherFocus();
+    _applyPluginWindowWidth(frame.wantsWideWindow);
+  }
+
+  /// Whether two plugin item lists carry the same ids in the same order — the
+  /// signal for "same list, just re-rendered" versus "a new list to show".
+  bool _sameItemIds(List<PluginItem> a, List<PluginItem> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id) return false;
+    }
+    return true;
+  }
+
+  /// Form view submit: forwards the field values to the plugin.
+  void _onPluginFormSubmit(Map<String, Object?> values) {
+    _pluginHost.sendFormSubmit(values);
+  }
+
+  /// Form view Escape: back when the frame declared canGoBack, otherwise exit.
+  void _onPluginFormCancel() {
+    if (_pluginFrame?.canGoBack == true) {
+      _pluginHost.sendBack();
+      return;
+    }
+    _exitPlugin();
+    _requestLauncherFocus();
+  }
+
+  /// Executes a `{"type":"command"}` side effect emitted by the plugin, so
+  /// scripts don't have to shell out to `clip`/`start` themselves.
+  void _onPluginCommand(PluginCommand command) {
+    if (!mounted || _activePlugin == null) return;
+    switch (command.name) {
+      case 'copy':
+        Clipboard.setData(ClipboardData(text: command.text ?? ''));
+        _showPluginToast('Copied to clipboard');
+        break;
+      case 'paste':
+        unawaited(_pastePluginText(command.text ?? ''));
+        break;
+      case 'open':
+        final String target = command.url?.trim() ?? '';
+        if (target.isNotEmpty) WinUtils.open(target);
+        break;
+      case 'hide':
+        unawaited(QuickMenuFunctions.hideQuickMenu());
+        break;
+      case 'toast':
+        _showPluginToast(command.text ?? '');
+        break;
+      case 'setquery':
+        _setPluginQuery(command.text ?? '');
+        break;
+    }
+  }
+
+  /// `setQuery` command: rewrites the search field's post-keyword text
+  /// (autocomplete, drill-down) while keeping the plugin active.
+  void _setPluginQuery(String text) {
+    final PluginManifest? plugin = _activePlugin;
+    if (plugin == null) return;
+    final String next = text.isEmpty ? '${plugin.keyword} ' : '${plugin.keyword} $text';
+    if (_controller.text == next) return;
+    _controller.text = next;
+    _controller.selection = TextSelection.collapsed(offset: next.length);
+    _onSearchChanged(next);
+  }
+
+  /// Shows a transient confirmation chip over the plugin results area.
+  void _showPluginToast(String message) {
+    if (message.trim().isEmpty) return;
+    _pluginToastTimer?.cancel();
+    setState(() => _pluginToast = message.trim());
+    _pluginToastTimer = Timer(const Duration(milliseconds: 1800), () {
+      _pluginToastTimer = null;
+      if (mounted) setState(() => _pluginToast = null);
+    });
+  }
+
+  /// Puts [text] on the clipboard, hides the launcher (which re-activates the
+  /// previously focused window), then sends Ctrl+V — the emoji picker's flow.
+  Future<void> _pastePluginText(String text) async {
+    if (text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    await QuickMenuFunctions.hideQuickMenu();
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    WinKeys.send("{#CONTROL}V{|}");
   }
 
   void _applyPluginWindowWidth(bool wide) {
@@ -567,6 +702,16 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   /// Fires the default action for the selected plugin item (Enter / tap).
   void _submitPluginItem() {
+    // A query keystroke is still waiting out its debounce: the visible frame
+    // predates what the user typed, so submitting now would fire the stale
+    // (unfiltered) list's item. Flush the query and defer the submit until the
+    // frame answering it arrives.
+    if ((_pluginQueryDebounce?.isActive ?? false) && _activePlugin != null) {
+      _pluginQueryDebounce!.cancel();
+      _pluginSubmitPending = true;
+      _pluginHost.sendQuery(PluginRegistry.queryAfterKeyword(_controller.text, _activePlugin!));
+      return;
+    }
     final PluginRenderFrame? frame = _pluginFrame;
     if (frame == null || frame.items.isEmpty) return;
     final int idx = _activeIndexNotifier.value.clamp(0, frame.items.length - 1);
@@ -611,12 +756,39 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.escape) {
-      if (event is KeyDownEvent) _exitPlugin();
+      // A frame that declared canGoBack owns Escape: the plugin renders its
+      // previous screen. Root frames exit the plugin as usual.
+      if (event is KeyDownEvent) {
+        if (frame.canGoBack) {
+          _pluginHost.sendBack();
+        } else {
+          _exitPlugin();
+        }
+      }
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.tab) {
+      // Forward Tab with the highlighted item so plugins can autocomplete
+      // (typically answered with a setQuery command). Swallowing it also stops
+      // focus traversal from leaving the search field.
+      if (event is KeyDownEvent) {
+        final int count = frame.items.length;
+        final String id =
+            count == 0 ? '' : frame.items[_activeIndexNotifier.value.clamp(0, count - 1)].id;
+        _pluginHost.sendTab(id);
+      }
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
       if (event is KeyDownEvent) _submitPluginItem();
       return KeyEventResult.handled;
+    }
+
+    // Detail (markdown document) view: arrows and page keys scroll the
+    // document. Home/End are left alone — they move the caret in the search
+    // field.
+    if (frame.view == PluginViewType.detail) {
+      return _scrollPluginDetail(event.logicalKey, isRepeat: event is KeyRepeatEvent);
     }
 
     final int count = frame.items.length;
@@ -643,33 +815,112 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     return KeyEventResult.handled;
   }
 
+  /// Scrolls the plugin detail document for arrow/page keys. Key repeats jump
+  /// instead of animating so held keys don't lag behind.
+  KeyEventResult _scrollPluginDetail(LogicalKeyboardKey key, {required bool isRepeat}) {
+    if (!_pluginDetailScroll.hasClients) return KeyEventResult.ignored;
+    final ScrollPosition position = _pluginDetailScroll.position;
+    final double page = position.viewportDimension * 0.85;
+    final double delta;
+    if (key == LogicalKeyboardKey.arrowDown) {
+      delta = 60;
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      delta = -60;
+    } else if (key == LogicalKeyboardKey.pageDown) {
+      delta = page;
+    } else if (key == LogicalKeyboardKey.pageUp) {
+      delta = -page;
+    } else {
+      return KeyEventResult.ignored;
+    }
+    final double target = (position.pixels + delta).clamp(0.0, position.maxScrollExtent);
+    if (isRepeat) {
+      _pluginDetailScroll.jumpTo(target);
+    } else {
+      _pluginDetailScroll.animateTo(target,
+          duration: const Duration(milliseconds: 110), curve: Curves.easeOutCubic);
+    }
+    return KeyEventResult.handled;
+  }
+
   Widget _buildPluginBody() {
     final PluginRenderFrame? frame = _pluginFrame;
+    final Widget body;
     if (frame == null) {
-      return const Center(
+      body = const Center(
         child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)),
       );
+    } else {
+      body = ValueListenableBuilder<int>(
+        valueListenable: _activeIndexNotifier,
+        builder: (BuildContext context, int activeIndex, Widget? _) {
+          return ValueListenableBuilder<bool>(
+            valueListenable: _isRepeatingKey,
+            builder: (BuildContext context, bool isRepeating, Widget? __) {
+              return PluginView(
+                frame: frame,
+                activeIndex: activeIndex,
+                isRepeating: isRepeating,
+                onTapItem: (int i) {
+                  _setPluginSelection(i);
+                  _submitPluginItem();
+                },
+                onHoverItem: _setPluginSelection,
+                onFormSubmit: _onPluginFormSubmit,
+                onFormCancel: _onPluginFormCancel,
+                detailScrollController: _pluginDetailScroll,
+              );
+            },
+          );
+        },
+      );
     }
-    return ValueListenableBuilder<int>(
-      valueListenable: _activeIndexNotifier,
-      builder: (BuildContext context, int activeIndex, Widget? _) {
-        return ValueListenableBuilder<bool>(
-          valueListenable: _isRepeatingKey,
-          builder: (BuildContext context, bool isRepeating, Widget? __) {
-            return PluginView(
-              frame: frame,
-              activeIndex: activeIndex,
-              isRepeating: isRepeating,
-              onTapItem: (int i) {
-                print("Tap");
-                _setPluginSelection(i);
-                _submitPluginItem();
-              },
-              onHoverItem: _setPluginSelection,
-            );
-          },
-        );
-      },
+    return Column(
+      children: <Widget>[
+        Expanded(
+          child: Stack(
+            children: <Widget>[
+              Positioned.fill(child: body),
+              if (_pluginToast != null)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 10,
+                  child: Center(child: _buildPluginToast(_pluginToast!)),
+                ),
+            ],
+          ),
+        ),
+        if (_activePlugin?.dev == true)
+          PluginDebugConsole(log: _pluginHost.debugLog, pluginId: _activePlugin!.id),
+      ],
+    );
+  }
+
+  Widget _buildPluginToast(String message) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withAlpha(240),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Design.accent.withAlpha(70)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 14, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.check_circle_rounded, size: 14, color: Design.accent),
+          const SizedBox(width: 6),
+          Text(
+            message,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Design.text),
+          ),
+        ],
+      ),
     );
   }
 
@@ -851,6 +1102,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     QuickMenuFunctions.removeListener(this);
     _searchToken.dispose();
     _pluginQueryDebounce?.cancel();
+    _pluginToastTimer?.cancel();
+    _pluginDetailScroll.dispose();
     _pluginHost.dispose();
     _restorePluginWindowWidth();
     _resultKeys.clear();
@@ -912,6 +1165,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     if (!QuickMenuFunctions.isQuickMenuVisible) return false;
     if (Globals.quickMenuPage != QuickMenuPage.launcher) return false;
     if (Navigator.of(context).canPop()) return false;
+    // A plugin form owns focus while it is shown — the search field must not
+    // steal keystrokes back from its inputs.
+    if (_activePlugin != null && _pluginFrame?.view == PluginViewType.form) return false;
     return true;
   }
 
@@ -961,6 +1217,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     if (!_scrollController.hasClients || _results.isEmpty) return;
     final int index = _activeIndexNotifier.value;
     if (index < 0 || index >= _results.length) return;
+
+    if (index == _results.length - 1) {
+      _moveResultListTo(_scrollController.position.maxScrollExtent, animated: !_isRepeatingKey.value);
+      return;
+    }
+    if (index == 0) {
+      _moveResultListTo(0, animated: !_isRepeatingKey.value);
+      return;
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients || _results.isEmpty) return;
@@ -1277,6 +1542,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       case LauncherSearchMode.terminalOnly:
         _handleTerminalSearch(context);
         break;
+      case LauncherSearchMode.workspacesOnly:
+        _handleWorkspacesSearch(context);
+        break;
       case LauncherSearchMode.timerCommand:
         _handleTimerCommand(context);
         break;
@@ -1290,6 +1558,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         _handleSpotifyCommand(context);
         break;
       default:
+        if (searchMode == LauncherSearchMode.mixed && _isMathCurrencyShorthand(context.normalizedQuery)) {
+          _handleMathCurrencyShorthand(context);
+          break;
+        }
         if (searchMode == LauncherSearchMode.mixed && _isCurrencyShorthand(context.normalizedQuery)) {
           _handleCurrencyShorthand(context);
           break;
@@ -1370,6 +1642,72 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         LauncherSearchResultItem.info(LauncherInfoResult(
           id: 'math-shorthand-error:$error',
           title: 'Calculation failed',
+          subtitle: error.toString(),
+          icon: Icons.error_outline_rounded,
+        )),
+      ], isSearching: false);
+    }
+  }
+
+  /// Matches a math expression followed by a currency conversion, e.g.
+  /// `30 + (3.79*3) usd to ron`. The expression part is restricted to
+  /// arithmetic-safe characters so it doesn't hijack ordinary searches.
+  static final RegExp _mathCurrencyShorthandPattern = RegExp(
+    r'^([\d\s.()+\-*/^%]+?)\s+([a-z]{3,4})\s+(?:to|in|into)\s+([a-z]{3,4})$',
+    caseSensitive: false,
+  );
+
+  /// Detects a math expression with a trailing currency conversion, e.g.
+  /// `30 + (3.79*3) usd to ron`, treated as: compute the expression, then
+  /// convert the result via the same handler as `$cur`.
+  bool _isMathCurrencyShorthand(String query) {
+    final String trimmed = query.trim();
+    if (trimmed.isEmpty) return false;
+    final RegExpMatch? match = _mathCurrencyShorthandPattern.firstMatch(trimmed);
+    if (match == null) return false;
+    final String expr = match.group(1)!.trim();
+    if (!RegExp(r'\d').hasMatch(expr)) return false;
+    return _mathOperatorPattern.hasMatch(expr);
+  }
+
+  /// Evaluates the arithmetic prefix of a `<expr> <CUR> to <CUR>` query, then
+  /// routes the numeric result through the currency conversion handler.
+  Future<void> _handleMathCurrencyShorthand(LauncherSearchContext context) async {
+    context.setSearching(true);
+    final String trimmed = context.normalizedQuery.trim();
+    final RegExpMatch? match = _mathCurrencyShorthandPattern.firstMatch(trimmed);
+    if (match == null) {
+      context.setResults(const <LauncherSearchResultItem>[], isSearching: false);
+      return;
+    }
+    final String expr = match.group(1)!.trim();
+    final String fromCurrency = match.group(2)!;
+    final String toCurrency = match.group(3)!;
+    try {
+      final ParserResult mathResult = await Parsers().calculator(expr);
+      if (!context.isActiveSearch(context.requestId, context.query)) return;
+      if (mathResult.results.isEmpty) {
+        context.setResults(<LauncherSearchResultItem>[
+          LauncherSearchResultItem.info(LauncherInfoResult(
+            id: 'math-currency-shorthand-empty',
+            title: mathResult.error.isEmpty ? 'No result' : mathResult.error,
+            subtitle: r'ex: 30 + (3.79*3) usd to ron',
+            icon: Icons.error_outline_rounded,
+          )),
+        ], isSearching: false);
+        return;
+      }
+      final String amount = _stripMathAssignmentPrefix(mathResult.results.last);
+      final List<LauncherSearchResultItem> results =
+          await _buildFunctionCurrencyResults('$amount $fromCurrency to $toCurrency');
+      if (!context.isActiveSearch(context.requestId, context.query)) return;
+      context.setResults(results, isSearching: false);
+    } catch (error) {
+      if (!context.isActiveSearch(context.requestId, context.query)) return;
+      context.setResults(<LauncherSearchResultItem>[
+        LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'math-currency-shorthand-error:$error',
+          title: 'Conversion failed',
           subtitle: error.toString(),
           icon: Icons.error_outline_rounded,
         )),
@@ -2097,6 +2435,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       emptyHelp: r'$c 1+3/5  •  Tip: just type 1+3/5 (no $c needed)',
       icon: Icons.calculate_rounded,
       parser: Parsers().calculator,
+      stripAssignmentPrefix: true,
+      closeAfterCopy: false,
     );
   }
 
@@ -2240,6 +2580,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     required String emptyHelp,
     required IconData icon,
     required Future<ParserResult> Function(String input) parser,
+    bool stripAssignmentPrefix = false,
+    bool closeAfterCopy = true,
   }) async {
     if (input.trim().isEmpty) {
       return <LauncherSearchResultItem>[
@@ -2263,12 +2605,14 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       ];
     }
     return result.results.take(12).map((String value) {
+      final String copyValue = stripAssignmentPrefix ? _stripMathAssignmentPrefix(value) : value;
       return LauncherSearchResultItem.quickAction(_buildCopyFunctionAction(
         id: '$idPrefix:$value',
         title: value,
         subtitle: result.error.isEmpty ? 'Copy result' : result.error,
         icon: icon,
-        value: value,
+        value: copyValue,
+        closeAfterExecute: closeAfterCopy,
       ));
     }).toList(growable: false);
   }
@@ -2403,6 +2747,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     required String subtitle,
     required IconData icon,
     required String value,
+    bool closeAfterExecute = true,
   }) {
     return _buildFunctionAction(
       id: id,
@@ -2412,10 +2757,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       searchTerms: <String>[title, subtitle, value],
       onExecute: () {
         Clipboard.setData(ClipboardData(text: value));
-        _finishLauncherFunctionExecution();
+        if (closeAfterExecute) _finishLauncherFunctionExecution();
       },
     );
   }
+
+  /// Strips a leading `x = ` variable-assignment prefix (as produced by the
+  /// calculator parser for each `|`-separated expression) so only the numeric
+  /// result gets copied to the clipboard.
+  static final RegExp _mathAssignmentPrefix = RegExp(r'^[a-zA-Z]\w*\s*=\s*');
+
+  String _stripMathAssignmentPrefix(String value) => value.replaceFirst(_mathAssignmentPrefix, '');
 
   QuickActionMenuEntry _buildFunctionAction({
     required String id,
@@ -2568,6 +2920,46 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         context.setResults(<LauncherSearchResultItem>[], isSearching: false);
       }
     }
+  }
+
+  void _handleWorkspacesSearch(LauncherSearchContext context) {
+    final List<Workspace> workspaces = Boxes.workspaces;
+    if (workspaces.isEmpty) {
+      context.setResults(<LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'workspaces-none',
+          title: 'No Workspaces Created',
+          subtitle: 'Create them in QuickMenu Settings',
+          icon: Icons.dashboard_customize_rounded,
+        )),
+      ], isSearching: false);
+      return;
+    }
+
+    final String query = context.normalizedQuery.toLowerCase();
+    final List<Workspace> filtered =
+        query.isEmpty ? workspaces : workspaces.where((Workspace w) => w.name.toLowerCase().contains(query)).toList();
+
+    final List<LauncherSearchResultItem> results = filtered
+        .map((Workspace workspace) => LauncherSearchResultItem.quickAction(_buildWorkspaceQuickAction(workspace)))
+        .toList(growable: false);
+    context.setResults(results, isSearching: false);
+  }
+
+  QuickActionMenuEntry _buildWorkspaceQuickAction(Workspace workspace) {
+    return _buildFunctionAction(
+      id: 'workspace:${workspace.id}',
+      title: workspace.name,
+      subtitle: '${workspace.areas.length} App${workspace.areas.length == 1 ? '' : 's'}',
+      icon: Icons.dashboard_customize_rounded,
+      searchTerms: <String>['workspace', 'ws', workspace.name],
+      onExecute: () => _launchWorkspaceFromLauncher(workspace),
+    );
+  }
+
+  void _launchWorkspaceFromLauncher(Workspace workspace) {
+    unawaited(WorkspaceRunner.run(workspace));
+    _finishLauncherFunctionExecution();
   }
 
   QuickActionMenuEntry _buildTerminalQuickAction(TerminalProfile profile) {
@@ -3102,7 +3494,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
               fontWeight: launcherTheme.searchFontWeight,
             ),
             decoration: InputDecoration(
-              hintText: 'Search applications, files, bookmarks...',
+              hintText: (_activePlugin != null ? _pluginFrame?.placeholder : null) ??
+                  'Search applications, files, bookmarks...',
               hintStyle: TextStyle(color: onSurface.withAlpha(70)),
               border: InputBorder.none,
               isDense: true,

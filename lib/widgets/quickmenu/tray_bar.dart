@@ -10,9 +10,11 @@ import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
 import '../../models/classes/boxes.dart';
+import '../../models/classes/saved_maps.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/tray_watcher.dart';
+import '../../models/win32/keys.dart';
 import '../../models/win32/win_utils.dart';
 import '../widgets/custom_tooltip.dart';
 import '../widgets/windows_scroll.dart';
@@ -109,94 +111,122 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
 
   @override
   Widget build(BuildContext context) {
-    if (tray.isEmpty || !user.showTrayBar) return Container();
+    final List<TrayBarButton> customButtons = Boxes.trayBarButtons;
+    if ((tray.isEmpty && customButtons.isEmpty) || !user.showTrayBar) return Container();
     Theme.of(context);
     final Widget row = Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            for (final TrayBarInfo info in tray)
-              GestureDetector(
-                onSecondaryTap: () async {
-                  // if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                  if (Boxes.pref.getStringList("postMessageTray")?.contains(info.processExe) ?? false) {
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDOWN);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDBLCLK);
-                    PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
-                  } else {
-                    sendTrayClick(info, TrayClickType.right);
-                  }
-                },
-                onLongPress: () {
-                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                  WinUtils.openAndFocus(info.processPath, centered: true, usePowerShell: true);
-                },
-                onSecondaryLongPress: () async {
-                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                  WinTray.click(info, clickType: TrayClickType.right);
-                },
-                onTertiaryTapUp: (TapUpDetails e) {
-                  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                  if (Boxes.pref.getStringList("postMessageTray")?.contains(info.processExe) ?? false) {
-                    WinTray.click(info, clickType: TrayClickType.middle);
-                  } else {
-                    sendTrayClick(info, TrayClickType.middle);
-                  }
-                },
-                child: InkWell(
-                  hoverColor: Design.text.withAlpha(30),
-                  borderRadius: BorderRadius.circular(3),
-                  onTap: () async {
-                    if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
-                    if (Boxes.pref.getStringList("postMessageTray")?.contains(info.processExe) ?? false) {
-                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
-                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
-                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
-                    } else {
-                      sendTrayClick(info, TrayClickType.left);
-                    }
-                  },
-                  onDoubleTap: () async {
-                    if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3),
+          child: Container(width: 1, height: 12, color: Design.text.withAlpha(28)),
+        ),
+        for (final TrayBarInfo info in tray)
+          GestureDetector(
+            onSecondaryTap: () async {
+              // if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+              if (Boxes.pref.getStringList("postMessageTray")?.contains(info.processExe) ?? false) {
+                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
+                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDOWN);
+                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
+                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONDBLCLK);
+                PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_RBUTTONUP);
+              } else {
+                sendTrayClick(info, TrayClickType.right);
+              }
+            },
+            onLongPress: () {
+              if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+              WinUtils.openAndFocus(info.processPath, centered: true, usePowerShell: true);
+            },
+            onSecondaryLongPress: () async {
+              if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+              WinTray.click(info, clickType: TrayClickType.right);
+            },
+            onTertiaryTapUp: (TapUpDetails e) {
+              if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+              if (Boxes.pref.getStringList("postMessageTray")?.contains(info.processExe) ?? false) {
+                WinTray.click(info, clickType: TrayClickType.middle);
+              } else {
+                sendTrayClick(info, TrayClickType.middle);
+              }
+            },
+            child: InkWell(
+              hoverColor: Design.text.withAlpha(30),
+              borderRadius: BorderRadius.circular(3),
+              onTap: () async {
+                if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+                if (Boxes.pref.getStringList("postMessageTray")?.contains(info.processExe) ?? false) {
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
+                } else {
+                  sendTrayClick(info, TrayClickType.left);
+                }
+              },
+              onDoubleTap: () async {
+                if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
 
-                    if (Boxes.pref.getStringList("postMessageTray")?.contains(info.processExe) ?? false) {
-                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
-                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
-                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
-                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDBLCLK);
-                      PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
-                    } else {
-                      sendTrayClick(info, TrayClickType.doubleClick);
-                    }
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
-                    child: CustomTooltip(
-                      message: info.processExe,
-                      child: Boxes.getIconRewrite(info.processPath) != ""
-                          ? Image.file(File(Boxes.getIconRewrite(info.processPath)), width: 20)
-                          // Packaged (Appx/UWP) apps: prefer the manifest logo resolved in
-                          // TrayWatcher.fetchTray. It's the only icon source that survives
-                          // running Tabame elevated (shell/HICON paths don't).
-                          : (info.iconData.length == 1
-                              ? fallBackImage(info)
-                              : Image.memory(
-                                  info.iconData,
-                                  cacheWidth: 32,
-                                  fit: BoxFit.scaleDown,
-                                  gaplessPlayback: true,
-                                  width: 16.1,
-                                  errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
-                                      fallBackImage(info),
-                                )),
-                    ),
-                  ),
+                if (Boxes.pref.getStringList("postMessageTray")?.contains(info.processExe) ?? false) {
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_MOUSEACTIVATE);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDOWN);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONDBLCLK);
+                  PostMessage(info.hWnd, info.uCallbackMessage, info.uID, WM_LBUTTONUP);
+                } else {
+                  sendTrayClick(info, TrayClickType.doubleClick);
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
+                child: CustomTooltip(
+                  message: info.processExe,
+                  child: Boxes.getIconRewrite(info.processPath) != ""
+                      ? Image.file(File(Boxes.getIconRewrite(info.processPath)), width: 20)
+                      // Packaged (Appx/UWP) apps: prefer the manifest logo resolved in
+                      // TrayWatcher.fetchTray. It's the only icon source that survives
+                      // running Tabame elevated (shell/HICON paths don't).
+                      : (info.iconData.length == 1
+                          ? fallBackImage(info)
+                          : Image.memory(
+                              info.iconData,
+                              cacheWidth: 32,
+                              fit: BoxFit.scaleDown,
+                              gaplessPlayback: true,
+                              width: 16.1,
+                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                                  fallBackImage(info),
+                            )),
                 ),
               ),
-            const SizedBox(width: 5.1),
-          ],
-        );
+            ),
+          ),
+        if (customButtons.isNotEmpty && tray.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: Container(width: 1, height: 12, color: Design.text.withAlpha(28)),
+          ),
+        for (final TrayBarButton button in customButtons)
+          InkWell(
+            hoverColor: Design.text.withAlpha(30),
+            borderRadius: BorderRadius.circular(3),
+            onTap: () => executeTrayBarButton(button),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2.2),
+              child: CustomTooltip(
+                message: button.name,
+                child: Icon(
+                  // ignore: non_const_argument_for_const_parameter
+                  IconData(button.iconCodePoint, fontFamily: 'MaterialIcons'),
+                  size: 16,
+                  color: Design.text,
+                ),
+              ),
+            ),
+          ),
+        const SizedBox(width: 5.1),
+      ],
+    );
     if (!widget.wrapScroll) return row;
     return ShaderMask(
       shaderCallback: (Rect rect) {
@@ -230,6 +260,17 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
                 const Icon(Icons.check_box_outline_blank, size: 16),
           )
         : const Icon(Icons.check_box_outline_blank, size: 16);
+  }
+}
+
+/// Runs a user-configured tray bar button ([TrayBarButton]): sends a hotkey
+/// sequence via [WinKeys.send], or opens a path/URL/command via [WinUtils.open].
+void executeTrayBarButton(TrayBarButton button) {
+  if (kReleaseMode) QuickMenuFunctions.hideQuickMenu();
+  if (button.type == "Open") {
+    WinUtils.open(button.value, parseParamaters: true);
+  } else {
+    WinKeys.send(button.value);
   }
 }
 

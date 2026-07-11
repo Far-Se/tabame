@@ -1,0 +1,10 @@
+{
+  "id": "github",
+  "name": "GitHub",
+  "keyword": "gh",
+  "description": "Search and manage GitHub — pull requests, issues, repos, branches, Actions runs, notifications, discussions, projects and repo downloads.",
+  "icon": "code",
+  "runtime": "node",
+  "entry": "main.js",
+  "args": []
+}

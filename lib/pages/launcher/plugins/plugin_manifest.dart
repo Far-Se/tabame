@@ -18,6 +18,7 @@ class PluginManifest {
     required this.args,
     required this.directory,
     this.enabled = true,
+    this.dev = false,
   });
 
   /// Stable identifier — defaults to the containing folder name.
@@ -54,6 +55,11 @@ class PluginManifest {
   /// match a keyword or appear as a discovery hint.
   final bool enabled;
 
+  /// Development mode, from the optional `"dev"` key in `plugin.json`. While
+  /// active, the host watches the plugin folder and hot-restarts the process on
+  /// file changes, and the launcher shows a live debug console under the view.
+  final bool dev;
+
   bool get isValid => keyword.trim().isNotEmpty && runtime.trim().isNotEmpty && entry.trim().isNotEmpty;
 
   /// The lowercased keyword used for matching.
@@ -78,6 +84,7 @@ class PluginManifest {
     }
 
     final Object? rawEnabled = json['enabled'];
+    final Object? rawDev = json['dev'];
 
     return PluginManifest(
       id: str('id', folderName),
@@ -91,6 +98,7 @@ class PluginManifest {
       directory: directory,
       // Absent or non-boolean `enabled` means the plugin is on by default.
       enabled: rawEnabled is bool ? rawEnabled : true,
+      dev: rawDev == true,
     );
   }
 }

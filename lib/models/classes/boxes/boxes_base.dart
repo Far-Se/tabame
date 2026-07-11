@@ -281,6 +281,14 @@ class Boxes {
       _quickActions = persistedQuickActions;
     }
 
+    if (pref.getString("trayBarButtons") == null) {
+      final List<TrayBarButton> defaultTrayBarButtons = <TrayBarButton>[
+        TrayBarButton(name: "Action Center", type: "Hotkey", value: "{#WIN}A{^WIN}", iconCodePoint: 0xe870),
+      ];
+      await pref.setString("trayBarButtons", jsonEncode(defaultTrayBarButtons));
+      Debug.add("Registered: trayBarButtons");
+    }
+
     mediaControls = pref.getStringList("mediaControls") ??
         <String>["Spotify.exe", "chrome.exe", "firefox.exe", "brave.exe", "Music.UI.exe"];
 
@@ -795,6 +803,15 @@ class Boxes {
       ? _quickActions = getSavedMap<QuickActions>(QuickActions.fromJson, "quickActions")
       : _quickActions;
 
+  static List<TrayBarButton>? _trayBarButtons;
+  static set trayBarButtons(List<TrayBarButton> list) {
+    _trayBarButtons = list;
+    Boxes.updateSettings("trayBarButtons", jsonEncode(list));
+  }
+
+  static List<TrayBarButton> get trayBarButtons =>
+      _trayBarButtons ??= getSavedMap<TrayBarButton>(TrayBarButton.fromJson, "trayBarButtons");
+
   static List<AppAudioControl> _appAudioControls = <AppAudioControl>[];
   static set appAudioControls(List<AppAudioControl> list) {
     _appAudioControls = list;
@@ -1010,6 +1027,7 @@ class Boxes {
     _reminders = null;
     _wallpaperSchedules = null;
     _quickActions = <QuickActions>[];
+    _trayBarButtons = null;
     _screenDrawHotkeys = <ScreenDrawHotkeyBinding>[];
     _runApi = <RunAPI>[];
     _defaultVolume = <DefaultVolume>[];

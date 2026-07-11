@@ -1,0 +1,9 @@
+{
+  "id": "weather",
+  "name": "Weather",
+  "description": "Today's weather and 7-day forecast",
+  "keyword": "weather",
+  "runtime": "node",
+  "entry": "main.js",
+  "icon": "weather"
+}

@@ -185,30 +185,41 @@ The Launcher is one text box that searches everything. Open it straight from the
 
 By default it blends results from files, windows and apps. If you want to narrow it down, start your query with a prefix:
 
-| Prefix             | What it searches                        |
-| ------------------ | --------------------------------------- |
-| _(nothing)_        | Mixed results: files, windows, apps     |
-| `/`                | QuickActions                            |
-| `.`                | Active windows                          |
-| `>` `?` or a space | Deep file search (your indexed folders) |
-| `'`                | Apps + bookmarks together               |
-| `b `               | Bookmarks only                          |
-| `cli `             | Your CLI snippet book                   |
-| `app `             | Apps only                               |
-| `;`                | Desktop files                           |
-| `n `               | Notion documents                        |
-| `$`                | Function commands (see below)           |
-| `timer `           | Make a timer right away                 |
+| Prefix             | What it searches                          |
+| ------------------ | ----------------------------------------- |
+| _(nothing)_        | Mixed results: files, windows, apps       |
+| `/`                | QuickActions                              |
+| `.`                | Active windows                            |
+| `,`                | Browser tabs                              |
+| `>` `?` or a space | Deep file search (your indexed folders)   |
+| `'`                | Apps + bookmarks + CLI together           |
+| `b `               | Bookmarks only                            |
+| `cli `             | Your CLI snippet book                     |
+| `app `             | Apps only                                 |
+| `;`                | Desktop files                             |
+| `n `               | Notion documents                          |
+| `o `               | Obsidian notes                            |
+| `r `               | Recent files                              |
+| `s `               | Steam games                               |
+| `t `               | Terminal profiles                         |
+| `m ` or `m1 `–`m5 `| Media control (generic or per-app slots)  |
+| `sp `              | Spotify commands                          |
+| `$`                | Function commands (see below)             |
+| `timer `           | Make a timer right away                   |
 
 ## Function commands (`$`)
 
 Quick one-off tools you can run inline without leaving the box:
 
 - `$timer` - start a quick countdown.
-- `$translate` - translate text on the spot.
+- `$translate` (or `$t`) - translate text on the spot. Supports `$t hello`, `$t hello from en`, `$t hello from en to ro`.
 - `$unit` - convert units (length, mass, temperature, volume, speed, data, area, energy, and more).
 - `$cur` - currency conversion using live rates ([fawazahmed0/currency-api](https://github.com/fawazahmed0/currency-api)).
 - `$c` - a calculator. You can chain equations with `|` and use variables like `x`, `y`, `z`. Example: `$c 75 | x * 20% | x - y`.
+- `$clear` - clear cache folders.
+- `$reindex` - reindex the launcher's file index.
+- `$design` - switch the Launcher design on the fly, e.g. `$design serene`.
+- `$sys` (or `$system`, `$power`) - system power actions like shutdown.
 
 ## Indexed file search
 
@@ -513,6 +524,7 @@ Everything you copy, kept around so you can paste it again later. You decide how
 - **Persistent reminders** stick around until you click them off - there's a warning sign in the QuickActions menu when one is waiting. Good for medication.
 - **Interval reminders** fire every X days. Set "every 5 days starting Monday" and it'll hit Saturday, then Thursday, then Tuesday, and so on.
 
+<img src="https://user-images.githubusercontent.com/20853986/200884861-d761c8bc-6885-43d2-86fe-119c1d6b60e3.png" align="right" width="250" height="auto" alt="Trktivity.">
 ---
 
 # 📝 Trktivity
@@ -524,8 +536,6 @@ Trktivity tracks how you use your computer 🧐 - keystrokes, mouse pings every 
 - Use regex to normalize noisy window titles per app, and flip a single global switch to kill all tracking.
 
 For viewing, you get **heat maps** of daily intensity, **activity charts** in half-hour buckets, **daily stats** (totals, idle time, multi-day ranges), **focus tables** broken down by app and title, a **timeline** for a chosen range, and **pattern** spotting for your repeated focus/distraction cycles.
-
-<img src="https://user-images.githubusercontent.com/20853986/200884861-d761c8bc-6885-43d2-86fe-119c1d6b60e3.png" align="right" width="250" height="auto" alt="Trktivity.">
 
 ---
 

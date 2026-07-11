@@ -123,35 +123,37 @@ class _SpotifyPanelState extends State<SpotifyPanel> {
   Widget _buildEmpty() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(Icons.music_off_rounded, size: 32, color: Design.text.withAlpha(120)),
-          const SizedBox(height: 10),
-          Text(
-            "Spotify isn't playing",
-            style: TextStyle(
-              fontSize: Design.baseFontSize + 1,
-              fontWeight: FontWeight.w700,
-              color: Design.text,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.music_off_rounded, size: 32, color: Design.text.withAlpha(120)),
+            const SizedBox(height: 10),
+            Text(
+              "Spotify isn't playing",
+              style: TextStyle(
+                fontSize: Design.baseFontSize + 1,
+                fontWeight: FontWeight.w700,
+                color: Design.text,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            "Start Spotify to control playback here",
-            style: TextStyle(fontSize: Design.baseFontSize - 0.5, color: Design.text.withAlpha(140)),
-          ),
-          const SizedBox(height: 16),
-          _buildAccentButton(
-            label: "Open Spotify",
-            icon: Icons.launch_rounded,
-            onTap: () {
-              SpotifyController.launchApp();
-              Future<void>.delayed(const Duration(seconds: 1), () => _refresh());
-            },
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              "Start Spotify to control playback here",
+              style: TextStyle(fontSize: Design.baseFontSize - 0.5, color: Design.text.withAlpha(140)),
+            ),
+            const SizedBox(height: 16),
+            _buildAccentButton(
+              label: "Open Spotify",
+              icon: Icons.launch_rounded,
+              onTap: () {
+                SpotifyController.launchApp();
+                Future<void>.delayed(const Duration(seconds: 1), () => _refresh());
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

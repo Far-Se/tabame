@@ -3,6 +3,22 @@ import 'package:flutter/services.dart';
 
 import '../../../models/settings.dart';
 import '../launcher_design.dart';
+import 'inline_markup.dart';
+
+/// Title/subtitle text that optionally renders the markdown-lite subset
+/// (`**bold**`, `` `code` ``) plugins may embed. Plain strings take the cheap
+/// [Text] path.
+Widget _rowText(String value, TextStyle style,
+    {required Color accent, required bool markup, int maxLines = 1}) {
+  if (!markup || !hasInlineMarkup(value)) {
+    return Text(value, maxLines: maxLines, overflow: TextOverflow.ellipsis, style: style);
+  }
+  return Text.rich(
+    launcherInlineMarkup(value, style, accent),
+    maxLines: maxLines,
+    overflow: TextOverflow.ellipsis,
+  );
+}
 
 abstract final class _SereneTokens {
   // Row geometry
@@ -62,53 +78,6 @@ class _SereneIconWell extends StatelessWidget {
   }
 }
 
-class _SereneTitleSubtitle extends StatelessWidget {
-  const _SereneTitleSubtitle({
-    required this.title,
-    required this.subtitle,
-    required this.onSurface,
-    required this.isSelected,
-  });
-
-  final String title;
-  final String subtitle;
-  final Color onSurface;
-  final bool isSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: _SereneTokens.titleSize,
-            fontWeight: FontWeight.w500,
-            color: isSelected ? onSurface : onSurface.withAlpha(210),
-            letterSpacing: -0.1,
-            height: 1.2,
-          ),
-        ),
-        const SizedBox(height: 1),
-        Text(
-          subtitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: _SereneTokens.subtitleSize,
-            color: isSelected ? onSurface.withAlpha(160) : onSurface.withAlpha(110),
-            height: 1.2,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _SereneRowContainer extends StatelessWidget {
   const _SereneRowContainer({
     required this.isSelected,
@@ -160,6 +129,8 @@ class LauncherResultRow extends StatelessWidget {
     this.title,
     this.subtitle,
     this.badge,
+    this.inlineMarkup = false,
+    this.subtitleMaxLines = 1,
   });
 
   final bool isSelected;
@@ -175,6 +146,17 @@ class LauncherResultRow extends StatelessWidget {
 
   final Widget? content;
   final Widget? badge;
+
+  /// Render `**bold**` / `` `code` `` spans in title/subtitle (plugin rows).
+  final bool inlineMarkup;
+
+  /// How many lines the subtitle may wrap to.
+  final int subtitleMaxLines;
+
+  Widget _titleText(TextStyle style) => _rowText(title ?? '', style, accent: accent, markup: inlineMarkup);
+
+  Widget _subtitleText(TextStyle style) =>
+      _rowText(subtitle ?? '', style, accent: accent, markup: inlineMarkup, maxLines: subtitleMaxLines);
 
   @override
   Widget build(BuildContext context) {
@@ -253,30 +235,20 @@ class LauncherResultRow extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(
-                            title ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GlassTokens.font(
-                              fontSize: Design.baseFontSize + 2,
-                              fontWeight: FontWeight.w600,
-                              color: isSelected ? onSurface : onSurface.withAlpha(225),
-                              height: 1.25,
-                              letterSpacing: -0.1,
-                            ),
-                          ),
+                          _titleText(GlassTokens.font(
+                            fontSize: Design.baseFontSize + 2,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? onSurface : onSurface.withAlpha(225),
+                            height: 1.25,
+                            letterSpacing: -0.1,
+                          )),
                           const SizedBox(height: 1),
-                          Text(
-                            subtitle ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GlassTokens.font(
-                              fontSize: Design.baseFontSize,
-                              fontWeight: FontWeight.w400,
-                              color: onSurface.withAlpha(isSelected ? 165 : 120),
-                              height: 1.2,
-                            ),
-                          ),
+                          _subtitleText(GlassTokens.font(
+                            fontSize: Design.baseFontSize,
+                            fontWeight: FontWeight.w400,
+                            color: onSurface.withAlpha(isSelected ? 165 : 120),
+                            height: 1.2,
+                          )),
                         ],
                       ),
                 ),
@@ -351,30 +323,20 @@ class LauncherResultRow extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(
-                            title ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: ZenTokens.soft(
-                              fontSize: Design.baseFontSize + 2,
-                              fontWeight: FontWeight.w600,
-                              color: isSelected ? onSurface : onSurface.withAlpha(225),
-                              height: 1.25,
-                              letterSpacing: 0.1,
-                            ),
-                          ),
+                          _titleText(ZenTokens.soft(
+                            fontSize: Design.baseFontSize + 2,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? onSurface : onSurface.withAlpha(225),
+                            height: 1.25,
+                            letterSpacing: 0.1,
+                          )),
                           const SizedBox(height: 1),
-                          Text(
-                            subtitle ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: ZenTokens.soft(
-                              fontSize: Design.baseFontSize,
-                              fontWeight: FontWeight.w400,
-                              color: onSurface.withAlpha(isSelected ? 150 : 115),
-                              height: 1.2,
-                            ),
-                          ),
+                          _subtitleText(ZenTokens.soft(
+                            fontSize: Design.baseFontSize,
+                            fontWeight: FontWeight.w400,
+                            color: onSurface.withAlpha(isSelected ? 150 : 115),
+                            height: 1.2,
+                          )),
                         ],
                       ),
                 ),
@@ -446,27 +408,17 @@ class LauncherResultRow extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(
-                            title ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TerminalTokens.mono(
-                              fontSize: Design.baseFontSize + 1,
-                              fontWeight: FontWeight.w600,
-                              color: isSelected ? accent : TerminalTokens.fg,
-                              height: 1.25,
-                            ),
-                          ),
-                          Text(
-                            subtitle ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TerminalTokens.mono(
-                              fontSize: Design.baseFontSize - 1,
-                              color: isSelected ? TerminalTokens.fg.withAlpha(190) : TerminalTokens.dim,
-                              height: 1.2,
-                            ),
-                          ),
+                          _titleText(TerminalTokens.mono(
+                            fontSize: Design.baseFontSize + 1,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? accent : TerminalTokens.fg,
+                            height: 1.25,
+                          )),
+                          _subtitleText(TerminalTokens.mono(
+                            fontSize: Design.baseFontSize - 1,
+                            color: isSelected ? TerminalTokens.fg.withAlpha(190) : TerminalTokens.dim,
+                            height: 1.2,
+                          )),
                         ],
                       ),
                 ),
@@ -546,27 +498,17 @@ class LauncherResultRow extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Text(
-                              title ?? '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: entryStyle(
-                                isSelected,
-                                fontSize: Design.baseFontSize + 1.5,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
+                            _titleText(entryStyle(
+                              isSelected,
+                              fontSize: Design.baseFontSize + 1.5,
+                              letterSpacing: 0.2,
+                            )),
                             const SizedBox(height: 1),
-                            Text(
-                              subtitle ?? '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: Design.baseFontSize - 0.5,
-                                letterSpacing: 0.1,
-                                color: isSelected ? onSurface.withAlpha(160) : onSurface.withAlpha(110),
-                              ),
-                            ),
+                            _subtitleText(TextStyle(
+                              fontSize: Design.baseFontSize - 0.5,
+                              letterSpacing: 0.1,
+                              color: isSelected ? onSurface.withAlpha(160) : onSurface.withAlpha(110),
+                            )),
                           ],
                         ),
                   ),
@@ -655,22 +597,12 @@ class LauncherResultRow extends StatelessWidget {
                         ? Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text(
-                                title ?? '',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: entryStyle(isSelected, fontSize: Design.baseFontSize + 2),
-                              ),
+                              _titleText(entryStyle(isSelected, fontSize: Design.baseFontSize + 2)),
                               const SizedBox(height: 2),
-                              Text(
-                                subtitle ?? '',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: Design.baseFontSize,
-                                  color: isSelected ? onSurface.withAlpha(170) : onSurface.withAlpha(130),
-                                ),
-                              ),
+                              _subtitleText(TextStyle(
+                                fontSize: Design.baseFontSize,
+                                color: isSelected ? onSurface.withAlpha(170) : onSurface.withAlpha(130),
+                              )),
                             ],
                           )
                         : content!,
@@ -714,11 +646,24 @@ class LauncherResultRow extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: content == null
-                      ? _SereneTitleSubtitle(
-                          title: title ?? '',
-                          subtitle: subtitle ?? '',
-                          onSurface: onSurface,
-                          isSelected: isSelected,
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            _titleText(TextStyle(
+                              fontSize: _SereneTokens.titleSize,
+                              fontWeight: FontWeight.w500,
+                              color: isSelected ? onSurface : onSurface.withAlpha(210),
+                              letterSpacing: -0.1,
+                              height: 1.2,
+                            )),
+                            const SizedBox(height: 1),
+                            _subtitleText(TextStyle(
+                              fontSize: _SereneTokens.subtitleSize,
+                              color: isSelected ? onSurface.withAlpha(160) : onSurface.withAlpha(110),
+                              height: 1.2,
+                            )),
+                          ],
                         )
                       : content!,
                 ),

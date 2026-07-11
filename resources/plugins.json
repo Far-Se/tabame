@@ -18,6 +18,23 @@
       }
     },
     {
+      "id": "github",
+      "name": "GitHub",
+      "keyword": "gh",
+      "description": "Search and manage GitHub — pull requests, issues, repos, branches, Actions runs, notifications, discussions, projects and repo downloads. Needs a Personal Access Token (asked for on first run).",
+      "icon": "code",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/github",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/github/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/github/main.js",
+        "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/github/config.example.json",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/github/README.md"
+      }
+    },
+    {
       "id": "linear",
       "name": "Linear",
       "keyword": "lin",
@@ -65,6 +82,36 @@
       }
     },
     {
+      "id": "symbols",
+      "name": "Symbols & Characters",
+      "keyword": "sym",
+      "description": "Search and copy special characters, math symbols, punctuation, and language characters.",
+      "icon": "tag",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/symbols",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/symbols/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/symbols/main.js"
+      }
+    },
+    {
+      "id": "weather",
+      "name": "Weather",
+      "keyword": "weather",
+      "description": "Today's weather and 7-day forecast",
+      "icon": "tag",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/weather",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/weather/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/weather/main.js"
+      }
+    },
+    {
       "id": "timezone",
       "name": "Timezone Converter",
       "keyword": "tz",
@@ -77,6 +124,21 @@
       "files": {
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/timezone/plugin.json",
         "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/timezone/main.py"
+      }
+    },
+    {
+      "id": "paste-rs",
+      "name": "paste.rs",
+      "keyword": "paste",
+      "description": "Upload text or files to paste.rs, with local link history.",
+      "icon": "upload",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/master/plugins/paste.rs",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/paste.rs/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/master/plugins/paste.rs/main.py"
       }
     }
   ]

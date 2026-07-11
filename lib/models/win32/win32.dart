@@ -720,6 +720,17 @@ class Win32 {
     }
   }
 
+  /// Positions [hwnd] using raw physical/virtual-screen pixel coordinates.
+  ///
+  /// Unlike [setPosDPI], this does no logical→physical conversion and no
+  /// monitor guessing — the caller supplies absolute physical coordinates.
+  /// Use it when the exact target monitor's physical bounds are already known
+  /// (e.g. workspace restore) so a window can never be mapped onto the wrong
+  /// monitor by the [setPosDPI] two-pass estimate.
+  static void setPhysicalPos(int hwnd, int physX, int physY, int physWidth, int physHeight) {
+    SetWindowPos(hwnd, 0, physX, physY, physWidth, physHeight, SWP_NOZORDER | SWP_NOACTIVATE);
+  }
+
   static void setPosDPI(int hwnd, PointXY logicalPos, {int? logicalWidth, int? logicalHeight}) {
     // Peek at what monitor the TARGET position lands on.
     // We need physical coords for MonitorFromPoint, but we only have logical ones.

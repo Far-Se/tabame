@@ -388,6 +388,7 @@ List<QuickActionMenuEntry> _buildStandardQuickActionEntries({
     );
   }
 
+  entries.sort((QuickActionMenuEntry a, QuickActionMenuEntry b) => a.title.compareTo(b.title));
   return entries;
 }
 

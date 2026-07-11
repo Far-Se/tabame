@@ -37,6 +37,7 @@ class _WindowLayoutsPanelState extends State<WindowLayoutsPanel> {
   bool _busy = false;
   String _confirmDeleteId = '';
   Timer? _confirmDeleteTimer;
+  String _editingId = '';
 
   List<WindowLayoutSnapshot> get _layouts => Boxes.windowLayouts;
 
@@ -131,7 +132,24 @@ class _WindowLayoutsPanelState extends State<WindowLayoutsPanel> {
     Boxes.windowLayouts = _layouts.where((WindowLayoutSnapshot s) => s.id != snapshot.id).toList();
     setState(() {
       _confirmDeleteId = '';
+      if (_editingId == snapshot.id) _editingId = '';
       _status = 'Deleted "${snapshot.name}"';
+    });
+  }
+
+  void _toggleEdit(WindowLayoutSnapshot snapshot) {
+    setState(() => _editingId = _editingId == snapshot.id ? '' : snapshot.id);
+  }
+
+  void _removeEntry(WindowLayoutSnapshot snapshot, int index) {
+    Boxes.windowLayouts = _layouts.map((WindowLayoutSnapshot s) {
+      if (s.id != snapshot.id) return s;
+      final List<WindowLayoutEntry> entries = List<WindowLayoutEntry>.from(s.entries);
+      if (index >= 0 && index < entries.length) entries.removeAt(index);
+      return s.copyWith(entries: entries);
+    }).toList();
+    setState(() {
+      _status = 'Removed app from "${snapshot.name}"';
     });
   }
 
@@ -318,15 +336,19 @@ class _WindowLayoutsPanelState extends State<WindowLayoutsPanel> {
   Widget _buildLayoutRow(WindowLayoutSnapshot snapshot) {
     final bool monitorsMatch = snapshot.monitorSignature == _currentSignature;
     final bool confirmingDelete = _confirmDeleteId == snapshot.id;
+    final bool editing = _editingId == snapshot.id;
     final int monitorCount = snapshot.monitorSignature.isEmpty ? 1 : snapshot.monitorSignature.split('|').length;
 
     return Container(
       decoration: BoxDecoration(
         color: Design.text.withAlpha(7),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Design.text.withAlpha(16)),
+        border: Border.all(color: editing ? Design.accent.withAlpha(70) : Design.text.withAlpha(16)),
       ),
-      child: InkWell(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          InkWell(
         onTap: () => _restore(snapshot),
         borderRadius: BorderRadius.circular(10),
         child: Padding(
@@ -390,6 +412,12 @@ class _WindowLayoutsPanelState extends State<WindowLayoutsPanel> {
                 onTap: () => _toggleAutoRestore(snapshot),
               ),
               _rowIconButton(
+                icon: editing ? Icons.edit_rounded : Icons.edit_outlined,
+                tooltip: editing ? 'Done editing' : 'Edit apps in this layout',
+                color: editing ? Design.accent : Design.text.withAlpha(120),
+                onTap: () => _toggleEdit(snapshot),
+              ),
+              _rowIconButton(
                 icon: Icons.refresh_rounded,
                 tooltip: 'Re-capture current windows into this layout',
                 color: Design.text.withAlpha(120),
@@ -404,6 +432,77 @@ class _WindowLayoutsPanelState extends State<WindowLayoutsPanel> {
             ],
           ),
         ),
+          ),
+          if (editing) _buildEditPanel(snapshot),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditPanel(WindowLayoutSnapshot snapshot) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      decoration: BoxDecoration(
+        color: Design.text.withAlpha(10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Design.text.withAlpha(16)),
+      ),
+      child: snapshot.entries.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Center(
+                child: Text(
+                  'No apps in this layout',
+                  style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: Design.text.withAlpha(120)),
+                ),
+              ),
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                for (int i = 0; i < snapshot.entries.length; i++) _buildEntryRow(snapshot, i),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildEntryRow(WindowLayoutSnapshot snapshot, int index) {
+    final WindowLayoutEntry entry = snapshot.entries[index];
+    final String primary = entry.title.isNotEmpty ? entry.title : entry.exe;
+    final bool showExe = entry.title.isNotEmpty && entry.exe.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 5, 4, 5),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.crop_square_rounded, size: 13, color: Design.text.withAlpha(90)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  primary,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: Design.text),
+                ),
+                if (showExe)
+                  Text(
+                    entry.exe,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: Design.baseFontSize - 0.5, color: Design.text.withAlpha(110)),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          _rowIconButton(
+            icon: Icons.close_rounded,
+            tooltip: 'Remove this app from the layout',
+            color: Colors.red.shade400.withAlpha(200),
+            onTap: () => _removeEntry(snapshot, index),
+          ),
+        ],
       ),
     );
   }

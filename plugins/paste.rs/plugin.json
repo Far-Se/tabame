@@ -1,0 +1,9 @@
+{
+  "id": "paste-rs",
+  "name": "paste.rs",
+  "description": "Upload text or files to paste.rs, with local link history.",
+  "keyword": "paste",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "upload"
+}

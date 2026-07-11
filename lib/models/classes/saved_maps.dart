@@ -83,6 +83,63 @@ class AppAudioControl extends SavedMap {
   }
 }
 
+/// A user-configurable button shown in the tray bar. [type] is either
+/// 'Hotkey' (value is a [WinKeys.send] key sequence, e.g. `{#WIN}A{^WIN}`)
+/// or 'Open' (value is a path/URL/command passed to `WinUtils.open`).
+class TrayBarButton extends SavedMap {
+  String name;
+  String type;
+  String value;
+  int iconCodePoint;
+
+  TrayBarButton({
+    required this.name,
+    required this.type,
+    required this.value,
+    this.iconCodePoint = 0xe5d2, // Icons.touch_app_rounded
+  });
+
+  TrayBarButton copyWith({String? name, String? type, String? value, int? iconCodePoint}) {
+    return TrayBarButton(
+      name: name ?? this.name,
+      type: type ?? this.type,
+      value: value ?? this.value,
+      iconCodePoint: iconCodePoint ?? this.iconCodePoint,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{'name': name, 'type': type, 'value': value, 'iconCodePoint': iconCodePoint};
+  }
+
+  factory TrayBarButton.fromMap(Map<String, dynamic> map) {
+    return TrayBarButton(
+      name: (map['name'] ?? '') as String,
+      type: (map['type'] ?? 'Hotkey') as String,
+      value: (map['value'] ?? '') as String,
+      iconCodePoint: (map['iconCodePoint'] ?? 0xe5d2) as int,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory TrayBarButton.fromJson(String source) => TrayBarButton.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() => 'TrayBarButton(name: $name, type: $type, value: $value, iconCodePoint: $iconCodePoint)';
+
+  @override
+  bool operator ==(covariant TrayBarButton other) {
+    if (identical(this, other)) return true;
+    return other.name == name && other.type == type && other.value == value && other.iconCodePoint == iconCodePoint;
+  }
+
+  @override
+  int get hashCode => name.hashCode ^ type.hashCode ^ value.hashCode ^ iconCodePoint.hashCode;
+}
+
+const List<String> trayBarButtonTypes = <String>["Hotkey", "Open"];
+
 class Reminder extends SavedMap {
   bool enabled;
   List<bool> weekDays;
@@ -1277,6 +1334,10 @@ class WorkspaceArea {
   double top;
   double right;
   double bottom;
+  // When false, left/top/right/bottom are monitor-relative fractions in [0, 1].
+  // When true, they are absolute pixels (LTRB) relative to the monitor's
+  // top-left, so the window keeps a fixed size regardless of monitor dimensions.
+  bool usePixels;
   int monitorNumber;
   String windowTitle;
   String executable;
@@ -1289,6 +1350,7 @@ class WorkspaceArea {
     required this.top,
     required this.right,
     required this.bottom,
+    this.usePixels = false,
     this.monitorNumber = -1,
     this.windowTitle = '',
     this.executable = '',
@@ -1302,6 +1364,7 @@ class WorkspaceArea {
     double? top,
     double? right,
     double? bottom,
+    bool? usePixels,
     int? monitorNumber,
     String? windowTitle,
     String? executable,
@@ -1314,6 +1377,7 @@ class WorkspaceArea {
       top: top ?? this.top,
       right: right ?? this.right,
       bottom: bottom ?? this.bottom,
+      usePixels: usePixels ?? this.usePixels,
       monitorNumber: monitorNumber ?? this.monitorNumber,
       windowTitle: windowTitle ?? this.windowTitle,
       executable: executable ?? this.executable,
@@ -1328,6 +1392,7 @@ class WorkspaceArea {
         'top': top,
         'right': right,
         'bottom': bottom,
+        'usePixels': usePixels,
         'monitorNumber': monitorNumber,
         'windowTitle': windowTitle,
         'executable': executable,
@@ -1341,6 +1406,7 @@ class WorkspaceArea {
         top: (map['top'] as num?)?.toDouble() ?? 0.0,
         right: (map['right'] as num?)?.toDouble() ?? 1.0,
         bottom: (map['bottom'] as num?)?.toDouble() ?? 1.0,
+        usePixels: (map['usePixels'] ?? false) as bool,
         monitorNumber: (map['monitorNumber'] ?? -1) as int,
         windowTitle: (map['windowTitle'] ?? '') as String,
         executable: (map['executable'] ?? '') as String,

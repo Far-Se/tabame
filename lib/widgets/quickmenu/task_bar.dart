@@ -1203,7 +1203,9 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
                               children: <Widget>[
                                 Text(
                                   !expanded
-                                      ? "${widget.item.artist ?? "Unknown Artist"} - ${widget.item.title}"
+                                      ? widget.item.artist == null
+                                          ? widget.item.title
+                                          : "${widget.item.artist} - ${widget.item.title}"
                                       : widget.item.title,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -1440,8 +1442,9 @@ class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
                       children: <Widget>[
                         Text(
                           !expanded
-                              ? '${widget.session.artist.isNotEmpty ? widget.session.artist : "Unknown Artist"}'
-                                  ' - ${widget.session.title}'
+                              ? widget.session.artist.isNotEmpty
+                                  ? '${widget.session.artist} - ${widget.session.title}'
+                                  : widget.session.title
                               : widget.session.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

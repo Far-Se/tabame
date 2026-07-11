@@ -7,10 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../models/classes/boxes.dart';
+import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
 import '../../../models/tray_watcher.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
+import '../../interface/quickmenu/tray_bar_buttons_editor.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/extracted_icon.dart';
@@ -30,6 +32,7 @@ class QMBottomBarState extends State<QMBottomBar> {
   List<String> pinnedApps = <String>[];
   final Map<String, ExtractedIcon> pinnedAppsIcons = <String, ExtractedIcon>{};
   late Future<void> pinnedAppsLoader;
+  final List<TrayBarButton> trayBarButtons = List<TrayBarButton>.from(Boxes.trayBarButtons);
 
   final TextEditingController cityLatLong = TextEditingController();
 
@@ -38,6 +41,39 @@ class QMBottomBarState extends State<QMBottomBar> {
     super.initState();
     pinnedApps = List<String>.from(Boxes.pinnedApps);
     pinnedAppsLoader = _loadPinnedAppsIcons();
+  }
+
+  void _persistTrayBarButtons() {
+    Boxes.trayBarButtons = trayBarButtons;
+    setState(() {});
+  }
+
+  void _addTrayBarButton() {
+    trayBarButtons.add(TrayBarButton(name: "New Button", type: "Hotkey", value: ""));
+    _persistTrayBarButtons();
+    _editTrayBarButton(trayBarButtons.length - 1);
+  }
+
+  void _editTrayBarButton(int index) {
+    editTrayBarButton(
+      context,
+      button: trayBarButtons[index],
+      onSaved: (TrayBarButton updated) {
+        trayBarButtons[index] = updated;
+        _persistTrayBarButtons();
+      },
+    );
+  }
+
+  void _removeTrayBarButton(int index) {
+    trayBarButtons.removeAt(index);
+    _persistTrayBarButtons();
+  }
+
+  void _reorderTrayBarButtons(int oldIndex, int newIndex) {
+    final TrayBarButton item = trayBarButtons.removeAt(oldIndex);
+    trayBarButtons.insert(newIndex, item);
+    _persistTrayBarButtons();
   }
 
   @override
@@ -197,8 +233,8 @@ class QMBottomBarState extends State<QMBottomBar> {
             ),
             if (user.showTrayBar) ...<Widget>[
               SwitchListTile(
-                title:
-                    const Text("Merge Pinned Apps with Tray", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                title: const Text("Merge Pinned Apps with Tray",
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                 subtitle: Text("Show pinned apps first, then continue with tray icons in a single bar",
                     style: TextStyle(fontSize: Design.baseFontSize + 2)),
                 secondary: const Icon(Icons.join_full, size: 20),
@@ -213,6 +249,7 @@ class QMBottomBarState extends State<QMBottomBar> {
                 padding: const EdgeInsets.only(top: 8, bottom: 16),
                 child: _buildTrayList(),
               ),
+              _buildTrayBarButtonsSection(),
             ],
           ],
         ),
@@ -354,6 +391,106 @@ class QMBottomBarState extends State<QMBottomBar> {
             ),
           );
         });
+  }
+
+  Widget _buildTrayBarButtonsSection() {
+    return Column(
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Row(
+            children: <Widget>[
+              Text("CUSTOM TRAY BUTTONS",
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                      )),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline, size: 18),
+                tooltip: "Add button",
+                style: IconButton.styleFrom(visualDensity: VisualDensity.compact),
+                onPressed: _addTrayBarButton,
+              ),
+            ],
+          ),
+        ),
+        if (trayBarButtons.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              "No custom buttons yet. They can simulate a hotkey or open an app/link.",
+              style: TextStyle(fontSize: Design.baseFontSize + 2, color: Theme.of(context).hintColor),
+            ),
+          )
+        else
+          ReorderableListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            shrinkWrap: true,
+            buildDefaultDragHandles: false,
+            physics: const NeverScrollableScrollPhysics(),
+            dragStartBehavior: DragStartBehavior.down,
+            itemCount: trayBarButtons.length,
+            onReorderItem: _reorderTrayBarButtons,
+            itemBuilder: (BuildContext context, int index) => _buildTrayBarButtonItem(index),
+          ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _buildTrayBarButtonItem(int index) {
+    final TrayBarButton button = trayBarButtons[index];
+    return Container(
+      key: ValueKey<int>(index),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        children: <Widget>[
+          ReorderableDragStartListener(
+            index: index,
+            child: Icon(Icons.drag_indicator_rounded,
+                size: 18, color: Theme.of(context).colorScheme.onSurface.withAlpha(60)),
+          ),
+          const SizedBox(width: 8),
+          // ignore: non_const_argument_for_const_parameter
+          Icon(IconData(button.iconCodePoint, fontFamily: 'MaterialIcons'),
+              size: 18, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(button.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                Text(
+                  "${button.type} • ${button.value}",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: Design.baseFontSize, color: Theme.of(context).hintColor),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            tooltip: "Edit",
+            onPressed: () => _editTrayBarButton(index),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
+            tooltip: "Remove",
+            onPressed: () => _removeTrayBarButton(index),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildTrayList() {

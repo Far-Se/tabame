@@ -13,6 +13,51 @@ import '../../../models/window_watcher.dart';
 import '../../widgets/extracted_icon.dart';
 import '../../widgets/windows_scroll.dart';
 
+/// Resolves the physical bounds of the monitor an area targets. Falls back to the
+/// primary/first monitor for "auto" (monitorNumber <= 0) or disconnected monitors,
+/// so px<->% conversions and previews always have something to scale against.
+Square? _monitorBoundsForNumber(int monitorNumber) {
+  if (monitorNumber > 0) {
+    for (final MapEntry<int, int> entry in Monitor.monitorIds.entries) {
+      if (entry.value == monitorNumber) {
+        final Square? bounds = Monitor.monitorSizes[entry.key];
+        if (bounds != null) return bounds;
+      }
+    }
+  }
+  return Monitor.monitorSizes.values.isNotEmpty ? Monitor.monitorSizes.values.first : null;
+}
+
+/// Converts an area's geometry between fraction and pixel encodings, keeping the
+/// same on-screen rect. LTRB is preserved in both modes (px are relative to the
+/// monitor's top-left). A no-op when already in the requested mode or when the
+/// monitor bounds are unknown.
+WorkspaceArea _convertAreaMode(WorkspaceArea area, {required bool usePixels}) {
+  if (area.usePixels == usePixels) return area;
+  final Square? bounds = _monitorBoundsForNumber(area.monitorNumber);
+  if (bounds == null || bounds.width <= 0 || bounds.height <= 0) {
+    return area.copyWith(usePixels: usePixels);
+  }
+  final double w = bounds.width.toDouble();
+  final double h = bounds.height.toDouble();
+  if (usePixels) {
+    return area.copyWith(
+      usePixels: true,
+      left: area.left * w,
+      top: area.top * h,
+      right: area.right * w,
+      bottom: area.bottom * h,
+    );
+  }
+  return area.copyWith(
+    usePixels: false,
+    left: (area.left / w).clamp(0.0, 1.0),
+    top: (area.top / h).clamp(0.0, 1.0),
+    right: (area.right / w).clamp(0.0, 1.0),
+    bottom: (area.bottom / h).clamp(0.0, 1.0),
+  );
+}
+
 class WorkspacesSettingsPage extends StatefulWidget {
   const WorkspacesSettingsPage({super.key});
 
@@ -410,15 +455,18 @@ class _WorkspaceEditorState extends State<_WorkspaceEditor> {
     final WorkspaceArea area = _workspace.areas[index];
     final Window? match = _findMatchingWindow(area, _windows, <int>{});
     if (match == null) return;
-    _updateArea(
-        index,
-        _captureAreaFromWindow(match).copyWith(
-          executable: area.executable,
-          parameters: area.parameters,
-          hookTo: area.hookTo,
-          hooks: List<String>.from(area.hooks),
-          windowTitle: area.windowTitle,
-        ));
+    // Capture always yields fractions; convert to pixels if this area edits in px.
+    final WorkspaceArea captured = _convertAreaMode(
+      _captureAreaFromWindow(match).copyWith(
+        executable: area.executable,
+        parameters: area.parameters,
+        hookTo: area.hookTo,
+        hooks: List<String>.from(area.hooks),
+        windowTitle: area.windowTitle,
+      ),
+      usePixels: area.usePixels,
+    );
+    _updateArea(index, captured);
   }
 
   Square? _monitorBoundsForHandle(int monitorHandle) {
@@ -913,13 +961,17 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
   late final TextEditingController _pathController;
   late final TextEditingController _paramsController;
   late final TextEditingController _hookToController;
-  // Geometry is stored as monitor-relative fractions (left/top/right/bottom) but
-  // edited here as integer percentages of position (X/Y) and size (W/H).
+  // Geometry is stored as left/top/right/bottom — either monitor-relative
+  // fractions (percent mode) or absolute pixels (px mode), per area.usePixels.
+  // Edited here as integer position (X/Y) and size (W/H) in the current unit.
   late final TextEditingController _xController;
   late final TextEditingController _yController;
   late final TextEditingController _wController;
   late final TextEditingController _hController;
   late WorkspaceArea _area;
+
+  bool get _usePixels => _area.usePixels;
+  String get _unit => _usePixels ? 'px' : '%';
 
   @override
   void initState() {
@@ -929,13 +981,15 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
     _pathController = TextEditingController(text: _area.executable);
     _paramsController = TextEditingController(text: _area.parameters);
     _hookToController = TextEditingController(text: _area.hookTo);
-    _xController = TextEditingController(text: _pct(_area.left));
-    _yController = TextEditingController(text: _pct(_area.top));
-    _wController = TextEditingController(text: _pct(_area.right - _area.left));
-    _hController = TextEditingController(text: _pct(_area.bottom - _area.top));
+    _xController = TextEditingController(text: _disp(_area.left));
+    _yController = TextEditingController(text: _disp(_area.top));
+    _wController = TextEditingController(text: _disp(_area.right - _area.left));
+    _hController = TextEditingController(text: _disp(_area.bottom - _area.top));
   }
 
-  String _pct(double fraction) => (fraction * 100).round().toString();
+  // A stored value (fraction or px) rendered as the integer shown in its field.
+  String _disp(double storageValue) =>
+      (_usePixels ? storageValue.round() : (storageValue * 100).round()).toString();
 
   @override
   void didUpdateWidget(covariant _WorkspaceAreaCard oldWidget) {
@@ -948,17 +1002,18 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
     if (widget.area.executable != _pathController.text) _pathController.text = widget.area.executable;
     if (widget.area.parameters != _paramsController.text) _paramsController.text = widget.area.parameters;
     if (widget.area.hookTo != _hookToController.text) _hookToController.text = widget.area.hookTo;
-    _syncPct(_xController, widget.area.left);
-    _syncPct(_yController, widget.area.top);
-    _syncPct(_wController, widget.area.right - widget.area.left);
-    _syncPct(_hController, widget.area.bottom - widget.area.top);
+    final bool px = widget.area.usePixels;
+    _syncNum(_xController, widget.area.left, px);
+    _syncNum(_yController, widget.area.top, px);
+    _syncNum(_wController, widget.area.right - widget.area.left, px);
+    _syncNum(_hController, widget.area.bottom - widget.area.top, px);
     _area = widget.area.copyWith();
   }
 
-  // Only rewrite when the underlying percentage actually changed (e.g. geometry
+  // Only rewrite when the underlying value actually changed (e.g. geometry
   // refreshed from a live window or clamped on emit), so typing isn't disrupted.
-  void _syncPct(TextEditingController controller, double fraction) {
-    final int value = (fraction * 100).round();
+  void _syncNum(TextEditingController controller, double storageValue, bool px) {
+    final int value = px ? storageValue.round() : (storageValue * 100).round();
     if ((int.tryParse(controller.text) ?? -1) != value) controller.text = value.toString();
   }
 
@@ -976,19 +1031,20 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
   }
 
   void _emit() {
-    // Fall back to the current fraction (not 0) when a field is empty/invalid, so
+    // Fall back to the current value (not 0) when a field is empty/invalid, so
     // clearing a box to retype doesn't collapse the window's geometry.
-    final double left = _fracOr(_xController, _area.left);
-    final double top = _fracOr(_yController, _area.top);
-    final double width = _fracOr(_wController, _area.right - _area.left);
-    final double height = _fracOr(_hController, _area.bottom - _area.top);
-    final double right = (left + width).clamp(0.0, 1.0);
-    final double bottom = (top + height).clamp(0.0, 1.0);
+    final double left = _numOr(_xController, _area.left);
+    final double top = _numOr(_yController, _area.top);
+    final double width = _numOr(_wController, _area.right - _area.left);
+    final double height = _numOr(_hController, _area.bottom - _area.top);
+    final double right = _usePixels ? left + width : (left + width).clamp(0.0, 1.0);
+    final double bottom = _usePixels ? top + height : (top + height).clamp(0.0, 1.0);
     widget.onChanged(_area.copyWith(
       windowTitle: _titleController.text,
       executable: _pathController.text,
       parameters: _paramsController.text,
       hookTo: _hookToController.text,
+      usePixels: _usePixels,
       left: left,
       top: top,
       right: right,
@@ -996,10 +1052,29 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
     ));
   }
 
-  double _fracOr(TextEditingController controller, double fallback) {
+  // Reads a field as a stored value (fraction or raw px). Percent mode divides by
+  // 100 and clamps to [0, 1]; px mode keeps the raw pixel count.
+  double _numOr(TextEditingController controller, double fallback) {
     final double? value = double.tryParse(controller.text.trim());
-    if (value == null) return fallback.clamp(0.0, 1.0);
-    return (value / 100).clamp(0.0, 1.0);
+    if (value == null) return fallback;
+    return _usePixels ? value : (value / 100).clamp(0.0, 1.0);
+  }
+
+  void _setUnit(bool usePixels) {
+    if (_area.usePixels == usePixels) return;
+    setState(() {
+      _area = _convertAreaMode(_area, usePixels: usePixels);
+      _xController.text = _disp(_area.left);
+      _yController.text = _disp(_area.top);
+      _wController.text = _disp(_area.right - _area.left);
+      _hController.text = _disp(_area.bottom - _area.top);
+    });
+    widget.onChanged(_area.copyWith(
+      windowTitle: _titleController.text,
+      executable: _pathController.text,
+      parameters: _paramsController.text,
+      hookTo: _hookToController.text,
+    ));
   }
 
   void _setMonitor(int monitorNumber) {
@@ -1031,10 +1106,18 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
   }
 
   String _geometryLabel() {
-    final int left = (widget.area.left * 100).round();
-    final int top = (widget.area.top * 100).round();
-    final int width = ((widget.area.right - widget.area.left) * 100).round();
-    final int height = ((widget.area.bottom - widget.area.top) * 100).round();
+    final WorkspaceArea a = widget.area;
+    if (a.usePixels) {
+      final int x = a.left.round();
+      final int y = a.top.round();
+      final int w = (a.right - a.left).round();
+      final int h = (a.bottom - a.top).round();
+      return '${x}px, ${y}px | ${w}x${h}px';
+    }
+    final int left = (a.left * 100).round();
+    final int top = (a.top * 100).round();
+    final int width = ((a.right - a.left) * 100).round();
+    final int height = ((a.bottom - a.top) * 100).round();
     return '$left%, $top% | $width%x$height%';
   }
 
@@ -1133,24 +1216,38 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
                     onChanged: _emit,
                   ),
                   const SizedBox(height: 10),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          'Position & size',
+                          style: TextStyle(
+                              fontSize: Design.baseFontSize + 1,
+                              fontWeight: FontWeight.w700,
+                              color: widget.onSurface.withValues(alpha: 0.6)),
+                        ),
+                      ),
+                      _unitToggle(),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
                   Text(
-                    'Position & size',
-                    style: TextStyle(
-                        fontSize: Design.baseFontSize + 1,
-                        fontWeight: FontWeight.w700,
-                        color: widget.onSurface.withValues(alpha: 0.6)),
+                    _usePixels
+                        ? 'Fixed pixel size, relative to the monitor top-left'
+                        : 'Percent of the monitor, scales with its size',
+                    style: TextStyle(fontSize: Design.baseFontSize, color: widget.onSurface.withValues(alpha: 0.45)),
                   ),
                   const SizedBox(height: 6),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: <Widget>[
-                      Expanded(child: _numField(label: 'X %', controller: _xController)),
+                      Expanded(child: _numField(label: 'X $_unit', controller: _xController)),
                       const SizedBox(width: 8),
-                      Expanded(child: _numField(label: 'Y %', controller: _yController)),
+                      Expanded(child: _numField(label: 'Y $_unit', controller: _yController)),
                       const SizedBox(width: 8),
-                      Expanded(child: _numField(label: 'W %', controller: _wController)),
+                      Expanded(child: _numField(label: 'W $_unit', controller: _wController)),
                       const SizedBox(width: 8),
-                      Expanded(child: _numField(label: 'H %', controller: _hController)),
+                      Expanded(child: _numField(label: 'H $_unit', controller: _hController)),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -1268,7 +1365,7 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
             keyboardType: TextInputType.number,
             inputFormatters: <TextInputFormatter>[
               FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(3),
+              LengthLimitingTextInputFormatter(_usePixels ? 5 : 3),
             ],
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: Design.baseFontSize + 2),
@@ -1281,6 +1378,42 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _unitToggle() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        _unitOption('%', !_usePixels, () => _setUnit(false)),
+        const SizedBox(width: 6),
+        _unitOption('px', _usePixels, () => _setUnit(true)),
+      ],
+    );
+  }
+
+  Widget _unitOption(String label, bool selected, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: selected ? widget.accent.withValues(alpha: 0.15) : widget.onSurface.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? widget.accent.withValues(alpha: 0.35) : widget.onSurface.withValues(alpha: 0.10),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: Design.baseFontSize,
+            fontWeight: FontWeight.w700,
+            color: selected ? widget.accent : widget.onSurface.withValues(alpha: 0.75),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1514,10 +1647,12 @@ class _WorkspacePreviewPainter extends CustomPainter {
   }
 
   Rect _safeRect(Rect innerRect, WorkspaceArea area) {
-    final double left = area.left.isFinite ? area.left.clamp(0.0, 1.0) : 0.0;
-    final double top = area.top.isFinite ? area.top.clamp(0.0, 1.0) : 0.0;
-    final double right = area.right.isFinite ? area.right.clamp(0.0, 1.0) : 1.0;
-    final double bottom = area.bottom.isFinite ? area.bottom.clamp(0.0, 1.0) : 1.0;
+    // Previews are laid out in monitor fractions; convert px-mode areas first.
+    final WorkspaceArea fractional = area.usePixels ? _convertAreaMode(area, usePixels: false) : area;
+    final double left = fractional.left.isFinite ? fractional.left.clamp(0.0, 1.0) : 0.0;
+    final double top = fractional.top.isFinite ? fractional.top.clamp(0.0, 1.0) : 0.0;
+    final double right = fractional.right.isFinite ? fractional.right.clamp(0.0, 1.0) : 1.0;
+    final double bottom = fractional.bottom.isFinite ? fractional.bottom.clamp(0.0, 1.0) : 1.0;
 
     final double minLeft = left <= right ? left : right;
     final double maxRight = right >= left ? right : left;

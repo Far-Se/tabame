@@ -14,6 +14,7 @@ enum LauncherSearchMode {
   recentOnly,
   steamOnly,
   terminalOnly,
+  workspacesOnly,
   timerCommand,
   functionCommand,
   mediaCommand,
@@ -59,6 +60,7 @@ class LauncherQuery {
     if (query.startsWith('r ')) return LauncherSearchMode.recentOnly;
     if (query.startsWith('s ')) return LauncherSearchMode.steamOnly;
     if (query.startsWith('t ')) return LauncherSearchMode.terminalOnly;
+    if (query.startsWith('ws ')) return LauncherSearchMode.workspacesOnly;
     if (query.startsWith('cli ')) return LauncherSearchMode.cliOnly;
     if (query.startsWith('app ')) return LauncherSearchMode.appsOnly;
     if (query.startsWith('b ')) return LauncherSearchMode.bookmarkOnly;
@@ -82,6 +84,7 @@ class LauncherQuery {
     if (query.startsWith('r ')) return query.substring(2).trimLeft();
     if (query.startsWith('s ')) return query.substring(2).trimLeft();
     if (query.startsWith('t ')) return query.substring(2).trimLeft();
+    if (query.startsWith('ws ')) return query.substring(3).trimLeft();
     if (query.startsWith('b ')) return query.substring(2).trimLeft();
     if (query.startsWith('/') ||
         query.startsWith('.') ||

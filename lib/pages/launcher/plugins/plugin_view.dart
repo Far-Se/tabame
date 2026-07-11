@@ -1,12 +1,16 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:markdown_widget/markdown_widget.dart';
 
 import '../../../models/settings.dart';
+import '../../../models/win32/win_utils.dart';
 import '../../../widgets/widgets/windows_scroll.dart';
 import '../result/result_row.dart';
+import 'plugin_form_view.dart';
 import 'plugin_icons.dart';
 import 'plugin_protocol.dart';
 
@@ -26,6 +30,9 @@ class PluginView extends StatefulWidget {
     required this.isRepeating,
     required this.onTapItem,
     required this.onHoverItem,
+    required this.onFormSubmit,
+    required this.onFormCancel,
+    this.detailScrollController,
   });
 
   final PluginRenderFrame frame;
@@ -33,6 +40,16 @@ class PluginView extends StatefulWidget {
   final bool isRepeating;
   final void Function(int index) onTapItem;
   final void Function(int index) onHoverItem;
+
+  /// Launcher-owned controller for the detail document, so arrow/page keys
+  /// (handled by the launcher) can scroll it.
+  final ScrollController? detailScrollController;
+
+  /// Form view: the user pressed Enter/submit with these field values.
+  final void Function(Map<String, Object?> values) onFormSubmit;
+
+  /// Form view: the user pressed Escape.
+  final VoidCallback onFormCancel;
 
   @override
   State<PluginView> createState() => _PluginViewState();
@@ -93,7 +110,17 @@ class _PluginViewState extends State<PluginView> {
     final PluginRenderFrame frame = widget.frame;
 
     if (frame.view == PluginViewType.detail) {
-      return _buildDetail(frame.detailMarkdown ?? '');
+      return _buildDetail(frame.detailMarkdown ?? '', frame.detailMetadata);
+    }
+
+    if (frame.view == PluginViewType.form) {
+      final PluginForm? form = frame.form;
+      if (form == null) return _buildEmptyOrLoading(frame);
+      return PluginFormView(
+        form: form,
+        onSubmit: widget.onFormSubmit,
+        onCancel: widget.onFormCancel,
+      );
     }
 
     if (frame.items.isEmpty) {
@@ -104,28 +131,77 @@ class _PluginViewState extends State<PluginView> {
 
     if (!frame.hasPreview) return itemsPane;
 
-    // Split layout: items on the left, a markdown preview of the selected item
-    // on the right.
+    // Split layout: items on the left, a markdown/metadata preview of the
+    // selected item on the right.
     final int idx = widget.activeIndex.clamp(0, frame.items.length - 1);
-    final String preview = frame.items[idx].previewMarkdown ?? '';
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Expanded(flex: 5, child: itemsPane),
         Container(width: 1, color: Design.accent.withAlpha(30)),
-        Expanded(flex: 4, child: _buildPreviewPane(preview)),
+        Expanded(flex: 4, child: _buildPreviewPane(frame.items[idx])),
       ],
     );
   }
 
   Widget _buildEmptyOrLoading(PluginRenderFrame frame) {
+    if (frame.loading) {
+      return Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(strokeWidth: 2, value: frame.loadingProgress),
+        ),
+      );
+    }
+    final PluginEmptyState? empty = frame.empty;
+    if (empty == null) {
+      return Center(
+        child: Text(frame.emptyText, style: TextStyle(fontSize: 13, color: Design.text.withAlpha(120))),
+      );
+    }
     return Center(
-      child: frame.loading
-          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
-          : Text(
-              frame.emptyText,
-              style: TextStyle(fontSize: 13, color: Design.text.withAlpha(120)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (empty.icon != null) ...<Widget>[
+            Icon(PluginIcons.resolve(empty.icon), size: 26, color: Design.accent.withAlpha(140)),
+            const SizedBox(height: 8),
+          ],
+          if (empty.title.isNotEmpty)
+            Text(
+              empty.title,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Design.text.withAlpha(190)),
             ),
+          if (empty.hint.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 3),
+            Text(empty.hint, style: TextStyle(fontSize: 11, color: Design.text.withAlpha(110))),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// A slim uppercase section header, rendered whenever an item's `section`
+  /// differs from the previous item's.
+  Widget _sectionHeader(String label) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
+      child: Row(
+        children: <Widget>[
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: Design.text.withAlpha(120),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Container(height: 1, color: Design.text.withAlpha(18))),
+        ],
+      ),
     );
   }
 
@@ -135,22 +211,36 @@ class _PluginViewState extends State<PluginView> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          for (int i = 0; i < frame.items.length; i++)
+          for (int i = 0; i < frame.items.length; i++) ...<Widget>[
+            if (frame.items[i].section != null && (i == 0 || frame.items[i].section != frame.items[i - 1].section))
+              _sectionHeader(frame.items[i].section!),
             KeyedSubtree(
               key: _keyFor(i),
-              child: LauncherResultRow(
-                isSelected: i == widget.activeIndex,
-                isRepeating: widget.isRepeating,
-                accent: Design.accent,
-                onSurface: Design.text,
-                onTap: () => widget.onTapItem(i),
-                onHover: () => _hoverSelect(i),
-                icon: _PluginIcon(name: frame.items[i].icon, accent: Design.accent),
-                title: frame.items[i].title,
-                subtitle: frame.items[i].subtitle,
-                badge: _accessoryBadge(frame.items[i]),
+              child: Column(
+                children: <Widget>[
+                  LauncherResultRow(
+                    isSelected: i == widget.activeIndex,
+                    isRepeating: widget.isRepeating,
+                    accent: Design.accent,
+                    onSurface: Design.text,
+                    onTap: () => widget.onTapItem(i),
+                    onHover: () => _hoverSelect(i),
+                    icon: _PluginIcon(name: frame.items[i].icon, accent: Design.accent),
+                    title: frame.items[i].title,
+                    subtitle: frame.items[i].subtitle,
+                    badge: _accessoryBadge(frame.items[i]),
+                    inlineMarkup: true,
+                    subtitleMaxLines: frame.items[i].subtitleLines,
+                  ),
+                  if (frame.items[i].progress != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 0, 18, 4),
+                      child: _PluginProgressBar(value: frame.items[i].progress!),
+                    ),
+                ],
               ),
             ),
+          ],
         ],
       ),
     );
@@ -165,9 +255,9 @@ class _PluginViewState extends State<PluginView> {
           Padding(
             padding: const EdgeInsets.only(left: 4),
             child: LauncherSereneBadge(
-              icon: Icons.label_important_rounded,
+              icon: accessory.icon != null ? PluginIcons.resolve(accessory.icon) : Icons.label_important_rounded,
               label: accessory.text,
-              color: Design.accent,
+              color: accessory.color ?? Design.accent,
             ),
           ),
       ],
@@ -205,24 +295,48 @@ class _PluginViewState extends State<PluginView> {
     );
   }
 
-  Widget _buildDetail(String markdown) {
+  Widget _buildDetail(String markdown, List<PluginMetadataEntry> metadata) {
+    final bool hasMarkdown = markdown.trim().isNotEmpty;
     return WindowsScrollView(
+      controller: widget.detailScrollController,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-        child: markdown.trim().isEmpty
+        child: !hasMarkdown && metadata.isEmpty
             ? Text('No content', style: TextStyle(fontSize: 13, color: Design.text.withAlpha(120)))
-            : MarkdownBlock(data: markdown, config: _markdownConfig),
+            // Cap the measure in the widened window — full-width prose lines
+            // are unreadable at 1080px.
+            : Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 820),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      if (hasMarkdown) MarkdownBlock(data: markdown, config: _markdownConfig),
+                      if (metadata.isNotEmpty) _PluginMetadataPane(entries: metadata, topGap: hasMarkdown),
+                    ],
+                  ),
+                ),
+              ),
       ),
     );
   }
 
-  Widget _buildPreviewPane(String markdown) {
+  Widget _buildPreviewPane(PluginItem item) {
+    final String markdown = item.previewMarkdown ?? '';
+    final bool hasMarkdown = markdown.trim().isNotEmpty;
     return WindowsScrollView(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        child: markdown.trim().isEmpty
+        child: !hasMarkdown && item.previewMetadata.isEmpty
             ? Text('No preview', style: TextStyle(fontSize: 12, color: Design.text.withAlpha(90)))
-            : MarkdownBlock(data: markdown, config: _markdownConfig),
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  if (hasMarkdown) MarkdownBlock(data: markdown, config: _markdownConfig),
+                  if (item.previewMetadata.isNotEmpty)
+                    _PluginMetadataPane(entries: item.previewMetadata, topGap: hasMarkdown),
+                ],
+              ),
       ),
     );
   }
@@ -254,14 +368,56 @@ class _PluginViewState extends State<PluginView> {
             padding: const EdgeInsets.all(10),
           ),
           BlockquoteConfig(sideColor: Design.accent.withAlpha(120), textColor: Design.text),
-          LinkConfig(style: TextStyle(color: Design.accent, decoration: TextDecoration.underline)),
+          // Tables: the package default draws full-opacity text-colored grid
+          // lines — soften to the launcher's hairline style.
+          TableConfig(
+            border: TableBorder.all(color: Design.text.withAlpha(40)),
+            headerStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Design.accent),
+            bodyStyle: TextStyle(fontSize: 12, color: Design.text),
+            headPadding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
+            bodyPadding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
+          ),
+          LinkConfig(
+            style: TextStyle(color: Design.accent, decoration: TextDecoration.underline),
+            onTap: (String url) {
+              final String target = url.trim();
+              if (target.isNotEmpty) WinUtils.open(target);
+            },
+          ),
+          // The package default only loads http rasters / Flutter assets;
+          // plugins reference local `file://` images (including generated SVGs).
+          ImgConfig(builder: (String url, Map<String, String> attributes) => _markdownImage(url)),
         ],
       );
+
+  /// Renders a markdown image from a `file://` path or http(s) URL, with SVG
+  /// support via flutter_svg, scaled down to the pane width.
+  Widget _markdownImage(String url) {
+    final String value = url.trim();
+    final Widget broken = Icon(Icons.broken_image_rounded, size: 16, color: Design.text.withAlpha(90));
+    final bool isSvg = Uri.tryParse(value)?.path.toLowerCase().endsWith('.svg') ?? false;
+    return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
+      final double? width = constraints.maxWidth.isFinite ? constraints.maxWidth : null;
+      if (value.startsWith('http://') || value.startsWith('https://')) {
+        return isSvg
+            ? SvgPicture.network(value, width: width, errorBuilder: (_, __, ___) => broken)
+            : Image.network(value, width: width, errorBuilder: (_, __, ___) => broken);
+      }
+      if (value.startsWith('file://')) {
+        final File file = File(Uri.parse(value).toFilePath(windows: true));
+        if (!file.existsSync()) return broken;
+        return isSvg
+            ? SvgPicture.file(file, width: width, errorBuilder: (_, __, ___) => broken)
+            : Image.file(file, width: width, errorBuilder: (_, __, ___) => broken);
+      }
+      return broken;
+    });
+  }
 }
 
-/// Resolves a plugin icon string to a widget: a Material icon name, a local
-/// `file://` image, or a remote `https://` image (both fall back to the icon on
-/// error).
+/// Resolves a plugin icon string to a widget: a `#RRGGBB` color swatch, a
+/// Material icon name, a local `file://` image, or a remote `https://` image
+/// (images fall back to the icon on error).
 class _PluginIcon extends StatelessWidget {
   const _PluginIcon({required this.name, required this.accent, this.size = 16});
   final String? name;
@@ -271,6 +427,18 @@ class _PluginIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? value = name?.trim();
+    final Color? swatch = parsePluginColor(value);
+    if (swatch != null) {
+      return Container(
+        width: size + 4,
+        height: size + 4,
+        decoration: BoxDecoration(
+          color: swatch,
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(color: Design.text.withAlpha(40)),
+        ),
+      );
+    }
     if (value != null && (value.startsWith('http://') || value.startsWith('https://'))) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(4),
@@ -303,6 +471,201 @@ class _PluginIcon extends StatelessWidget {
   }
 }
 
+/// A thin determinate bar shown under a list row that carries `"progress"`.
+class _PluginProgressBar extends StatelessWidget {
+  const _PluginProgressBar({required this.value});
+
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(2),
+      child: SizedBox(
+        height: 3,
+        child: LinearProgressIndicator(
+          value: value,
+          backgroundColor: Design.text.withAlpha(20),
+          valueColor: AlwaysStoppedAnimation<Color>(Design.accent.withAlpha(200)),
+        ),
+      ),
+    );
+  }
+}
+
+/// Axis-free inline mini-chart used by metadata entries with `"sparkline"`.
+class _PluginSparkline extends StatelessWidget {
+  const _PluginSparkline({required this.values, required this.color});
+
+  final List<double> values;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: const Size(90, 16),
+      painter: _SparklinePainter(values: values, color: color),
+    );
+  }
+}
+
+class _SparklinePainter extends CustomPainter {
+  _SparklinePainter({required this.values, required this.color});
+
+  final List<double> values;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    double min = values.first, max = values.first;
+    for (final double v in values) {
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+    final double range = max - min;
+    // Inset vertically so the stroke doesn't clip at the extremes.
+    const double inset = 1.5;
+    final double drawHeight = size.height - inset * 2;
+    final Path line = Path();
+    for (int i = 0; i < values.length; i++) {
+      final double x = size.width * i / (values.length - 1);
+      final double normalized = range == 0 ? 0.5 : (values[i] - min) / range;
+      final double y = inset + drawHeight * (1 - normalized);
+      if (i == 0) {
+        line.moveTo(x, y);
+      } else {
+        line.lineTo(x, y);
+      }
+    }
+    // Faint fill under the line, then the line itself.
+    final Path fill = Path.from(line)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(fill, Paint()..color = color.withAlpha(26));
+    canvas.drawPath(
+      line,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_SparklinePainter oldDelegate) =>
+      oldDelegate.color != color || !listEquals(oldDelegate.values, values);
+}
+
+/// Dense key-value rows shown under preview/detail markdown: label column on
+/// the left, value (with optional icon, tint, and link) on the right.
+class _PluginMetadataPane extends StatelessWidget {
+  const _PluginMetadataPane({required this.entries, required this.topGap});
+
+  final List<PluginMetadataEntry> entries;
+
+  /// Whether markdown precedes the pane (adds a separating divider).
+  final bool topGap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(top: topGap ? 10 : 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          if (topGap)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Container(height: 1, color: Design.text.withAlpha(18)),
+            ),
+          for (final PluginMetadataEntry entry in entries)
+            if (entry.separator)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Container(height: 1, color: Design.text.withAlpha(18)),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2.5),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    SizedBox(
+                      width: 90,
+                      child: Text(
+                        entry.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Design.text.withAlpha(120),
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(child: _value(entry)),
+                  ],
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+
+  Widget _value(PluginMetadataEntry entry) {
+    final Color valueColor = entry.color ?? Design.text.withAlpha(210);
+    final Widget text = Text(
+      entry.text,
+      style: TextStyle(
+        fontSize: 11.5,
+        fontWeight: FontWeight.w600,
+        color: entry.url != null ? Design.accent : valueColor,
+        decoration: entry.url != null ? TextDecoration.underline : null,
+        height: 1.35,
+      ),
+    );
+    final Widget value = Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        if (entry.sparkline != null)
+          Padding(
+            padding: EdgeInsets.only(right: entry.text.isEmpty ? 0 : 6, top: 1),
+            child: _PluginSparkline(values: entry.sparkline!, color: entry.color ?? Design.accent),
+          ),
+        if (entry.icon != null)
+          Padding(
+            padding: const EdgeInsets.only(right: 5, top: 1),
+            child: Icon(PluginIcons.resolve(entry.icon), size: 12, color: entry.color ?? Design.accent),
+          )
+        else if (entry.color != null && entry.sparkline == null)
+          Padding(
+            padding: const EdgeInsets.only(right: 5, top: 4),
+            child: Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(color: entry.color, shape: BoxShape.circle),
+            ),
+          ),
+        Flexible(child: text),
+      ],
+    );
+    if (entry.url == null) return value;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => WinUtils.open(entry.url!.trim()),
+        child: value,
+      ),
+    );
+  }
+}
+
 /// A single grid tile: icon over title/subtitle, with an accent selection
 /// treatment matching the launcher's design language.
 class _PluginGridTile extends StatelessWidget {
@@ -322,6 +685,13 @@ class _PluginGridTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color accent = Design.accent;
     final Color onSurface = Design.text;
+
+    // A tileColor turns the tile into a filled swatch: text flips to black or
+    // white for contrast, and selection becomes a contrast ring (an accent
+    // border would clash with arbitrary swatch colors).
+    final Color? tile = item.tileColor;
+    final Color labelColor = tile == null ? onSurface : (tile.computeLuminance() > 0.5 ? Colors.black : Colors.white);
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onHover: (PointerHoverEvent event) {
@@ -334,14 +704,19 @@ class _PluginGridTile extends StatelessWidget {
           curve: Curves.easeOut,
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: isSelected ? accent.withAlpha(40) : onSurface.withAlpha(8),
+            color: tile ?? (isSelected ? accent.withAlpha(40) : onSurface.withAlpha(8)),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: isSelected ? accent.withAlpha(120) : onSurface.withAlpha(14)),
+            border: Border.all(
+              color: tile != null
+                  ? (isSelected ? labelColor.withAlpha(220) : labelColor.withAlpha(40))
+                  : (isSelected ? accent.withAlpha(120) : onSurface.withAlpha(14)),
+              width: tile != null && isSelected ? 2 : 1,
+            ),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              _PluginIcon(name: item.icon, accent: accent, size: 22),
+              if (tile == null || item.icon != null) _PluginIcon(name: item.icon, accent: accent, size: 22),
               if (item.title.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 4),
                 Text(
@@ -352,7 +727,7 @@ class _PluginGridTile extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: isSelected ? onSurface : onSurface.withAlpha(210),
+                    color: isSelected ? labelColor : labelColor.withAlpha(210),
                   ),
                 ),
               ],
@@ -362,7 +737,7 @@ class _PluginGridTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 9, color: onSurface.withAlpha(130)),
+                  style: TextStyle(fontSize: 9, color: labelColor.withAlpha(130)),
                 ),
             ],
           ),

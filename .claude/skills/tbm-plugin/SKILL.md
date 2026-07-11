@@ -44,9 +44,12 @@ When a detail isn't covered below, consult the full spec rather than guessing.
   "description": "", // optional
   "icon": "cloud", // optional — icon name (see spec §11)
   "args": [], // optional — CLI args inserted BEFORE entry
-  "enabled": true // optional — defaults to true; set false (or toggle
+  "enabled": true, // optional — defaults to true; set false (or toggle
   //   from the Launcher Plugins manager) to hide the
   //   plugin without deleting it
+  "dev": false // optional — true enables dev mode: hot-restart on file
+  //   save + a live debug console (stderr, dropped frames,
+  //   commands) under the plugin view. Turn off before sharing.
 }
 ```
 
@@ -60,10 +63,13 @@ Messages you receive on **stdin**:
 
 | Message  | When                                                | Key fields                         |
 | -------- | --------------------------------------------------- | ---------------------------------- |
-| `init`   | Once at startup                                     | `query` (initial text)             |
+| `init`   | Once at startup                                     | `query`, `protocol` (2), `theme` (`{accent,text,background,dark}` hex + flag), `locale` |
 | `query`  | Every keystroke                                     | `text`, `rev` (generation counter) |
 | `select` | Highlighted item changed                            | `id`, `rev`                        |
 | `action` | **Enter** (`action:"default"`) or a **Ctrl+K** pick | `id`, `action` (no `rev`)          |
+| `submit` | User submits a `form` view                          | `values` (`{fieldId: value}`)      |
+| `back`   | Escape on a frame with `canGoBack: true`            | `rev` — render the previous screen |
+| `tab`    | Tab pressed                                          | `id` of highlighted item, `rev` — answer with `setQuery` |
 | `close`  | Shutting down                                       | —                                  |
 
 Minimal render frame you print to **stdout**:
@@ -79,25 +85,36 @@ Minimal render frame you print to **stdout**:
 }
 ```
 
-Full frame/item fields (views `list`/`grid`/`detail`, `loading`, `emptyText`, `grid`, `detail.markdown`, `preview`, item `accessories`/`actions`/`preview`) are documented in spec §6–§8.
+Full frame/item fields are documented in spec §6–§8: views `list`/`grid`/`detail`/`form`; frame `loading` (bool or `{progress}`), `emptyText`, `empty` (`{icon,title,hint}`), `placeholder`, `canGoBack`, `grid`, `detail` (`{markdown, metadata, wide}` — a markdown-only document view with no list; ↑/↓/PageUp/PageDown scroll it, `wide: true` widens the window), `form`, `preview`; item `accessories` (tintable via `color`, own `icon`), `actions`, `preview` (`{markdown, metadata}`), `section` headers, `lines` (subtitle wrap), `progress` bar, grid `tileColor`, and `**bold**`/`` `code` `` spans in title/subtitle. `metadata` entries (spec §7.1) are aligned key-value rows supporting `color` dots, `icon`, clickable `url`, `sparkline` arrays, and `{"separator":true}` dividers. Icons accept a §11 name, a `#RRGGBB` color swatch, or a raster URL.
+
+You can also print **commands** — side effects the host executes for you (spec §5.2). No `rev`, fire-and-forget; combine by printing several lines (e.g. `copy` then `hide`):
+
+```json
+{"type":"command","command":"copy","text":"..."}   // clipboard + "Copied" toast
+{"type":"command","command":"paste","text":"..."}  // clipboard + hide + Ctrl+V into the previous window
+{"type":"command","command":"open","url":"..."}    // URL or file/folder path
+{"type":"command","command":"hide"}                 // hide the launcher (your process gets `close`)
+{"type":"command","command":"toast","text":"..."}  // transient confirmation chip
+{"type":"command","command":"setQuery","text":"..."} // rewrite post-keyword search text (autocomplete)
+```
 
 ## Non-negotiable rules (get these right)
 
-- **stdout is render frames only.** Any other stdout line is treated as a diagnostic log. Send all debug output to **stderr**.
+- **stdout is protocol messages only** (render frames and commands). Any other stdout line is treated as a diagnostic log. Send all debug output to **stderr**.
 - **Echo `rev`** on frames responding to a `query`/`select`; use **`rev: 0`** for unsolicited pushes (action results, async/background refreshes). Tabame **drops frames with a stale `rev`**, so a slow response to "rom" can't overwrite fresh results for "rome".
 - **Flush stdout** after every frame; **one JSON object per line**, no embedded newlines.
 - **Every item needs a stable, unique `id`** — it's echoed back in `select`/`action`.
 - **Exit on `close` and on stdin EOF.** After `close`, ~2s grace then the process is killed.
 - **Read stdin line by line**; never block for all input.
-- **Escape exits the whole plugin** (no built-in "back") — for multi-screen plugins keep your own `screen` state and add a "◀ Back" item or a Ctrl+K `back` action.
+- **Escape exits the whole plugin** unless the frame set `"canGoBack": true` — then you get `{"type":"back"}` and should render the previous screen. Keep your own `screen` state; leave `canGoBack` off the root screen (and never set it on a screen you can't leave, or Escape is trapped).
 - **Slow work:** emit a `loading:true` frame (echoing the rev) first, then the result frame.
 - **Never crash on bad input** — wrap handlers in try/except and render the error as a `detail` frame.
-- **Icons** must be a name from spec §11 (case-insensitive) or a `file://`/`https://` **raster** (PNG/JPG, no SVG).
+- **Icons** must be a name from spec §11 (case-insensitive), a `#RRGGBB` color swatch, or a `file://`/`https://` **raster** (PNG/JPG, no SVG).
 - On Windows, Tabame sets `PYTHONIOENCODING=utf-8` / `PYTHONUTF8=1` for Python; Node/Bun are UTF-8 already.
 
 ## Doing real work
 
-The plugin is an ordinary process: HTTP (`requests`/`urllib`, or global `fetch` in Node 18+/Bun), filesystem, spawning tools. Read secrets from a `config.json` in the plugin folder (the CWD) or env vars — see `plugins/linear/config.example.json`. To open a URL or copy to the clipboard on Windows, shell out via `cmd /c start`/`cmd /c clip` (recipes in spec §12). Markdown links in `detail` render but are **not clickable** — expose URLs as item **actions** and open them yourself.
+The plugin is an ordinary process: HTTP (`requests`/`urllib`, or global `fetch` in Node 18+/Bun), filesystem, spawning tools. Read secrets from a `config.json` in the plugin folder (the CWD) or env vars — see `plugins/linear/config.example.json`. To open a URL, copy/paste text, hide the launcher, or show a toast, print a **command** (see above) — don't shell out to `cmd /c start`/`clip`. Markdown links in `detail`/`preview` are clickable and open in the default browser; metadata entries can carry a `url` for the same effect.
 
 ## Deliverables
 

@@ -1071,6 +1071,13 @@ class HotKeyInfo {
         QuickMenuFunctions.hideQuickMenu();
       });
     },
+    "showLastWindowUnderCursor": () {
+      QuickMenuFunctions.hideQuickMenu();
+      WindowWatcher.showLastWindowUnderCursor();
+      Future<void>.delayed(const Duration(milliseconds: 320), () {
+        QuickMenuFunctions.hideQuickMenu();
+      });
+    },
     "ExpandSnippet": () => TextSnippetsManager.expand(),
     "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),
     "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),
