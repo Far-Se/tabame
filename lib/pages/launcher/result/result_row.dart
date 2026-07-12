@@ -361,6 +361,7 @@ class LauncherResultRow extends StatelessWidget {
   Widget _buildTerminal(BuildContext context) {
     final int animMs = isRepeating ? 40 : 120;
     final Curve curve = isRepeating ? Curves.linear : Curves.easeOut;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return RepaintBoundary(
       child: MouseRegion(
@@ -411,12 +412,12 @@ class LauncherResultRow extends StatelessWidget {
                           _titleText(TerminalTokens.mono(
                             fontSize: Design.baseFontSize + 1,
                             fontWeight: FontWeight.w600,
-                            color: isSelected ? accent : TerminalTokens.fg,
+                            color: isSelected ? accent : TerminalTokens.fg(isDark),
                             height: 1.25,
                           )),
                           _subtitleText(TerminalTokens.mono(
                             fontSize: Design.baseFontSize - 1,
-                            color: isSelected ? TerminalTokens.fg.withAlpha(190) : TerminalTokens.dim,
+                            color: isSelected ? TerminalTokens.fg(isDark).withAlpha(190) : TerminalTokens.dim(isDark),
                             height: 1.2,
                           )),
                         ],

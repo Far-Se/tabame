@@ -198,8 +198,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   // When a plugin keyword is active, the launcher hands its results area over to
   // an external script: `_pluginFrame` holds the latest JSON-described UI and
   // `_activePlugin` the running manifest. `_results` is empty in this mode.
-  late final LauncherPluginHost _pluginHost =
-      LauncherPluginHost(onFrame: _onPluginFrame, onCommand: _onPluginCommand);
+  late final LauncherPluginHost _pluginHost = LauncherPluginHost(onFrame: _onPluginFrame, onCommand: _onPluginCommand);
   PluginManifest? _activePlugin;
   PluginRenderFrame? _pluginFrame;
   Timer? _pluginQueryDebounce;
@@ -775,8 +774,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       // focus traversal from leaving the search field.
       if (event is KeyDownEvent) {
         final int count = frame.items.length;
-        final String id =
-            count == 0 ? '' : frame.items[_activeIndexNotifier.value.clamp(0, count - 1)].id;
+        final String id = count == 0 ? '' : frame.items[_activeIndexNotifier.value.clamp(0, count - 1)].id;
         _pluginHost.sendTab(id);
       }
       return KeyEventResult.handled;
@@ -839,8 +837,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     if (isRepeat) {
       _pluginDetailScroll.jumpTo(target);
     } else {
-      _pluginDetailScroll.animateTo(target,
-          duration: const Duration(milliseconds: 110), curve: Curves.easeOutCubic);
+      _pluginDetailScroll.animateTo(target, duration: const Duration(milliseconds: 110), curve: Curves.easeOutCubic);
     }
     return KeyEventResult.handled;
   }
@@ -893,8 +890,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
             ],
           ),
         ),
-        if (_activePlugin?.dev == true)
-          PluginDebugConsole(log: _pluginHost.debugLog, pluginId: _activePlugin!.id),
+        if (_activePlugin?.dev == true) PluginDebugConsole(log: _pluginHost.debugLog, pluginId: _activePlugin!.id),
       ],
     );
   }
@@ -972,6 +968,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       if (event is KeyDownEvent &&
           event.logicalKey == LogicalKeyboardKey.keyC &&
           HardwareKeyboard.instance.isControlPressed) {
+        if (_activePlugin != null) return KeyEventResult.ignored;
         _copyItem();
         setState(() {});
         return KeyEventResult.handled;
@@ -1018,7 +1015,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         return KeyEventResult.handled;
       }
 
-      if (event.logicalKey == LogicalKeyboardKey.arrowDown || event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      if (event.logicalKey == LogicalKeyboardKey.arrowDown ||
+          event.logicalKey == LogicalKeyboardKey.arrowUp ||
+          event.logicalKey == LogicalKeyboardKey.home ||
+          event.logicalKey == LogicalKeyboardKey.end) {
         if (_lastPressedKey == event.logicalKey) return KeyEventResult.handled;
         _lastPressedKey = event.logicalKey;
 
@@ -1171,6 +1171,14 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     // A plugin form owns focus while it is shown — the search field must not
     // steal keystrokes back from its inputs.
     if (_activePlugin != null && _pluginFrame?.view == PluginViewType.form) return false;
+    // Plugin markdown (detail view or the split preview pane) is wrapped in a
+    // SelectionArea so users can select/copy text with the mouse. That widget
+    // grabs focus on tap-drag; auto-reclaiming focus for the search field
+    // would yank it away mid-selection and break Ctrl+C.
+    if (_activePlugin != null &&
+        (_pluginFrame?.view == PluginViewType.detail || (_pluginFrame?.hasPreview ?? false))) {
+      return false;
+    }
     return true;
   }
 
@@ -1212,6 +1220,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       _activeIndexNotifier.value = ((_activeIndexNotifier.value + 1) % _results.length).toInt();
     } else if (key == LogicalKeyboardKey.arrowUp) {
       _activeIndexNotifier.value = ((_activeIndexNotifier.value - 1 + _results.length) % _results.length).toInt();
+    } else if (key == LogicalKeyboardKey.home) {
+      _activeIndexNotifier.value = 0;
+    } else if (key == LogicalKeyboardKey.end) {
+      _activeIndexNotifier.value = _results.length - 1;
     }
     _scrollToActiveIndex();
   }
@@ -1894,11 +1906,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
     final bool isWebsite = _looksLikeWebsite(target);
     groups[index].bookmarks.add(BookmarkInfo(
-      emoji: isWebsite ? '🌐' : '🔖',
-      title: _deriveBookmarkTitle(target, isWebsite),
-      stringToExecute: target,
-      preferInputIcon: isWebsite,
-    ));
+          emoji: isWebsite ? '🌐' : '🔖',
+          title: _deriveBookmarkTitle(target, isWebsite),
+          stringToExecute: target,
+          preferInputIcon: isWebsite,
+        ));
 
     await Boxes.updateSettings('projects', jsonEncode(groups));
     if (!mounted) return;
@@ -2213,13 +2225,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
 
     final String input = context.normalizedQuery.trim().toLowerCase();
-    final List<({String id, String label, IconData icon, String command, List<String> aliases})> matches =
-        input.isEmpty
-            ? _spotifyControlActions
-            : _spotifyControlActions
-                .where((({String id, String label, IconData icon, String command, List<String> aliases}) a) =>
-                    a.aliases.any((String alias) => alias.startsWith(input)))
-                .toList(growable: false);
+    final List<({String id, String label, IconData icon, String command, List<String> aliases})> matches = input.isEmpty
+        ? _spotifyControlActions
+        : _spotifyControlActions
+            .where((({String id, String label, IconData icon, String command, List<String> aliases}) a) =>
+                a.aliases.any((String alias) => alias.startsWith(input)))
+            .toList(growable: false);
 
     final List<LauncherSearchResultItem> results = <LauncherSearchResultItem>[
       // Now-playing hero row is always shown; Enter on it toggles play/pause.
@@ -3626,12 +3637,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     final ThemeData theme = isTerminal
         ? baseTheme.copyWith(
             colorScheme: baseTheme.colorScheme.copyWith(
-              surface: TerminalTokens.bg,
-              onSurface: TerminalTokens.fg,
+              surface: TerminalTokens.bg(isDark),
+              onSurface: TerminalTokens.fg(isDark),
             ),
             highlightColor: accent.withAlpha(38),
             textTheme: GoogleFonts.jetBrainsMonoTextTheme(baseTheme.textTheme)
-                .apply(bodyColor: TerminalTokens.fg, displayColor: TerminalTokens.fg),
+                .apply(bodyColor: TerminalTokens.fg(isDark), displayColor: TerminalTokens.fg(isDark)),
           )
         : isZen
             ? baseTheme.copyWith(

@@ -98,6 +98,18 @@ class Design {
         .withSaturation((accentHsl.saturation * saturation).clamp(0.0, 1.0))
         .toColor();
   }
+
+  static Color backgroundHue(int hue, {double saturation = 1.0}) {
+    final HSLColor backgroundHsl = HSLColor.fromColor(Design.background);
+    return backgroundHsl
+        .withHue((backgroundHsl.hue + hue) % 360)
+        .withSaturation((backgroundHsl.saturation * saturation).clamp(0.0, 1.0))
+        .toColor();
+  }
+
+  static HSLColor backgroundHsl() {
+    return HSLColor.fromColor(Design.background);
+  }
 }
 
 class C {

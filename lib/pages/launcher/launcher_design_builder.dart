@@ -77,10 +77,11 @@ extension LauncherDesignBuilder on LauncherDesign {
         );
 
       case LauncherDesign.terminal:
-        // Forced console screen — ignores the themed surface on purpose.
+        // Console screen — [surface] is the forced terminal palette background
+        // (light or dark) supplied by the launcher theme.
         return BoxDecoration(
           borderRadius: BorderRadius.circular(6),
-          color: TerminalTokens.bg,
+          color: surface,
           border: Border.all(color: accent.withAlpha(60)),
           boxShadow: <BoxShadow>[
             BoxShadow(
@@ -935,6 +936,7 @@ class TerminalLauncherFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return LauncherTheme(
       data: const LauncherThemeData(design: LauncherDesign.terminal),
       child: Container(
@@ -948,15 +950,15 @@ class TerminalLauncherFrame extends StatelessWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  _TerminalTitleBar(accent: accent),
+                  _TerminalTitleBar(accent: accent, isDark: isDark),
                   child,
-                  _TerminalStatusBar(accent: accent, resultCount: resultCount),
+                  _TerminalStatusBar(accent: accent, resultCount: resultCount, isDark: isDark),
                 ],
               ),
               // CRT scanlines.
-              const Positioned.fill(
+              Positioned.fill(
                 child: IgnorePointer(
-                  child: CustomPaint(painter: _ScanlinePainter()),
+                  child: CustomPaint(painter: _ScanlinePainter(isDark: isDark)),
                 ),
               ),
             ],
@@ -968,9 +970,10 @@ class TerminalLauncherFrame extends StatelessWidget {
 }
 
 class _TerminalTitleBar extends StatelessWidget {
-  const _TerminalTitleBar({required this.accent});
+  const _TerminalTitleBar({required this.accent, required this.isDark});
 
   final Color accent;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -982,7 +985,7 @@ class _TerminalTitleBar extends StatelessWidget {
         height: 24,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-          color: TerminalTokens.chrome,
+          color: TerminalTokens.chrome(isDark),
           border: Border(bottom: BorderSide(color: accent.withAlpha(40))),
         ),
         child: Row(
@@ -997,7 +1000,7 @@ class _TerminalTitleBar extends StatelessWidget {
               'QuickLaunch',
               style: TerminalTokens.mono(
                 fontSize: Design.baseFontSize - 1,
-                color: TerminalTokens.dim,
+                color: TerminalTokens.dim(isDark),
                 letterSpacing: 0.3,
               ),
             ),
@@ -1012,7 +1015,7 @@ class _TerminalTitleBar extends StatelessWidget {
                   '─  ✕',
                   style: TerminalTokens.mono(
                     fontSize: Design.baseFontSize - 1,
-                    color: TerminalTokens.dim,
+                    color: TerminalTokens.dim(isDark),
                     letterSpacing: 1.5,
                   ),
                 ),
@@ -1026,10 +1029,11 @@ class _TerminalTitleBar extends StatelessWidget {
 }
 
 class _TerminalStatusBar extends StatelessWidget {
-  const _TerminalStatusBar({required this.accent, required this.resultCount});
+  const _TerminalStatusBar({required this.accent, required this.resultCount, required this.isDark});
 
   final Color accent;
   final int resultCount;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -1040,12 +1044,12 @@ class _TerminalStatusBar extends StatelessWidget {
     );
     final TextStyle label = TerminalTokens.mono(
       fontSize: Design.baseFontSize - 1.5,
-      color: TerminalTokens.dim,
+      color: TerminalTokens.dim(isDark),
     );
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
       decoration: BoxDecoration(
-        color: TerminalTokens.chrome,
+        color: TerminalTokens.chrome(isDark),
         border: Border(top: BorderSide(color: accent.withAlpha(40))),
       ),
       child: Row(
@@ -1053,7 +1057,7 @@ class _TerminalStatusBar extends StatelessWidget {
           Text('↵', style: key),
           Text(' run   ', style: label),
           Text('→', style: key),
-          Text(' opts   ', style: label),
+          Text(' Ctrl+K   ', style: label),
           Text('esc', style: key),
           Text(' quit', style: label),
           const Spacer(),
@@ -1072,14 +1076,17 @@ class _TerminalStatusBar extends StatelessWidget {
   }
 }
 
-/// Very subtle horizontal scanlines for a CRT feel.
+/// Very subtle horizontal scanlines for a CRT feel. Light phosphor lines on the
+/// dark screen; faint ink lines on the light "paper console".
 class _ScanlinePainter extends CustomPainter {
-  const _ScanlinePainter();
+  const _ScanlinePainter({required this.isDark});
+
+  final bool isDark;
 
   @override
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()
-      ..color = Colors.white.withAlpha(5)
+      ..color = (isDark ? Colors.white : Colors.black).withAlpha(5)
       ..strokeWidth = 1;
     for (double y = 0; y < size.height; y += 3) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
@@ -1087,7 +1094,7 @@ class _ScanlinePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ScanlinePainter oldDelegate) => false;
+  bool shouldRepaint(covariant _ScanlinePainter oldDelegate) => oldDelegate.isDark != isDark;
 }
 
 // ---------------------------------------------------------------------------

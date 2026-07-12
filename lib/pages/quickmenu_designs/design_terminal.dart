@@ -8,8 +8,25 @@ import '../../widgets/quickmenu/libre_stats.dart';
 import '../../widgets/quickmenu/task_bar.dart';
 import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
-import '../launcher/launcher_design.dart';
 import 'design_backdrop_stable.dart';
+
+/// "Raised chrome" surface (title bar / status bar) for the Terminal QuickMenu
+/// design, derived from the active theme background so it reads correctly in
+/// both light and dark themes.
+///
+/// Unlike the launcher's `TerminalTokens` — which intentionally forces a
+/// near-black console palette regardless of theme — the QuickMenu Terminal
+/// design follows the user's chosen colors (`Design.background`/`Design.accent`),
+/// so its chrome must adapt too. On dark backgrounds the chrome lifts slightly
+/// lighter; on light backgrounds it settles slightly darker.
+Color _terminalChrome() {
+  final Color bg = Design.background;
+  final bool isDark = bg.computeLuminance() < 0.5;
+  return Color.alphaBlend(
+    (isDark ? Colors.white : Colors.black).withAlpha(isDark ? 16 : 14),
+    bg,
+  );
+}
 
 class MainMenuTerminalWidget extends StatelessWidget {
   const MainMenuTerminalWidget({super.key});
@@ -18,6 +35,7 @@ class MainMenuTerminalWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     Theme.of(context); // register as theme-dependent so Design.* values update live
     final Color accent = Design.accent;
+    final Color chrome = _terminalChrome();
     final double radius = Design.borderRadius;
 
     return ConstrainedBox(
@@ -78,14 +96,14 @@ class MainMenuTerminalWidget extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      const _TerminalTitleBar(),
+                      _TerminalTitleBar(chrome: chrome),
                       _TerminalHairline(accent: accent),
                       const TaskBar(),
                       _TerminalHairline(accent: accent),
                       if (!user.bottomBarOnTop) const PinnedAndTrayList(),
                       if (user.taskManagerStats) const TaskbarStats(),
                       if (user.libreStats) const LibreStats(),
-                      _TerminalStatusBar(accent: accent),
+                      _TerminalStatusBar(accent: accent, chrome: chrome),
                     ],
                   ),
                 ),
@@ -103,12 +121,14 @@ class MainMenuTerminalWidget extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _TerminalTitleBar extends StatelessWidget {
-  const _TerminalTitleBar();
+  const _TerminalTitleBar({required this.chrome});
+
+  final Color chrome;
 
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: TerminalTokens.chrome,
+      color: chrome,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(3, 3, 8, 3),
         child: user.bottomBarOnTop ? const PinnedAndTrayList() : const TopBar(),
@@ -129,14 +149,15 @@ class _TerminalHairline extends StatelessWidget {
 }
 
 class _TerminalStatusBar extends StatelessWidget {
-  const _TerminalStatusBar({required this.accent});
+  const _TerminalStatusBar({required this.accent, required this.chrome});
 
   final Color accent;
+  final Color chrome;
 
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: TerminalTokens.chrome,
+      color: chrome,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[

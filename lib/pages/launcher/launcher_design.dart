@@ -5,22 +5,36 @@ import '../../models/settings.dart';
 
 /// Shared visual tokens for the Terminal (CLI) launcher design.
 ///
-/// The Terminal design intentionally overrides the active theme with a forced
-/// console palette so it always reads as a command prompt — light phosphor text
-/// on a near-black screen — regardless of the user's chosen launcher colors.
-/// The accent stays user-driven (prompt, cursor, selection).
+/// The Terminal design overrides the active theme with a forced console palette
+/// so it always reads as a command prompt — regardless of the user's chosen
+/// launcher colors. Two curated palettes adapt to the active brightness: a
+/// near-black screen with light phosphor text in dark mode, and a soft "paper
+/// console" with dark ink in light mode. The accent stays user-driven (prompt,
+/// cursor, selection).
 abstract final class TerminalTokens {
-  /// Console "screen" background (Windows Terminal default black).
-  static const Color bg = Color(0xFF0C0C0C);
+  // Dark — near-black screen (Windows Terminal default).
+  static const Color _bgDark = Color(0xFF0C0C0C);
+  static const Color _chromeDark = Color(0xFF161616);
+  static const Color _fgDark = Color(0xFFCCCCCC);
+  static const Color _dimDark = Color(0xFF7A7A7A);
+
+  // Light — "paper console": off-white screen, dark ink.
+  static const Color _bgLight = Color(0xFFF4F4F1);
+  static const Color _chromeLight = Color(0xFFE7E7E2);
+  static const Color _fgLight = Color(0xFF2A2A2A);
+  static const Color _dimLight = Color(0xFF6C6C6C);
+
+  /// Console "screen" background.
+  static Color bg(bool isDark) => isDark ? _bgDark : _bgLight;
 
   /// Slightly raised chrome (title bar / status bar).
-  static const Color chrome = Color(0xFF161616);
+  static Color chrome(bool isDark) => isDark ? _chromeDark : _chromeLight;
 
-  /// Primary foreground (Windows console default light gray).
-  static const Color fg = Color(0xFFCCCCCC);
+  /// Primary foreground.
+  static Color fg(bool isDark) => isDark ? _fgDark : _fgLight;
 
   /// Dimmed/secondary foreground.
-  static const Color dim = Color(0xFF7A7A7A);
+  static Color dim(bool isDark) => isDark ? _dimDark : _dimLight;
 
   static TextStyle mono({
     double? fontSize,
