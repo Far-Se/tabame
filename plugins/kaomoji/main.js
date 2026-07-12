@@ -87,7 +87,6 @@ function render(rev, text) {
       preview: {
         markdown: `# ${r.item.name}
 
-## Kaomoji
 
 \`\`\`
 ${r.item.entry}
