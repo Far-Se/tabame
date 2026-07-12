@@ -452,7 +452,7 @@ const COMMANDS = [
   {
     id: "my_repos",
     section: "Repositories",
-    title: "My Latest Repositories",
+    title: "My Latest Repositories (reps)",
     subtitle: "Your repositories by latest push",
     icon: "folder",
   },
