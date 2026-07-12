@@ -561,8 +561,11 @@ class QuickMenuState extends State<QuickMenu>
         QuickMenuFunctions.isQuickMenuVisible &&
         Globals.quickMenuPage == QuickMenuPage.quickMenu &&
         !QuickMenuFunctions.keepOpen) {
-      QuickMenuFunctions.hideQuickMenu();
-      Future<void>.delayed(const Duration(milliseconds: 100), () => QuickMenuFunctions.hideQuickMenu());
+      // Added Date to block quick flash.
+      if (DateTime.now().difference(DateTime(QuickMenuFunctions.shownTime)).inMilliseconds > 300) {
+        QuickMenuFunctions.hideQuickMenu();
+        Future<void>.delayed(const Duration(milliseconds: 100), () => QuickMenuFunctions.hideQuickMenu());
+      }
     }
   }
 

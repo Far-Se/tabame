@@ -58,6 +58,7 @@ enum LauncherDesign {
   terminal,
   zen,
   glass,
+  blueprint,
 }
 
 enum LightSwitchMode { off, fixed, sunrise }

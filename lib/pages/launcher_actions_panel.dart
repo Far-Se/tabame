@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:tabamewin32/tabamewin32.dart';
-import 'package:window_manager/window_manager.dart';
 // tabamewin32 import removed - shell context menu now uses win32 5.x directly.
 // See win32_context_menu_bridge.dart.
 
@@ -22,7 +21,11 @@ import '../widgets/itzy/quickmenu/button_notion.dart';
 import '../widgets/itzy/quickmenu/button_obsidian.dart';
 import '../widgets/itzy/quickmenu/button_quickactions.dart';
 import '../widgets/itzy/quickmenu/button_steam.dart';
+import 'launcher/launcher_design.dart';
+import 'launcher/launcher_design_builder.dart';
+import 'launcher/launcher_modal_theme.dart';
 import 'launcher/result/result_item_bookmark.dart';
+import 'launcher/result/result_row.dart';
 import 'launcher_search_models.dart';
 
 part 'launcher/services/launcher_actions_service.dart';
@@ -116,10 +119,6 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
       _loading = false;
     });
   }
-  // Inside _ActionsPanelScaffoldState:
-
-  bool _isKeyboardNavigating = false; // <-- Add this flag
-
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
@@ -133,7 +132,6 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
 
     if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
       setState(() {
-        _isKeyboardNavigating = true; // <-- Lock out mouse hover
         if (_activeIndex < _filteredActions.length - 1) _activeIndex++;
       });
       _scrollToActive();
@@ -142,7 +140,6 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
 
     if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
       setState(() {
-        _isKeyboardNavigating = true; // <-- Lock out mouse hover
         if (_activeIndex > 0) _activeIndex--;
       });
       _scrollToActive();
@@ -212,9 +209,12 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final Color accent = Design.accent;
-    final Color surface = theme.colorScheme.surface;
+    final LauncherModalTokens tokens = LauncherModalTokens.of(context);
+    final LauncherThemeData launcherTheme = LauncherThemeData(design: tokens.design);
+    final OutlineInputBorder searchBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(tokens.controlRadius),
+      borderSide: tokens.outlinedControls ? BorderSide(color: tokens.accent.withAlpha(50)) : BorderSide.none,
+    );
 
     return Material(
       type: MaterialType.transparency,
@@ -229,27 +229,15 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
             child: Focus(
               focusNode: _focusNode,
               onKeyEvent: _onKey,
-              child: Container(
+              child: LauncherModalFrame(
+                tokens: tokens,
                 width: 440,
-                constraints: const BoxConstraints(maxHeight: 520),
-                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-                decoration: BoxDecoration(
-                  color: surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: accent.withAlpha(40)),
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: Colors.black.withAlpha(60),
-                      blurRadius: 28,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
+                maxHeight: 520,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    _ActionsHeader(item: widget.item, accent: accent, theme: theme),
-                    const Divider(height: 1, thickness: 1),
+                    _ActionsHeader(item: widget.item, tokens: tokens),
+                    Divider(height: 1, thickness: 1, color: tokens.onSurface.withAlpha(20)),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
                       child: SizedBox(
@@ -261,7 +249,6 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
                             }
 
                             if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                              _isKeyboardNavigating = true;
                               setState(() {
                                 if (_activeIndex < _filteredActions.length - 1) {
                                   _activeIndex++;
@@ -274,7 +261,6 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
                             }
 
                             if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                              _isKeyboardNavigating = true;
                               setState(() {
                                 if (_activeIndex > 0) {
                                   _activeIndex--;
@@ -298,19 +284,25 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
                             autofocus: true,
                             focusNode: _searchControllerFocus,
                             onChanged: _filterActions,
-                            style: theme.textTheme.bodyMedium,
+                            style: tokens.text(fontSize: Design.baseFontSize + 3, color: tokens.onSurface),
                             decoration: InputDecoration(
                               hintText: 'Search actions...',
+                              hintStyle: tokens.text(
+                                fontSize: Design.baseFontSize + 3,
+                                color: tokens.onSurface.withAlpha(70),
+                              ),
                               prefixIcon: Icon(
-                                Icons.search_rounded,
+                                launcherTheme.searchIcon,
                                 size: 18,
-                                color: theme.colorScheme.onSurface.withAlpha(120),
+                                color: launcherTheme.searchIconUsesOnSurface
+                                    ? tokens.onSurface.withAlpha(120)
+                                    : tokens.accent.withAlpha(200),
                               ),
                               suffixIcon: _query.isEmpty
                                   ? null
                                   : IconButton(
                                       splashRadius: 16,
-                                      icon: const Icon(Icons.close_rounded, size: 16),
+                                      icon: Icon(Icons.close_rounded, size: 16, color: tokens.onSurface.withAlpha(140)),
                                       onPressed: () {
                                         _searchController.clear();
                                         _filterActions('');
@@ -318,11 +310,15 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
                                     ),
                               isDense: true,
                               filled: true,
-                              fillColor: theme.colorScheme.onSurface.withAlpha(10),
+                              fillColor: tokens.onSurface.withAlpha(10),
                               contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide.none,
+                              border: searchBorder,
+                              enabledBorder: searchBorder,
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(tokens.controlRadius),
+                                borderSide: tokens.outlinedControls
+                                    ? BorderSide(color: tokens.accent.withAlpha(120))
+                                    : BorderSide.none,
                               ),
                             ),
                           ),
@@ -330,49 +326,40 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
                       ),
                     ),
                     if (_loading)
-                      const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: tokens.accent),
+                          ),
+                        ),
                       )
                     else if (_actions.isEmpty)
                       Padding(
                         padding: const EdgeInsets.all(24),
                         child: Text(
                           'No actions available',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withAlpha(120),
-                          ),
+                          style: tokens.text(fontSize: Design.baseFontSize + 2, color: tokens.dim),
                         ),
                       )
                     else
-                      // Inside ActionsPanelScaffold's build() method:
-
                       Flexible(
-                        child: Material(
-                          type: MaterialType.transparency,
-                          child: _ActionsList(
-                            actions: _filteredActions,
-                            activeIndex: _activeIndex,
-                            scrollController: _scrollController,
-                            // Only allow hover updates if we aren't mid-keyboard-navigation
-                            onHover: (int i) {
-                              if (!_isKeyboardNavigating) {
-                                setState(() => _activeIndex = i);
-                              }
-                            },
-                            onTap: _execute,
-                            // Re-enable mouse tracking as soon as the user physically moves their pointer
-                            onMouseMove: () {
-                              if (_isKeyboardNavigating) {
-                                setState(() => _isKeyboardNavigating = false);
-                              }
-                            },
-                            accent: accent,
-                            theme: theme,
-                          ),
+                        child: _ActionsList(
+                          actions: _filteredActions,
+                          activeIndex: _activeIndex,
+                          scrollController: _scrollController,
+                          onHover: (int i) => setState(() => _activeIndex = i),
+                          onTap: _execute,
+                          tokens: tokens,
                         ),
                       ),
-                    _ActionsPanelFooter(theme: theme, accent: accent),
+                    LauncherModalFooter(
+                      tokens: tokens,
+                      hints: const <(String, String)>[('↑↓', 'navigate'), ('↵', 'run'), ('Esc', 'close')],
+                      trailing: ('Ctrl+K', 'toggle'),
+                    ),
                   ],
                 ),
               ),
@@ -391,89 +378,21 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
 class _ActionsHeader extends StatelessWidget {
   const _ActionsHeader({
     required this.item,
-    required this.accent,
-    required this.theme,
+    required this.tokens,
   });
 
   final LauncherSearchResultItem item;
-  final Color accent;
-  final ThemeData theme;
+  final LauncherModalTokens tokens;
 
   @override
   Widget build(BuildContext context) {
-    final Color onSurface = theme.colorScheme.onSurface;
     final (IconData icon, String title, String subtitle) = _resolveIdentity();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: <Widget>[
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onPanStart: (DragStartDetails details) {
-              windowManager.startDragging();
-            },
-            child: Container(
-              width: 36,
-              height: 36,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: accent.withAlpha(28),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, size: 18, color: accent),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: onSurface,
-                  ),
-                ),
-                if (subtitle.isNotEmpty)
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: onSurface.withAlpha(120),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-            decoration: BoxDecoration(
-              color: accent.withAlpha(20),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Icon(Icons.keyboard_rounded, size: 11, color: accent.withAlpha(180)),
-                const SizedBox(width: 3),
-                Text(
-                  'Actions',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: accent.withAlpha(180),
-                    fontWeight: FontWeight.w600,
-                    fontSize: Design.baseFontSize,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return LauncherModalHeader(
+      tokens: tokens,
+      icon: Icon(icon, size: 18, color: tokens.accent),
+      title: title,
+      subtitle: subtitle,
+      badgeLabel: 'Actions',
     );
   }
 
@@ -530,83 +449,8 @@ class _ActionsHeader extends StatelessWidget {
 }
 
 // =============================================================================
-// Footer - keyboard hints
-// =============================================================================
-
-class _ActionsPanelFooter extends StatelessWidget {
-  const _ActionsPanelFooter({required this.theme, required this.accent});
-  final ThemeData theme;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color onSurface = theme.colorScheme.onSurface;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: onSurface.withAlpha(16))),
-      ),
-      child: Row(
-        children: <Widget>[
-          _KbdHint(label: '↵', caption: 'navigate', onSurface: onSurface),
-          const SizedBox(width: 16),
-          _KbdHint(label: '↵', caption: 'run', onSurface: onSurface),
-          const SizedBox(width: 16),
-          _KbdHint(label: 'Esc', caption: 'close', onSurface: onSurface),
-          const Spacer(),
-          _KbdHint(label: 'Ctrl+K', caption: 'toggle', onSurface: onSurface),
-        ],
-      ),
-    );
-  }
-}
-
-class _KbdHint extends StatelessWidget {
-  const _KbdHint({
-    required this.label,
-    required this.caption,
-    required this.onSurface,
-  });
-  final String label;
-  final String caption;
-  final Color onSurface;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-          decoration: BoxDecoration(
-            color: onSurface.withAlpha(14),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: onSurface.withAlpha(28)),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: Design.baseFontSize,
-              fontWeight: FontWeight.w600,
-              color: onSurface.withAlpha(160),
-              fontFamily: 'monospace',
-            ),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          caption,
-          style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withAlpha(80)),
-        ),
-      ],
-    );
-  }
-}
-
-// =============================================================================
 // Actions list
 // =============================================================================
-// Update your _ActionsList widget to look like this:
 
 class _ActionsList extends StatelessWidget {
   const _ActionsList({
@@ -615,9 +459,7 @@ class _ActionsList extends StatelessWidget {
     required this.scrollController,
     required this.onHover,
     required this.onTap,
-    required this.accent,
-    required this.theme,
-    required this.onMouseMove, // <-- Add this callback
+    required this.tokens,
   });
 
   final List<LauncherAction> actions;
@@ -625,58 +467,38 @@ class _ActionsList extends StatelessWidget {
   final ScrollController scrollController;
   final ValueChanged<int> onHover;
   final ValueChanged<int> onTap;
-  final VoidCallback onMouseMove; // <-- Add this callback
-  final Color accent;
-  final ThemeData theme;
+  final LauncherModalTokens tokens;
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      // Triggers ONLY when the physical mouse moves over this region
-      onHover: (_) => onMouseMove(),
-      child: ListView.builder(
-        controller: scrollController,
-        shrinkWrap: true,
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        itemCount: actions.length,
-        itemBuilder: (BuildContext ctx, int i) {
-          final LauncherAction action = actions[i];
-          final bool isActive = i == activeIndex;
+    return ListView.builder(
+      controller: scrollController,
+      shrinkWrap: true,
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      itemCount: actions.length,
+      itemBuilder: (BuildContext ctx, int i) {
+        final LauncherAction action = actions[i];
 
-          if (action.isSeparator) {
-            // ... (keep separator code exactly as it is)
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              child: Row(
-                children: <Widget>[
-                  Expanded(child: Divider(height: 1, color: theme.colorScheme.onSurface.withAlpha(20))),
-                  if (action.label.isNotEmpty) ...<Widget>[
-                    const SizedBox(width: 8),
-                    Text(
-                      action.label,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withAlpha(60),
-                        fontSize: Design.baseFontSize,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(child: Divider(height: 1, color: theme.colorScheme.onSurface.withAlpha(20))),
-                  ],
-                ],
-              ),
-            );
+        if (action.isSeparator) {
+          // Labeled separators speak in the active design's section-header
+          // voice (dimension lines on Blueprint, `::` rules on Terminal, …).
+          if (action.label.isNotEmpty) {
+            return tokens.design.buildSectionHeader(label: action.label, accent: tokens.accent);
           }
-
-          return _ActionTile(
-            action: action,
-            isActive: isActive,
-            accent: accent,
-            theme: theme,
-            onHover: () => onHover(i),
-            onTap: () => onTap(i),
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            child: Container(height: 1, color: tokens.onSurface.withAlpha(20)),
           );
-        },
-      ),
+        }
+
+        return _ActionTile(
+          action: action,
+          isActive: i == activeIndex,
+          tokens: tokens,
+          onHover: () => onHover(i),
+          onTap: () => onTap(i),
+        );
+      },
     );
   }
 }
@@ -685,96 +507,103 @@ class _ActionTile extends StatelessWidget {
   const _ActionTile({
     required this.action,
     required this.isActive,
-    required this.accent,
-    required this.theme,
+    required this.tokens,
     required this.onHover,
     required this.onTap,
   });
 
   final LauncherAction action;
   final bool isActive;
-  final Color accent;
-  final ThemeData theme;
+  final LauncherModalTokens tokens;
   final VoidCallback onHover;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final Color onSurface = theme.colorScheme.onSurface;
-    final Color tileColor = isActive ? theme.highlightColor : Colors.transparent;
-    final Color iconColor = action.isDestructive ? Colors.redAccent : accent;
+    final bool destructive = action.isDestructive;
+    final Widget icon = SizedBox(
+      width: 16,
+      height: 16,
+      child: action.iconImage != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: Image.memory(action.iconImage!, fit: BoxFit.cover),
+            )
+          : Icon(
+              action.icon ?? Icons.play_arrow_rounded,
+              size: 16,
+              color: destructive ? Colors.redAccent : tokens.accent,
+            ),
+    );
 
-    return MouseRegion(
-      onEnter: (_) => onHover(),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-        decoration: BoxDecoration(
-          color: tileColor,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              children: <Widget>[
-                // Icon or image
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: action.iconImage != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: Image.memory(action.iconImage!, fit: BoxFit.cover),
-                        )
-                      : Icon(action.icon ?? Icons.play_arrow_rounded, size: 16, color: iconColor),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        action.label,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: action.isDestructive ? Colors.redAccent : onSurface,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      if (action.subtitle != null && action.subtitle!.isNotEmpty)
-                        Text(
-                          action.subtitle!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: onSurface.withAlpha(100),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                if (action.kbdHint != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: onSurface.withAlpha(12),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      action.kbdHint!,
-                      style: TextStyle(
-                        fontSize: Design.baseFontSize,
-                        color: onSurface.withAlpha(100),
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ),
-              ],
+    final Widget? kbdBadge = action.kbdHint == null
+        ? null
+        : Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: tokens.onSurface.withAlpha(12),
+              borderRadius: BorderRadius.circular(tokens.design == LauncherDesign.blueprint ? 2 : 4),
+              border: tokens.outlinedControls ? Border.all(color: tokens.accent.withAlpha(60)) : null,
+            ),
+            child: Text(
+              action.kbdHint!,
+              style: tokens.text(fontSize: Design.baseFontSize, color: tokens.onSurface.withAlpha(120)),
+            ),
+          );
+
+    final bool hasSubtitle = action.subtitle != null && action.subtitle!.isNotEmpty;
+    final Color titleColor = destructive
+        ? Colors.redAccent
+        : isActive && tokens.design == LauncherDesign.terminal
+            ? tokens.accent
+            : isActive
+                ? tokens.onSurface
+                : tokens.onSurface.withAlpha(220);
+
+    // The row shell (icon nest, selection treatment, motion) comes from
+    // LauncherResultRow, so the tile matches the launcher's result rows; only
+    // the text column is custom so subtitle-less and destructive actions
+    // render correctly.
+    return LauncherResultRow(
+      isSelected: isActive,
+      isRepeating: false,
+      accent: tokens.accent,
+      onSurface: tokens.onSurface,
+      onTap: onTap,
+      onHover: onHover,
+      icon: icon,
+      badge: kbdBadge,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            action.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: tokens.text(
+              fontSize: Design.baseFontSize + 1.5,
+              fontWeight: FontWeight.w600,
+              color: titleColor,
+              height: 1.25,
             ),
           ),
-        ),
+          if (hasSubtitle)
+            Text(
+              action.subtitle!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: tokens.text(
+                fontSize: Design.baseFontSize - 0.5,
+                color: destructive
+                    ? Colors.redAccent.withAlpha(150)
+                    : isActive
+                        ? tokens.onSurface.withAlpha(160)
+                        : tokens.dim,
+                height: 1.2,
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -3628,12 +3628,18 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     final bool isTerminal = _design == LauncherDesign.terminal;
     final bool isZen = _design == LauncherDesign.zen;
     final bool isGlass = _design == LauncherDesign.glass;
-    // Terminal and Zen force their own palette + text theme. Every result
-    // builder reads its colors from this theme, so they all inherit the look
-    // without per-builder branching. Terminal keeps the user accent (phosphor);
-    // Zen replaces it with a calm moss. Glass keeps the theme colors (its glass
-    // picks them up) and only forces Inter for the iOS feel.
-    final Color accent = isZen ? ZenTokens.accent(isDark) : Design.accent;
+    final bool isBlueprint = _design == LauncherDesign.blueprint;
+    // Terminal, Zen and Blueprint force their own palette + text theme. Every
+    // result builder reads its colors from this theme, so they all inherit the
+    // look without per-builder branching. Terminal keeps the user accent
+    // (phosphor); Zen replaces it with a calm moss, Blueprint with drafting
+    // ink. Glass keeps the theme colors (its glass picks them up) and only
+    // forces Inter for the iOS feel.
+    final Color accent = isZen
+        ? ZenTokens.accent(isDark)
+        : isBlueprint
+            ? BlueprintTokens.accent(isDark)
+            : Design.accent;
     final ThemeData theme = isTerminal
         ? baseTheme.copyWith(
             colorScheme: baseTheme.colorScheme.copyWith(
@@ -3654,9 +3660,19 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
                 textTheme: GoogleFonts.quicksandTextTheme(baseTheme.textTheme)
                     .apply(bodyColor: ZenTokens.fg(isDark), displayColor: ZenTokens.fg(isDark)),
               )
-            : isGlass
-                ? baseTheme.copyWith(textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme))
-                : baseTheme;
+            : isBlueprint
+                ? baseTheme.copyWith(
+                    colorScheme: baseTheme.colorScheme.copyWith(
+                      surface: BlueprintTokens.bg(isDark),
+                      onSurface: BlueprintTokens.fg(isDark),
+                    ),
+                    highlightColor: accent.withAlpha(34),
+                    textTheme: GoogleFonts.chakraPetchTextTheme(baseTheme.textTheme)
+                        .apply(bodyColor: BlueprintTokens.fg(isDark), displayColor: BlueprintTokens.fg(isDark)),
+                  )
+                : isGlass
+                    ? baseTheme.copyWith(textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme))
+                    : baseTheme;
     final Color onSurface = theme.colorScheme.onSurface;
     final bool hasInput = _controller.text.trim().isNotEmpty;
     final LauncherThemeData launcherTheme = LauncherThemeData(design: _design);
@@ -3837,10 +3853,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
           onSurface: onSurface,
           child: innerContent,
         ),
+      LauncherDesign.blueprint => BlueprintLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent,
+        ),
     };
 
     return Theme(
-      data: (isTerminal || isZen || isGlass)
+      data: (isTerminal || isZen || isGlass || isBlueprint)
           ? theme
           : theme.copyWith(
               textTheme: GoogleFonts.getTextTheme(Design.entryFontFamily),

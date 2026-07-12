@@ -121,6 +121,56 @@ abstract final class GlassTokens {
   }
 }
 
+/// Shared visual tokens for the Blueprint (drafting sheet) launcher design.
+///
+/// Like [TerminalTokens]/[ZenTokens] this forces its own palette so the
+/// launcher always reads as an engineering drawing — a cyanotype blueprint
+/// (deep prussian-blue sheet, pale ink) in dark mode, and white drafting paper
+/// with navy ink in light mode. Every line on the sheet — grid, borders,
+/// dimension lines, balloons — is drawn in "ink" (the forced accent).
+abstract final class BlueprintTokens {
+  // Dark — cyanotype: deep prussian-blue sheet, pale ink.
+  static const Color _bgDark = Color(0xFF0C2841);
+  static const Color _fgDark = Color(0xFFD9EAF8);
+  static const Color _dimDark = Color(0xFF7E9FBD);
+  static const Color _accentDark = Color(0xFF7FB8E6);
+
+  // Light — drafting paper: cool white sheet, navy ink.
+  static const Color _bgLight = Color(0xFFD9D8FF);
+  static const Color _fgLight = Color(0xFF1F4467);
+  static const Color _dimLight = Color(0xFF6F8CA6);
+  static const Color _accentLight = Color(0xFF2E6DA4);
+
+  /// Sheet background.
+  static Color bg(bool isDark) => isDark ? _bgDark : _bgLight;
+
+  /// Primary ink (titles, values, sheet border).
+  static Color fg(bool isDark) => isDark ? _fgDark : _fgLight;
+
+  /// Dimmed ink (labels, subtitles, minor grid).
+  static Color dim(bool isDark) => isDark ? _dimDark : _dimLight;
+
+  /// Bright drafting ink — the forced accent (selection, dimension lines).
+  static Color accent(bool isDark) => isDark ? _accentDark : _accentLight;
+
+  /// Squared technical lettering — the drafting-stencil voice of the sheet.
+  static TextStyle tech({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return GoogleFonts.chakraPetch(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    );
+  }
+}
+
 @immutable
 class LauncherThemeData {
   const LauncherThemeData({required this.design});
@@ -133,9 +183,11 @@ class LauncherThemeData {
   bool get isTerminal => design == LauncherDesign.terminal;
   bool get isZen => design == LauncherDesign.zen;
   bool get isGlass => design == LauncherDesign.glass;
+  bool get isBlueprint => design == LauncherDesign.blueprint;
 
   /// Leading glyph in the search bar — a chevron prompt for the Command/Terminal
-  /// consoles, a leaf for Zen, a magnifier otherwise.
+  /// consoles, a leaf for Zen, a drafting compass for Blueprint, a magnifier
+  /// otherwise.
   IconData get searchIcon => switch (design) {
         LauncherDesign.command => Icons.chevron_right_rounded,
         LauncherDesign.terminal => Icons.chevron_right_rounded,
@@ -143,6 +195,7 @@ class LauncherThemeData {
         LauncherDesign.serene => Icons.search_rounded,
         LauncherDesign.glass => Icons.search_rounded,
         LauncherDesign.classic => Icons.search_rounded,
+        LauncherDesign.blueprint => Icons.architecture_rounded,
       };
 
   double get searchIconSize => switch (design) {
@@ -152,6 +205,7 @@ class LauncherThemeData {
         LauncherDesign.zen => 20.0,
         LauncherDesign.glass => 20.0,
         LauncherDesign.classic => 20.0,
+        LauncherDesign.blueprint => 20.0,
       };
 
   bool get searchIconUsesOnSurface => isSerene || isGlass;
@@ -163,6 +217,7 @@ class LauncherThemeData {
         LauncherDesign.zen => 15.0,
         LauncherDesign.glass => 16.0,
         LauncherDesign.classic => 15.0,
+        LauncherDesign.blueprint => 15.0,
       };
   FontWeight? get searchFontWeight => switch (design) {
         LauncherDesign.serene => FontWeight.w400,
@@ -171,6 +226,7 @@ class LauncherThemeData {
         LauncherDesign.zen => FontWeight.w500,
         LauncherDesign.glass => FontWeight.w500,
         LauncherDesign.classic => null,
+        LauncherDesign.blueprint => FontWeight.w500,
       };
 
   double get frameRadius => switch (design) {
@@ -180,6 +236,7 @@ class LauncherThemeData {
         LauncherDesign.zen => 26.0,
         LauncherDesign.glass => 28.0,
         LauncherDesign.classic => 18.0,
+        LauncherDesign.blueprint => 3.0,
       };
 
   EdgeInsets get resultsListPadding => const EdgeInsets.all(8.0);

@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../../../models/settings.dart';
 import '../../../widgets/widgets/windows_scroll.dart';
+import '../launcher_modal_theme.dart';
+import '../result/result_row.dart';
 import 'plugin_icons.dart';
 import 'plugin_protocol.dart';
 
@@ -78,9 +80,7 @@ class _PluginActionsPanelState extends State<PluginActionsPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final Color accent = Design.accent;
-    final Color surface = theme.colorScheme.surface;
+    final LauncherModalTokens tokens = LauncherModalTokens.of(context);
 
     return Material(
       type: MaterialType.transparency,
@@ -93,66 +93,55 @@ class _PluginActionsPanelState extends State<PluginActionsPanel> {
             child: Focus(
               focusNode: _focusNode,
               onKeyEvent: _onKey,
-              child: Container(
+              child: LauncherModalFrame(
+                tokens: tokens,
                 width: 380,
-                constraints: const BoxConstraints(maxHeight: 460),
-                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-                decoration: BoxDecoration(
-                  color: surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: accent.withAlpha(40)),
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(color: Colors.black.withAlpha(60), blurRadius: 28, offset: const Offset(0, 10)),
-                  ],
-                ),
+                maxHeight: 460,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-                      child: Row(
-                        children: <Widget>[
-                          Icon(PluginIcons.resolve(widget.item.icon), size: 18, color: accent),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              widget.item.title.isEmpty ? 'Actions' : widget.item.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                        ],
-                      ),
+                    LauncherModalHeader(
+                      tokens: tokens,
+                      icon: Icon(PluginIcons.resolve(widget.item.icon), size: 18, color: tokens.accent),
+                      title: widget.item.title.isEmpty ? 'Actions' : widget.item.title,
+                      badgeLabel: 'Actions',
                     ),
-                    const Divider(height: 1, thickness: 1),
+                    Divider(height: 1, thickness: 1, color: tokens.onSurface.withAlpha(20)),
                     if (_actions.isEmpty)
                       Padding(
                         padding: const EdgeInsets.all(24),
                         child: Text(
                           'No actions available',
-                          style: theme.textTheme.bodyMedium?.copyWith(color: Design.text.withAlpha(120)),
+                          style: tokens.text(fontSize: Design.baseFontSize + 2, color: tokens.dim),
                         ),
                       )
                     else
                       Flexible(
                         child: WindowsScrollView(
                           controller: _scrollController,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              for (int i = 0; i < _actions.length; i++)
-                                _PluginActionRow(
-                                  action: _actions[i],
-                                  isSelected: i == _activeIndex,
-                                  accent: accent,
-                                  onTap: () => _execute(i),
-                                  onHover: () => setState(() => _activeIndex = i),
-                                ),
-                            ],
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                for (int i = 0; i < _actions.length; i++)
+                                  _PluginActionRow(
+                                    action: _actions[i],
+                                    isSelected: i == _activeIndex,
+                                    tokens: tokens,
+                                    onTap: () => _execute(i),
+                                    onHover: () => setState(() => _activeIndex = i),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
+                    LauncherModalFooter(
+                      tokens: tokens,
+                      hints: const <(String, String)>[('↑↓', 'navigate'), ('↵', 'run'), ('Esc', 'close')],
+                      trailing: ('Ctrl+K', 'toggle'),
+                    ),
                   ],
                 ),
               ),
@@ -168,51 +157,46 @@ class _PluginActionRow extends StatelessWidget {
   const _PluginActionRow({
     required this.action,
     required this.isSelected,
-    required this.accent,
+    required this.tokens,
     required this.onTap,
     required this.onHover,
   });
 
   final PluginAction action;
   final bool isSelected;
-  final Color accent;
+  final LauncherModalTokens tokens;
   final VoidCallback onTap;
   final VoidCallback onHover;
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onHover: (PointerHoverEvent event) {
-        if (event.delta != Offset.zero) onHover();
-      },
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-          decoration: BoxDecoration(
-            color: isSelected ? accent.withAlpha(40) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: <Widget>[
-              Icon(PluginIcons.resolve(action.icon), size: 16, color: accent),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  action.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected ? Design.text : Design.text.withAlpha(210),
-                  ),
-                ),
-              ),
-            ],
-          ),
+    // The row shell (icon nest, selection treatment, motion) comes from
+    // LauncherResultRow, so plugin actions match the launcher's result rows.
+    return LauncherResultRow(
+      isSelected: isSelected,
+      isRepeating: false,
+      accent: tokens.accent,
+      onSurface: tokens.onSurface,
+      onTap: onTap,
+      onHover: onHover,
+      icon: SizedBox(
+        width: 16,
+        height: 16,
+        child: Icon(PluginIcons.resolve(action.icon), size: 16, color: tokens.accent),
+      ),
+      content: Text(
+        action.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: tokens.text(
+          fontSize: Design.baseFontSize + 1.5,
+          fontWeight: FontWeight.w600,
+          color: isSelected && tokens.design == LauncherDesign.terminal
+              ? tokens.accent
+              : isSelected
+                  ? tokens.onSurface
+                  : tokens.onSurface.withAlpha(210),
+          height: 1.25,
         ),
       ),
     );

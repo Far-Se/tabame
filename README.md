@@ -266,6 +266,10 @@ Most plugins need nothing but the runtime. If yours needs a library, Tabame inst
 
 Installs are cached and only re-run when your dependency list changes, so normal launches stay instant. Full details (including the `"env"` key for custom environment variables) are in `plugins/TABAME_PLUGIN_SKILL.md`, §4.1.
 
+## Submit Your Plugin
+
+If you made a plugin and want to share it with the community, please make an Issue [here](https://github.com/Far-Se/tabame/issues/new?template=plugin_submission.md) and follow the template. I will manually review the code and add it to the official gallery.
+
 ---
 
 # ⚡ QuickActions
