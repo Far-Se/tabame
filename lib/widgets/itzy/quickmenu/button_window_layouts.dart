@@ -145,7 +145,19 @@ class _WindowLayoutsPanelState extends State<WindowLayoutsPanel> {
     Boxes.windowLayouts = _layouts.map((WindowLayoutSnapshot s) {
       if (s.id != snapshot.id) return s;
       final List<WindowLayoutEntry> entries = List<WindowLayoutEntry>.from(s.entries);
-      if (index >= 0 && index < entries.length) entries.removeAt(index);
+      if (index < 0 || index >= entries.length) return s.copyWith(entries: entries);
+      entries.removeAt(index);
+      // Removing an entry shifts every later index down by one — drop references
+      // to the removed entry and re-base the ones after it so hooks stay valid.
+      for (int i = 0; i < entries.length; i++) {
+        entries[i] = entries[i].copyWith(
+          hookedEntries: entries[i]
+              .hookedEntries
+              .where((int h) => h != index)
+              .map((int h) => h > index ? h - 1 : h)
+              .toList(),
+        );
+      }
       return s.copyWith(entries: entries);
     }).toList();
     setState(() {
@@ -470,6 +482,7 @@ class _WindowLayoutsPanelState extends State<WindowLayoutsPanel> {
     final WindowLayoutEntry entry = snapshot.entries[index];
     final String primary = entry.title.isNotEmpty ? entry.title : entry.exe;
     final bool showExe = entry.title.isNotEmpty && entry.exe.isNotEmpty;
+    final int hookCount = entry.hookedEntries.length;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 5, 4, 5),
@@ -481,10 +494,42 @@ class _WindowLayoutsPanelState extends State<WindowLayoutsPanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  primary,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: Design.text),
+                Row(
+                  children: <Widget>[
+                    Flexible(
+                      child: Text(
+                        primary,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: Design.text),
+                      ),
+                    ),
+                    if (hookCount > 0) ...<Widget>[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Design.accent.withAlpha(24),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(Icons.link_rounded, size: 11, color: Design.accent),
+                            const SizedBox(width: 2),
+                            Text(
+                              '$hookCount',
+                              style: TextStyle(
+                                fontSize: Design.baseFontSize - 1,
+                                fontWeight: FontWeight.w700,
+                                color: Design.accent,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 if (showExe)
                   Text(

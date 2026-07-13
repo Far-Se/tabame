@@ -1053,11 +1053,29 @@ class Boxes {
 
   static final List<QuickTimer> quickTimers = <QuickTimer>[];
 
+  /// Fired when a Claude-usage reset quick timer (type 3) elapses. Registered
+  /// by the Claude Usage quick-menu button so the alert logic lives with that
+  /// feature. May be null if that button was never mounted this session.
+  static VoidCallback? onClaudeResetTimer;
+
   void addQuickTimer(String name, int minutes, int type) {
     final QuickTimer quickTimer = QuickTimer();
     quickTimer.name = name;
     quickTimer.endTime = DateTime.now().add(Duration(minutes: minutes));
     quickTimer.type = type;
+    _startQuickTimer(quickTimer);
+    quickTimers.add(quickTimer);
+    saveQuickTimers();
+  }
+
+  /// Like [addQuickTimer] but fires at an absolute [endTime] rather than a
+  /// whole-minute offset — used for alarms that must hit an exact moment.
+  void addQuickTimerAt(String name, DateTime endTime, int type) {
+    if (!endTime.isAfter(DateTime.now())) return;
+    final QuickTimer quickTimer = QuickTimer()
+      ..name = name
+      ..endTime = endTime
+      ..type = type;
     _startQuickTimer(quickTimer);
     quickTimers.add(quickTimer);
     saveQuickTimers();
@@ -1078,6 +1096,11 @@ class Boxes {
           body: "Timer Expired: ${quickTimer.name}",
           onClick: () {},
         );
+      } else if (quickTimer.type == 3) {
+        // Claude-usage reset alarm: pop the QuickMenu on the usage panel and
+        // let the Claude Usage button sound the beep (see onClaudeResetTimer).
+        QuickMenuFunctions.openQuickMenuWithAction('claudeUsage', center: true);
+        onClaudeResetTimer?.call();
       }
       quickTimers.remove(quickTimer);
       saveQuickTimers();

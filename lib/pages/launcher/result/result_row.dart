@@ -169,7 +169,206 @@ class LauncherResultRow extends StatelessWidget {
       LauncherDesign.glass => _buildGlass(context),
       LauncherDesign.classic => _buildClassic(context),
       LauncherDesign.blueprint => _buildBlueprint(context),
+      LauncherDesign.transit => _buildTransit(context),
+      LauncherDesign.fluent => _buildFluent(context),
     };
+  }
+
+  // ── Fluent (Windows 11) ────────────────────────────────────────────────────
+  // A WinUI list item: a rounded neutral fill on the selected row plus the
+  // signature accent "pill" indicator at the left edge. Icons sit plain (no
+  // well), lettering is Segoe at regular weight — Windows never bolds a list.
+
+  Widget _buildFluent(BuildContext context) {
+    final int animMs = isRepeating ? 50 : 150;
+    final Curve curve = isRepeating ? Curves.linear : Curves.easeOutCubic;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return RepaintBoundary(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: animMs),
+            curve: curve,
+            margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+            decoration: BoxDecoration(
+              color: isSelected ? onSurface.withAlpha(isDark ? 18 : 14) : Colors.transparent,
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Row(
+                    children: <Widget>[
+                      SizedBox(width: 24, height: 24, child: Center(child: icon)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: content ??
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                _titleText(FluentTokens.segoe(
+                                  fontSize: Design.baseFontSize + 2,
+                                  fontWeight: FontWeight.w400,
+                                  color: isSelected ? onSurface : onSurface.withAlpha(225),
+                                  height: 1.25,
+                                )),
+                                _subtitleText(FluentTokens.segoe(
+                                  fontSize: Design.baseFontSize,
+                                  fontWeight: FontWeight.w400,
+                                  color: FluentTokens.dim(isDark).withAlpha(isSelected ? 255 : 210),
+                                  height: 1.2,
+                                )),
+                              ],
+                            ),
+                      ),
+                      if (badge != null)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: badge,
+                        ),
+                    ],
+                  ),
+                ),
+                // Accent selection pill — the WinUI list indicator.
+                AnimatedContainer(
+                  duration: Duration(milliseconds: animMs),
+                  curve: curve,
+                  width: 3,
+                  height: isSelected ? 16 : 0,
+                  decoration: BoxDecoration(
+                    color: accent,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Transit ────────────────────────────────────────────────────────────────
+  // A metro-map stop: every row is a station on a continuous route line drawn
+  // in the accent (rows keep zero vertical margin so the segments connect).
+  // The selected row is the interchange — a bigger roundel, a sign-plate fill,
+  // and a "you are here" pointer.
+
+  Widget _buildTransit(BuildContext context) {
+    final int animMs = isRepeating ? 50 : 170;
+    final Curve curve = isRepeating ? Curves.linear : Curves.easeOutCubic;
+    final Color surface = Theme.of(context).colorScheme.surface;
+
+    // Route-line geometry: plate margin (6) + plate padding (8) + half of the
+    // 26px marker slot centers the line under the station roundel.
+    const double lineLeft = 6 + 8 + 13 - 1.5;
+
+    return RepaintBoundary(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          child: Stack(
+            children: <Widget>[
+              // The route line — runs edge-to-edge so neighbouring rows join
+              // into one continuous metro line.
+              Positioned(
+                left: lineLeft,
+                top: 0,
+                bottom: 0,
+                child: Container(width: 3, color: accent),
+              ),
+              AnimatedContainer(
+                duration: Duration(milliseconds: animMs),
+                curve: curve,
+                margin: const EdgeInsets.symmetric(horizontal: 6),
+                padding: const EdgeInsets.fromLTRB(8, 5, 10, 5),
+                decoration: BoxDecoration(
+                  color: isSelected ? accent.withAlpha(26) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    // Station marker — a stop dot that grows into an
+                    // interchange roundel on selection.
+                    SizedBox(
+                      width: 26,
+                      child: Center(
+                        child: AnimatedContainer(
+                          duration: Duration(milliseconds: animMs),
+                          curve: curve,
+                          width: isSelected ? 16 : 10,
+                          height: isSelected ? 16 : 10,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: surface,
+                            border: Border.all(color: accent, width: isSelected ? 3.4 : 2.4),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(width: 22, height: 22, child: Center(child: icon)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: content ??
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              _titleText(TransitTokens.sign(
+                                fontSize: Design.baseFontSize + 1.5,
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                color: isSelected ? onSurface : onSurface.withAlpha(225),
+                                letterSpacing: 0.2,
+                                height: 1.25,
+                              )),
+                              _subtitleText(TransitTokens.sign(
+                                fontSize: Design.baseFontSize - 0.5,
+                                fontWeight: FontWeight.w400,
+                                color: onSurface.withAlpha(isSelected ? 165 : 125),
+                                letterSpacing: 0.3,
+                                height: 1.15,
+                              )),
+                            ],
+                          ),
+                    ),
+                    if (badge != null)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: badge,
+                      ),
+                    // "You are here" pointer — only at the current stop.
+                    AnimatedSize(
+                      duration: Duration(milliseconds: animMs),
+                      curve: curve,
+                      child: isSelected
+                          ? Padding(
+                              padding: const EdgeInsets.only(left: 6),
+                              child: Icon(Icons.play_arrow_rounded, size: 15, color: accent),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // ── Blueprint ──────────────────────────────────────────────────────────────

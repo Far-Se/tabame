@@ -1467,6 +1467,10 @@ class WindowLayoutEntry {
   int width;
   int height;
   int showCmd;
+  // Indices (within the snapshot's [entries] list) of windows hooked to follow
+  // this one — i.e. this entry is the master in `user.hookedWins`. Persists the
+  // otherwise runtime-only hook relationships so they survive a restart.
+  List<int> hookedEntries;
 
   WindowLayoutEntry({
     required this.exePath,
@@ -1477,7 +1481,8 @@ class WindowLayoutEntry {
     required this.width,
     required this.height,
     required this.showCmd,
-  });
+    List<int>? hookedEntries,
+  }) : hookedEntries = hookedEntries ?? <int>[];
 
   WindowLayoutEntry copyWith({
     String? exePath,
@@ -1488,6 +1493,7 @@ class WindowLayoutEntry {
     int? width,
     int? height,
     int? showCmd,
+    List<int>? hookedEntries,
   }) {
     return WindowLayoutEntry(
       exePath: exePath ?? this.exePath,
@@ -1498,6 +1504,7 @@ class WindowLayoutEntry {
       width: width ?? this.width,
       height: height ?? this.height,
       showCmd: showCmd ?? this.showCmd,
+      hookedEntries: hookedEntries ?? List<int>.from(this.hookedEntries),
     );
   }
 
@@ -1510,6 +1517,7 @@ class WindowLayoutEntry {
         'width': width,
         'height': height,
         'showCmd': showCmd,
+        'hookedEntries': hookedEntries,
       };
 
   factory WindowLayoutEntry.fromMap(Map<String, dynamic> map) => WindowLayoutEntry(
@@ -1521,6 +1529,8 @@ class WindowLayoutEntry {
         width: (map['width'] ?? 0) as int,
         height: (map['height'] ?? 0) as int,
         showCmd: (map['showCmd'] ?? 1) as int,
+        hookedEntries:
+            (map['hookedEntries'] as List<dynamic>? ?? <dynamic>[]).map((dynamic e) => e as int).toList(),
       );
 }
 

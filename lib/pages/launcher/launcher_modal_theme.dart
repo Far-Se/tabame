@@ -56,6 +56,24 @@ class LauncherModalTokens {
           onSurface: BlueprintTokens.fg(isDark),
           dim: BlueprintTokens.dim(isDark),
         );
+      case LauncherDesign.transit:
+        return LauncherModalTokens._(
+          design: design,
+          isDark: isDark,
+          surface: TransitTokens.bg(isDark),
+          accent: Design.accent,
+          onSurface: TransitTokens.fg(isDark),
+          dim: TransitTokens.dim(isDark),
+        );
+      case LauncherDesign.fluent:
+        return LauncherModalTokens._(
+          design: design,
+          isDark: isDark,
+          surface: FluentTokens.bg(isDark),
+          accent: Design.accent,
+          onSurface: FluentTokens.fg(isDark),
+          dim: FluentTokens.dim(isDark),
+        );
       case LauncherDesign.classic:
       case LauncherDesign.serene:
       case LauncherDesign.command:
@@ -95,6 +113,8 @@ class LauncherModalTokens {
         LauncherDesign.glass => 14.0,
         LauncherDesign.serene => 10.0,
         LauncherDesign.classic => 10.0,
+        LauncherDesign.transit => 8.0,
+        LauncherDesign.fluent => 4.0,
       };
 
   /// Designs whose controls carry a visible accent outline (console/drafting
@@ -118,6 +138,10 @@ class LauncherModalTokens {
       LauncherDesign.glass => GlassTokens.font(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       LauncherDesign.blueprint => BlueprintTokens.tech(
+          fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
+      LauncherDesign.transit => TransitTokens.sign(
+          fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
+      LauncherDesign.fluent => FluentTokens.segoe(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       _ => TextStyle(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
@@ -323,6 +347,17 @@ class LauncherModalHeader extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(color: accent.withAlpha(180), width: 1.2),
         ),
+      // Line roundel, like the Transit search bar bullet.
+      LauncherDesign.transit => BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: accent, width: 2.4),
+        ),
+      // Faint WinUI layer chip with a hairline stroke.
+      LauncherDesign.fluent => BoxDecoration(
+          color: tokens.onSurface.withAlpha(14),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: FluentTokens.stroke(tokens.isDark)),
+        ),
       _ => BoxDecoration(
           color: accent.withAlpha(28),
           borderRadius: BorderRadius.circular(8),
@@ -428,12 +463,19 @@ class LauncherModalFooter extends StatelessWidget {
     final Color lineColor = switch (tokens.design) {
       LauncherDesign.terminal => tokens.accent.withAlpha(40),
       LauncherDesign.blueprint => tokens.accent.withAlpha(80),
+      LauncherDesign.transit => tokens.accent.withAlpha(90),
       _ => tokens.onSurface.withAlpha(16),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: tokens.design == LauncherDesign.terminal ? TerminalTokens.chrome(tokens.isDark) : null,
+        color: tokens.design == LauncherDesign.terminal
+            ? TerminalTokens.chrome(tokens.isDark)
+            : tokens.design == LauncherDesign.transit
+                ? TransitTokens.chrome(tokens.isDark)
+                : tokens.design == LauncherDesign.fluent
+                    ? FluentTokens.chrome(tokens.isDark)
+                    : null,
         border: Border(top: BorderSide(color: lineColor)),
       ),
       child: Row(

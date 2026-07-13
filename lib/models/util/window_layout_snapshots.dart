@@ -7,6 +7,7 @@ import 'package:win32/win32.dart';
 import '../../logic/error_handler.dart';
 import '../classes/boxes.dart';
 import '../classes/saved_maps.dart';
+import '../settings.dart';
 import '../win32/mixed.dart';
 import '../win32/window.dart';
 import '../window_watcher.dart';
@@ -40,6 +41,9 @@ class WindowLayoutSnapshots {
   static Future<WindowLayoutSnapshot> capture(String name) async {
     await WindowWatcher.fetchWindows();
     final List<WindowLayoutEntry> entries = <WindowLayoutEntry>[];
+    // Parallel to [entries]: the hWnd each entry was captured from, so the
+    // runtime hook relationships can be resolved to persistent entry indices.
+    final List<int> entryHandles = <int>[];
 
     for (final Window window in WindowWatcher.list) {
       final Pointer<WINDOWPLACEMENT> placement = calloc<WINDOWPLACEMENT>();
@@ -59,10 +63,13 @@ class WindowLayoutSnapshots {
             height: height,
             showCmd: placement.ref.showCmd,
           ));
+          entryHandles.add(window.hWnd);
         }
       }
       free(placement);
     }
+
+    _captureHooks(entries, entryHandles);
 
     return WindowLayoutSnapshot(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -73,22 +80,49 @@ class WindowLayoutSnapshots {
     );
   }
 
+  /// Translates the live `user.hookedWins` map (master hWnd → hooked child
+  /// hWnds) into entry-index relationships stored on the snapshot entries, so
+  /// the hooks persist across restarts where the hWnds no longer exist.
+  static void _captureHooks(List<WindowLayoutEntry> entries, List<int> entryHandles) {
+    if (user.hookedWins.isEmpty) return;
+    final Map<int, int> handleToIndex = <int, int>{};
+    for (int i = 0; i < entryHandles.length; i++) {
+      handleToIndex[entryHandles[i]] = i;
+    }
+
+    user.hookedWins.forEach((int masterHwnd, List<int> childHandles) {
+      final int? masterIndex = handleToIndex[masterHwnd];
+      if (masterIndex == null) return;
+      for (final int childHwnd in childHandles) {
+        final int? childIndex = handleToIndex[childHwnd];
+        if (childIndex != null && childIndex != masterIndex) {
+          entries[masterIndex].hookedEntries.add(childIndex);
+        }
+      }
+    });
+  }
+
   /// Repositions every window that can be matched to a snapshot entry.
   /// Returns how many entries were restored and how many had no match.
   static Future<({int restored, int missing})> restore(WindowLayoutSnapshot snapshot) async {
     await WindowWatcher.fetchWindows();
     final List<Window> windows = List<Window>.from(WindowWatcher.list);
     final Set<int> usedHandles = <int>{};
+    // Parallel to snapshot.entries: the hWnd each entry matched to (0 = none),
+    // used to re-establish the hooks after all windows are placed.
+    final List<int> matchedHandles = List<int>.filled(snapshot.entries.length, 0);
     int restored = 0;
     int missing = 0;
 
-    for (final WindowLayoutEntry entry in snapshot.entries) {
+    for (int i = 0; i < snapshot.entries.length; i++) {
+      final WindowLayoutEntry entry = snapshot.entries[i];
       final Window? match = _bestMatch(entry, windows, usedHandles);
       if (match == null) {
         missing++;
         continue;
       }
       usedHandles.add(match.hWnd);
+      matchedHandles[i] = match.hWnd;
       if (_applyEntry(match.hWnd, entry)) {
         restored++;
       } else {
@@ -96,7 +130,37 @@ class WindowLayoutSnapshots {
       }
     }
 
+    _restoreHooks(snapshot, matchedHandles);
+
     return (restored: restored, missing: missing);
+  }
+
+  /// Rebuilds the live `user.hookedWins` map from the snapshot's persisted
+  /// hook relationships, mapping stored entry indices back to the hWnds they
+  /// matched to this session. Only entries whose master and at least one child
+  /// were both matched produce a live hook.
+  static void _restoreHooks(WindowLayoutSnapshot snapshot, List<int> matchedHandles) {
+    for (int i = 0; i < snapshot.entries.length; i++) {
+      final List<int> hooked = snapshot.entries[i].hookedEntries;
+      if (hooked.isEmpty) continue;
+      final int masterHwnd = matchedHandles[i];
+      if (masterHwnd == 0) continue;
+
+      final List<int> childHandles = <int>[];
+      for (final int childIndex in hooked) {
+        if (childIndex < 0 || childIndex >= matchedHandles.length) continue;
+        final int childHwnd = matchedHandles[childIndex];
+        if (childHwnd != 0 && childHwnd != masterHwnd && !childHandles.contains(childHwnd)) {
+          childHandles.add(childHwnd);
+        }
+      }
+      if (childHandles.isEmpty) continue;
+
+      final List<int> existing = user.hookedWins[masterHwnd] ??= <int>[];
+      for (final int childHwnd in childHandles) {
+        if (!existing.contains(childHwnd)) existing.add(childHwnd);
+      }
+    }
   }
 
   static bool _applyEntry(int hWnd, WindowLayoutEntry entry) {

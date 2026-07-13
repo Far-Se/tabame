@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 
+import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../services/claude_usage_service.dart';
 import '../../widgets/modal_button.dart';
@@ -10,11 +12,77 @@ class ClaudeUsageButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The QuickMenu tree is built at startup, so wiring the reset-alarm hook
+    // here guarantees a restored (post-restart) type-3 timer can beep.
+    ClaudeUsageAlarm.ensureRegistered();
     return ModalButton(
       actionName: "Claude Usage",
       icon: const Icon(Icons.bar_chart_rounded),
       child: () => const ClaudeUsagePanel(),
     );
+  }
+}
+
+/// Owns the "alert when the 5-hour window resets" alarm. The alarm is a
+/// persistent quick timer (type 3) so it survives app restarts; when it fires,
+/// [Boxes] opens the Claude Usage panel and calls back into [_playBeep] here.
+class ClaudeUsageAlarm {
+  ClaudeUsageAlarm._();
+
+  /// QuickTimer type dedicated to the Claude 5-hour reset alarm.
+  static const int timerType = 3;
+  static const String _timerName = 'Claude 5-hour window reset';
+
+  static bool _registered = false;
+
+  /// Point the type-3 quick-timer fire hook at the beep. Idempotent.
+  static void ensureRegistered() {
+    if (_registered) return;
+    _registered = true;
+    Boxes.onClaudeResetTimer = _playBeep;
+  }
+
+  /// Whether a reset alarm is currently armed.
+  static bool get isArmed => Boxes.quickTimers.any((QuickTimer t) => t.type == timerType);
+
+  /// Arm an alarm that fires at [resetIso] (an ISO-8601 timestamp). Returns
+  /// false if the time is unparseable or already in the past.
+  static bool arm(String resetIso) {
+    final DateTime target;
+    try {
+      target = DateTime.parse(resetIso).toLocal();
+    } catch (_) {
+      return false;
+    }
+    if (!target.isAfter(DateTime.now())) return false;
+    cancel();
+    Boxes().addQuickTimerAt(_timerName, target, timerType);
+    return true;
+  }
+
+  /// Disarm any pending reset alarm.
+  static void cancel() {
+    Boxes.quickTimers.removeWhere((QuickTimer t) {
+      if (t.type == timerType) {
+        t.timer?.cancel();
+        return true;
+      }
+      return false;
+    });
+    Boxes.saveQuickTimers();
+  }
+
+  static Future<void> _playBeep() async {
+    final AudioPlayer player = AudioPlayer();
+    await player.setAsset('resources/beep.mp3');
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await player.seek(Duration.zero);
+    await player.play();
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await player.seek(Duration.zero);
+    await player.play();
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await player.dispose();
   }
 }
 
@@ -35,7 +103,17 @@ class _ClaudeUsagePanelState extends State<ClaudeUsagePanel> {
   @override
   void initState() {
     super.initState();
+    ClaudeUsageAlarm.ensureRegistered();
     ClaudeUsageService.instance.addListener(_onUsage);
+  }
+
+  void _toggleAlarm(String resetAt) {
+    if (ClaudeUsageAlarm.isArmed) {
+      ClaudeUsageAlarm.cancel();
+    } else {
+      ClaudeUsageAlarm.arm(resetAt);
+    }
+    if (mounted) setState(() {});
   }
 
   @override
@@ -73,11 +151,23 @@ class _ClaudeUsagePanelState extends State<ClaudeUsagePanel> {
                   crossAxisAlignment: C.start,
                   children: <Widget>[
                     _UsageCard(label: '5-hour window', value: r.fiveHour, resetAt: r.fiveResetAt, onSurface: onSurface),
+                    if (r.fiveResetAt != null) ...<Widget>[
+                      const SizedBox(height: 6),
+                      _ResetAlarmButton(
+                        armed: ClaudeUsageAlarm.isArmed,
+                        onSurface: onSurface,
+                        onTap: () => _toggleAlarm(r.fiveResetAt!),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     _UsageCard(label: '7-day window', value: r.sevenDay, resetAt: r.sevenResetAt, onSurface: onSurface),
                     const SizedBox(height: 8),
                     Text(
                       'Updated ${_timeAgo(r.fetchedAt)}',
+                      style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withAlpha(150)),
+                    ),
+                    Text(
+                      'Works only with Claude Code CLI',
                       style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withAlpha(150)),
                     ),
                   ],
@@ -177,6 +267,54 @@ class _UsageCard extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _ResetAlarmButton extends StatelessWidget {
+  const _ResetAlarmButton({required this.armed, required this.onSurface, required this.onTap});
+
+  final bool armed;
+  final Color onSurface;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = Design.accent;
+    final Color tint = armed ? accent : onSurface;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: tint.withAlpha(armed ? 22 : 8),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: tint.withAlpha(armed ? 90 : 30)),
+          ),
+          child: Row(
+            children: <Widget>[
+              Icon(armed ? Icons.notifications_active_rounded : Icons.notifications_none_rounded,
+                  size: 14, color: tint),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  armed ? 'Alarm set for reset — tap to cancel' : 'Alert when 5-hour window resets',
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize + 0.5,
+                    fontWeight: FontWeight.w600,
+                    color: armed ? tint : onSurface.withAlpha(200),
+                  ),
+                ),
+              ),
+              if (armed) Icon(Icons.close_rounded, size: 13, color: tint.withAlpha(180)),
+            ],
+          ),
+        ),
       ),
     );
   }

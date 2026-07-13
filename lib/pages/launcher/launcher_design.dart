@@ -171,6 +171,115 @@ abstract final class BlueprintTokens {
   }
 }
 
+/// Shared visual tokens for the Transit (metro map) launcher design.
+///
+/// Like [TerminalTokens] this forces its own palette so the launcher always
+/// reads as wayfinding signage — a night-service dark board or a clean white
+/// station sign in light mode. The user accent stays in charge as "your line
+/// color": the route line, roundels, bands and zone markers are all drawn in
+/// it, so every accent choice becomes a different metro line.
+abstract final class TransitTokens {
+  // Dark — night network board.
+  static const Color _bgDark = Color(0xFF15181D);
+  static const Color _chromeDark = Color(0xFF1C2026);
+  static const Color _fgDark = Color(0xFFE9EDF2);
+  static const Color _dimDark = Color(0xFF8C96A3);
+
+  // Light — enamel station sign.
+  static const Color _bgLight = Color(0xFFF7F7F4);
+  static const Color _chromeLight = Color(0xFFECECE7);
+  static const Color _fgLight = Color(0xFF17191C);
+  static const Color _dimLight = Color(0xFF70767E);
+
+  /// Sign background.
+  static Color bg(bool isDark) => isDark ? _bgDark : _bgLight;
+
+  /// Slightly raised chrome (platform strip / footer).
+  static Color chrome(bool isDark) => isDark ? _chromeDark : _chromeLight;
+
+  /// Primary lettering.
+  static Color fg(bool isDark) => isDark ? _fgDark : _fgLight;
+
+  /// Dimmed lettering (connections, captions).
+  static Color dim(bool isDark) => isDark ? _dimDark : _dimLight;
+
+  /// Signage lettering — Overpass, digitised from US highway-sign alphabets.
+  static TextStyle sign({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return GoogleFonts.overpass(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    );
+  }
+}
+
+/// Shared visual tokens for the Fluent (Windows 11) launcher design.
+///
+/// Like [TerminalTokens] this forces its own palette — the Windows 11 "Mica"
+/// neutrals: the smoky #202020 sheet in dark mode, the frosted #F3F3F3 one in
+/// light. The user accent stays in charge (selection pill, focus underline),
+/// exactly like the system accent color in Windows. Typography is Segoe UI
+/// Variable with a plain Segoe UI fallback — the native voice of the OS, no
+/// bundled font needed.
+abstract final class FluentTokens {
+  // Dark — mica dark.
+  static const Color _bgDark = Color(0xFF202020);
+  static const Color _chromeDark = Color(0xFF1B1B1B);
+  static const Color _fgDark = Color(0xFFFFFFFF);
+  static const Color _dimDark = Color(0xFF9D9D9D);
+
+  // Light — mica light.
+  static const Color _bgLight = Color(0xFFF3F3F3);
+  static const Color _chromeLight = Color(0xFFEBEBEB);
+  static const Color _fgLight = Color(0xFF1B1B1B);
+  static const Color _dimLight = Color(0xFF5D5D5D);
+
+  /// Mica window background.
+  static Color bg(bool isDark) => isDark ? _bgDark : _bgLight;
+
+  /// Slightly shifted chrome (footer strip), like the Start menu's bottom bar.
+  static Color chrome(bool isDark) => isDark ? _chromeDark : _chromeLight;
+
+  /// Primary foreground.
+  static Color fg(bool isDark) => isDark ? _fgDark : _fgLight;
+
+  /// Secondary foreground (subtitles, captions).
+  static Color dim(bool isDark) => isDark ? _dimDark : _dimLight;
+
+  /// Hairline control stroke (WinUI "ControlStrokeColorDefault").
+  static Color stroke(bool isDark) => isDark ? const Color(0x17FFFFFF) : const Color(0x12000000);
+
+  /// Faint layer fill a WinUI text box / list item sits on.
+  static Color fill(bool isDark) => isDark ? const Color(0x0FFFFFFF) : const Color(0xB3FFFFFF);
+
+  /// Segoe UI Variable (Win11) with the classic Segoe UI as fallback (Win10).
+  static TextStyle segoe({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return TextStyle(
+      fontFamily: 'Segoe UI Variable Text',
+      fontFamilyFallback: const <String>['Segoe UI'],
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    );
+  }
+}
+
 @immutable
 class LauncherThemeData {
   const LauncherThemeData({required this.design});
@@ -184,6 +293,8 @@ class LauncherThemeData {
   bool get isZen => design == LauncherDesign.zen;
   bool get isGlass => design == LauncherDesign.glass;
   bool get isBlueprint => design == LauncherDesign.blueprint;
+  bool get isTransit => design == LauncherDesign.transit;
+  bool get isFluent => design == LauncherDesign.fluent;
 
   /// Leading glyph in the search bar — a chevron prompt for the Command/Terminal
   /// consoles, a leaf for Zen, a drafting compass for Blueprint, a magnifier
@@ -196,6 +307,8 @@ class LauncherThemeData {
         LauncherDesign.glass => Icons.search_rounded,
         LauncherDesign.classic => Icons.search_rounded,
         LauncherDesign.blueprint => Icons.architecture_rounded,
+        LauncherDesign.transit => Icons.near_me_rounded,
+        LauncherDesign.fluent => Icons.search_rounded,
       };
 
   double get searchIconSize => switch (design) {
@@ -206,9 +319,11 @@ class LauncherThemeData {
         LauncherDesign.glass => 20.0,
         LauncherDesign.classic => 20.0,
         LauncherDesign.blueprint => 20.0,
+        LauncherDesign.transit => 16.0,
+        LauncherDesign.fluent => 18.0,
       };
 
-  bool get searchIconUsesOnSurface => isSerene || isGlass;
+  bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent;
 
   double get searchFontSize => switch (design) {
         LauncherDesign.serene => 16.0,
@@ -218,6 +333,8 @@ class LauncherThemeData {
         LauncherDesign.glass => 16.0,
         LauncherDesign.classic => 15.0,
         LauncherDesign.blueprint => 15.0,
+        LauncherDesign.transit => 15.0,
+        LauncherDesign.fluent => 15.0,
       };
   FontWeight? get searchFontWeight => switch (design) {
         LauncherDesign.serene => FontWeight.w400,
@@ -227,6 +344,8 @@ class LauncherThemeData {
         LauncherDesign.glass => FontWeight.w500,
         LauncherDesign.classic => null,
         LauncherDesign.blueprint => FontWeight.w500,
+        LauncherDesign.transit => FontWeight.w600,
+        LauncherDesign.fluent => FontWeight.w400,
       };
 
   double get frameRadius => switch (design) {
@@ -237,6 +356,8 @@ class LauncherThemeData {
         LauncherDesign.glass => 28.0,
         LauncherDesign.classic => 18.0,
         LauncherDesign.blueprint => 3.0,
+        LauncherDesign.transit => 16.0,
+        LauncherDesign.fluent => 8.0,
       };
 
   EdgeInsets get resultsListPadding => const EdgeInsets.all(8.0);

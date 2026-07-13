@@ -30,20 +30,32 @@ class TimersButtonState extends State<TimersButton> {
   }
 
   void _checkForTimers() {
+    if (!QuickMenuFunctions.isQuickMenuVisible) return;
     if (Boxes.quickTimers.isNotEmpty) {
       Duration diff = Boxes.quickTimers[0].endTime.difference(DateTime.now());
       for (final QuickTimer time in Boxes.quickTimers) {
         final Duration newDiff = time.endTime.difference(DateTime.now());
         if (newDiff < diff) diff = newDiff;
       }
-      remainingTimer = diff.inMinutes != 0
-          ? "${diff.inSeconds % 60 < 30 ? diff.inMinutes % 60 : (diff.inMinutes % 60) + 1}m"
-          : "${(diff.inSeconds % 60)}s";
+      remainingTimer = _formatRemaining(diff);
       if (mounted) setState(() {});
     } else if (remainingTimer != "") {
       remainingTimer = "";
       if (mounted) setState(() {});
     }
+  }
+
+  /// Compact label for the nearest timer, kept to ~3-4 glyphs so it fits the
+  /// button. Under a minute -> "45s"; under an hour -> "47m"; otherwise the
+  /// hours are kept instead of being dropped -> "1h47" (107 minutes).
+  String _formatRemaining(Duration diff) {
+    if (diff.inSeconds < 60) return "${diff.inSeconds}s";
+    // Round to the nearest whole minute.
+    final int totalMinutes = diff.inMinutes + (diff.inSeconds % 60 >= 30 ? 1 : 0);
+    if (totalMinutes < 60) return "${totalMinutes}m";
+    final int hours = totalMinutes ~/ 60;
+    final int minutes = totalMinutes % 60;
+    return minutes == 0 ? "${hours}h" : "${hours}h\n$minutes";
   }
 
   @override
@@ -57,7 +69,11 @@ class TimersButtonState extends State<TimersButton> {
               child: Text(
                 remainingTimer,
                 softWrap: false,
-                style: TextStyle(fontSize: 9, overflow: TextOverflow.fade, color: Design.text),
+                style: TextStyle(
+                    height: 1.1,
+                    fontSize: remainingTimer.contains('\n') ? 8 : 9,
+                    overflow: TextOverflow.fade,
+                    color: Design.text),
               ),
             )
           : const Icon(Icons.timer_sharp),
@@ -407,9 +423,11 @@ class _ListTimersWidgetState extends State<ListTimersWidget> {
         final bool overdue = diff.isNegative;
         final String timeLabel = overdue
             ? "Done"
-            : diff.inMinutes > 0
-                ? "${diff.inMinutes}m ${diff.inSeconds % 60}s"
-                : "${diff.inSeconds}s";
+            : diff.inHours > 0
+                ? "${diff.inHours}h ${diff.inMinutes % 60}m ${diff.inSeconds % 60}s"
+                : diff.inMinutes > 0
+                    ? "${diff.inMinutes}m ${diff.inSeconds % 60}s"
+                    : "${diff.inSeconds}s";
 
         return _ActiveTimerRow(
           name: qt.name,

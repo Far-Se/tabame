@@ -751,8 +751,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
 
     if (event is KeyDownEvent &&
-        event.logicalKey == LogicalKeyboardKey.keyK &&
-        HardwareKeyboard.instance.isControlPressed) {
+        ((event.logicalKey == LogicalKeyboardKey.keyK && HardwareKeyboard.instance.isControlPressed) ||
+            event.logicalKey == LogicalKeyboardKey.tab)) {
       _openPluginActions();
       return KeyEventResult.handled;
     }
@@ -957,10 +957,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         final KeyEventResult pluginResult = _handlePluginKey(event);
         if (pluginResult != KeyEventResult.ignored) return pluginResult;
       }
-      // Escape: go back to quickmenu
       if (event is KeyDownEvent &&
-          event.logicalKey == LogicalKeyboardKey.keyK &&
-          HardwareKeyboard.instance.isControlPressed) {
+          ((event.logicalKey == LogicalKeyboardKey.keyK && HardwareKeyboard.instance.isControlPressed) ||
+              event.logicalKey == LogicalKeyboardKey.tab)) {
         _openActionsForActiveResult();
         setState(() {});
         return KeyEventResult.handled;
@@ -998,6 +997,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         }
         return KeyEventResult.handled;
       }
+      // Escape: go back to quickmenu
       if (event.logicalKey == LogicalKeyboardKey.escape) {
         if (kReleaseMode) {
           QuickMenuFunctions.hideQuickMenu();
@@ -1175,8 +1175,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     // SelectionArea so users can select/copy text with the mouse. That widget
     // grabs focus on tap-drag; auto-reclaiming focus for the search field
     // would yank it away mid-selection and break Ctrl+C.
-    if (_activePlugin != null &&
-        (_pluginFrame?.view == PluginViewType.detail || (_pluginFrame?.hasPreview ?? false))) {
+    if (_activePlugin != null && (_pluginFrame?.view == PluginViewType.detail || (_pluginFrame?.hasPreview ?? false))) {
       return false;
     }
     return true;
@@ -3629,12 +3628,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     final bool isZen = _design == LauncherDesign.zen;
     final bool isGlass = _design == LauncherDesign.glass;
     final bool isBlueprint = _design == LauncherDesign.blueprint;
-    // Terminal, Zen and Blueprint force their own palette + text theme. Every
-    // result builder reads its colors from this theme, so they all inherit the
-    // look without per-builder branching. Terminal keeps the user accent
-    // (phosphor); Zen replaces it with a calm moss, Blueprint with drafting
-    // ink. Glass keeps the theme colors (its glass picks them up) and only
-    // forces Inter for the iOS feel.
+    final bool isTransit = _design == LauncherDesign.transit;
+    final bool isFluent = _design == LauncherDesign.fluent;
+    // Terminal, Zen, Blueprint, Transit and Fluent force their own palette +
+    // text theme. Every result builder reads its colors from this theme, so
+    // they all inherit the look without per-builder branching. Terminal,
+    // Transit and Fluent keep the user accent (phosphor / line color / Windows
+    // accent); Zen replaces it with a calm moss, Blueprint with drafting ink.
+    // Glass keeps the theme colors (its glass picks them up) and only forces
+    // Inter for the iOS feel.
     final Color accent = isZen
         ? ZenTokens.accent(isDark)
         : isBlueprint
@@ -3670,9 +3672,33 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
                     textTheme: GoogleFonts.chakraPetchTextTheme(baseTheme.textTheme)
                         .apply(bodyColor: BlueprintTokens.fg(isDark), displayColor: BlueprintTokens.fg(isDark)),
                   )
-                : isGlass
-                    ? baseTheme.copyWith(textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme))
-                    : baseTheme;
+                : isTransit
+                    ? baseTheme.copyWith(
+                        colorScheme: baseTheme.colorScheme.copyWith(
+                          surface: TransitTokens.bg(isDark),
+                          onSurface: TransitTokens.fg(isDark),
+                        ),
+                        highlightColor: accent.withAlpha(30),
+                        textTheme: GoogleFonts.overpassTextTheme(baseTheme.textTheme)
+                            .apply(bodyColor: TransitTokens.fg(isDark), displayColor: TransitTokens.fg(isDark)),
+                      )
+                    : isFluent
+                        ? baseTheme.copyWith(
+                            colorScheme: baseTheme.colorScheme.copyWith(
+                              surface: FluentTokens.bg(isDark),
+                              onSurface: FluentTokens.fg(isDark),
+                            ),
+                            highlightColor: accent.withAlpha(28),
+                            textTheme: baseTheme.textTheme.apply(
+                              fontFamily: 'Segoe UI Variable Text',
+                              fontFamilyFallback: const <String>['Segoe UI'],
+                              bodyColor: FluentTokens.fg(isDark),
+                              displayColor: FluentTokens.fg(isDark),
+                            ),
+                          )
+                        : isGlass
+                            ? baseTheme.copyWith(textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme))
+                            : baseTheme;
     final Color onSurface = theme.colorScheme.onSurface;
     final bool hasInput = _controller.text.trim().isNotEmpty;
     final LauncherThemeData launcherTheme = LauncherThemeData(design: _design);
@@ -3860,10 +3886,24 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
           resultCount: _results.length,
           child: innerContent,
         ),
+      LauncherDesign.transit => TransitLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent,
+        ),
+      LauncherDesign.fluent => FluentLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent,
+        ),
     };
 
     return Theme(
-      data: (isTerminal || isZen || isGlass || isBlueprint)
+      data: (isTerminal || isZen || isGlass || isBlueprint || isTransit || isFluent)
           ? theme
           : theme.copyWith(
               textTheme: GoogleFonts.getTextTheme(Design.entryFontFamily),

@@ -47,7 +47,7 @@ class MainMenuSereneWidget extends StatelessWidget {
     return ConstrainedBox(
       constraints: BoxConstraints(
         minHeight: 203,
-        maxHeight: MediaQuery.of(context).size.height - 90,
+        maxHeight: MediaQuery.of(context).size.height - 50,
       ),
       child: RepaintBoundary(
         child: ClipRRect(

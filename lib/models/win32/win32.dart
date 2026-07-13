@@ -843,6 +843,21 @@ class Win32 {
         case QuickMenuDesigns.terminal:
           verticalPosition -= 40;
           break;
+        case QuickMenuDesigns.cassette:
+          verticalPosition -= 40;
+          break;
+        case QuickMenuDesigns.fluent:
+          verticalPosition -= 40;
+          break;
+        case QuickMenuDesigns.gazette:
+          verticalPosition -= 40;
+          break;
+        case QuickMenuDesigns.player:
+          verticalPosition -= 40;
+          break;
+        case QuickMenuDesigns.steam:
+          verticalPosition -= 40;
+          break;
       }
     }
     await WindowManager.instance.setPosition(Offset(horizontalPosition + 1, verticalPosition));

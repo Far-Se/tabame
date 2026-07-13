@@ -5,11 +5,16 @@ import '../../models/classes/boxes/quick_menu_box.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
 import 'design_aurora.dart';
+import 'design_cassette.dart';
 import 'design_classic.dart';
+import 'design_fluent.dart';
+import 'design_gazette.dart';
 import 'design_interface.dart';
 import 'design_matrix.dart';
 import 'design_modern.dart';
+import 'design_player.dart';
 import 'design_serene.dart';
+import 'design_steam.dart';
 import 'design_terminal.dart';
 
 class LoadQuickMenuDesign extends StatefulWidget {
@@ -79,6 +84,11 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.serene => MainMenuSereneWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.aurora => MainMenuAuroraWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.terminal => MainMenuTerminalWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.cassette => MainMenuCassetteWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.fluent => MainMenuFluentWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.gazette => MainMenuGazetteWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.player => MainMenuPlayerWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.steam => MainMenuSteamWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }
 }

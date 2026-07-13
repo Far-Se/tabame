@@ -69,58 +69,73 @@ class PinnedAndTrayList extends StatelessWidget {
         padding:
             !user.expandedTaskbar ? const EdgeInsets.fromLTRB(7, 3, 3, 3) : const EdgeInsets.symmetric(horizontal: 10),
         child: LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
-          // The horizontal scroll view already shrink-wraps to min(content,
-          // maxWidth), so IntrinsicWidth was redundant — it only added an extra
-          // unbounded layout pass of the row on every (frequent) rebuild.
-          final Widget mergedTray = ConstrainedBox(
-            constraints:
-                BoxConstraints(maxWidth: user.bottomBarOnTop ? constraints.maxWidth * 0.5 : constraints.maxWidth),
-            child: ClipRRect(
-                child: user.bottomBarOnTop ? const _MergedPinnedTray() : const Center(child: _MergedPinnedTray())),
-          );
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: user.bottomBarOnTop
-                ? <Widget>[
-                    //BarWithQuickActions Section
-                    Expanded(
-                      flex: 6,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          const LogoDragButton(),
-                          const SizedBox(width: 3),
-                          const Expanded(child: BarWithQuickActions()),
-                          Theme(
-                              data: Theme.of(context).copyWith(
-                                  iconTheme: IconThemeData(size: 16, color: Theme.of(context).iconTheme.color)),
-                              child: const OpenSettingsButton()),
-                        ],
-                      ),
-                    ),
-                    if (user.mergePinnedTray)
-                      mergedTray
-                    else ...<Widget>[
-                      if (Boxes.pinnedApps.isNotEmpty)
-                        const Flexible(flex: 4, child: RepaintBoundary(child: PinnedApps())),
-                      if (user.showTrayBar) const Flexible(flex: 4, child: RepaintBoundary(child: TrayBar())),
-                    ],
-                  ]
-                : <Widget>[
-                    if (user.quickActionsAtBottom) const Expanded(flex: 5, child: BarWithQuickActions()),
-                    if (user.mergePinnedTray)
-                      mergedTray
-                    else ...<Widget>[
-                      if (Boxes.pinnedApps.isNotEmpty)
-                        const Flexible(flex: 4, child: RepaintBoundary(child: PinnedApps())),
-                      if (user.showTrayBar) const Flexible(flex: 4, child: RepaintBoundary(child: TrayBar())),
-                    ],
-                  ],
+            // Three independent flags decide this row's layout:
+            //   bottomBarOnTop     -> fuse logo + quick actions + pinned/tray into one combined row.
+            //   quickActionsAtBottom -> the quick-actions bar lives here (else it stays in the TopBar).
+            //   mergePinnedTray    -> pinned apps + tray render as one gradient scroll bar.
+            children: user.bottomBarOnTop ? _combinedRow(context, constraints) : _splitRow(context),
           );
         }),
       ),
     );
+  }
+
+  // Pinned apps and tray as two separate, independently-scrolling flex sections.
+  List<Widget> get _separatePinnedTray => <Widget>[
+        if (Boxes.pinnedApps.isNotEmpty) const Flexible(flex: 4, child: RepaintBoundary(child: PinnedApps())),
+        if (user.showTrayBar) const Flexible(flex: 4, child: RepaintBoundary(child: TrayBar())),
+      ];
+
+  // bottomBarOnTop: logo + quick actions + settings form one unit on the left,
+  // pinned/tray sits on the right and is capped at half the available width.
+  List<Widget> _combinedRow(BuildContext context, BoxConstraints constraints) {
+    return <Widget>[
+      Expanded(
+        flex: 6,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const LogoDragButton(),
+            const SizedBox(width: 3),
+            const Expanded(child: BarWithQuickActions()),
+            Theme(
+              data: Theme.of(context)
+                  .copyWith(iconTheme: IconThemeData(size: 16, color: Theme.of(context).iconTheme.color)),
+              child: const OpenSettingsButton(),
+            ),
+          ],
+        ),
+      ),
+      if (user.mergePinnedTray)
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.5),
+          child: const ClipRRect(child: _MergedPinnedTray()),
+        )
+      else
+        ..._separatePinnedTray,
+    ];
+  }
+
+  // bottomBarOnTop == false: an optional quick-actions bar on the left, then the
+  // pinned/tray section. The merged bar must FLEX when it shares the row with the
+  // quick-actions bar (otherwise it grabs the full width and hides quick actions);
+  // when it is alone on the row it is centred across the full width instead.
+  List<Widget> _splitRow(BuildContext context) {
+    final bool showQuickActions = user.quickActionsAtBottom;
+    final List<Widget> children = <Widget>[
+      if (showQuickActions) const Expanded(flex: 5, child: BarWithQuickActions()),
+    ];
+    if (!user.mergePinnedTray) {
+      children.addAll(_separatePinnedTray);
+    } else if (showQuickActions) {
+      children.add(const Flexible(flex: 4, child: ClipRRect(child: _MergedPinnedTray())));
+    } else {
+      children.add(const Expanded(child: ClipRRect(child: Center(child: _MergedPinnedTray()))));
+    }
+    return children;
   }
 }
 
@@ -214,18 +229,30 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
         ),
         hoverColor: Colors.grey.withAlpha(50),
       ),
-      child: showWidgets.isNotEmpty
-          ? BarWithButtons(
-              height: 25.1,
+      child: user.bottomBarOnTop
+          // bottomBarOnTop draws its own OpenSettingsButton in _combinedRow.
+          ? _quickActionsBar()
+          // Split-row: keep the settings button pinned outside the scroll so it
+          // stays reachable no matter how many quick actions overflow the bar.
+          : Row(
               children: <Widget>[
-                if (kDebugMode) const TestingButton(),
-                if (user.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
-                ...List<Widget>.generate(showWidgets.length, (int i) => showWidgets[i]),
-                if (user.lastChangelog != Globals.version) const CheckChangelogButton(),
-                if (!user.bottomBarOnTop) const OpenSettingsButton(),
+                Expanded(child: _quickActionsBar()),
+                const OpenSettingsButton(),
               ],
-            )
-          : const SizedBox.shrink(),
+            ),
+    );
+  }
+
+  Widget _quickActionsBar() {
+    if (showWidgets.isEmpty) return const SizedBox.shrink();
+    return BarWithButtons(
+      height: 25.1,
+      children: <Widget>[
+        if (kDebugMode) const TestingButton(),
+        if (user.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
+        ...List<Widget>.generate(showWidgets.length, (int i) => showWidgets[i]),
+        if (user.lastChangelog != Globals.version) const CheckChangelogButton(),
+      ],
     );
   }
 }

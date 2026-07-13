@@ -153,6 +153,42 @@ extension LauncherDesignBuilder on LauncherDesign {
             ),
           ],
         );
+
+      case LauncherDesign.transit:
+        // Station sign — [surface] is the forced signage palette. Soft signage
+        // rounding, an enamel-plate edge, and a flat drop shadow.
+        return BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: surface,
+          border: Border.all(color: accent.withAlpha(120), width: 1.4),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: Colors.black.withAlpha(90),
+              blurRadius: 26,
+              spreadRadius: -6,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        );
+
+      case LauncherDesign.fluent:
+        // Mica window — [surface] is the forced Win11 neutral. The 8px corner,
+        // a hairline stroke, and the broad soft shadow Windows 11 puts under
+        // every flyout.
+        final bool fluentDark = surface.computeLuminance() < 0.5;
+        return BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: surface,
+          border: Border.all(color: fluentDark ? Colors.white.withAlpha(24) : Colors.black.withAlpha(20)),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: Colors.black.withAlpha(80),
+              blurRadius: 34,
+              spreadRadius: -8,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        );
     }
   }
 
@@ -228,6 +264,23 @@ extension LauncherDesignBuilder on LauncherDesign {
         return _BlueprintSearchBar(
           accent: accent,
           onSurface: onSurface,
+          dragHandle: dragHandle,
+          textField: textField,
+          trailingBadge: trailingBadge,
+          isSearching: isSearching,
+        );
+      case LauncherDesign.transit:
+        return _TransitSearchBar(
+          accent: accent,
+          onSurface: onSurface,
+          dragHandle: dragHandle,
+          textField: textField,
+          trailingBadge: trailingBadge,
+          isSearching: isSearching,
+        );
+      case LauncherDesign.fluent:
+        return _FluentSearchBar(
+          accent: accent,
           dragHandle: dragHandle,
           textField: textField,
           trailingBadge: trailingBadge,
@@ -365,6 +418,58 @@ extension LauncherDesignBuilder on LauncherDesign {
             ],
           ),
         );
+      case LauncherDesign.transit:
+        // A fare-zone boundary: a small zone pill, then a dashed border line
+        // running to the sign's edge.
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
+          child: Row(
+            children: <Widget>[
+              Container(
+                padding: const EdgeInsets.fromLTRB(8, 2, 8, 1),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: accent.withAlpha(150), width: 1.2),
+                ),
+                child: Text(
+                  'ZONE · ${label.toUpperCase()}',
+                  style: TransitTokens.sign(
+                    fontSize: Design.baseFontSize - 1.5,
+                    color: accent.withAlpha(220),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.6,
+                    height: 1.1,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 1,
+                  child: CustomPaint(painter: _TransitZonePainter(color: accent.withAlpha(110))),
+                ),
+              ),
+            ],
+          ),
+        );
+      case LauncherDesign.fluent:
+        // A "Best match" group label: plain semibold Segoe in the foreground
+        // color — Windows 11 search never decorates its headers.
+        return Builder(builder: (BuildContext context) {
+          final Color fg = Theme.of(context).colorScheme.onSurface;
+          return Padding(
+            padding: const EdgeInsets.only(left: 16, top: 12, bottom: 4),
+            child: Text(
+              label,
+              style: FluentTokens.segoe(
+                fontSize: Design.baseFontSize + 1,
+                color: fg.withAlpha(210),
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.1,
+              ),
+            ),
+          );
+        });
     }
   }
 }
@@ -1839,6 +1944,424 @@ class _BlueprintTitleBlock extends StatelessWidget {
             _cell('QTY', resultCount.toString().padLeft(2, '0')),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Transit (metro map) — destination-sign search bar topped by the line-color
+// band, a station-sign frame, and a platform-strip footer. Results render as
+// stations on a continuous route line (see LauncherResultRow._buildTransit).
+// ---------------------------------------------------------------------------
+
+class _TransitSearchBar extends StatelessWidget {
+  const _TransitSearchBar({
+    required this.accent,
+    required this.onSurface,
+    required this.dragHandle,
+    required this.textField,
+    required this.trailingBadge,
+    required this.isSearching,
+  });
+
+  final Color accent;
+  final Color onSurface;
+  final Widget dragHandle;
+  final Widget textField;
+  final Widget? trailingBadge;
+  final bool isSearching;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 11, 14, 9),
+          child: Row(
+            children: <Widget>[
+              // Line roundel — the metro-line bullet (also the drag handle).
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: accent, width: 2.4),
+                ),
+                child: dragHandle,
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.centerRight,
+                  children: <Widget>[
+                    textField,
+                    if (trailingBadge != null)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: trailingBadge!,
+                      ),
+                  ],
+                ),
+              ),
+              if (isSearching)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: SizedBox(
+                    width: 13,
+                    height: 13,
+                    child: CircularProgressIndicator(strokeWidth: 1.6, color: accent.withAlpha(170)),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        // The line-color band — the identity stripe of a station sign.
+        Container(height: 5, color: accent),
+      ],
+    );
+  }
+}
+
+/// Dashed fare-zone boundary line used by the Transit section header.
+class _TransitZonePainter extends CustomPainter {
+  const _TransitZonePainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.2;
+    const double dash = 5;
+    const double gap = 5;
+    final double y = size.height / 2;
+    for (double x = 0; x < size.width; x += dash + gap) {
+      canvas.drawLine(Offset(x, y), Offset((x + dash).clamp(0, size.width), y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _TransitZonePainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// The station sign — forced signage palette, a flat enamel plate with the
+/// accent as the metro-line color, and a platform strip along the bottom.
+class TransitLauncherFrame extends StatelessWidget {
+  const TransitLauncherFrame({
+    super.key,
+    required this.child,
+    required this.surface,
+    required this.accent,
+    required this.onSurface,
+    this.resultCount = 0,
+  });
+
+  final Widget child;
+  final Color surface;
+  final Color accent;
+  final Color onSurface;
+  final int resultCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return LauncherTheme(
+      data: const LauncherThemeData(design: LauncherDesign.transit),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 360),
+        decoration: LauncherDesign.transit.outerDecoration(surface: surface, accent: accent),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            children: <Widget>[
+              if (Design.backdropLauncher) const StableBackdrop(),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  child,
+                  _TransitFooter(accent: accent, resultCount: resultCount, isDark: isDark),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The platform strip: boarding hints on the left, the stop count on the
+/// right — all in signage lettering.
+class _TransitFooter extends StatelessWidget {
+  const _TransitFooter({required this.accent, required this.resultCount, required this.isDark});
+
+  final Color accent;
+  final int resultCount;
+  final bool isDark;
+
+  Widget _hint(String key, String caption) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(
+          key,
+          style: TransitTokens.sign(
+            fontSize: Design.baseFontSize - 1,
+            color: accent,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.6,
+          ),
+        ),
+        Text(
+          ' $caption',
+          style: TransitTokens.sign(
+            fontSize: Design.baseFontSize - 1,
+            color: TransitTokens.dim(isDark),
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.0,
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+      decoration: BoxDecoration(
+        color: TransitTokens.chrome(isDark),
+        border: Border(top: BorderSide(color: accent.withAlpha(90))),
+      ),
+      child: Row(
+        children: <Widget>[
+          _hint('↵', 'BOARD'),
+          const SizedBox(width: 14),
+          _hint('→', 'LINES'),
+          const SizedBox(width: 14),
+          _hint('ESC', 'EXIT'),
+          const Spacer(),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: accent, width: 2),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            resultCount == 1 ? '1 STOP' : '$resultCount STOPS',
+            style: TransitTokens.sign(
+              fontSize: Design.baseFontSize - 1,
+              color: TransitTokens.dim(isDark),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Fluent (Windows 11) — a WinUI text box with the accent focus underline, a
+// mica frame, and a Start-menu-style footer strip. Results render as WinUI
+// list items with the accent selection pill (see LauncherResultRow._buildFluent).
+// ---------------------------------------------------------------------------
+
+class _FluentSearchBar extends StatelessWidget {
+  const _FluentSearchBar({
+    required this.accent,
+    required this.dragHandle,
+    required this.textField,
+    required this.trailingBadge,
+    required this.isSearching,
+  });
+
+  final Color accent;
+  final Widget dragHandle;
+  final Widget textField;
+  final Widget? trailingBadge;
+  final bool isSearching;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    // A WinUI AutoSuggestBox: faint layer fill, hairline stroke, and — since
+    // the launcher input is always focused — the 2px accent bottom underline.
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+      child: Container(
+        decoration: BoxDecoration(
+          color: FluentTokens.fill(isDark),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: FluentTokens.stroke(isDark)),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 10, 7),
+                child: Row(
+                  children: <Widget>[
+                    dragHandle,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Stack(
+                        alignment: Alignment.centerRight,
+                        children: <Widget>[
+                          textField,
+                          if (trailingBadge != null)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: trailingBadge!,
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (isSearching)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: accent),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              // Focus underline — the accent bottom stroke of a focused text box.
+              Container(height: 2, color: accent),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The mica window — forced Win11 neutrals, 8px corners, and a footer strip in
+/// the shifted chrome shade, like the Start menu's bottom bar.
+class FluentLauncherFrame extends StatelessWidget {
+  const FluentLauncherFrame({
+    super.key,
+    required this.child,
+    required this.surface,
+    required this.accent,
+    required this.onSurface,
+    this.resultCount = 0,
+  });
+
+  final Widget child;
+  final Color surface;
+  final Color accent;
+  final Color onSurface;
+  final int resultCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return LauncherTheme(
+      data: const LauncherThemeData(design: LauncherDesign.fluent),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 360),
+        decoration: LauncherDesign.fluent.outerDecoration(surface: surface, accent: accent),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Stack(
+            children: <Widget>[
+              if (Design.backdropLauncher) const StableBackdrop(),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  child,
+                  _FluentFooter(onSurface: onSurface, resultCount: resultCount, isDark: isDark),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FluentFooter extends StatelessWidget {
+  const _FluentFooter({required this.onSurface, required this.resultCount, required this.isDark});
+
+  final Color onSurface;
+  final int resultCount;
+  final bool isDark;
+
+  Widget _kbd(String keyLabel, String caption) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Container(
+          constraints: const BoxConstraints(minWidth: 18),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: onSurface.withAlpha(12),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: FluentTokens.stroke(isDark)),
+          ),
+          child: Text(
+            keyLabel,
+            style: FluentTokens.segoe(
+              fontSize: Design.baseFontSize - 1,
+              fontWeight: FontWeight.w600,
+              color: onSurface.withAlpha(180),
+              height: 1.2,
+            ),
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          caption,
+          style: FluentTokens.segoe(
+            fontSize: Design.baseFontSize - 1,
+            color: FluentTokens.dim(isDark),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 7, 14, 7),
+      decoration: BoxDecoration(
+        color: FluentTokens.chrome(isDark),
+        border: Border(top: BorderSide(color: FluentTokens.stroke(isDark))),
+      ),
+      child: Row(
+        children: <Widget>[
+          _kbd('↵', 'Open'),
+          const SizedBox(width: 12),
+          _kbd('→', 'Actions'),
+          const SizedBox(width: 12),
+          _kbd('Esc', 'Dismiss'),
+          const Spacer(),
+          Text(
+            resultCount == 1 ? '1 result' : '$resultCount results',
+            style: FluentTokens.segoe(
+              fontSize: Design.baseFontSize - 1,
+              color: FluentTokens.dim(isDark),
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ],
       ),
     );
   }
