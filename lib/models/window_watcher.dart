@@ -288,7 +288,8 @@ class WindowWatcher {
   /// milliseconds and tries again.
   static void showSecondWindowUnderCursor() {
     Win32.activeWindowUnderCursor();
-    Future<void>.delayed(const Duration(milliseconds: 100), () {
+    Future<void>.delayed(const Duration(milliseconds: 100), () async {
+      await fetchWindows();
       if (hierarchy.isEmpty) hierarchy = list.map((Window e) => e.hWnd).toList();
       final Pointer<POINT> lpPoint = calloc<POINT>();
       GetCursorPos(lpPoint);
@@ -332,28 +333,26 @@ class WindowWatcher {
   /// z-order) and activates the first one that is neither the currently active
   /// window nor Tabame's own window. This lets you "peel back" to the window
   /// sitting just beneath whatever is currently focused under the pointer.
-  static void showLastWindowUnderCursor() {
-    Future<void>.delayed(const Duration(milliseconds: 100), () {
-      final Pointer<POINT> lpPoint = calloc<POINT>();
-      GetCursorPos(lpPoint);
-      final PointXY mousePos = PointXY(X: lpPoint.ref.x, Y: lpPoint.ref.y);
-      free(lpPoint);
+  static void showLastWindowUnderCursor() async {
+    await fetchWindows();
+    final Pointer<POINT> lpPoint = calloc<POINT>();
+    GetCursorPos(lpPoint);
+    final PointXY mousePos = PointXY(X: lpPoint.ref.x, Y: lpPoint.ref.y);
+    free(lpPoint);
 
-      final int activeHandle = Win32.getActiveWindowHandle();
-      final int ownHandle = Win32.getMainHandle();
+    final int activeHandle = Win32.getActiveWindowHandle();
+    final int ownHandle = Win32.getMainHandle();
 
-      for (final Window window in list) {
-        final int h = window.hWnd;
-        if (h == activeHandle || h == ownHandle) continue;
-        final Square rect = Win32.getWindowRect(hwnd: h);
-        if (mousePos.X.isBetween(rect.x, rect.x + rect.width) &&
-            mousePos.Y.isBetween(rect.y, rect.y + rect.height)) {
-          Win32.activateWindow(h);
-          Future<void>.delayed(
-              const Duration(milliseconds: 200), () => GetForegroundWindow() != h ? Win32.activateWindow(h) : null);
-          return;
-        }
+    for (final Window window in list) {
+      final int h = window.hWnd;
+      if (h == activeHandle || h == ownHandle) continue;
+      final Square rect = Win32.getWindowRect(hwnd: h);
+      if (mousePos.X.isBetween(rect.x, rect.x + rect.width) && mousePos.Y.isBetween(rect.y, rect.y + rect.height)) {
+        Win32.activateWindow(h);
+        Future<void>.delayed(
+            const Duration(milliseconds: 200), () => GetForegroundWindow() != h ? Win32.activateWindow(h) : null);
+        return;
       }
-    });
+    }
   }
 }

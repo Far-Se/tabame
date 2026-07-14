@@ -827,7 +827,7 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
         children: <Widget>[
           Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
+              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(9),
             ),
             child: Padding(

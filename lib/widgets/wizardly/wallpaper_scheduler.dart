@@ -700,6 +700,7 @@ class _WallpaperSchedulerState extends State<WallpaperScheduler> {
   Widget _buildFillModeSelection(Color accent, WallpaperSchedule s) {
     return ModernDropdown<int>(
       value: s.fillMode,
+      showSearch: true,
       items: <ModernDropdownItem<int>>[
         for (int i = 0; i < WallpaperFillMode.values.length; i++)
           ModernDropdownItem<int>(

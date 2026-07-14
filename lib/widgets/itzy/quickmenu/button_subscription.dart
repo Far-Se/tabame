@@ -98,7 +98,7 @@ class _SubscriptionPanelState extends State<SubscriptionPanel> {
       // width: 400,
       // height: 600,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        // color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.16)),
       ),
@@ -160,7 +160,7 @@ class _SubscriptionPanelState extends State<SubscriptionPanel> {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: accent.withAlpha(40),
+            // color: accent.withAlpha(40),
             width: 1,
           ),
         ),
@@ -686,13 +686,12 @@ class _SubscriptionCalendarViewState extends State<SubscriptionCalendarView> {
         Positioned(
           right: 0,
           top: 0,
-          child: Text("logo.dev ",
-              style: TextStyle(fontSize: Design.baseFontSize, color: Design.text)),
+          child: Text("logo.dev ", style: TextStyle(fontSize: Design.baseFontSize, color: Design.text)),
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.3),
             border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15))),
           ),
           child: Material(
@@ -882,8 +881,7 @@ class _SubscriptionInsightsViewState extends State<SubscriptionInsightsView> {
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Text("Total/mo",
-                        style: TextStyle(
-                            fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.6))),
+                        style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.6))),
                     Text("\$${totalMonthly.toStringAsFixed(2)}",
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: onSurface)),
                   ],
@@ -940,8 +938,7 @@ class _SubscriptionInsightsViewState extends State<SubscriptionInsightsView> {
                     Icon(IconData(cat.iconCodePoint, fontFamily: cat.fontFamily), size: 10, color: cat.color),
                     const SizedBox(width: 4),
                     Text(cat.name,
-                        style: TextStyle(
-                            fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.6))),
+                        style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.6))),
                     if (!s.isActive) ...<Widget>[
                       const SizedBox(width: 8),
                       Container(
@@ -1031,9 +1028,7 @@ class _SubscriptionInsightsViewState extends State<SubscriptionInsightsView> {
             color: Design.accent.withValues(alpha: 0.28),
             borderRadius: BorderRadius.circular(99),
           ),
-          child: Text("$count",
-              style:
-                  TextStyle(fontSize: Design.baseFontSize, color: Design.accent)),
+          child: Text("$count", style: TextStyle(fontSize: Design.baseFontSize, color: Design.accent)),
         ),
         const SizedBox(width: 8),
         Expanded(child: Divider(height: 1, color: onSurface.withValues(alpha: 0.2))),
@@ -1332,10 +1327,7 @@ class _SubscriptionFormState extends State<SubscriptionForm> {
                     ),
                     child: Text(
                       "SAVE",
-                      style: TextStyle(
-                          fontSize: Design.baseFontSize + 2,
-                          fontWeight: FontWeight.bold,
-                          color: accent),
+                      style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold, color: accent),
                     ),
                   ),
                 ),

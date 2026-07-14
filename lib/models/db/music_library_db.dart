@@ -18,8 +18,7 @@ class MusicRoot {
 
   String get title {
     final String name = p.basename(path);
-    final String result = name.trim().isEmpty ? path : name;
-    return MusicLibraryDb.sanitize(result);
+    return name.trim().isEmpty ? path : name;
   }
 }
 
@@ -522,7 +521,7 @@ class MusicLibraryDb {
       final ({String? hash, String? largePath, String? smallPath}) poster = _folderPosterForPath(db, childPath);
       return MusicItem(
         id: '$folderIdPrefix$childPath',
-        title: sanitize(p.basename(childPath)),
+        title: p.basename(childPath),
         localPath: childPath,
         parentPath: folderPath,
         isFolder: true,
@@ -875,25 +874,9 @@ class MusicLibraryDb {
     return value.replaceAll('~', '~~').replaceAll('%', '~%').replaceAll('_', '~_');
   }
 
-  static String sanitize(String input) {
-    // Replace non-ASCII characters and special symbols with '-'
-    // Keeps: a-z, A-Z, 0-9, _, space, ., -
-    String result = input.replaceAll(RegExp(r'[^\x00-\x7F]|[^\w\s\.\-]'), '-');
-
-    // Collapse multiple hyphens and trim them from the ends
-    result = result.replaceAll(RegExp(r'-+'), '-').replaceAll(RegExp(r'^-+|-+$'), '').trim();
-
-    return result;
-  }
-
   static String _fallbackTitle(String title, String path) {
     final String trimmed = title.trim();
-    String result = sanitize(trimmed.isNotEmpty ? trimmed : p.basenameWithoutExtension(path));
-
-    if (result.isEmpty) {
-      return trimmed.isNotEmpty ? trimmed : p.basenameWithoutExtension(path);
-    }
-    return result;
+    return trimmed.isNotEmpty ? trimmed : p.basenameWithoutExtension(path);
   }
 
   static String? _blankToNull(String? value) {

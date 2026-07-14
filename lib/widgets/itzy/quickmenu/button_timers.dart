@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
+import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
@@ -18,15 +19,27 @@ class TimersButton extends StatefulWidget {
   TimersButtonState createState() => TimersButtonState();
 }
 
-class TimersButtonState extends State<TimersButton> {
+class TimersButtonState extends State<TimersButton> with QuickMenuTriggers {
   String remainingTimer = "";
 
   @override
   void initState() {
     Boxes().loadLatestQuickTimers();
+    QuickMenuFunctions.addListener(this);
     super.initState();
     _checkForTimers();
     Timer.periodic(const Duration(seconds: 1), (_) => _checkForTimers());
+  }
+
+  @override
+  void dispose() {
+    QuickMenuFunctions.removeListener(this);
+    super.dispose();
+  }
+
+  @override
+  Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
+    _checkForTimers();
   }
 
   void _checkForTimers() {

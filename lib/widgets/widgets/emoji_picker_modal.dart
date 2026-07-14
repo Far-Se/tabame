@@ -95,6 +95,7 @@ class EmojiPickerModal extends StatefulWidget {
     this.userPredefined = true,
     this.showPanelHeader = true,
     this.quickTip,
+    this.addBackgroundColor = true,
   });
 
   final String title;
@@ -103,6 +104,7 @@ class EmojiPickerModal extends StatefulWidget {
   final VoidCallback? onCloseRequested;
   final bool showPanelHeader;
   final bool userPredefined;
+  final bool addBackgroundColor;
   final String? quickTip;
 
   @override
@@ -224,12 +226,12 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
         }
       },
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 620, maxHeight: 720),
+        constraints: const BoxConstraints(maxHeight: 720), //maxWidth: 620,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(18),
           child: Container(
             decoration: BoxDecoration(
-              color: scheme.surface.withValues(alpha: 0.96),
+              color: widget.addBackgroundColor ? scheme.surface.withValues(alpha: 0.96) : Colors.transparent,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: borderColor, width: 1),
             ),

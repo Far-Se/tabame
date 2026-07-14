@@ -240,7 +240,11 @@ class LauncherModalFrame extends StatelessWidget {
             ),
           ),
         ],
-        child,
+        Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
+            ),
+            child: child),
         // Foreground flourishes.
         if (design == LauncherDesign.terminal)
           Positioned.fill(

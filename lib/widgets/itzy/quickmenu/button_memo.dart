@@ -196,7 +196,6 @@ class MemosWidgetState extends State<MemosWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color surface = Theme.of(context).colorScheme.surface;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final Color accent = Design.accent;
 
@@ -206,7 +205,7 @@ class MemosWidgetState extends State<MemosWidget> {
       constraints: const BoxConstraints(maxHeight: 500),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: surface.withAlpha(216),
+        // color: surface.withAlpha(216),
         border: Border.all(color: onSurface.withAlpha(25), width: 1),
         boxShadow: <BoxShadow>[
           BoxShadow(
@@ -621,8 +620,7 @@ class _MemoCardState extends State<_MemoCard> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (widget.isKeyboardFocused)
-                      Icon(Icons.chevron_right_rounded, size: 18, color: Design.accent),
+                    if (widget.isKeyboardFocused) Icon(Icons.chevron_right_rounded, size: 18, color: Design.accent),
                   ],
                 ),
                 if (widget.message.isNotEmpty) ...<Widget>[

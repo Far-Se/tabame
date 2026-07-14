@@ -174,39 +174,16 @@ class MusicLocalIndexer {
         break;
       }
 
-      File fileToProcess = entity;
-      final String oldPath = fileToProcess.path;
-      final String dir = p.dirname(oldPath);
-      final String base = p.basename(oldPath);
-      final String ext = p.extension(oldPath);
-      final String name = p.basenameWithoutExtension(oldPath);
-
-      final String sanitizedName = MusicLibraryDb.sanitize(name);
-      final String newBase = '$sanitizedName$ext';
-
-      if (base != newBase) {
-        final String newPath = p.join(dir, newBase);
-        try {
-          if (!File(newPath).existsSync()) {
-            fileToProcess = await fileToProcess.rename(newPath);
-          } else {
-            debugPrint('MusicLocalIndexer: rename skipped, destination already exists: $newPath');
-          }
-        } catch (e) {
-          debugPrint('MusicLocalIndexer: rename failed for $oldPath: $e');
-        }
-      }
-
       try {
         final LocalMusicMetadata metadata =
-            await _metadataReader.read(fileToProcess, rootPath: rootPath).timeout(perFileTimeout);
+            await _metadataReader.read(entity, rootPath: rootPath).timeout(perFileTimeout);
         collected.add(metadata);
       } on TimeoutException {
         skipped++;
-        debugPrint('MusicLocalIndexer: timed out reading ${fileToProcess.path}; skipped.');
+        debugPrint('MusicLocalIndexer: timed out reading ${entity.path}; skipped.');
       } catch (e) {
         skipped++;
-        debugPrint('MusicLocalIndexer: skipped ${fileToProcess.path}: $e');
+        debugPrint('MusicLocalIndexer: skipped ${entity.path}: $e');
       }
 
       processed++;

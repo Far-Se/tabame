@@ -905,6 +905,7 @@ class HotKeyActionState extends State<HotKeyAction> {
       );
     } else if (action.type == ActionType.tabameFunction) {
       return ModernDropdown<String>(
+        showSearch: true,
         value: HotKeyInfo.tabameFunctions.contains(action.value) ? action.value : HotKeyInfo.tabameFunctions[0],
         onChanged: (String? newValue) => setState(() => action.value = newValue ?? HotKeyInfo.tabameFunctions[0]),
         items: HotKeyInfo.tabameFunctions
@@ -915,6 +916,7 @@ class HotKeyActionState extends State<HotKeyAction> {
       return Material(
         type: MaterialType.transparency,
         child: ModernDropdown<String>(
+          showSearch: true,
           value: HotKeyInfo.quickMenuPopups.contains(action.value) ? action.value : HotKeyInfo.quickMenuPopups[0],
           onChanged: (String? newValue) => setState(() => action.value = newValue ?? HotKeyInfo.quickMenuPopups[0]),
           items: HotKeyInfo.quickMenuPopups.map((String v) => ModernDropdownItem<String>(value: v, label: v)).toList(),

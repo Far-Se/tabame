@@ -132,7 +132,7 @@ class ShutDownWidgetState extends State<ShutDownWidget> with QuickMenuTriggers {
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: scheme.surface.withValues(alpha: 0.6),
+                      color: scheme.surface.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
                     ),
@@ -181,7 +181,7 @@ class ShutDownWidgetState extends State<ShutDownWidget> with QuickMenuTriggers {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(22),
-                      color: scheme.surface.withValues(alpha: 0.58),
+                      color: scheme.surface.withValues(alpha: 0.3),
                       border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
                     ),
                     child: Row(

@@ -433,7 +433,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: onSurface.withAlpha(15),
+            // color: onSurface.withAlpha(15),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: onSurface.withAlpha(20)),
           ),
@@ -460,7 +460,6 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final Color surface = Theme.of(context).colorScheme.surface;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final Color accent = Design.accent;
 
@@ -469,7 +468,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: surface.withAlpha(216),
+          // color: surface.withAlpha(216),
           border: Border.all(color: onSurface.withAlpha(25), width: 1),
         ),
         child: Column(

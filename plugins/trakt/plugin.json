@@ -1,0 +1,10 @@
+{
+  "id": "trakt",
+  "name": "Trakt",
+  "keyword": "trakt",
+  "description": "Search movies & shows, browse trending/popular, and manage your Trakt watchlist, history & calendar.",
+  "icon": "video",
+  "runtime": "node",
+  "entry": "main.js",
+  "args": []
+}

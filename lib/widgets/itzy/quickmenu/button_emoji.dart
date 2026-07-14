@@ -30,6 +30,7 @@ class EmojiButton extends StatelessWidget {
         onEmojiSelected: _handleEmojiSelected,
         userPredefined: false,
         onCloseRequested: _closeEmojiPicker,
+        addBackgroundColor: false,
       ),
     );
   }

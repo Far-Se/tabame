@@ -405,7 +405,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: theme.colorScheme.surface.withAlpha(220),
+          // color: theme.colorScheme.surface.withAlpha(220),
           border: Border.all(color: onSurface.withAlpha(22), width: 1),
         ),
         child: Column(

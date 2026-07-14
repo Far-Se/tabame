@@ -1071,7 +1071,7 @@ class HotKeyInfo {
         QuickMenuFunctions.hideQuickMenu();
       });
     },
-    "showLastWindowUnderCursor": () {
+    "ShowLastWindowUnderCursor": () {
       QuickMenuFunctions.hideQuickMenu();
       WindowWatcher.showLastWindowUnderCursor();
       Future<void>.delayed(const Duration(milliseconds: 320), () {

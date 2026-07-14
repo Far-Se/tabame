@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'custom_tooltip.dart';
+import 'windows_scroll.dart';
 
 class ModernDropdownItem<T> {
   final T value;
@@ -23,6 +24,9 @@ class ModernDropdown<T> extends StatelessWidget {
   final double height;
   final double itemHeight;
 
+  // Shows a search field on top of the popup that filters the visible results.
+  final bool showSearch;
+
   // Custom decoration parameters
   final BoxDecoration? decoration;
   final ShapeBorder? dropdownMenuEntriesShape;
@@ -37,6 +41,7 @@ class ModernDropdown<T> extends StatelessWidget {
     this.height = 48,
     this.itemHeight = 40,
     this.isExpanded = true,
+    this.showSearch = false,
     this.decoration,
     this.dropdownMenuEntriesShape,
   });
@@ -89,34 +94,55 @@ class ModernDropdown<T> extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             shadowColor: Colors.black.withAlpha(100),
             position: PopupMenuPosition.under,
-            itemBuilder: (BuildContext context) => items.map((ModernDropdownItem<T> item) {
-              final bool isSelected = item.value == value;
-              return PopupMenuItem<T>(
-                value: item.value,
-                height: itemHeight,
-                child: Row(
-                  children: <Widget>[
-                    if (item.icon != null) ...<Widget>[
-                      Icon(
-                        item.icon,
-                        size: 18,
-                        color: isSelected ? colors.primary : colors.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    Text(
-                      item.label,
-                      style: texts.bodyMedium?.copyWith(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected ? colors.primary : colors.onSurface,
-                      ),
+            itemBuilder: (BuildContext context) {
+              if (showSearch) {
+                return <PopupMenuEntry<T>>[
+                  PopupMenuItem<T>(
+                    enabled: false,
+                    padding: EdgeInsets.zero,
+                    child: _SearchableDropdownContent<T>(
+                      items: items,
+                      value: value,
+                      itemHeight: itemHeight,
+                      colors: colors,
+                      texts: texts,
+                      onSelected: (T selected) {
+                        Navigator.of(context).pop();
+                        onChanged(selected);
+                      },
                     ),
-                    const Spacer(),
-                    if (isSelected) Icon(Icons.check_rounded, size: 16, color: colors.primary),
-                  ],
-                ),
-              );
-            }).toList(),
+                  ),
+                ];
+              }
+              return items.map((ModernDropdownItem<T> item) {
+                final bool isSelected = item.value == value;
+                return PopupMenuItem<T>(
+                  value: item.value,
+                  height: itemHeight,
+                  child: Row(
+                    children: <Widget>[
+                      if (item.icon != null) ...<Widget>[
+                        Icon(
+                          item.icon,
+                          size: 18,
+                          color: isSelected ? colors.primary : colors.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      Text(
+                        item.label,
+                        style: texts.bodyMedium?.copyWith(
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? colors.primary : colors.onSurface,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (isSelected) Icon(Icons.check_rounded, size: 16, color: colors.primary),
+                    ],
+                  ),
+                );
+              }).toList();
+            },
             child: Container(
               height: height,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -146,6 +172,163 @@ class ModernDropdown<T> extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SearchableDropdownContent<T> extends StatefulWidget {
+  final List<ModernDropdownItem<T>> items;
+  final T value;
+  final double itemHeight;
+  final ColorScheme colors;
+  final TextTheme texts;
+  final void Function(T selected) onSelected;
+
+  const _SearchableDropdownContent({
+    super.key,
+    required this.items,
+    required this.value,
+    required this.itemHeight,
+    required this.colors,
+    required this.texts,
+    required this.onSelected,
+  });
+
+  @override
+  State<_SearchableDropdownContent<T>> createState() => _SearchableDropdownContentState<T>();
+}
+
+class _SearchableDropdownContentState<T> extends State<_SearchableDropdownContent<T>> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  String _query = "";
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  // Measures the widest label so the popup is wide enough to avoid ellipsis,
+  // clamped to a sensible min/max range.
+  double _contentWidth(TextTheme texts) {
+    double widest = 0;
+    final TextStyle? style = texts.bodyMedium;
+    for (final ModernDropdownItem<T> item in widget.items) {
+      final TextPainter painter = TextPainter(
+        text: TextSpan(text: item.label, style: style),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      // label + optional icon (18 + 12) + trailing check (16) + row/container padding.
+      double itemWidth = painter.width + 24 + 16 + 8;
+      if (item.icon != null) itemWidth += 30;
+      if (itemWidth > widest) widest = itemWidth;
+    }
+    return widest.clamp(200.0, 400.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = widget.colors;
+    final TextTheme texts = widget.texts;
+
+    final List<ModernDropdownItem<T>> filtered = _query.isEmpty
+        ? widget.items
+        : widget.items.where((ModernDropdownItem<T> item) => item.label.toLowerCase().contains(_query.toLowerCase())).toList();
+
+    return SizedBox(
+      width: _contentWidth(texts),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              style: texts.bodyMedium,
+              onChanged: (String value) => setState(() => _query = value),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: "Search...",
+                prefixIcon: Icon(Icons.search_rounded, size: 18, color: colors.onSurfaceVariant),
+                prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: colors.outlineVariant.withAlpha(100)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: colors.outlineVariant.withAlpha(100)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: colors.primary),
+                ),
+              ),
+            ),
+          ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 240),
+            child: filtered.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      "No results",
+                      style: texts.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+                    ),
+                  )
+                : WindowsScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: filtered.map((ModernDropdownItem<T> item) {
+                        final bool isSelected = item.value == widget.value;
+                        return InkWell(
+                          onTap: () => widget.onSelected(item.value),
+                          child: Container(
+                            height: widget.itemHeight,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Row(
+                              children: <Widget>[
+                                if (item.icon != null) ...<Widget>[
+                                  Icon(
+                                    item.icon,
+                                    size: 18,
+                                    color: isSelected ? colors.primary : colors.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 12),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    item.label,
+                                    style: texts.bodyMedium?.copyWith(
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      color: isSelected ? colors.primary : colors.onSurface,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (isSelected) Icon(Icons.check_rounded, size: 16, color: colors.primary),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
