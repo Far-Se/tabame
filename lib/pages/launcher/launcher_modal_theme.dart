@@ -159,13 +159,20 @@ class LauncherModalFrame extends StatelessWidget {
     super.key,
     required this.tokens,
     required this.width,
-    required this.maxHeight,
+    this.maxHeight = double.infinity,
+    this.constraints,
+    this.margin = const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
     required this.child,
   });
 
   final LauncherModalTokens tokens;
   final double width;
   final double maxHeight;
+
+  /// Overrides the [maxHeight]-derived constraints when provided (used by the
+  /// QuickMenu popup frame, which also carries a minHeight).
+  final BoxConstraints? constraints;
+  final EdgeInsetsGeometry margin;
   final Widget child;
 
   @override
@@ -292,8 +299,8 @@ class LauncherModalFrame extends StatelessWidget {
 
     return Container(
       width: width,
-      constraints: BoxConstraints(maxHeight: maxHeight),
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+      constraints: constraints ?? BoxConstraints(maxHeight: maxHeight),
+      margin: margin,
       decoration: design.outerDecoration(surface: tokens.surface, accent: accent),
       child: ClipRRect(borderRadius: radius, child: core),
     );

@@ -10,6 +10,7 @@ import '../globals.dart';
 import '../settings.dart';
 import '../theme.dart';
 import '../win32/win32.dart';
+import 'quickmenu_modal_theme.dart';
 
 /// Standardized modal bottom sheet for QuickMenu buttons.
 /// Provides a blurred background and standard layout constraints.
@@ -48,9 +49,8 @@ Future<void> showQuickMenuModal({
           final ThemeData modalTheme = user.themeTypeMode == ThemeType.dark
               ? AppTheme.getDarkThemeData(context)
               : AppTheme.getLightThemeData(context);
-          final ColorScheme scheme = modalTheme.colorScheme;
-          final Color surface = scheme.surface;
           final Animation<double>? animation = ModalRoute.of(context)?.animation;
+          final double frameWidth = maxWidth!;
 
           final Widget modalChild = Focus(
             autofocus: true,
@@ -103,49 +103,14 @@ Future<void> showQuickMenuModal({
                         },
                         child: Padding(
                           padding: const EdgeInsets.all(2.0).copyWith(top: 0),
-                          child: Container(
-                            width: maxWidth,
+                          child: QuickMenuModalFrame(
+                            width: frameWidth,
                             constraints: BoxConstraints(
                                 maxHeight: 520,
                                 minHeight: Globals.quickMenuPage == QuickMenuPage.launcher
                                     ? Globals.launcherCurrentSize.height + 10
                                     : Globals.quickMenuCurrentHeight),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              color: surface.withValues(
-                                  alpha:
-                                      Globals.quickMenuPage == QuickMenuPage.launcher && user.launcherFullPopups
-                                          ? 1
-                                          : switch (QuickMenuDesigns.values[user.quickMenuDesign]) {
-                                              QuickMenuDesigns.modern => 0.95,
-                                              QuickMenuDesigns.classic => 0.88,
-                                              QuickMenuDesigns.interface => 0.93,
-                                              // ignore: unreachable_switch_case
-                                              _ => 0.95,
-                                            }),
-                              border: Border(
-                                top: BorderSide(color: scheme.onSurface.withValues(alpha: 0.12), width: 0.5),
-                                left: BorderSide(color: scheme.onSurface.withValues(alpha: 0.12), width: 0.5),
-                                right: BorderSide(color: scheme.onSurface.withValues(alpha: 0.12), width: 0.5),
-                                bottom: BorderSide.none,
-                              ),
-                              boxShadow: true
-                                  ? null
-                                  // ignore: dead_code
-                                  : <BoxShadow>[
-                                      BoxShadow(
-                                        color: Colors.black.withAlpha(45),
-                                        blurRadius: 25,
-                                        offset: const Offset(0, 10),
-                                      ),
-                                      BoxShadow(
-                                        color: Colors.black.withAlpha(30),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                            ),
-                            child: ClipRRect(borderRadius: BorderRadius.circular(16), child: child),
+                            child: child,
                           ),
                         )),
                   ),
