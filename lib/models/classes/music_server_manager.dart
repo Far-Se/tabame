@@ -38,16 +38,163 @@ class MusicServerManager {
   static String? _lastRecordedLocalPlayKey;
   static final ValueNotifier<bool> shuffleEnabledNotifier = ValueNotifier<bool>(false);
 
+  // Playback preferences (persisted across restarts in a manager-owned prefs file
+  // rather than the shared settings.json, so frequent slider writes stay isolated).
+  static const double minSpeed = 0.5;
+  static const double maxSpeed = 2.0;
+  static final ValueNotifier<double> volumeNotifier = ValueNotifier<double>(1.0);
+  static final ValueNotifier<double> speedNotifier = ValueNotifier<double>(1.0);
+  static double _volumeBeforeMute = 1.0;
+  static Timer? _prefsSaveDebounce;
+
+  // Sleep timer state. Kept in the manager so it survives the QuickMenu closing.
+  static Timer? _sleepTimer;
+  static Timer? _sleepTicker;
+  static DateTime? _sleepEndsAt;
+  static bool _sleepEndOfTrack = false;
+  static StreamSubscription<int?>? _sleepIndexSub;
+  static StreamSubscription<ProcessingState>? _sleepProcSub;
+  static final ValueNotifier<Duration?> sleepRemainingNotifier = ValueNotifier<Duration?>(null);
+
+  static String get _playbackPrefsPath =>
+      "${WinUtils.getTabameAppDataFolder(settings: true)}\\music_playback_prefs.json";
+
   static List<MusicServerConfig> get configs => _configs;
   static String? get activeConfigId => _activeConfigId;
   static bool get isConnected => _isConnected;
   static bool get isLocalActive => _activeConfigId == localSourceId;
   static List<MusicItem> get queue => List<MusicItem>.unmodifiable(_queue);
   static bool get shuffleEnabled => shuffleEnabledNotifier.value;
+  static bool get sleepTimerActive => _sleepEndsAt != null || _sleepEndOfTrack;
+  static bool get sleepEndOfTrack => _sleepEndOfTrack;
 
   static Future<void> setShuffleEnabled(bool enabled) async {
     shuffleEnabledNotifier.value = enabled;
     await player.setShuffleModeEnabled(enabled);
+  }
+
+  // Volume / mute -------------------------------------------------------------
+
+  static Future<void> setVolume(double volume) async {
+    final double v = volume.clamp(0.0, 1.0);
+    volumeNotifier.value = v;
+    try {
+      await player.setVolume(v);
+    } catch (e) {
+      debugPrint("MusicServerManager.setVolume error: $e");
+    }
+    _savePlaybackPrefsDebounced();
+  }
+
+  static Future<void> nudgeVolume(double delta) => setVolume(volumeNotifier.value + delta);
+
+  /// Toggles between silence and the last non-zero volume.
+  static Future<void> toggleMute() async {
+    if (volumeNotifier.value > 0) {
+      _volumeBeforeMute = volumeNotifier.value;
+      await setVolume(0);
+    } else {
+      await setVolume(_volumeBeforeMute <= 0 ? 1.0 : _volumeBeforeMute);
+    }
+  }
+
+  // Playback speed ------------------------------------------------------------
+
+  static Future<void> setSpeed(double speed) async {
+    final double s = speed.clamp(minSpeed, maxSpeed);
+    speedNotifier.value = s;
+    try {
+      await player.setSpeed(s);
+    } catch (e) {
+      debugPrint("MusicServerManager.setSpeed error: $e");
+    }
+    _savePlaybackPrefsDebounced();
+  }
+
+  // Prefs persistence ---------------------------------------------------------
+
+  static Future<void> _loadPlaybackPrefs() async {
+    try {
+      final File file = File(_playbackPrefsPath);
+      if (!file.existsSync()) return;
+      final dynamic decoded = jsonDecode(await file.readAsString());
+      if (decoded is! Map<String, dynamic>) return;
+      final double volume = (decoded['volume'] as num?)?.toDouble() ?? 1.0;
+      final double speed = (decoded['speed'] as num?)?.toDouble() ?? 1.0;
+      volumeNotifier.value = volume.clamp(0.0, 1.0);
+      speedNotifier.value = speed.clamp(minSpeed, maxSpeed);
+      _volumeBeforeMute = volumeNotifier.value > 0 ? volumeNotifier.value : 1.0;
+    } catch (e) {
+      debugPrint("MusicServerManager._loadPlaybackPrefs error: $e");
+    }
+  }
+
+  static void _savePlaybackPrefsDebounced() {
+    _prefsSaveDebounce?.cancel();
+    _prefsSaveDebounce = Timer(const Duration(milliseconds: 600), () => unawaited(_savePlaybackPrefs()));
+  }
+
+  static Future<void> _savePlaybackPrefs() async {
+    try {
+      final File file = File(_playbackPrefsPath);
+      if (!file.existsSync()) await file.create(recursive: true);
+      await file.writeAsString(jsonEncode(<String, dynamic>{
+        'volume': volumeNotifier.value,
+        'speed': speedNotifier.value,
+      }));
+    } catch (e) {
+      debugPrint("MusicServerManager._savePlaybackPrefs error: $e");
+    }
+  }
+
+  // Sleep timer ---------------------------------------------------------------
+
+  /// Pauses playback after [duration] elapses, counting down every second.
+  static void startSleepTimer(Duration duration) {
+    cancelSleepTimer();
+    if (duration <= Duration.zero) return;
+    _sleepEndsAt = DateTime.now().add(duration);
+    sleepRemainingNotifier.value = duration;
+    _sleepTimer = Timer(duration, _fireSleep);
+    _sleepTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      final DateTime? endsAt = _sleepEndsAt;
+      if (endsAt == null) return;
+      final Duration remaining = endsAt.difference(DateTime.now());
+      sleepRemainingNotifier.value = remaining.isNegative ? Duration.zero : remaining;
+    });
+  }
+
+  /// Pauses playback once the current track finishes.
+  static void startSleepAtEndOfTrack() {
+    cancelSleepTimer();
+    _sleepEndOfTrack = true;
+    sleepRemainingNotifier.value = null;
+    final int startIndex = player.currentIndex ?? 0;
+    _sleepIndexSub = player.currentIndexStream.listen((int? index) {
+      if (index != null && index != startIndex) _fireSleep();
+    });
+    _sleepProcSub = player.processingStateStream.listen((ProcessingState state) {
+      if (state == ProcessingState.completed) _fireSleep();
+    });
+  }
+
+  static void _fireSleep() {
+    cancelSleepTimer();
+    unawaited(player.pause());
+  }
+
+  static void cancelSleepTimer() {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    _sleepTicker?.cancel();
+    _sleepTicker = null;
+    unawaited(_sleepIndexSub?.cancel());
+    _sleepIndexSub = null;
+    unawaited(_sleepProcSub?.cancel());
+    _sleepProcSub = null;
+    _sleepEndsAt = null;
+    _sleepEndOfTrack = false;
+    sleepRemainingNotifier.value = null;
   }
 
   // just_audio_windows drops shuffle mode on track navigation/queue reload; reassert our
@@ -85,6 +232,13 @@ class MusicServerManager {
       await setActiveServer(def);
     }
     _setupPlayerListeners();
+    await _loadPlaybackPrefs();
+    try {
+      await player.setVolume(volumeNotifier.value);
+      await player.setSpeed(speedNotifier.value);
+    } catch (e) {
+      debugPrint("MusicServerManager.init apply prefs error: $e");
+    }
     wasInitiated = true;
   }
 
@@ -896,6 +1050,70 @@ class MusicServerManager {
 
     await _loadQueue(playable, initialIndex: resolvedInitialIndex, play: true);
     await saveCurrentQueue();
+  }
+
+  static List<AudioSource> _toAudioSources(List<MusicItem> items) => items
+      .map((MusicItem item) => AudioSource.uri(Uri.parse(item.streamUrl!), tag: item))
+      .toList(growable: false);
+
+  /// Appends [items] to the end of the current queue. Starts a fresh queue when
+  /// nothing is playing.
+  static Future<void> addToQueue(List<MusicItem> items) async {
+    final List<MusicItem> playable = await _resolvePlayableQueueItems(items);
+    if (playable.isEmpty) return;
+    if (player.sequence.isEmpty) {
+      await playQueue(playable);
+      return;
+    }
+    try {
+      await player.addAudioSources(_toAudioSources(playable));
+      _queue = _currentPlaybackQueue();
+      await saveCurrentQueue();
+    } catch (e) {
+      debugPrint("MusicServerManager.addToQueue error: $e");
+    }
+  }
+
+  /// Inserts [items] immediately after the current track. Starts a fresh queue
+  /// when nothing is playing.
+  static Future<void> playNext(List<MusicItem> items) async {
+    final List<MusicItem> playable = await _resolvePlayableQueueItems(items);
+    if (playable.isEmpty) return;
+    if (player.sequence.isEmpty) {
+      await playQueue(playable);
+      return;
+    }
+    try {
+      final int insertAt = ((player.currentIndex ?? -1) + 1).clamp(0, player.sequence.length);
+      await player.insertAudioSources(insertAt, _toAudioSources(playable));
+      _queue = _currentPlaybackQueue();
+      await saveCurrentQueue();
+    } catch (e) {
+      debugPrint("MusicServerManager.playNext error: $e");
+    }
+  }
+
+  static Future<void> removeFromQueueAt(int index) async {
+    if (index < 0 || index >= player.sequence.length) return;
+    try {
+      await player.removeAudioSourceAt(index);
+      _queue = _currentPlaybackQueue();
+      await saveCurrentQueue();
+    } catch (e) {
+      debugPrint("MusicServerManager.removeFromQueueAt error: $e");
+    }
+  }
+
+  static Future<void> moveQueueItem(int oldIndex, int newIndex) async {
+    final int length = player.sequence.length;
+    if (oldIndex < 0 || oldIndex >= length || newIndex < 0 || newIndex >= length || oldIndex == newIndex) return;
+    try {
+      await player.moveAudioSource(oldIndex, newIndex);
+      _queue = _currentPlaybackQueue();
+      await saveCurrentQueue();
+    } catch (e) {
+      debugPrint("MusicServerManager.moveQueueItem error: $e");
+    }
   }
 
   static Future<void> _loadQueue(List<MusicItem> playable, {required int initialIndex, required bool play}) async {

@@ -579,38 +579,78 @@ class _PlaylistPickerRow extends StatelessWidget {
   }
 }
 
-class _CompactQueueRow extends StatelessWidget {
-  const _CompactQueueRow({required this.item, required this.active, required this.onTap});
+class _QueueEditRow extends StatelessWidget {
+  const _QueueEditRow({
+    super.key,
+    required this.item,
+    required this.active,
+    required this.onTap,
+    required this.onRemove,
+    required this.reorderable,
+    this.index,
+  });
 
   final MusicItem item;
   final bool active;
-
   final VoidCallback onTap;
+  final VoidCallback onRemove;
+  final bool reorderable;
+  final int? index;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-        child: Row(
-          children: <Widget>[
-            _CoverArt(item: item, size: 24),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(_queueLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: Design.baseFontSize + 1.5,
-                      fontWeight: active ? FontWeight.w800 : FontWeight.w500,
-                      color: active
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Theme.of(context).colorScheme.onSurface.withAlpha(155))),
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    return SizedBox(
+      height: 40,
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                child: Row(
+                  children: <Widget>[
+                    _CoverArt(item: item, size: 24),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(_queueLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: Design.baseFontSize + 1.5,
+                              fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+                              color: active ? onSurface : onSurface.withAlpha(155))),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ],
-        ),
+          ),
+          Tooltip(
+            message: "Remove from queue",
+            child: InkWell(
+              onTap: onRemove,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Icon(Icons.close_rounded, size: 15, color: onSurface.withAlpha(130)),
+              ),
+            ),
+          ),
+          if (reorderable && index != null)
+            ReorderableDragStartListener(
+              index: index!,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.grab,
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(Icons.drag_handle_rounded, size: 16, color: onSurface.withAlpha(110)),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

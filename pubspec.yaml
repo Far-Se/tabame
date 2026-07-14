@@ -31,7 +31,11 @@ dependencies:
   image: ^4.8.0
   intl: ^0.20.2
   just_audio: ^0.10.5
-  just_audio_windows: ^0.2.3
+  just_audio_windows:
+    git:
+      url: https://github.com/Far-Se/just_audio_windows.git
+      ref: master
+      path: just_audio_windows
   local_notifier: ^0.1.5
   markdown_widget: ^2.3.2+8
   math_parser: ^1.5.0

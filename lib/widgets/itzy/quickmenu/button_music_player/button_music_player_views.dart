@@ -189,7 +189,11 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                                   _buildTimeline(accent, item),
                                   const SizedBox(height: 8),
                                   _buildTransport(accent, sequenceState, item),
-                                  const SizedBox(height: 16),
+                                  const SizedBox(height: 12),
+                                  _buildVolumeBar(accent),
+                                  const SizedBox(height: 10),
+                                  _buildUtilityRow(accent),
+                                  const SizedBox(height: 14),
                                   _buildQueueButton(accent, queueLength, currentIndex),
                                 ],
                               ),
@@ -382,6 +386,235 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
         ],
       ),
     );
+  }
+
+  Widget _buildVolumeBar(Color accent) {
+    return ValueListenableBuilder<double>(
+      valueListenable: MusicServerManager.volumeNotifier,
+      builder: (BuildContext context, double volume, _) {
+        final double clamped = volume.clamp(0.0, 1.0);
+        final IconData icon = clamped <= 0
+            ? Icons.volume_off_rounded
+            : clamped < 0.5
+                ? Icons.volume_down_rounded
+                : Icons.volume_up_rounded;
+        final Color onSurface = Theme.of(context).colorScheme.onSurface;
+        return Row(
+          children: <Widget>[
+            Tooltip(
+              message: clamped <= 0 ? "Unmute" : "Mute",
+              child: _MiniIconButton(icon: icon, onTap: MusicServerManager.toggleMute),
+            ),
+            Expanded(
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 3.5,
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5.5),
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                  activeTrackColor: accent,
+                  inactiveTrackColor: accent.withAlpha(35),
+                  thumbColor: accent,
+                  overlayColor: accent.withAlpha(28),
+                  trackShape: const RoundedRectSliderTrackShape(),
+                ),
+                child: Slider(
+                  min: 0,
+                  max: 1,
+                  value: clamped,
+                  padding: EdgeInsets.zero,
+                  onChanged: (double next) => MusicServerManager.setVolume(next),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 32,
+              child: Text(
+                "${(clamped * 100).round()}%",
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontSize: Design.baseFontSize,
+                  fontWeight: FontWeight.w700,
+                  color: onSurface.withAlpha(150),
+                  fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildUtilityRow(Color accent) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        Expanded(child: _buildSpeedControl(accent)),
+        const SizedBox(width: 8),
+        Expanded(child: _buildSleepControl(accent)),
+      ],
+    );
+  }
+
+  Widget _buildSpeedControl(Color accent) {
+    const List<double> presets = <double>[0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+    return ValueListenableBuilder<double>(
+      valueListenable: MusicServerManager.speedNotifier,
+      builder: (BuildContext context, double speed, _) {
+        final bool active = (speed - 1.0).abs() > 0.001;
+        return PopupMenuButton<double>(
+          position: PopupMenuPosition.under,
+          tooltip: "Playback speed",
+          color: Color.alphaBlend(Design.accent.withAlpha(16), Theme.of(context).colorScheme.surface),
+          surfaceTintColor: Design.accent.withAlpha(30),
+          elevation: 8,
+          borderRadius: BorderRadius.circular(16),
+          onSelected: (double value) => MusicServerManager.setSpeed(value),
+          itemBuilder: (BuildContext context) => presets
+              .map(
+                (double value) => _speedMenuItem(value, (value - speed).abs() < 0.001),
+              )
+              .toList(growable: false),
+          child: _controlPill(
+            icon: Icons.speed_rounded,
+            label: "${_formatSpeed(speed)}×",
+            active: active,
+            accent: accent,
+          ),
+        );
+      },
+    );
+  }
+
+  PopupMenuItem<double> _speedMenuItem(double value, bool selected) {
+    return PopupMenuItem<double>(
+      value: value,
+      height: 34,
+      child: Row(
+        children: <Widget>[
+          Icon(selected ? Icons.check_rounded : Icons.speed_rounded,
+              size: 16, color: selected ? Design.accent : Design.accent.withAlpha(150)),
+          const SizedBox(width: 9),
+          Text("${_formatSpeed(value)}×",
+              style: TextStyle(
+                  fontSize: Design.baseFontSize + 2,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSleepControl(Color accent) {
+    return ValueListenableBuilder<Duration?>(
+      valueListenable: MusicServerManager.sleepRemainingNotifier,
+      builder: (BuildContext context, Duration? remaining, _) {
+        final bool active = MusicServerManager.sleepTimerActive;
+        final String label = !active
+            ? "Sleep"
+            : remaining != null
+                ? _formatDuration(remaining)
+                : "End";
+        return PopupMenuButton<int>(
+          position: PopupMenuPosition.under,
+          tooltip: "Sleep timer",
+          color: Color.alphaBlend(Design.accent.withAlpha(16), Theme.of(context).colorScheme.surface),
+          surfaceTintColor: Design.accent.withAlpha(30),
+          elevation: 8,
+          borderRadius: BorderRadius.circular(16),
+          onSelected: _onSleepSelected,
+          itemBuilder: (BuildContext context) => <PopupMenuEntry<int>>[
+            _sleepMenuItem(Icons.timer_outlined, "15 minutes", 15),
+            _sleepMenuItem(Icons.timer_outlined, "30 minutes", 30),
+            _sleepMenuItem(Icons.timer_outlined, "45 minutes", 45),
+            _sleepMenuItem(Icons.timer_outlined, "60 minutes", 60),
+            _sleepMenuItem(Icons.music_note_rounded, "End of track", -1),
+            if (active) ...<PopupMenuEntry<int>>[
+              const PopupMenuDivider(),
+              _sleepMenuItem(Icons.timer_off_rounded, "Turn off", 0),
+            ],
+          ],
+          child: _controlPill(
+            icon: active ? Icons.bedtime_rounded : Icons.bedtime_outlined,
+            label: label,
+            active: active,
+            accent: accent,
+          ),
+        );
+      },
+    );
+  }
+
+  void _onSleepSelected(int value) {
+    if (value == 0) {
+      MusicServerManager.cancelSleepTimer();
+      _showInfo("Sleep timer off.");
+    } else if (value == -1) {
+      MusicServerManager.startSleepAtEndOfTrack();
+      _showInfo("Will pause at end of track.");
+    } else {
+      MusicServerManager.startSleepTimer(Duration(minutes: value));
+      _showInfo("Pausing in $value minutes.");
+    }
+  }
+
+  PopupMenuItem<int> _sleepMenuItem(IconData icon, String label, int value) {
+    return PopupMenuItem<int>(
+      value: value,
+      height: 34,
+      child: Row(
+        children: <Widget>[
+          Icon(icon, size: 16, color: Design.accent),
+          const SizedBox(width: 9),
+          Text(label, style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+
+  Widget _controlPill({
+    required IconData icon,
+    required String label,
+    required bool active,
+    required Color accent,
+  }) {
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    return Container(
+      height: 34,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: active ? accent.withAlpha(22) : onSurface.withAlpha(8),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: active ? accent.withAlpha(90) : onSurface.withAlpha(20)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(icon, size: 15, color: active ? accent : onSurface.withAlpha(150)),
+          const SizedBox(width: 7),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: Design.baseFontSize + 1,
+                fontWeight: FontWeight.w700,
+                color: active ? accent : onSurface.withAlpha(170),
+                fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatSpeed(double speed) {
+    if (speed == speed.roundToDouble()) return speed.toStringAsFixed(0);
+    String text = speed.toStringAsFixed(2);
+    if (text.endsWith('0')) text = text.substring(0, text.length - 1);
+    return text;
   }
 
   Widget _buildTimeline(Color accent, MusicItem item) {
@@ -709,6 +942,90 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
     );
   }
 
+  Widget _buildQueueList(List<_QueueEntry> entries, int currentIndex, {required bool reorderable}) {
+    if (!reorderable) {
+      return ClipRRect(
+        child: Material(
+          type: MaterialType.transparency,
+          child: ListView.builder(
+            itemCount: entries.length,
+            itemExtent: 40,
+            scrollCacheExtent: const ScrollCacheExtent.pixels(160),
+            itemBuilder: (BuildContext context, int index) {
+              final _QueueEntry entry = entries[index];
+              return _QueueEditRow(
+                key: ValueKey<String>('q_${entry.index}_${entry.item.id}'),
+                item: entry.item,
+                active: entry.index == currentIndex,
+                reorderable: false,
+                onTap: () => MusicServerManager.player.seek(Duration.zero, index: entry.index),
+                onRemove: () => _removeFromQueue(entry.index),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      child: Material(
+        type: MaterialType.transparency,
+        child: ReorderableListView.builder(
+          buildDefaultDragHandles: false,
+          itemCount: entries.length,
+          onReorderItem: (int oldIndex, int newIndex) {
+            if (oldIndex == newIndex) return;
+            unawaited(MusicServerManager.moveQueueItem(entries[oldIndex].index, entries[newIndex].index));
+          },
+          itemBuilder: (BuildContext context, int index) {
+            final _QueueEntry entry = entries[index];
+            return _QueueEditRow(
+              key: ValueKey<String>('q_${entry.index}_${entry.item.id}'),
+              index: index,
+              item: entry.item,
+              active: entry.index == currentIndex,
+              reorderable: true,
+              onTap: () => MusicServerManager.player.seek(Duration.zero, index: entry.index),
+              onRemove: () => _removeFromQueue(entry.index),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _removeFromQueue(int index) async {
+    // The sequenceStateStream drives the rebuild once the source is removed.
+    await MusicServerManager.removeFromQueueAt(index);
+  }
+
+  Future<void> _queueTrack(MusicItem item, {required bool next}) async {
+    if (item.isFolder) return;
+    if (next) {
+      await MusicServerManager.playNext(<MusicItem>[item]);
+      _showInfo("Playing next: ${item.title}.");
+    } else {
+      await MusicServerManager.addToQueue(<MusicItem>[item]);
+      _showInfo("Added to queue: ${item.title}.");
+    }
+  }
+
+  List<_RowAction> _trackQueueActions(MusicItem item) {
+    if (item.isFolder) return const <_RowAction>[];
+    return <_RowAction>[
+      _RowAction(
+        icon: Icons.playlist_play_rounded,
+        tooltip: "Play next",
+        onTap: () => _queueTrack(item, next: true),
+      ),
+      _RowAction(
+        icon: Icons.queue_music_rounded,
+        tooltip: "Add to queue",
+        onTap: () => _queueTrack(item, next: false),
+      ),
+    ];
+  }
+
   Widget _buildQueuePreview(Color accent, SequenceState? sequenceState) {
     final List<IndexedAudioSource> sequence = sequenceState?.sequence ?? <IndexedAudioSource>[];
     if (sequence.isEmpty) return const SizedBox.shrink();
@@ -778,25 +1095,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                             title: "No queue matches",
                             subtitle: "Try another artist, album, or title.",
                           )
-                        : ClipRRect(
-                            child: Material(
-                              type: MaterialType.transparency,
-                              child: ListView.builder(
-                                itemCount: visibleEntries.length,
-                                itemExtent: 36,
-                                // cacheExtent: 144,
-                                scrollCacheExtent: const ScrollCacheExtent.pixels(144),
-                                itemBuilder: (BuildContext context, int index) {
-                                  final _QueueEntry entry = visibleEntries[index];
-                                  return _CompactQueueRow(
-                                    item: entry.item,
-                                    active: entry.index == currentIndex,
-                                    onTap: () => MusicServerManager.player.seek(Duration.zero, index: entry.index),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
+                        : _buildQueueList(visibleEntries, currentIndex, reorderable: query.isEmpty),
                   ),
                 ],
               ),
@@ -950,6 +1249,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                     tooltip: "Shuffle",
                     onTap: () => _playLibraryItem(item, shuffle: true),
                   ),
+                ..._trackQueueActions(item),
                 if (!item.isFolder && playlistId != null)
                   _RowAction(
                     icon: Icons.delete_outline_rounded,
@@ -986,6 +1286,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                   tooltip: "Shuffle",
                   onTap: () => _playLibraryItem(item, shuffle: true),
                 ),
+              ..._trackQueueActions(item),
             ],
           ),
         );
@@ -1028,6 +1329,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                 tooltip: "Shuffle folder",
                 onTap: () => _playFolder(item, shuffle: true),
               ),
+            ..._trackQueueActions(item),
           ],
         );
       },

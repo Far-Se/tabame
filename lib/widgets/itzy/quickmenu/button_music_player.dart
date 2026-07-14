@@ -97,10 +97,9 @@ class _MusicServerButtonState extends State<MusicServerButton> {
 
     _lastDragPosition = details.localPosition.distance;
     final bool isUp = (details.primaryDelta ?? 0) < 0;
-    //seek 3 seconds
-    unawaited(
-      MusicServerManager.player.seek(MusicServerManager.player.position + Duration(seconds: isUp ? -3 : 3)),
-    );
+    // Dragging up raises volume, down lowers it.
+    unawaited(MusicServerManager.nudgeVolume(isUp ? 0.04 : -0.04));
+    _setFeedbackIcon(isUp ? Icons.volume_up_rounded : Icons.volume_down_rounded);
   }
 
   @override

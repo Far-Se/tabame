@@ -1078,6 +1078,9 @@ class HotKeyInfo {
         QuickMenuFunctions.hideQuickMenu();
       });
     },
+    "ToggleAlwaysOnTopForWindow": () {
+      Win32.setAlwaysOnTop(GetForegroundWindow());
+    },
     "ExpandSnippet": () => TextSnippetsManager.expand(),
     "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),
     "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),
