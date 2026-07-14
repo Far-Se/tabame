@@ -84,6 +84,15 @@ class QuickMenuState extends State<QuickMenu>
   Timer? _quickMenuFocusRetryTimer;
   Size? _savedQuickMenuSize;
 
+  /// Click-through-when-outside-content: the window is a fixed 555px tall while
+  /// the actual QuickMenu/Launcher content is shorter, leaving a transparent gap
+  /// that would otherwise eat clicks meant for the window behind. A lightweight
+  /// cursor poller makes the window pass clicks through whenever the pointer
+  /// isn't over the real content, and reclaims them when it is.
+  Timer? _clickThroughTimer;
+  bool _isClickThroughActive = false;
+  final GlobalKey _contentKey = GlobalKey();
+
   double previousVolume = 0.0;
 
   int unixVisible = 0;
@@ -215,11 +224,13 @@ class QuickMenuState extends State<QuickMenu>
     }
     AllowSetForegroundWindow(GetCurrentProcessId());
     _initializeWindowSize();
+    _clickThroughTimer = Timer.periodic(const Duration(milliseconds: 50), (Timer _) => _clickThroughTick());
     Debug.add("QuickMenu: init");
   }
 
   void _dispose() {
     trk.stopTimer();
+    _clickThroughTimer?.cancel();
     _clearRam?.cancel();
     PaintingBinding.instance.imageCache.clear();
     NativeHooks.removeListener(this);
@@ -426,7 +437,10 @@ class QuickMenuState extends State<QuickMenu>
 
   Future<void> _onQuickMenuSwitchedPage(QuickMenuPage newType, QuickMenuPage oldType, bool visible) async {
     Win32.setWindowInvisible(true);
-    if (oldType == QuickMenuPage.quickClick) WinUtils.makeWindowClickThrough(false);
+    if (oldType == QuickMenuPage.quickClick) {
+      WinUtils.makeWindowClickThrough(false);
+      _isClickThroughActive = false; // keep the poller's cache in sync
+    }
 
     if (newType == QuickMenuPage.quickClick) {
       Globals.quickMenuPage = newType;
@@ -447,6 +461,7 @@ class QuickMenuState extends State<QuickMenu>
     Globals.quickMenuPage = type;
     if (type == QuickMenuPage.quickMenu) {
       WinUtils.makeWindowClickThrough(false);
+      _isClickThroughActive = false; // keep the poller's cache in sync
       final ({int height, int width}) size = Win32.getSize();
       if (size.width != Boxes.quickMenuWidth) {
         WindowManager.instance.setSize(Size(Boxes.quickMenuWidth, Globals.quickMenuSize.height));
@@ -579,6 +594,71 @@ class QuickMenuState extends State<QuickMenu>
 
   void _onHotKeyEvent(HotkeyEvent hotkeyInfo) {
     handler.handle(hotkeyInfo);
+  }
+
+  // --------------------------------------------------------------------------
+  // Click-through-when-outside-content
+  // --------------------------------------------------------------------------
+
+  /// Runs on a poller: makes the window pass clicks through to whatever is
+  /// behind it whenever the cursor is over the empty transparent area, and
+  /// reclaims them when the cursor returns to the real content. Uses a global
+  /// cursor read (not Flutter hover) because a click-through window receives no
+  /// pointer events, so re-entry must be detected from the OS cursor position.
+  void _clickThroughTick() {
+    if (!mounted) return;
+    final QuickMenuPage page = Globals.quickMenuPage;
+    final bool applicable =
+        QuickMenuFunctions.isQuickMenuVisible && (page == QuickMenuPage.quickMenu || page == QuickMenuPage.launcher);
+
+    if (!applicable) {
+      // Undo only click-through we enabled, and never on pages that own the
+      // window style themselves (quickClick stays click-through, quickSnap uses
+      // a layered window).
+      if (_isClickThroughActive && page != QuickMenuPage.quickClick && page != QuickMenuPage.quickSnap) {
+        _setClickThrough(false);
+      }
+      return;
+    }
+
+    // A modal (a pushed route) draws a full-window barrier on top of the base
+    // content, so the whole window must stay interactive — otherwise clicks on
+    // the barrier outside the underlying content rect would pass through.
+    if (Navigator.maybeOf(context)?.canPop() ?? false) {
+      _setClickThrough(false);
+      return;
+    }
+
+    _setClickThrough(!_isCursorOverContent());
+  }
+
+  void _setClickThrough(bool value) {
+    if (_isClickThroughActive == value) return;
+    _isClickThroughActive = value;
+    WinUtils.makeWindowClickThrough(value);
+  }
+
+  /// True when the physical cursor is inside the laid-out content rectangle.
+  /// Defaults to `true` (interactive) when the content isn't measurable yet, so
+  /// we never accidentally make live content click-through.
+  bool _isCursorOverContent() {
+    final BuildContext? ctx = _contentKey.currentContext;
+    if (ctx == null) return true;
+    final RenderObject? renderObject = ctx.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.hasSize) return true;
+
+    final double dpr = MediaQuery.of(ctx).devicePixelRatio;
+    final Offset topLeft = renderObject.localToGlobal(Offset.zero);
+    final Size size = renderObject.size;
+
+    final ({int x, int y}) origin = Win32.clientToScreen(Win32.hWnd, 0, 0);
+    final double left = origin.x + topLeft.dx * dpr;
+    final double top = origin.y + topLeft.dy * dpr;
+    final double right = left + size.width * dpr;
+    final double bottom = top + size.height * dpr;
+
+    final ({int x, int y}) cursor = Win32.getCursorPosRaw();
+    return cursor.x >= left && cursor.x <= right && cursor.y >= top && cursor.y <= bottom;
   }
 
   Widget _build(BuildContext context) {
@@ -724,7 +804,7 @@ class QuickMenuState extends State<QuickMenu>
                     child: GestureDetector(
                       onTap: () {},
                       child: Container(
-                        // key: Globals.quickMenu,
+                        key: _contentKey,
                         color: Colors.transparent,
                         child: MouseRegion(
                           onEnter: (PointerEnterEvent event) async {

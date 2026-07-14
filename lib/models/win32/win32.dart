@@ -562,6 +562,30 @@ class Win32 {
     free(processIds);
   }
 
+  /// Raw physical cursor position (device pixels, un-DPI-scaled). Matches the
+  /// coordinate space of [clientToScreen] and native window rects.
+  static ({int x, int y}) getCursorPosRaw() {
+    final Pointer<POINT> point = calloc<POINT>();
+    GetCursorPos(point);
+    final ({int x, int y}) pos = (x: point.ref.x, y: point.ref.y);
+    free(point);
+    return pos;
+  }
+
+  /// Converts a point in [hwnd]'s client area to physical screen coordinates.
+  /// Unlike [getWindowRect], this excludes the invisible resize-handle border a
+  /// resizable frameless window carries, so it lines up with the client origin.
+  static ({int x, int y}) clientToScreen(int hwnd, int x, int y) {
+    final Pointer<POINT> point = calloc<POINT>();
+    point.ref
+      ..x = x
+      ..y = y;
+    ClientToScreen(hwnd, point);
+    final ({int x, int y}) pos = (x: point.ref.x, y: point.ref.y);
+    free(point);
+    return pos;
+  }
+
   // Geometry and positioning
   static Square getWindowRect({int? hwnd}) {
     hwnd ??= hWnd;
