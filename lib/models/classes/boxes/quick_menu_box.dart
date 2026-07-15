@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../globals.dart';
@@ -98,9 +97,7 @@ class QuickMenuFunctions {
     if (launcherActivateLastWin && Globals.quickMenuPage == QuickMenuPage.launcher) {
       Future<void>.delayed(const Duration(milliseconds: 50), () => Win32.activateWindow(Globals.lastFocusedWinHWND));
     }
-    SetLayeredWindowAttributes(Win32.hWnd, 0, 0, LWA_ALPHA);
     await toggleQuickMenu(visible: false);
-    SetLayeredWindowAttributes(Win32.hWnd, 0, 255, LWA_ALPHA);
   }
 
   static Future<void> toggleQuickMenu(
@@ -117,6 +114,9 @@ class QuickMenuFunctions {
     }
     visible ??= !isQuickMenuVisible;
     isQuickMenuVisible = visible;
+    if (!visible && !(kDebugMode && !Globals.debugHotkeys)) {
+      Win32.setPosition(const Offset(-99999, -99999));
+    }
     if (Globals.quickMenuPage != type) {
       for (final QuickMenuTriggers listener in listeners) {
         if (!_listeners.contains(listener)) continue;

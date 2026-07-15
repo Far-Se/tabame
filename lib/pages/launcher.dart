@@ -863,9 +863,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       return KeyEventResult.ignored;
     }
 
+    // if (event is KeyDownEvent &&
+    //     event.logicalKey == LogicalKeyboardKey.keyK &&
+    //     HardwareKeyboard.instance.isControlPressed) {
+
     if (event is KeyDownEvent &&
-        event.logicalKey == LogicalKeyboardKey.keyK &&
-        HardwareKeyboard.instance.isControlPressed) {
+        ((event.logicalKey == LogicalKeyboardKey.keyK && HardwareKeyboard.instance.isControlPressed) ||
+            event.logicalKey == LogicalKeyboardKey.tab)) {
       _openPluginActions();
       return KeyEventResult.handled;
     }
@@ -1473,6 +1477,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   void _refreshVisibleWindowResults() {
     if (_results.isEmpty) return;
+    // A new query is in flight: the rows on screen belong to the previous
+    // query and are about to be replaced — patching them now would stamp them
+    // with the current query text (see _setResults) and let the stale
+    // selection be carried over into the new results.
+    if (_isSearching) return;
 
     bool changed = false;
     final Map<int, Window> latestWindows = <int, Window>{
@@ -1557,6 +1566,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   // ---------------------------------------------------------------------------
 
   int _searchGeneration = 0;
+
+  /// The query text that produced the currently displayed [_results].
+  /// Selection is only carried over between result sets of the same query —
+  /// results for a different query always start at the first row.
+  String? _resultsQuery;
 
   void _onSearchChanged(String query) {
     user.launcherSearchText = query;
@@ -3339,8 +3353,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     _syncResultKeys(results);
     _mouseSelectionEnabled = false;
 
+    // `resetSelection: false` keeps the highlighted item across background
+    // refreshes of the *same* query (phase-2 merges, catalog-sync re-runs,
+    // window refresh, pruning). When the displayed results belong to a
+    // different query, the carried-over id would re-select a stale item at a
+    // random position — force a reset then. Keyed on the query text (not the
+    // search generation) because same-text re-runs bump the generation.
+    final bool keepSelection = !resetSelection && _resultsQuery == _controller.text;
+    _resultsQuery = _controller.text;
+
     int nextIndex = 0;
-    if (!resetSelection && _results.isNotEmpty && _activeIndexNotifier.value < _results.length) {
+    if (keepSelection && _results.isNotEmpty && _activeIndexNotifier.value < _results.length) {
       final String activeId = _results[_activeIndexNotifier.value].id;
       final int foundIndex = results.indexWhere((LauncherSearchResultItem r) => r.id == activeId);
       if (foundIndex != -1) {
@@ -3352,17 +3375,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
     setState(() {
       _results = results;
-      if (resetSelection) {
-        _activeIndexNotifier.value = 0;
-      } else {
-        _activeIndexNotifier.value = nextIndex;
-      }
+      _activeIndexNotifier.value = keepSelection ? nextIndex : 0;
       if (isSearching != null) {
         _isSearching = isSearching;
       }
     });
 
-    if (resetSelection && _scrollController.hasClients) {
+    if (!keepSelection && _scrollController.hasClients) {
       _scrollController.jumpTo(0);
     }
 

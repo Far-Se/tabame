@@ -581,45 +581,61 @@ class _WorkspaceEditorState extends State<_WorkspaceEditor> {
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: Design.accent.withAlpha(60))),
       ),
-      child: CancelTraversal(
-        child: Row(
-          children: <Widget>[
-            _headerIconButton(
-              icon: Icons.arrow_back_rounded,
-              tooltip: 'Back',
-              onTap: () {
-                if (_dirty) widget.onSave(_workspace.copyWith(name: _nameController.text.trim().isEmpty ? _workspace.name : _nameController.text.trim()));
-                widget.onBack();
-              },
-            ),
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(color: Design.accent.withAlpha(30), borderRadius: BorderRadius.circular(8)),
-              child: Icon(widget.isNew ? Icons.add_box_rounded : Icons.dashboard_customize_rounded,
-                  size: 14, color: Design.accent),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                controller: _nameController,
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.3, color: Design.text),
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  isDense: true,
-                  hintText: 'Workspace name',
-                  hintStyle: TextStyle(fontSize: 13, color: Design.text.withAlpha(90)),
+      child: Row(
+        children: <Widget>[
+          _headerIconButton(
+            icon: Icons.arrow_back_rounded,
+            tooltip: 'Back',
+            onTap: () {
+              if (_dirty) {
+                widget.onSave(_workspace.copyWith(
+                    name: _nameController.text.trim().isEmpty ? _workspace.name : _nameController.text.trim()));
+              }
+              widget.onBack();
+            },
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(color: Design.accent.withAlpha(30), borderRadius: BorderRadius.circular(8)),
+            child: Icon(widget.isNew ? Icons.add_box_rounded : Icons.dashboard_customize_rounded,
+                size: 14, color: Design.accent),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _nameController,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.3, color: Design.text),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'Workspace name',
+                hintStyle: TextStyle(fontSize: 13, color: Design.text.withAlpha(90)),
+                prefixIcon: Icon(Icons.edit_rounded, size: 15, color: Design.accent),
+                filled: true,
+                fillColor: Design.text.withAlpha(7),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Design.text.withAlpha(18)),
                 ),
-                onChanged: _renameWorkspace,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Design.text.withAlpha(18)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Design.accent.withAlpha(90)),
+                ),
               ),
+              onChanged: _renameWorkspace,
             ),
-            const SizedBox(width: 8),
-            if (_refreshing)
-              SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Design.accent))
-            else
-              _headerIconButton(icon: Icons.refresh_rounded, tooltip: 'Refresh windows', onTap: _loadWindows),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+          if (_refreshing)
+            SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Design.accent))
+          else
+            _headerIconButton(icon: Icons.refresh_rounded, tooltip: 'Refresh windows', onTap: _loadWindows),
+        ],
       ),
     );
 

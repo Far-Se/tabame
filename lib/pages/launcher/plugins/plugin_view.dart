@@ -623,9 +623,9 @@ configs: <WidgetConfig>[
   }
 
   /// Renders a markdown image from a `file://` path or http(s) URL, with SVG
-  /// support via flutter_svg, scaled to the pane width but never wider than
-  /// [maxImageWidth] (so posters/thumbnails don't fill a narrow preview pane).
-  /// Clicking opens the image full-size in a lightbox overlay.
+  /// support via flutter_svg. Rasters render at intrinsic size, capped at the
+  /// pane width and [maxImageWidth]; SVGs scale to fill that width. Clicking
+  /// opens the image full-size in a lightbox overlay.
   Widget _markdownImage(String url, double maxImageWidth) {
     final String value = url.trim();
     final Widget broken = Icon(Icons.broken_image_rounded, size: 16, color: Design.text.withAlpha(90));
@@ -641,15 +641,21 @@ configs: <WidgetConfig>[
       if (value.startsWith('http://') || value.startsWith('https://')) {
         image = isSvg
             ? SvgPicture.network(value, width: width, errorBuilder: (_, __, ___) => broken)
-            : Image.network(value, width: width, errorBuilder: (_, __, ___) => broken);
+            : Image.network(value, errorBuilder: (_, __, ___) => broken);
       } else if (value.startsWith('file://')) {
         final File file = File(Uri.parse(value).toFilePath(windows: true));
         if (!file.existsSync()) return broken;
         image = isSvg
             ? SvgPicture.file(file, width: width, errorBuilder: (_, __, ___) => broken)
-            : Image.file(file, width: width, errorBuilder: (_, __, ___) => broken);
+            : Image.file(file, errorBuilder: (_, __, ___) => broken);
       }
       if (image == null) return broken;
+      // Rasters scale down to fit the pane but never upscale past their
+      // intrinsic size — a 96px avatar must not stretch across the detail pane.
+      // SVGs keep filling [width]: plugin-generated vector charts rely on it.
+      if (!isSvg && width != null) {
+        image = ConstrainedBox(constraints: BoxConstraints(maxWidth: width), child: image);
+      }
       return MouseRegion(
         cursor: SystemMouseCursors.zoomIn,
         child: GestureDetector(

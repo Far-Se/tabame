@@ -18,44 +18,55 @@
  * poster thumbnails; without it they fall back to icons.
  */
 
-'use strict';
+"use strict";
 
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-const TRAKT_API = 'https://api.trakt.tv';
-const TMDB_API = 'https://api.themoviedb.org/3';
-const TMDB_IMG = 'https://image.tmdb.org/t/p';
-const OOB = 'urn:ietf:wg:oauth:2.0:oob';
+const TRAKT_API = "https://api.trakt.tv";
+const TMDB_API = "https://api.themoviedb.org/3";
+const TMDB_IMG = "https://image.tmdb.org/t/p";
+const OOB = "urn:ietf:wg:oauth:2.0:oob";
 // api.trakt.tv is behind Cloudflare, which blocks requests with no/default
 // User-Agent (what Node's fetch sends) with a bot challenge. Send a real one.
 const USER_AGENT =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 
 // ── protocol plumbing ────────────────────────────────────────────────────────
 function send(frame) {
-  process.stdout.write(JSON.stringify(frame) + '\n');
+  process.stdout.write(JSON.stringify(frame) + "\n");
 }
 function log(...a) {
   process.stderr.write(
-    a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ') + '\n',
+    a.map((x) => (typeof x === "string" ? x : JSON.stringify(x))).join(" ") +
+      "\n",
   );
 }
 // Sub-screens (stack depth > 1) get canGoBack so Escape pops instead of exiting.
 function render(rev, view, opts = {}) {
-  send({ type: 'render', rev, view, canGoBack: state.stack.length > 1, ...opts });
+  send({
+    type: "render",
+    rev,
+    view,
+    canGoBack: state.stack.length > 1,
+    ...opts,
+  });
 }
 function command(name, extra = {}) {
-  send({ type: 'command', command: name, ...extra });
+  send({ type: "command", command: name, ...extra });
 }
-const cmdCopy = (t) => command('copy', { text: t == null ? '' : String(t) });
-const cmdOpen = (u) => command('open', { url: u });
-const cmdToast = (t) => command('toast', { text: t });
-const cmdHide = () => command('hide');
-const cmdSetQuery = (t) => command('setQuery', { text: t });
+const cmdCopy = (t) => command("copy", { text: t == null ? "" : String(t) });
+const cmdOpen = (u) => command("open", { url: u });
+const cmdToast = (t) => command("toast", { text: t });
+const cmdHide = () => command("hide");
+const cmdSetQuery = (t) => command("setQuery", { text: t });
 
 function loadingFrame(rev, text) {
-  render(rev, 'list', { loading: true, items: [], loadingText: text || 'Loading…' });
+  render(rev, "list", {
+    loading: true,
+    items: [],
+    loadingText: text || "Loading…",
+  });
 }
 
 function renderError(rev, err) {
@@ -63,7 +74,7 @@ function renderError(rev, err) {
   if (err && err.status === 401 && !session.access_token) {
     return renderNeedLogin(rev);
   }
-  render(rev, 'detail', {
+  render(rev, "detail", {
     detail: { markdown: `## Trakt error\n\n\`\`\`\n${msg}\n\`\`\`` },
   });
 }
@@ -78,20 +89,20 @@ class HttpError extends Error {
 // ── config / auth ────────────────────────────────────────────────────────────
 function loadConfig() {
   const cfg = {
-    clientId: process.env.TRAKT_CLIENT_ID || '',
-    clientSecret: process.env.TRAKT_CLIENT_SECRET || '',
-    tmdbApiKey: process.env.TMDB_API_KEY || '',
+    clientId: process.env.TRAKT_CLIENT_ID || "",
+    clientSecret: process.env.TRAKT_CLIENT_SECRET || "",
+    tmdbApiKey: process.env.TMDB_API_KEY || "",
   };
   try {
-    const file = path.join(process.cwd(), 'config.json');
+    const file = path.join(process.cwd(), "config.json");
     if (fs.existsSync(file)) {
-      const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+      const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
       if (parsed.clientId) cfg.clientId = parsed.clientId;
       if (parsed.clientSecret) cfg.clientSecret = parsed.clientSecret;
       if (parsed.tmdbApiKey) cfg.tmdbApiKey = parsed.tmdbApiKey;
     }
   } catch (err) {
-    log('config:', err.message);
+    log("config:", err.message);
   }
   return cfg;
 }
@@ -99,12 +110,13 @@ const config = loadConfig();
 const hasPosters = () => !!config.tmdbApiKey;
 
 // OAuth tokens live in their own file so we never rewrite the user's config.
-const TOKENS_FILE = path.join(process.cwd(), 'tokens.json');
+const TOKENS_FILE = path.join(process.cwd(), "tokens.json");
 function loadTokens() {
   try {
-    if (fs.existsSync(TOKENS_FILE)) return JSON.parse(fs.readFileSync(TOKENS_FILE, 'utf8'));
+    if (fs.existsSync(TOKENS_FILE))
+      return JSON.parse(fs.readFileSync(TOKENS_FILE, "utf8"));
   } catch (err) {
-    log('tokens:', err.message);
+    log("tokens:", err.message);
   }
   return {};
 }
@@ -120,7 +132,7 @@ function saveTokens(tok) {
   try {
     fs.writeFileSync(TOKENS_FILE, JSON.stringify(session, null, 2));
   } catch (err) {
-    log('saveTokens:', err.message);
+    log("saveTokens:", err.message);
   }
 }
 function clearTokens() {
@@ -128,42 +140,49 @@ function clearTokens() {
   try {
     if (fs.existsSync(TOKENS_FILE)) fs.unlinkSync(TOKENS_FILE);
   } catch (err) {
-    log('clearTokens:', err.message);
+    log("clearTokens:", err.message);
   }
 }
 
 // ── HTTP ─────────────────────────────────────────────────────────────────────
 async function ensureToken() {
-  if (!session.access_token) throw new HttpError(401, 'Not logged in');
+  if (!session.access_token) throw new HttpError(401, "Not logged in");
   // Refresh a minute before expiry.
-  if (session.expires_at && Date.now() > session.expires_at - 60000 && session.refresh_token) {
+  if (
+    session.expires_at &&
+    Date.now() > session.expires_at - 60000 &&
+    session.refresh_token
+  ) {
     const res = await fetch(`${TRAKT_API}/oauth/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'User-Agent': USER_AGENT },
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
       body: JSON.stringify({
         refresh_token: session.refresh_token,
         client_id: config.clientId,
         client_secret: config.clientSecret,
         redirect_uri: OOB,
-        grant_type: 'refresh_token',
+        grant_type: "refresh_token",
       }),
     });
     if (res.ok) {
       saveTokens(await res.json());
     } else {
       clearTokens();
-      throw new HttpError(401, 'Trakt session expired — please log in again');
+      throw new HttpError(401, "Trakt session expired — please log in again");
     }
   }
 }
 
-async function trakt(apiPath, { method = 'GET', body = null, authed = false } = {}) {
+async function trakt(
+  apiPath,
+  { method = "GET", body = null, authed = false } = {},
+) {
   if (authed) await ensureToken();
   const headers = {
-    'Content-Type': 'application/json',
-    'User-Agent': USER_AGENT,
-    'trakt-api-version': '2',
-    'trakt-api-key': config.clientId,
+    "Content-Type": "application/json",
+    "User-Agent": USER_AGENT,
+    "trakt-api-version": "2",
+    "trakt-api-key": config.clientId,
   };
   if (authed) headers.Authorization = `Bearer ${session.access_token}`;
   const res = await fetch(TRAKT_API + apiPath, {
@@ -181,7 +200,7 @@ async function trakt(apiPath, { method = 'GET', body = null, authed = false } = 
   if (!res.ok) {
     const detail =
       (data && (data.error_description || data.error)) ||
-      (typeof data === 'string' && data) ||
+      (typeof data === "string" && data) ||
       `HTTP ${res.status}`;
     throw new HttpError(res.status, detail);
   }
@@ -195,10 +214,10 @@ async function posterPath(mediaType, tmdbId) {
   const key = `${mediaType}:${tmdbId}`;
   if (posterCache.has(key)) return posterCache.get(key);
   try {
-    const kind = mediaType === 'show' ? 'tv' : 'movie';
+    const kind = mediaType === "show" ? "tv" : "movie";
     const res = await fetch(
       `${TMDB_API}/${kind}/${tmdbId}?api_key=${encodeURIComponent(config.tmdbApiKey)}`,
-      { headers: { 'User-Agent': USER_AGENT } },
+      { headers: { "User-Agent": USER_AGENT } },
     );
     if (!res.ok) {
       posterCache.set(key, null);
@@ -220,7 +239,10 @@ async function attachPosters(medias) {
   if (!config.tmdbApiKey) return;
   await Promise.all(
     medias.map(async (m) => {
-      m._posterPath = await posterPath(m.mediaType, m.obj.ids && m.obj.ids.tmdb);
+      m._posterPath = await posterPath(
+        m.mediaType,
+        m.obj.ids && m.obj.ids.tmdb,
+      );
     }),
   );
 }
@@ -234,35 +256,38 @@ function toMedia(mediaType, obj, extra) {
 
 function fmtNum(n) {
   n = Number(n) || 0;
-  if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'k';
+  if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "k";
   return String(n);
 }
 function pad2(n) {
-  return String(n).padStart(2, '0');
+  return String(n).padStart(2, "0");
 }
 function fmtDate(iso) {
   try {
     return new Date(iso).toLocaleDateString();
   } catch (_) {
-    return iso || '';
+    return iso || "";
   }
 }
 function fmtDateTime(iso) {
   try {
-    return new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    return new Date(iso).toLocaleString([], {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
   } catch (_) {
-    return iso || '';
+    return iso || "";
   }
 }
 
 function traktWebUrl(m) {
-  const seg = m.mediaType === 'show' ? 'shows' : 'movies';
+  const seg = m.mediaType === "show" ? "shows" : "movies";
   const ids = m.obj.ids || {};
-  return `https://trakt.tv/${seg}/${ids.slug || ids.trakt || ''}`;
+  return `https://trakt.tv/${seg}/${ids.slug || ids.trakt || ""}`;
 }
 function tmdbWebUrl(m) {
-  const seg = m.mediaType === 'show' ? 'tv' : 'movie';
+  const seg = m.mediaType === "show" ? "tv" : "movie";
   const ids = m.obj.ids || {};
   return ids.tmdb ? `https://www.themoviedb.org/${seg}/${ids.tmdb}` : null;
 }
@@ -273,93 +298,123 @@ function imdbWebUrl(m) {
 
 function mediaPreview(m) {
   const o = m.obj;
-  const isShow = m.mediaType === 'show';
+  const isShow = m.mediaType === "show";
   const md = [];
-  const big = imgUrl(m._posterPath, 'w500');
-  if (big) md.push(`![poster](${big})`, '');
-  md.push(`## ${o.title || 'Untitled'}${o.year ? ` (${o.year})` : ''}`);
-  if (o.tagline) md.push('', `*${o.tagline}*`);
-  if (o.overview) md.push('', o.overview);
+  // const big = imgUrl(m._posterPath, 'w500');
+  // if (big) md.push(`![poster](${big})`, '');
+  md.push(`## ${o.title || "Untitled"}${o.year ? ` (${o.year})` : ""}`);
+  if (o.tagline) md.push("", `*${o.tagline}*`);
+  if (o.overview) md.push("", o.overview);
 
   const meta = [];
-  meta.push({ label: 'Type', text: isShow ? 'TV Show' : 'Movie', icon: 'video' });
-  if (o.year) meta.push({ label: 'Year', text: String(o.year) });
+  meta.push({
+    label: "Type",
+    text: isShow ? "TV Show" : "Movie",
+    icon: "video",
+  });
+  if (o.year) meta.push({ label: "Year", text: String(o.year) });
   if (o.rating)
     meta.push({
-      label: 'Rating',
-      text: `★ ${Number(o.rating).toFixed(1)}${o.votes ? `  ·  ${fmtNum(o.votes)} votes` : ''}`,
-      color: '#F5C518',
+      label: "Rating",
+      text: `★ ${Number(o.rating).toFixed(1)}${o.votes ? `  ·  ${fmtNum(o.votes)} votes` : ""}`,
+      color: "#F5C518",
     });
-  if (o.runtime) meta.push({ label: 'Runtime', text: `${o.runtime} min` });
+  if (o.runtime) meta.push({ label: "Runtime", text: `${o.runtime} min` });
   if (o.genres && o.genres.length)
-    meta.push({ label: 'Genres', text: o.genres.slice(0, 4).join(', ') });
-  if (o.certification) meta.push({ label: 'Rated', text: o.certification });
-  if (isShow && o.status) meta.push({ label: 'Status', text: o.status });
-  if (isShow && o.network) meta.push({ label: 'Network', text: o.network });
-  if (o.language) meta.push({ label: 'Language', text: String(o.language).toUpperCase() });
+    meta.push({ label: "Genres", text: o.genres.slice(0, 4).join(", ") });
+  if (o.certification) meta.push({ label: "Rated", text: o.certification });
+  if (isShow && o.status) meta.push({ label: "Status", text: o.status });
+  if (isShow && o.network) meta.push({ label: "Network", text: o.network });
+  if (o.language)
+    meta.push({ label: "Language", text: String(o.language).toUpperCase() });
 
   const ex = m.extra || {};
   if (ex.episode)
     meta.push({
-      label: 'Episode',
-      text: `S${pad2(ex.episode.season)}E${pad2(ex.episode.number)}${ex.episode.title ? ` · ${ex.episode.title}` : ''}`,
+      label: "Episode",
+      text: `S${pad2(ex.episode.season)}E${pad2(ex.episode.number)}${ex.episode.title ? ` · ${ex.episode.title}` : ""}`,
     });
-  if (ex.watchers) meta.push({ label: 'Watchers', text: fmtNum(ex.watchers), icon: 'person' });
-  if (ex.rank) meta.push({ label: 'List rank', text: `#${ex.rank}` });
-  if (ex.watched_at) meta.push({ label: 'Watched', text: fmtDate(ex.watched_at), icon: 'clock' });
+  if (ex.watchers)
+    meta.push({ label: "Watchers", text: fmtNum(ex.watchers), icon: "person" });
+  if (ex.rank) meta.push({ label: "List rank", text: `#${ex.rank}` });
+  if (ex.watched_at)
+    meta.push({
+      label: "Watched",
+      text: fmtDate(ex.watched_at),
+      icon: "clock",
+    });
   if (ex.first_aired)
-    meta.push({ label: 'Airs', text: fmtDateTime(ex.first_aired), icon: 'calendar' });
+    meta.push({
+      label: "Airs",
+      text: fmtDateTime(ex.first_aired),
+      icon: "calendar",
+    });
 
   meta.push({ separator: true });
-  meta.push({ label: 'Trakt', text: 'trakt.tv', url: traktWebUrl(m), icon: 'link' });
+  meta.push({
+    label: "Trakt",
+    text: "trakt.tv",
+    url: traktWebUrl(m),
+    icon: "link",
+  });
   const imdb = imdbWebUrl(m);
-  if (imdb) meta.push({ label: 'IMDb', text: (o.ids && o.ids.imdb) || '', url: imdb });
+  if (imdb)
+    meta.push({ label: "IMDb", text: (o.ids && o.ids.imdb) || "", url: imdb });
   const tmdb = tmdbWebUrl(m);
-  if (tmdb) meta.push({ label: 'TMDB', text: String(o.ids.tmdb), url: tmdb });
+  if (tmdb) meta.push({ label: "TMDB", text: String(o.ids.tmdb), url: tmdb });
 
-  return { markdown: md.join('\n'), metadata: meta };
+  return { markdown: md.join("\n"), metadata: meta };
 }
 
 function mediaActions(m) {
-  const a = [
-    { id: 'default', title: 'Open on Trakt', icon: 'open' },
-  ];
-  if (imdbWebUrl(m)) a.push({ id: 'open_imdb', title: 'Open on IMDb', icon: 'link' });
-  a.push({ id: 'copy_title', title: 'Copy Title', icon: 'copy' });
+  const a = [{ id: "default", title: "Open on Trakt", icon: "open" }];
+  if (imdbWebUrl(m))
+    a.push({ id: "open_imdb", title: "Open on IMDb", icon: "link" });
+  a.push({ id: "copy_title", title: "Copy Title", icon: "copy" });
   if (isAuthed()) {
-    if (top().screen === 'watchlist')
-      a.push({ id: 'remove_watchlist', title: 'Remove from Watchlist', icon: 'remove' });
-    else a.push({ id: 'add_watchlist', title: 'Add to Watchlist', icon: 'add' });
-    a.push({ id: 'mark_watched', title: 'Mark as Watched', icon: 'check' });
+    if (top().screen === "watchlist")
+      a.push({
+        id: "remove_watchlist",
+        title: "Remove from Watchlist",
+        icon: "remove",
+      });
+    else
+      a.push({ id: "add_watchlist", title: "Add to Watchlist", icon: "add" });
+    a.push({ id: "mark_watched", title: "Mark as Watched", icon: "check" });
   }
   return a;
 }
 
 function mediaItem(m) {
   const o = m.obj;
-  const isShow = m.mediaType === 'show';
+  const isShow = m.mediaType === "show";
   const id = `media:${m.mediaType}:${(o.ids && o.ids.trakt) || o.title}`;
-  const small = imgUrl(m._posterPath, 'w342');
+  const small = imgUrl(m._posterPath, "w342");
 
-  const acc = [{ text: isShow ? 'TV' : 'FILM', color: isShow ? '#8B5CF6' : '#0EA5E9' }];
-  if (o.rating) acc.push({ text: `★ ${Number(o.rating).toFixed(1)}`, color: '#F5C518' });
+  const acc = [
+    { text: isShow ? "TV" : "FILM", color: isShow ? "#8B5CF6" : "#0EA5E9" },
+  ];
+  if (o.rating)
+    acc.push({ text: `★ ${Number(o.rating).toFixed(1)}`, color: "#F5C518" });
   const ex = m.extra || {};
-  if (ex.watchers) acc.push({ text: `${fmtNum(ex.watchers)} watching`, icon: 'person' });
+  if (ex.watchers)
+    acc.push({ text: `${fmtNum(ex.watchers)} watching`, icon: "person" });
   if (ex.rank) acc.push({ text: `#${ex.rank}` });
 
   const sub = [];
-  if (ex.episode) sub.push(`S${pad2(ex.episode.season)}E${pad2(ex.episode.number)}`);
+  if (ex.episode)
+    sub.push(`S${pad2(ex.episode.season)}E${pad2(ex.episode.number)}`);
   if (o.year) sub.push(String(o.year));
-  if (o.genres && o.genres.length) sub.push(o.genres.slice(0, 3).join(', '));
+  if (o.genres && o.genres.length) sub.push(o.genres.slice(0, 3).join(", "));
   else if (o.runtime) sub.push(`${o.runtime} min`);
   if (ex.first_aired) sub.push(fmtDateTime(ex.first_aired));
   if (ex.watched_at) sub.push(`watched ${fmtDate(ex.watched_at)}`);
 
   const it = {
     id,
-    title: o.title || 'Untitled',
-    subtitle: sub.join('  ·  '),
-    icon: small || (isShow ? 'video' : 'play'),
+    title: o.title || "Untitled",
+    subtitle: sub.join("  ·  "),
+    icon: small || (isShow ? "video" : "play"),
     accessories: acc,
     actions: mediaActions(m),
     preview: mediaPreview(m),
@@ -369,22 +424,22 @@ function mediaItem(m) {
 }
 
 function filterMedia(list, text) {
-  const q = (text || '').trim().toLowerCase();
+  const q = (text || "").trim().toLowerCase();
   if (!q) return list;
   return list.filter(
     (m) =>
-      (m.obj.title || '').toLowerCase().includes(q) ||
-      String(m.obj.year || '').includes(q) ||
+      (m.obj.title || "").toLowerCase().includes(q) ||
+      String(m.obj.year || "").includes(q) ||
       (m.obj.genres || []).some((g) => String(g).toLowerCase().includes(q)),
   );
 }
 
 // ── state machine ────────────────────────────────────────────────────────────
 const state = {
-  stack: [{ screen: 'root', ctx: {}, savedQuery: '' }],
+  stack: [{ screen: "root", ctx: {}, savedQuery: "" }],
   itemsById: {},
   lastRev: 0,
-  lastText: '',
+  lastText: "",
 };
 function top() {
   return state.stack[state.stack.length - 1];
@@ -396,24 +451,24 @@ function setItems(items) {
 function push(screen, ctx) {
   cancelSearch();
   top().savedQuery = state.lastText;
-  state.stack.push({ screen, ctx: ctx || {}, savedQuery: '' });
-  cmdSetQuery('');
-  return renderScreen(0, '');
+  state.stack.push({ screen, ctx: ctx || {}, savedQuery: "" });
+  cmdSetQuery("");
+  return renderScreen(0, "");
 }
 function popScreen() {
   cancelSearch();
-  if (top().screen === 'login') stopLogin();
+  if (top().screen === "login") stopLogin();
   if (state.stack.length > 1) state.stack.pop();
-  const q = top().savedQuery || '';
+  const q = top().savedQuery || "";
   cmdSetQuery(q);
   return renderScreen(0, q);
 }
 function resetToRoot() {
   cancelSearch();
   stopLogin();
-  state.stack = [{ screen: 'root', ctx: {}, savedQuery: '' }];
-  cmdSetQuery('');
-  return renderScreen(0, '');
+  state.stack = [{ screen: "root", ctx: {}, savedQuery: "" }];
+  cmdSetQuery("");
+  return renderScreen(0, "");
 }
 
 // Debounce for screens that hit the search API on every keystroke.
@@ -435,45 +490,128 @@ function debounceSearch(rev, fn) {
 // ── root / commands ──────────────────────────────────────────────────────────
 function buildCommands() {
   const cmds = [
-    { id: 'search_all', section: 'Search', title: 'Search Movies & Shows', subtitle: 'Search everything on Trakt', icon: 'search' },
-    { id: 'search_movies', section: 'Search', title: 'Search Movies', subtitle: 'Movies only', icon: 'search' },
-    { id: 'search_shows', section: 'Search', title: 'Search Shows', subtitle: 'TV shows only', icon: 'search' },
-    { id: 'trending_movies', section: 'Discover', title: 'Trending Movies', subtitle: 'What people are watching now', icon: 'bolt' },
-    { id: 'trending_shows', section: 'Discover', title: 'Trending Shows', subtitle: 'What people are watching now', icon: 'bolt' },
-    { id: 'popular_movies', section: 'Discover', title: 'Popular Movies', subtitle: 'Most popular of all time', icon: 'star' },
-    { id: 'popular_shows', section: 'Discover', title: 'Popular Shows', subtitle: 'Most popular of all time', icon: 'star' },
+    {
+      id: "search_all",
+      section: "Search",
+      title: "Search Movies & Shows",
+      subtitle: "Search everything on Trakt",
+      icon: "search",
+    },
+    {
+      id: "search_movies",
+      section: "Search",
+      title: "Search Movies",
+      subtitle: "Movies only",
+      icon: "search",
+    },
+    {
+      id: "search_shows",
+      section: "Search",
+      title: "Search Shows",
+      subtitle: "TV shows only",
+      icon: "search",
+    },
+    {
+      id: "trending_movies",
+      section: "Discover",
+      title: "Trending Movies",
+      subtitle: "What people are watching now",
+      icon: "bolt",
+    },
+    {
+      id: "trending_shows",
+      section: "Discover",
+      title: "Trending Shows",
+      subtitle: "What people are watching now",
+      icon: "bolt",
+    },
+    {
+      id: "popular_movies",
+      section: "Discover",
+      title: "Popular Movies",
+      subtitle: "Most popular of all time",
+      icon: "star",
+    },
+    {
+      id: "popular_shows",
+      section: "Discover",
+      title: "Popular Shows",
+      subtitle: "Most popular of all time",
+      icon: "star",
+    },
   ];
   if (isAuthed()) {
     cmds.push(
-      { id: 'watchlist', section: 'You', title: 'My Watchlist', subtitle: 'Movies & shows you saved', icon: 'bookmark' },
-      { id: 'history', section: 'You', title: 'Watched History', subtitle: 'Recently watched', icon: 'clock' },
-      { id: 'up_next', section: 'You', title: 'Up Next', subtitle: 'Upcoming episodes (next 14 days)', icon: 'calendar' },
-      { id: 'account', section: 'Account', title: 'Account', subtitle: 'Your Trakt profile', icon: 'person' },
-      { id: 'logout', section: 'Account', title: 'Log out', subtitle: 'Sign out of Trakt', icon: 'lock' },
+      {
+        id: "watchlist",
+        section: "You",
+        title: "My Watchlist",
+        subtitle: "Movies & shows you saved",
+        icon: "bookmark",
+      },
+      {
+        id: "history",
+        section: "You",
+        title: "Watched History",
+        subtitle: "Recently watched",
+        icon: "clock",
+      },
+      {
+        id: "up_next",
+        section: "You",
+        title: "Up Next",
+        subtitle: "Upcoming episodes (next 14 days)",
+        icon: "calendar",
+      },
+      {
+        id: "account",
+        section: "Account",
+        title: "Account",
+        subtitle: "Your Trakt profile",
+        icon: "person",
+      },
+      {
+        id: "logout",
+        section: "Account",
+        title: "Log out",
+        subtitle: "Sign out of Trakt",
+        icon: "lock",
+      },
     );
   } else {
-    cmds.push({ id: 'login', section: 'Account', title: 'Log in to Trakt', subtitle: 'Enable your watchlist, history & calendar', icon: 'key' });
+    cmds.push({
+      id: "login",
+      section: "Account",
+      title: "Log in to Trakt",
+      subtitle: "Enable your watchlist, history & calendar",
+      icon: "key",
+    });
   }
   return cmds;
 }
 
 function renderRoot(rev, text) {
-  const q = (text || '').toLowerCase();
+  const q = (text || "").toLowerCase();
   const items = buildCommands()
-    .filter((c) => !q || c.title.toLowerCase().includes(q) || c.subtitle.toLowerCase().includes(q))
+    .filter(
+      (c) =>
+        !q ||
+        c.title.toLowerCase().includes(q) ||
+        c.subtitle.toLowerCase().includes(q),
+    )
     .map((c) => ({
       id: `cmd:${c.id}`,
       title: c.title,
       subtitle: c.subtitle,
       icon: c.icon,
       section: c.section,
-      actions: [{ id: 'default', title: 'Open', icon: 'open' }],
+      actions: [{ id: "default", title: "Open", icon: "open" }],
     }));
   setItems(items);
-  render(rev, 'list', {
+  render(rev, "list", {
     items,
-    emptyText: 'No matching commands',
-    placeholder: 'Trakt — search or pick a command…',
+    emptyText: "No matching commands",
+    placeholder: "Trakt — search or pick a command…",
   });
 }
 
@@ -481,15 +619,15 @@ function renderRoot(rev, text) {
 function renderMediaFrame(rev, medias, opts) {
   const items = medias.map(mediaItem);
   setItems(items);
-  const view = hasPosters() ? 'grid' : 'list';
+  const view = hasPosters() ? "grid" : "list";
   const frame = {
     items,
     preview: { enabled: true },
-    emptyText: (opts && opts.emptyText) || 'No results',
+    emptyText: (opts && opts.emptyText) || "No results",
   };
   if (opts && opts.placeholder) frame.placeholder = opts.placeholder;
   // Poster wall: 4 columns, tile a touch taller than 2:3 to fit the caption.
-  if (view === 'grid') frame.grid = { columns: 4, aspectRatio: 0.6 };
+  if (view === "grid") frame.grid = { columns: 4, aspectRatio: 0.6 };
   render(rev, view, frame);
 }
 
@@ -499,9 +637,10 @@ async function renderBrowse(rev, text, fetcher, opts) {
   if (frame.ctx.data) {
     return renderMediaFrame(rev, filterMedia(frame.ctx.data, text), opts);
   }
-  if (frame.ctx.loading) return loadingFrame(rev, (opts && opts.loadingText) || 'Loading…');
+  if (frame.ctx.loading)
+    return loadingFrame(rev, (opts && opts.loadingText) || "Loading…");
   frame.ctx.loading = true;
-  loadingFrame(rev, (opts && opts.loadingText) || 'Loading…');
+  loadingFrame(rev, (opts && opts.loadingText) || "Loading…");
   try {
     const data = await fetcher();
     await attachPosters(data);
@@ -514,26 +653,40 @@ async function renderBrowse(rev, text, fetcher, opts) {
   frame.ctx.loading = false;
   // Render against the latest query — the awaited fetch may be stale by `rev`.
   if (top() === frame)
-    renderMediaFrame(state.lastRev, filterMedia(frame.ctx.data, state.lastText), opts);
+    renderMediaFrame(
+      state.lastRev,
+      filterMedia(frame.ctx.data, state.lastText),
+      opts,
+    );
 }
 
 function renderSearch(rev, text, endpoint, opts) {
-  const term = (text || '').trim();
+  const term = (text || "").trim();
   if (!term) {
     setItems([]);
-    return render(rev, 'list', {
+    return render(rev, "list", {
       items: [],
-      empty: { icon: 'search', title: 'Search Trakt', hint: (opts && opts.hint) || 'Type a title…' },
-      placeholder: (opts && opts.placeholder) || 'Search…',
+      empty: {
+        icon: "search",
+        title: "Search Trakt",
+        hint: (opts && opts.hint) || "Type a title…",
+      },
+      placeholder: (opts && opts.placeholder) || "Search…",
     });
   }
-  loadingFrame(rev, 'Searching…');
+  loadingFrame(rev, "Searching…");
   debounceSearch(rev, async () => {
     const raw = await trakt(
       `/search/${endpoint}?query=${encodeURIComponent(term)}&extended=full&limit=25`,
     );
     const medias = (raw || [])
-      .map((r) => (r.movie ? toMedia('movie', r.movie) : r.show ? toMedia('show', r.show) : null))
+      .map((r) =>
+        r.movie
+          ? toMedia("movie", r.movie)
+          : r.show
+            ? toMedia("show", r.show)
+            : null,
+      )
       .filter(Boolean);
     await attachPosters(medias);
     renderMediaFrame(rev, medias, opts);
@@ -543,40 +696,61 @@ function renderSearch(rev, text, endpoint, opts) {
 // Fetchers -------------------------------------------------------------------
 async function fetchTrending(kind) {
   const raw = await trakt(`/${kind}/trending?extended=full&limit=25`);
-  const type = kind === 'shows' ? 'show' : 'movie';
-  return (raw || []).map((r) => toMedia(type, r[type], { watchers: r.watchers }));
+  const type = kind === "shows" ? "show" : "movie";
+  return (raw || []).map((r) =>
+    toMedia(type, r[type], { watchers: r.watchers }),
+  );
 }
 async function fetchPopular(kind) {
   const raw = await trakt(`/${kind}/popular?extended=full&limit=25`);
-  const type = kind === 'shows' ? 'show' : 'movie';
+  const type = kind === "shows" ? "show" : "movie";
   return (raw || []).map((o) => toMedia(type, o));
 }
 async function fetchWatchlist() {
-  const raw = await trakt('/sync/watchlist?extended=full', { authed: true });
+  const raw = await trakt("/sync/watchlist?extended=full", { authed: true });
   return (raw || [])
-    .filter((r) => r.type === 'movie' || r.type === 'show')
+    .filter((r) => r.type === "movie" || r.type === "show")
     .map((r) => toMedia(r.type, r[r.type], { rank: r.rank }));
 }
 async function fetchHistory() {
-  const raw = await trakt('/sync/history?limit=40&extended=full', { authed: true });
+  const raw = await trakt("/sync/history?limit=40&extended=full", {
+    authed: true,
+  });
   return (raw || [])
-    .filter((r) => r.type === 'movie' || r.type === 'show' || r.type === 'episode')
+    .filter(
+      (r) => r.type === "movie" || r.type === "show" || r.type === "episode",
+    )
     .map((r) => {
-      if (r.type === 'episode')
-        return toMedia('show', r.show, { watched_at: r.watched_at, episode: r.episode });
+      if (r.type === "episode")
+        return toMedia("show", r.show, {
+          watched_at: r.watched_at,
+          episode: r.episode,
+        });
       return toMedia(r.type, r[r.type], { watched_at: r.watched_at });
     });
 }
 async function fetchUpNext() {
   const today = new Date().toISOString().slice(0, 10);
-  const raw = await trakt(`/calendars/my/shows/${today}/14?extended=full`, { authed: true });
+  const raw = await trakt(`/calendars/my/shows/${today}/14?extended=full`, {
+    authed: true,
+  });
   return (raw || []).map((r) =>
-    toMedia('show', r.show, { first_aired: r.first_aired, episode: r.episode }),
+    toMedia("show", r.show, { first_aired: r.first_aired, episode: r.episode }),
   );
 }
 
 // ── login (OAuth device flow) ────────────────────────────────────────────────
-const login = { active: false, userCode: '', url: '', deviceCode: '', interval: 5, expiresAt: 0, timer: null, status: 'idle', error: '' };
+const login = {
+  active: false,
+  userCode: "",
+  url: "",
+  deviceCode: "",
+  interval: 5,
+  expiresAt: 0,
+  timer: null,
+  status: "idle",
+  error: "",
+};
 function stopLogin() {
   if (login.timer) clearTimeout(login.timer);
   login.timer = null;
@@ -585,23 +759,26 @@ function stopLogin() {
 
 async function startLogin() {
   if (!config.clientSecret) {
-    login.status = 'no-secret';
+    login.status = "no-secret";
     return renderLogin(0);
   }
   try {
-    const d = await trakt('/oauth/device/code', { method: 'POST', body: { client_id: config.clientId } });
+    const d = await trakt("/oauth/device/code", {
+      method: "POST",
+      body: { client_id: config.clientId },
+    });
     login.active = true;
     login.userCode = d.user_code;
-    login.url = d.verification_url || 'https://trakt.tv/activate';
+    login.url = d.verification_url || "https://trakt.tv/activate";
     login.deviceCode = d.device_code;
     login.interval = d.interval || 5;
     login.expiresAt = Date.now() + (d.expires_in || 600) * 1000;
-    login.status = 'waiting';
-    login.error = '';
+    login.status = "waiting";
+    login.error = "";
     scheduleLoginPoll();
     renderLogin(0);
   } catch (err) {
-    login.status = 'error';
+    login.status = "error";
     login.error = err.message;
     renderLogin(0);
   }
@@ -614,13 +791,13 @@ async function pollLogin() {
   if (!login.active) return;
   if (Date.now() > login.expiresAt) {
     stopLogin();
-    login.status = 'expired';
+    login.status = "expired";
     return renderLogin(0);
   }
   try {
     const res = await fetch(`${TRAKT_API}/oauth/device/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'User-Agent': USER_AGENT },
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
       body: JSON.stringify({
         code: login.deviceCode,
         client_id: config.clientId,
@@ -630,8 +807,8 @@ async function pollLogin() {
     if (res.status === 200) {
       saveTokens(await res.json());
       stopLogin();
-      login.status = 'done';
-      cmdToast('Logged into Trakt');
+      login.status = "done";
+      cmdToast("Logged into Trakt");
       return resetToRoot();
     }
     if (res.status === 400) return scheduleLoginPoll(); // authorization pending
@@ -641,7 +818,8 @@ async function pollLogin() {
     }
     // 404 not found · 409 already used · 410 expired · 418 denied
     stopLogin();
-    login.status = res.status === 410 ? 'expired' : res.status === 418 ? 'denied' : 'error';
+    login.status =
+      res.status === 410 ? "expired" : res.status === 418 ? "denied" : "error";
     login.error = `HTTP ${res.status}`;
     renderLogin(0);
   } catch (err) {
@@ -651,90 +829,101 @@ async function pollLogin() {
 
 function renderLogin(rev) {
   if (!config.clientSecret) {
-    return render(rev, 'detail', {
+    return render(rev, "detail", {
       detail: {
         markdown: [
-          '## Trakt login needs a Client Secret',
-          '',
-          'Add `clientSecret` to `config.json` next to the plugin, then re-open',
-          'this command:',
-          '',
-          '```json',
+          "## Trakt login needs a Client Secret",
+          "",
+          "Add `clientSecret` to `config.json` next to the plugin, then re-open",
+          "this command:",
+          "",
+          "```json",
           '{ "clientId": "…", "clientSecret": "…" }',
-          '```',
-          '',
-          'Create an app (redirect URI `urn:ietf:wg:oauth:2.0:oob`) at',
-          '[trakt.tv/oauth/applications](https://trakt.tv/oauth/applications).',
-        ].join('\n'),
+          "```",
+          "",
+          "Create an app (redirect URI `urn:ietf:wg:oauth:2.0:oob`) at",
+          "[trakt.tv/oauth/applications](https://trakt.tv/oauth/applications).",
+        ].join("\n"),
       },
     });
   }
 
-  let statusLine = 'Waiting for you to authorize…';
-  if (login.status === 'expired') statusLine = 'Code expired — press Enter on “Restart” to try again.';
-  else if (login.status === 'denied') statusLine = 'Authorization was denied.';
-  else if (login.status === 'error') statusLine = `Error: ${login.error}`;
+  let statusLine = "Waiting for you to authorize…";
+  if (login.status === "expired")
+    statusLine = "Code expired — press Enter on “Restart” to try again.";
+  else if (login.status === "denied") statusLine = "Authorization was denied.";
+  else if (login.status === "error") statusLine = `Error: ${login.error}`;
 
   const items = [];
-  if (login.status === 'waiting') {
+  if (login.status === "waiting") {
     items.push({
-      id: 'login:open',
-      title: `Your code:  ${login.userCode || '…'}`,
+      id: "login:open",
+      title: `Your code:  ${login.userCode || "…"}`,
       subtitle: `Enter to open ${login.url}  ·  ${statusLine}`,
-      icon: 'globe',
-      accessories: [{ text: 'waiting', color: '#F5C518' }],
+      icon: "globe",
+      accessories: [{ text: "waiting", color: "#F5C518" }],
       actions: [
-        { id: 'default', title: 'Open activation page', icon: 'open' },
-        { id: 'copy_code', title: 'Copy code', icon: 'copy' },
+        { id: "default", title: "Open activation page", icon: "open" },
+        { id: "copy_code", title: "Copy code", icon: "copy" },
       ],
       preview: {
         markdown: [
-          '## Log in to Trakt',
-          '',
+          "## Log in to Trakt",
+          "",
           `1. Open **[${login.url}](${login.url})**`,
           `2. Enter the code:  **\`${login.userCode}\`**`,
-          '3. Approve the app — this screen updates automatically.',
-        ].join('\n'),
+          "3. Approve the app — this screen updates automatically.",
+        ].join("\n"),
       },
     });
   } else {
     items.push({
-      id: 'login:restart',
-      title: 'Restart login',
+      id: "login:restart",
+      title: "Restart login",
       subtitle: statusLine,
-      icon: 'refresh',
-      actions: [{ id: 'default', title: 'Restart', icon: 'refresh' }],
+      icon: "refresh",
+      actions: [{ id: "default", title: "Restart", icon: "refresh" }],
     });
   }
   setItems(items);
-  render(rev, 'list', { items, placeholder: 'Authorizing with Trakt…' });
+  render(rev, "list", { items, placeholder: "Authorizing with Trakt…" });
 }
 
 function renderNeedLogin(rev) {
-  render(rev, 'detail', {
+  render(rev, "detail", {
     detail: {
       markdown: [
-        '## Not logged in',
-        '',
-        'This needs a Trakt login. Go back and run **Log in to Trakt** first.',
-      ].join('\n'),
+        "## Not logged in",
+        "",
+        "This needs a Trakt login. Go back and run **Log in to Trakt** first.",
+      ].join("\n"),
     },
   });
 }
 
 async function renderAccount(rev) {
-  loadingFrame(rev, 'Loading profile…');
-  const data = await trakt('/users/settings', { authed: true });
+  loadingFrame(rev, "Loading profile…");
+  const data = await trakt("/users/settings", { authed: true });
   const u = (data && data.user) || {};
-  render(rev, 'detail', {
+  render(rev, "detail", {
     detail: {
-      markdown: [`## ${u.name || u.username || 'Trakt user'}`, '', 'You are logged in.'].join('\n'),
+      markdown: [
+        `## ${u.name || u.username || "Trakt user"}`,
+        "",
+        "You are logged in.",
+      ].join("\n"),
       metadata: [
-        { label: 'Username', text: u.username || '—', icon: 'person' },
-        { label: 'VIP', text: u.vip ? 'Yes' : 'No' },
-        { label: 'Private', text: u.private ? 'Yes' : 'No' },
+        { label: "Username", text: u.username || "—", icon: "person" },
+        { label: "VIP", text: u.vip ? "Yes" : "No" },
+        { label: "Private", text: u.private ? "Yes" : "No" },
         { separator: true },
-        { label: 'Profile', text: 'trakt.tv', url: u.username ? `https://trakt.tv/users/${u.username}` : 'https://trakt.tv' },
+        {
+          label: "Profile",
+          text: "trakt.tv",
+          url: u.username
+            ? `https://trakt.tv/users/${u.username}`
+            : "https://trakt.tv",
+        },
       ],
     },
   });
@@ -742,26 +931,26 @@ async function renderAccount(rev) {
 
 // ── screen dispatch ──────────────────────────────────────────────────────────
 function renderSetup(rev) {
-  render(rev, 'detail', {
+  render(rev, "detail", {
     detail: {
       markdown: [
-        '## Trakt — setup needed',
-        '',
-        'Create a file named `config.json` next to this plugin with your Trakt',
-        'API credentials:',
-        '',
-        '```json',
+        "## Trakt — setup needed",
+        "",
+        "Create a file named `config.json` next to this plugin with your Trakt",
+        "API credentials:",
+        "",
+        "```json",
         '{ "clientId": "…", "clientSecret": "…", "tmdbApiKey": "" }',
-        '```',
-        '',
-        '1. Sign in at [trakt.tv](https://trakt.tv) and open',
-        '   **[trakt.tv/oauth/applications](https://trakt.tv/oauth/applications)**.',
-        '2. Create an app with redirect URI `urn:ietf:wg:oauth:2.0:oob`.',
-        '3. Copy the **Client ID** and **Client Secret** into `config.json`.',
-        '4. *(optional)* add a free **TMDB v3** `tmdbApiKey` to show posters.',
-        '',
-        'Then re-open the launcher and type `trakt`.',
-      ].join('\n'),
+        "```",
+        "",
+        "1. Sign in at [trakt.tv](https://trakt.tv) and open",
+        "   **[trakt.tv/oauth/applications](https://trakt.tv/oauth/applications)**.",
+        "2. Create an app with redirect URI `urn:ietf:wg:oauth:2.0:oob`.",
+        "3. Copy the **Client ID** and **Client Secret** into `config.json`.",
+        "4. *(optional)* add a free **TMDB v3** `tmdbApiKey` to show posters.",
+        "",
+        "Then re-open the launcher and type `trakt`.",
+      ].join("\n"),
     },
   });
 }
@@ -770,35 +959,71 @@ async function renderScreen(rev, text) {
   if (!config.clientId) return renderSetup(rev);
   try {
     switch (top().screen) {
-      case 'root':
+      case "root":
         return renderRoot(rev, text);
-      case 'search_all':
-        return renderSearch(rev, text, 'movie,show', { emptyText: 'No results', hint: 'Type a movie or show…', placeholder: 'Search movies & shows…' });
-      case 'search_movies':
-        return renderSearch(rev, text, 'movie', { emptyText: 'No movies', hint: 'Type a movie title…', placeholder: 'Search movies…' });
-      case 'search_shows':
-        return renderSearch(rev, text, 'show', { emptyText: 'No shows', hint: 'Type a show title…', placeholder: 'Search shows…' });
-      case 'trending_movies':
-        return renderBrowse(rev, text, () => fetchTrending('movies'), { loadingText: 'Loading trending movies…', placeholder: 'Filter trending movies…' });
-      case 'trending_shows':
-        return renderBrowse(rev, text, () => fetchTrending('shows'), { loadingText: 'Loading trending shows…', placeholder: 'Filter trending shows…' });
-      case 'popular_movies':
-        return renderBrowse(rev, text, () => fetchPopular('movies'), { loadingText: 'Loading popular movies…', placeholder: 'Filter popular movies…' });
-      case 'popular_shows':
-        return renderBrowse(rev, text, () => fetchPopular('shows'), { loadingText: 'Loading popular shows…', placeholder: 'Filter popular shows…' });
-      case 'watchlist':
-        return renderBrowse(rev, text, fetchWatchlist, { loadingText: 'Loading watchlist…', emptyText: 'Your watchlist is empty', placeholder: 'Filter watchlist…' });
-      case 'history':
-        return renderBrowse(rev, text, fetchHistory, { loadingText: 'Loading history…', emptyText: 'No watched history', placeholder: 'Filter history…' });
-      case 'up_next':
-        return renderBrowse(rev, text, fetchUpNext, { loadingText: 'Loading calendar…', emptyText: 'Nothing airing in the next 14 days', placeholder: 'Filter upcoming…' });
-      case 'login':
+      case "search_all":
+        return renderSearch(rev, text, "movie,show", {
+          emptyText: "No results",
+          hint: "Type a movie or show…",
+          placeholder: "Search movies & shows…",
+        });
+      case "search_movies":
+        return renderSearch(rev, text, "movie", {
+          emptyText: "No movies",
+          hint: "Type a movie title…",
+          placeholder: "Search movies…",
+        });
+      case "search_shows":
+        return renderSearch(rev, text, "show", {
+          emptyText: "No shows",
+          hint: "Type a show title…",
+          placeholder: "Search shows…",
+        });
+      case "trending_movies":
+        return renderBrowse(rev, text, () => fetchTrending("movies"), {
+          loadingText: "Loading trending movies…",
+          placeholder: "Filter trending movies…",
+        });
+      case "trending_shows":
+        return renderBrowse(rev, text, () => fetchTrending("shows"), {
+          loadingText: "Loading trending shows…",
+          placeholder: "Filter trending shows…",
+        });
+      case "popular_movies":
+        return renderBrowse(rev, text, () => fetchPopular("movies"), {
+          loadingText: "Loading popular movies…",
+          placeholder: "Filter popular movies…",
+        });
+      case "popular_shows":
+        return renderBrowse(rev, text, () => fetchPopular("shows"), {
+          loadingText: "Loading popular shows…",
+          placeholder: "Filter popular shows…",
+        });
+      case "watchlist":
+        return renderBrowse(rev, text, fetchWatchlist, {
+          loadingText: "Loading watchlist…",
+          emptyText: "Your watchlist is empty",
+          placeholder: "Filter watchlist…",
+        });
+      case "history":
+        return renderBrowse(rev, text, fetchHistory, {
+          loadingText: "Loading history…",
+          emptyText: "No watched history",
+          placeholder: "Filter history…",
+        });
+      case "up_next":
+        return renderBrowse(rev, text, fetchUpNext, {
+          loadingText: "Loading calendar…",
+          emptyText: "Nothing airing in the next 14 days",
+          placeholder: "Filter upcoming…",
+        });
+      case "login":
         // Kick off the device flow once on entry; afterwards just reflect its
         // state. A failed/expired flow shows a "Restart login" item instead of
         // re-triggering on every keystroke.
-        if (login.status === 'idle') return startLogin();
+        if (login.status === "idle") return startLogin();
         return renderLogin(rev);
-      case 'account':
+      case "account":
         return renderAccount(rev);
       default:
         return renderRoot(rev, text);
@@ -810,33 +1035,45 @@ async function renderScreen(rev, text) {
 
 // ── actions ──────────────────────────────────────────────────────────────────
 async function mediaBody(m) {
-  const key = m.mediaType === 'show' ? 'shows' : 'movies';
+  const key = m.mediaType === "show" ? "shows" : "movies";
   return { [key]: [{ ids: { trakt: m.obj.ids.trakt } }] };
 }
 
 async function handleMediaAction(m, action) {
   switch (action) {
-    case 'default':
+    case "default":
       cmdOpen(traktWebUrl(m));
       return cmdHide();
-    case 'open_imdb': {
+    case "open_imdb": {
       const u = imdbWebUrl(m);
       if (u) cmdOpen(u);
       return cmdHide();
     }
-    case 'copy_title':
-      return cmdCopy(m.obj.title || '');
-    case 'add_watchlist':
-      await trakt('/sync/watchlist', { method: 'POST', body: await mediaBody(m), authed: true });
+    case "copy_title":
+      return cmdCopy(m.obj.title || "");
+    case "add_watchlist":
+      await trakt("/sync/watchlist", {
+        method: "POST",
+        body: await mediaBody(m),
+        authed: true,
+      });
       return cmdToast(`Added “${m.obj.title}” to watchlist`);
-    case 'remove_watchlist':
-      await trakt('/sync/watchlist/remove', { method: 'POST', body: await mediaBody(m), authed: true });
+    case "remove_watchlist":
+      await trakt("/sync/watchlist/remove", {
+        method: "POST",
+        body: await mediaBody(m),
+        authed: true,
+      });
       cmdToast(`Removed “${m.obj.title}” from watchlist`);
       // Refresh the watchlist so the row disappears.
-      if (top().screen === 'watchlist') top().ctx.data = null;
+      if (top().screen === "watchlist") top().ctx.data = null;
       return renderScreen(0, state.lastText);
-    case 'mark_watched':
-      await trakt('/sync/history', { method: 'POST', body: await mediaBody(m), authed: true });
+    case "mark_watched":
+      await trakt("/sync/history", {
+        method: "POST",
+        body: await mediaBody(m),
+        authed: true,
+      });
       return cmdToast(`Marked “${m.obj.title}” as watched`);
     default:
       cmdOpen(traktWebUrl(m));
@@ -845,26 +1082,26 @@ async function handleMediaAction(m, action) {
 }
 
 async function handleAction(id, action) {
-  if (id.startsWith('cmd:')) {
+  if (id.startsWith("cmd:")) {
     const c = id.slice(4);
-    if (c === 'logout') {
+    if (c === "logout") {
       clearTokens();
-      cmdToast('Logged out of Trakt');
+      cmdToast("Logged out of Trakt");
       return resetToRoot();
     }
-    if (c === 'login') {
+    if (c === "login") {
       stopLogin();
-      login.status = 'idle'; // start a fresh device flow on entry
+      login.status = "idle"; // start a fresh device flow on entry
     }
     return push(c);
   }
-  if (id === 'login:open') {
-    if (action === 'copy_code') return cmdCopy(login.userCode);
+  if (id === "login:open") {
+    if (action === "copy_code") return cmdCopy(login.userCode);
     return cmdOpen(login.url);
   }
-  if (id === 'login:restart') {
+  if (id === "login:restart") {
     stopLogin();
-    login.status = 'idle';
+    login.status = "idle";
     return startLogin();
   }
 
@@ -874,18 +1111,18 @@ async function handleAction(id, action) {
 }
 
 // ── stdin loop ───────────────────────────────────────────────────────────────
-let buffer = '';
-process.stdin.setEncoding('utf8');
-process.stdin.on('data', (chunk) => {
+let buffer = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => {
   buffer += chunk;
   let idx;
-  while ((idx = buffer.indexOf('\n')) >= 0) {
+  while ((idx = buffer.indexOf("\n")) >= 0) {
     const line = buffer.slice(0, idx).trim();
     buffer = buffer.slice(idx + 1);
     if (line) handleLine(line);
   }
 });
-process.stdin.on('end', () => process.exit(0));
+process.stdin.on("end", () => process.exit(0));
 
 async function handleLine(line) {
   let msg;
@@ -895,28 +1132,28 @@ async function handleLine(line) {
     return;
   }
   switch (msg.type) {
-    case 'close':
+    case "close":
       stopLogin();
       process.exit(0);
       break;
-    case 'init':
+    case "init":
       state.lastRev = msg.rev || 0;
-      state.lastText = msg.query != null ? msg.query : '';
+      state.lastText = msg.query != null ? msg.query : "";
       await renderScreen(state.lastRev, state.lastText);
       break;
-    case 'query':
+    case "query":
       state.lastRev = msg.rev || 0;
-      state.lastText = msg.text != null ? msg.text : '';
+      state.lastText = msg.text != null ? msg.text : "";
       await renderScreen(state.lastRev, state.lastText);
       break;
-    case 'action':
+    case "action":
       try {
-        await handleAction(msg.id || '', msg.action || 'default');
+        await handleAction(msg.id || "", msg.action || "default");
       } catch (err) {
         cmdToast(`Error: ${err.message}`);
       }
       break;
-    case 'back':
+    case "back":
       await popScreen();
       break;
     // 'select' needs no work — previews are provided per item.
