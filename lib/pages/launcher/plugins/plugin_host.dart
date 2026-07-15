@@ -2,11 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+
 import '../../../logic/error_handler.dart';
 import '../../../models/settings.dart';
+import '../../../models/win32/win_utils.dart';
 import 'plugin_debug.dart';
 import 'plugin_manifest.dart';
 import 'plugin_protocol.dart';
+import 'plugin_storage.dart';
 
 /// Owns the lifecycle of a single running plugin process and the newline-
 /// delimited JSON conversation with it.
@@ -53,6 +57,18 @@ class LauncherPluginHost {
   int _rev = 0;
   bool _closing = false;
 
+  /// Activation generation. Bumped on every activate/deactivate so stdout
+  /// lines from a superseded (background-finishing) process can be told apart
+  /// from the live plugin's: detached processes keep their storage/notify
+  /// abilities but can no longer render frames or drive the UI.
+  int _generation = 0;
+
+  /// Extra shutdown grace requested via the `background` command: instead of
+  /// being killed ~2s after `close`, the process gets this long to finish its
+  /// work (uploads, syncs) — still able to write storage and fire native
+  /// notifications, but detached from the UI.
+  Duration? _backgroundGrace;
+
   /// Serializes stdin writes. Each `writeln` + `flush` must fully complete
   /// before the next starts: `flush()` temporarily marks the sink as "bound to
   /// a stream", and writing during that window throws `StateError`. Chaining
@@ -77,6 +93,8 @@ class LauncherPluginHost {
     _closing = false;
     _active = manifest;
     _lastQuery = initialQuery;
+    _backgroundGrace = null;
+    final int generation = ++_generation;
 
     // Install the plugin's dependencies before the first launch (pip for Python,
     // npm/bun for Node). This can block on the network, so it runs before the
@@ -99,7 +117,7 @@ class LauncherPluginHost {
       _stdoutSub = process.stdout
           .transform(const Utf8Decoder(allowMalformed: true))
           .transform(const LineSplitter())
-          .listen(_handleStdoutLine);
+          .listen((String line) => _handleStdoutLine(generation, manifest, line));
 
       _stderrSub = process.stderr
           .transform(const Utf8Decoder(allowMalformed: true))
@@ -309,6 +327,8 @@ class LauncherPluginHost {
           return;
         }
         if (path.endsWith('.log') || path.endsWith('.tmp')) return;
+        // Storage writes come from the plugin itself — never a reason to restart.
+        if (path.endsWith('/${PluginStorage.storeFileName}')) return;
         _devReloadDebounce?.cancel();
         // Editors fire several events per save (write + metadata); coalesce
         // them into one restart.
@@ -355,10 +375,36 @@ class LauncherPluginHost {
     _send(<String, Object?>{'type': 'action', 'id': id, 'action': action});
   }
 
-  /// Delivers a form view's field values after the user submits.
-  void sendFormSubmit(Map<String, Object?> values) {
+  /// Delivers a form view's field values after the user submits. [button] is
+  /// the id of the pressed `form.buttons` entry, when the form declared any.
+  void sendFormSubmit(Map<String, Object?> values, {String? button}) {
     debugLog.add(PluginDebugKind.info, 'submit ${jsonEncode(values)}');
-    _send(<String, Object?>{'type': 'submit', 'values': values});
+    _send(<String, Object?>{
+      'type': 'submit',
+      'values': values,
+      if (button != null) 'button': button,
+    });
+  }
+
+  /// A watched form field changed — lets plugins re-render dependent fields.
+  void sendFormChange(String fieldId, Map<String, Object?> values) {
+    _send(<String, Object?>{'type': 'change', 'id': fieldId, 'values': values});
+  }
+
+  /// The user scrolled near the end of a `hasMore` list — the plugin should
+  /// answer with a longer item list (same rev semantics as a query response).
+  void sendLoadMore() {
+    debugLog.add(PluginDebugKind.info, 'loadMore');
+    _send(<String, Object?>{'type': 'loadMore', 'rev': _rev});
+  }
+
+  /// `inputMode: "submit"` — Enter submits the whole query text at once
+  /// instead of streaming keystrokes.
+  void sendSubmitQuery(String text) {
+    _rev++;
+    _lastQuery = text;
+    debugLog.add(PluginDebugKind.info, 'submitQuery "${_truncate(text)}"');
+    _send(<String, Object?>{'type': 'submitQuery', 'text': text, 'rev': _rev});
   }
 
   /// Escape on a frame that declared `canGoBack` — the plugin should render
@@ -374,9 +420,14 @@ class LauncherPluginHost {
     _send(<String, Object?>{'type': 'tab', 'id': id, 'rev': _rev});
   }
 
-  void _handleStdoutLine(String line) {
+  void _handleStdoutLine(int generation, PluginManifest manifest, String line) {
     final String trimmed = line.trim();
     if (trimmed.isEmpty) return;
+
+    // A line from a superseded process (the user left the plugin while it
+    // finishes in the background): it may still persist state and notify, but
+    // can no longer render frames or drive the launcher UI.
+    final bool live = generation == _generation && _process != null;
 
     Map<String, dynamic>? message;
     if (trimmed.startsWith('{')) {
@@ -390,12 +441,16 @@ class LauncherPluginHost {
     if (message == null) {
       // Not a protocol message — treat as diagnostic output from the plugin.
       debugLog.add(PluginDebugKind.stdout, trimmed);
-      unawaited(ErrorLogger.log('Plugin:${_active?.id ?? '?'}', '[stdout] $line', null));
+      unawaited(ErrorLogger.log('Plugin:${manifest.id}', '[stdout] $line', null));
       return;
     }
 
     final Object? type = message['type'];
     if (type == 'render') {
+      if (!live) {
+        debugLog.add(PluginDebugKind.dropped, 'Dropped frame from background-finishing process');
+        return;
+      }
       final PluginRenderFrame frame = PluginRenderFrame.fromJson(message);
       // Drop stale responses: a frame answering an old query (rev < latest) is
       // superseded. rev == 0 means "unsolicited" (e.g. a background refresh) and
@@ -421,11 +476,93 @@ class LauncherPluginHost {
         return;
       }
       debugLog.add(PluginDebugKind.command, 'command ${command.name}${command.text != null ? ' text=${_truncate(command.text!)}' : ''}${command.url != null ? ' url=${_truncate(command.url!)}' : ''}');
+      // Host services (storage, clipboard, notifications, background grace)
+      // are executed here; UI side effects are forwarded to the launcher.
+      if (_handleHostCommand(command, manifest, live: live)) return;
+      if (!live) {
+        debugLog.add(PluginDebugKind.dropped, 'Dropped UI command "${command.name}" from background process');
+        return;
+      }
       onCommand(command);
       return;
     }
 
     debugLog.add(PluginDebugKind.error, 'Unknown message type "$type"');
+  }
+
+  /// Executes commands that are host services rather than launcher UI effects.
+  /// Returns true when the command was consumed.
+  bool _handleHostCommand(PluginCommand command, PluginManifest manifest, {required bool live}) {
+    switch (command.name) {
+      case 'storage':
+        _handleStorageCommand(command, manifest, live: live);
+        return true;
+      case 'clipboardread':
+        if (!live) return true;
+        final Object? requestId = command.data['requestId'];
+        unawaited(Clipboard.getData('text/plain').then((ClipboardData? data) {
+          _send(<String, Object?>{
+            'type': 'clipboard',
+            if (requestId != null) 'requestId': requestId,
+            'text': data?.text ?? '',
+          });
+        }));
+        return true;
+      case 'notify':
+        // Works even from a background-finishing process — that's its point.
+        final Object? title = command.data['title'];
+        WinUtils.showWindowsNotification(
+          title: title is String && title.trim().isNotEmpty ? title : manifest.name,
+          body: command.text ?? '',
+          onClick: () {},
+        );
+        return true;
+      case 'background':
+        if (!live) return true;
+        final Object? timeout = command.data['timeout'];
+        final int seconds = (timeout is num ? timeout.toInt() : 30).clamp(5, 300);
+        _backgroundGrace = Duration(seconds: seconds);
+        debugLog.add(PluginDebugKind.info, 'Background finish granted (${seconds}s after close)');
+        return true;
+    }
+    return false;
+  }
+
+  /// `storage` command: `op` = get / set / delete / keys, with optional
+  /// `secret: true` routing values to the Windows Credential Manager. `get`
+  /// and `keys` reply with a `{"type":"storage"}` message echoing `requestId`.
+  void _handleStorageCommand(PluginCommand command, PluginManifest manifest, {required bool live}) {
+    final Object? op = command.data['op'];
+    final Object? key = command.data['key'];
+    final Object? requestId = command.data['requestId'];
+    final bool secret = command.data['secret'] == true;
+    switch (op) {
+      case 'set':
+        if (key is String && key.isNotEmpty) PluginStorage.set(manifest, key, command.data['value'], secret: secret);
+        return;
+      case 'delete':
+        if (key is String && key.isNotEmpty) PluginStorage.delete(manifest, key, secret: secret);
+        return;
+      case 'get':
+        if (!live || key is! String || key.isEmpty) return;
+        _send(<String, Object?>{
+          'type': 'storage',
+          if (requestId != null) 'requestId': requestId,
+          'key': key,
+          'value': PluginStorage.get(manifest, key, secret: secret),
+        });
+        return;
+      case 'keys':
+        if (!live) return;
+        _send(<String, Object?>{
+          'type': 'storage',
+          if (requestId != null) 'requestId': requestId,
+          'keys': PluginStorage.keys(manifest),
+        });
+        return;
+      default:
+        debugLog.add(PluginDebugKind.error, 'storage command with unknown op "$op"');
+    }
   }
 
   static String _truncate(String value) => value.length <= 120 ? value : '${value.substring(0, 120)}…';
@@ -459,24 +596,34 @@ class LauncherPluginHost {
   }
 
   /// Gracefully stops the current plugin: send `close`, then kill after a short
-  /// grace period if it does not exit on its own.
+  /// grace period if it does not exit on its own. A plugin that requested
+  /// `background` finishing instead keeps running (detached from the UI) for
+  /// its granted grace period — still able to write storage and notify.
   Future<void> deactivate() async {
     final Process? process = _process;
     _process = null;
     _active = null;
     _closing = true;
+    _generation++;
 
     _devReloadDebounce?.cancel();
     _devReloadDebounce = null;
     await _devWatchSub?.cancel();
     _devWatchSub = null;
 
-    await _stdoutSub?.cancel();
-    await _stderrSub?.cancel();
+    final StreamSubscription<String>? stdoutSub = _stdoutSub;
+    final StreamSubscription<String>? stderrSub = _stderrSub;
     _stdoutSub = null;
     _stderrSub = null;
 
-    if (process == null) return;
+    final Duration? backgroundGrace = _backgroundGrace;
+    _backgroundGrace = null;
+
+    if (process == null) {
+      await stdoutSub?.cancel();
+      await stderrSub?.cancel();
+      return;
+    }
     // Let any in-flight write drain before sending `close`, so the two don't
     // overlap on the sink (see _send).
     await _writeChain.catchError((Object _) {});
@@ -486,6 +633,28 @@ class LauncherPluginHost {
     } catch (_) {
       // Ignore — the pipe may already be gone.
     }
+
+    if (backgroundGrace != null) {
+      // Detached finish: keep the stdout listener alive (storage writes and
+      // notify commands still work; frames and UI commands are dropped by the
+      // generation guard) and only kill once the grace runs out. Don't await —
+      // a switch to another plugin must not block on this.
+      debugLog.add(PluginDebugKind.info, 'Finishing in background (up to ${backgroundGrace.inSeconds}s)');
+      unawaited(process.exitCode
+          .timeout(backgroundGrace, onTimeout: () {
+            process.kill();
+            return -1;
+          })
+          .catchError((Object _) => -1)
+          .whenComplete(() async {
+            await stdoutSub?.cancel();
+            await stderrSub?.cancel();
+          }));
+      return;
+    }
+
+    await stdoutSub?.cancel();
+    await stderrSub?.cancel();
     try {
       await process.exitCode.timeout(
         const Duration(seconds: 2),

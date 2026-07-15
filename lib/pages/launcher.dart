@@ -60,6 +60,7 @@ import 'launcher/plugins/plugin_host.dart';
 import 'launcher/plugins/plugin_manifest.dart';
 import 'launcher/plugins/plugin_protocol.dart';
 import 'launcher/plugins/plugin_registry.dart';
+import 'launcher/plugins/plugin_shortcut.dart';
 import 'launcher/plugins/plugin_view.dart';
 import 'launcher/services/launcher_app_catalog_service.dart';
 import 'launcher/services/windows_terminal_service.dart';
@@ -212,6 +213,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   Timer? _pluginWidthCollapseTimer;
   String? _pluginToast;
   Timer? _pluginToastTimer;
+
+  /// Toast styling from the `toast` command: `success` (default), `error`,
+  /// `info`, or `progress` (which pins the toast until a later update or a
+  /// determinate `progress` value; re-sending the same `id` replaces it).
+  String _pluginToastStyle = 'success';
+  double? _pluginToastProgress;
+
+  /// `inputMode: "submit"`: the last query text sent via `submitQuery`, so a
+  /// second Enter on unchanged text activates the selected item instead of
+  /// re-submitting.
+  String? _pluginLastSubmittedQuery;
 
   /// Scrolls the detail (markdown document) view from arrow/page keys.
   final ScrollController _pluginDetailScroll = ScrollController();
@@ -492,6 +504,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         _activeIndexNotifier.value = 0;
       });
       unawaited(_pluginHost.activate(plugin, initialQuery: pluginQuery));
+    } else if (_pluginFrame?.submitInput == true) {
+      // `inputMode: "submit"`: keystrokes stay local; the query only reaches
+      // the plugin when the user presses Enter (see _submitPluginItem).
     } else {
       // Debounce keystrokes before hitting the plugin process — plugins that
       // call a rate-limited external API on every query can get blocked if we
@@ -507,6 +522,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   void _deactivatePlugin() {
     _pluginQueryDebounce?.cancel();
     _pluginSubmitPending = false;
+    _pluginLastSubmittedQuery = null;
     _pluginToastTimer?.cancel();
     _pluginToastTimer = null;
     if (_activePlugin == null && _pluginFrame == null) return;
@@ -518,6 +534,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       setState(() {
         _pluginFrame = null;
         _pluginToast = null;
+        _pluginToastProgress = null;
       });
     }
   }
@@ -535,16 +552,26 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     if (!mounted || _activePlugin == null) return;
     final PluginRenderFrame? previous = _pluginFrame;
     final bool wasForm = previous?.view == PluginViewType.form;
+    // Streaming `detail.append` frames carry only the new chunk — resolve them
+    // against the markdown currently on screen before rendering.
+    if (frame.detailAppend != null) {
+      frame = frame.resolveAppend(previous?.view == PluginViewType.detail ? previous?.detailMarkdown : null);
+    }
     // A different item set means a new screen (drill-in) or a fresh search:
     // snap the selection back to the first row so it matches what's shown and
     // arrow keys start from there. Same-id re-renders (e.g. a background badge
-    // refresh) keep the cursor where the user left it.
+    // refresh) keep the cursor where the user left it. A frame carrying
+    // `selectId` picks its own highlight instead.
     final bool sameItemSet = previous != null && _sameItemIds(previous.items, frame.items);
     setState(() {
       _pluginFrame = frame;
       _isSearching = frame.loading;
       final int count = frame.items.length;
-      if (count == 0 || !sameItemSet) {
+      final int selectIdIndex =
+          frame.selectId == null ? -1 : frame.items.indexWhere((PluginItem item) => item.id == frame.selectId);
+      if (selectIdIndex >= 0) {
+        _activeIndexNotifier.value = selectIdIndex;
+      } else if (count == 0 || !sameItemSet) {
         _activeIndexNotifier.value = 0;
       } else if (_activeIndexNotifier.value >= count) {
         _activeIndexNotifier.value = count - 1;
@@ -577,8 +604,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   }
 
   /// Form view submit: forwards the field values to the plugin.
-  void _onPluginFormSubmit(Map<String, Object?> values) {
-    _pluginHost.sendFormSubmit(values);
+  void _onPluginFormSubmit(Map<String, Object?> values, {String? button}) {
+    _pluginHost.sendFormSubmit(values, button: button);
+  }
+
+  /// Form view: a `watch: true` field changed (dependent dropdowns).
+  void _onPluginFormChange(String fieldId, Map<String, Object?> values) {
+    _pluginHost.sendFormChange(fieldId, values);
   }
 
   /// Form view Escape: back when the frame declared canGoBack, otherwise exit.
@@ -611,7 +643,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         unawaited(QuickMenuFunctions.hideQuickMenu());
         break;
       case 'toast':
-        _showPluginToast(command.text ?? '');
+        final Object? style = command.data['style'];
+        final Object? progress = command.data['progress'];
+        _showPluginToast(
+          command.text ?? '',
+          style: style is String ? style : 'success',
+          progress: progress is num ? progress.toDouble().clamp(0.0, 1.0) : null,
+        );
         break;
       case 'setquery':
         _setPluginQuery(command.text ?? '');
@@ -632,10 +670,18 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   }
 
   /// Shows a transient confirmation chip over the plugin results area.
-  void _showPluginToast(String message) {
+  /// `progress`-style toasts stay pinned (updated in place by later `toast`
+  /// commands) until a non-progress style arrives or the plugin exits.
+  void _showPluginToast(String message, {String style = 'success', double? progress}) {
     if (message.trim().isEmpty) return;
     _pluginToastTimer?.cancel();
-    setState(() => _pluginToast = message.trim());
+    _pluginToastTimer = null;
+    setState(() {
+      _pluginToast = message.trim();
+      _pluginToastStyle = style;
+      _pluginToastProgress = progress;
+    });
+    if (style == 'progress') return; // Pinned until updated.
     _pluginToastTimer = Timer(const Duration(milliseconds: 1800), () {
       _pluginToastTimer = null;
       if (mounted) setState(() => _pluginToast = null);
@@ -703,28 +749,67 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   /// Fires the default action for the selected plugin item (Enter / tap).
   void _submitPluginItem() {
+    final PluginManifest? plugin = _activePlugin;
+    // `inputMode: "submit"` — Enter delivers the query text (chat-style) when
+    // it changed since the last submit; unchanged text falls through to the
+    // selected item's default action so arrows+Enter still work.
+    if (_pluginFrame?.submitInput == true && plugin != null) {
+      final String text = PluginRegistry.queryAfterKeyword(_controller.text, plugin);
+      if (text.trim().isNotEmpty && text != _pluginLastSubmittedQuery) {
+        _pluginLastSubmittedQuery = text;
+        _pluginHost.sendSubmitQuery(text);
+        return;
+      }
+    }
     // A query keystroke is still waiting out its debounce: the visible frame
     // predates what the user typed, so submitting now would fire the stale
     // (unfiltered) list's item. Flush the query and defer the submit until the
     // frame answering it arrives.
-    if ((_pluginQueryDebounce?.isActive ?? false) && _activePlugin != null) {
+    if ((_pluginQueryDebounce?.isActive ?? false) && plugin != null) {
       _pluginQueryDebounce!.cancel();
       _pluginSubmitPending = true;
-      _pluginHost.sendQuery(PluginRegistry.queryAfterKeyword(_controller.text, _activePlugin!));
+      _pluginHost.sendQuery(PluginRegistry.queryAfterKeyword(_controller.text, plugin));
       return;
     }
     final PluginRenderFrame? frame = _pluginFrame;
     if (frame == null || frame.items.isEmpty) return;
     final int idx = _activeIndexNotifier.value.clamp(0, frame.items.length - 1);
-    _pluginHost.sendAction(frame.items[idx].id, 'default');
+    final PluginItem item = frame.items[idx];
+    // Enter fires "default"; when the item *lists* a default action with a
+    // confirm/destructive gate, honor it.
+    PluginAction? declared;
+    for (final PluginAction action in item.actions) {
+      if (action.id == 'default') declared = action;
+    }
+    _firePluginAction(item.id, declared ?? const PluginAction(id: 'default', title: ''));
+  }
+
+  /// Central action dispatch: shows the action's confirm gate (if any), then
+  /// forwards it to the plugin. [itemId] is empty for frame-level actions.
+  void _firePluginAction(String itemId, PluginAction action) {
+    if (action.confirm == null) {
+      _pluginHost.sendAction(itemId, action.id);
+      return;
+    }
+    showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.transparent,
+      builder: (_) => PluginConfirmPanel(action: action),
+    ).then((bool? confirmed) {
+      if (confirmed == true && _activePlugin != null) _pluginHost.sendAction(itemId, action.id);
+    });
   }
 
   void _openPluginActions() {
     final PluginRenderFrame? frame = _pluginFrame;
-    if (frame == null || frame.items.isEmpty) return;
-    final int idx = _activeIndexNotifier.value.clamp(0, frame.items.length - 1);
-    final PluginItem item = frame.items[idx];
-    if (item.actions.isEmpty) return;
+    if (frame == null) return;
+    PluginItem? item;
+    if (frame.items.isNotEmpty && frame.view != PluginViewType.detail && frame.view != PluginViewType.form) {
+      item = frame.items[_activeIndexNotifier.value.clamp(0, frame.items.length - 1)];
+    }
+    if ((item?.actions.isEmpty ?? true) && frame.frameActions.isEmpty) return;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -732,9 +817,37 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       barrierColor: Colors.transparent,
       builder: (_) => PluginActionsPanel(
         item: item,
-        onSelected: (String actionId) => _pluginHost.sendAction(item.id, actionId),
+        frameActions: frame.frameActions,
+        onSelected: (PluginAction action, {required bool isFrameAction}) =>
+            _firePluginAction(isFrameAction ? '' : (item?.id ?? ''), action),
       ),
     );
+  }
+
+  /// Matches a key press against the shortcuts declared by the highlighted
+  /// item's actions and the frame's actions; fires the first hit.
+  bool _handlePluginShortcut(KeyEvent event) {
+    final PluginRenderFrame? frame = _pluginFrame;
+    if (frame == null) return false;
+    PluginItem? item;
+    if (frame.items.isNotEmpty) {
+      item = frame.items[_activeIndexNotifier.value.clamp(0, frame.items.length - 1)];
+    }
+    for (final PluginAction action in item?.actions ?? const <PluginAction>[]) {
+      final PluginShortcut? shortcut = PluginShortcut.parse(action.shortcut);
+      if (shortcut != null && shortcut.matches(event)) {
+        _firePluginAction(item!.id, action);
+        return true;
+      }
+    }
+    for (final PluginAction action in frame.frameActions) {
+      final PluginShortcut? shortcut = PluginShortcut.parse(action.shortcut);
+      if (shortcut != null && shortcut.matches(event)) {
+        _firePluginAction('', action);
+        return true;
+      }
+    }
+    return false;
   }
 
   /// Handles key events while a plugin owns the launcher. Returns
@@ -751,11 +864,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     }
 
     if (event is KeyDownEvent &&
-        ((event.logicalKey == LogicalKeyboardKey.keyK && HardwareKeyboard.instance.isControlPressed) ||
-            event.logicalKey == LogicalKeyboardKey.tab)) {
+        event.logicalKey == LogicalKeyboardKey.keyK &&
+        HardwareKeyboard.instance.isControlPressed) {
       _openPluginActions();
       return KeyEventResult.handled;
     }
+    // Plugin-declared action shortcuts (item's, then frame's).
+    if (event is KeyDownEvent && _handlePluginShortcut(event)) return KeyEventResult.handled;
     if (event.logicalKey == LogicalKeyboardKey.escape) {
       // A frame that declared canGoBack owns Escape: the plugin renders its
       // previous screen. Root frames exit the plugin as usual.
@@ -867,6 +982,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
                 onHoverItem: _setPluginSelection,
                 onFormSubmit: _onPluginFormSubmit,
                 onFormCancel: _onPluginFormCancel,
+                onFormChange: _onPluginFormChange,
+                onLoadMore: _pluginHost.sendLoadMore,
+                onEmptyAction: (PluginAction action) => _firePluginAction('', action),
+                onOpenActions: _openPluginActions,
                 detailScrollController: _pluginDetailScroll,
               );
             },
@@ -896,12 +1015,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   }
 
   Widget _buildPluginToast(String message) {
+    // Icon/tint per `toast` style; `progress` shows a spinner (indeterminate)
+    // or a determinate ring, and stays pinned until updated.
+    final (IconData, Color) look = switch (_pluginToastStyle) {
+      'error' => (Icons.error_rounded, const Color(0xFFE5534B)),
+      'info' => (Icons.info_rounded, Design.accent),
+      'progress' => (Icons.hourglass_top_rounded, Design.accent),
+      _ => (Icons.check_circle_rounded, Design.accent),
+    };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface.withAlpha(240),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Design.accent.withAlpha(70)),
+        border: Border.all(color: look.$2.withAlpha(70)),
         boxShadow: <BoxShadow>[
           BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 14, offset: const Offset(0, 4)),
         ],
@@ -909,7 +1036,14 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(Icons.check_circle_rounded, size: 14, color: Design.accent),
+          if (_pluginToastStyle == 'progress')
+            SizedBox(
+              width: 13,
+              height: 13,
+              child: CircularProgressIndicator(strokeWidth: 2, value: _pluginToastProgress, color: look.$2),
+            )
+          else
+            Icon(look.$1, size: 14, color: look.$2),
           const SizedBox(width: 6),
           Text(
             message,

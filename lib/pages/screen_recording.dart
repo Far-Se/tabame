@@ -306,12 +306,13 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   int _fileSizeBytes = 0;
   bool _stopHotkeyDown = false;
   bool _pauseHotkeyDown = false;
+  bool _stoppingRecording = false;
+  final FocusNode _keyboardFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
-    File(_ffmpegDebugLogPath).writeAsStringSync('');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await RecordingOverlayWindow.setupOverlay();
       RecordingOverlayWindow.disableClickThrough();
@@ -462,21 +463,28 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
     }
   }
 
+  /// Device pixel ratio of the overlay window. Flutter positions/sizes are
+  /// logical pixels; Win32 rects and the capture backends use physical pixels,
+  /// so every conversion between the two must scale by this.
+  double get _dpr => mounted ? View.of(context).devicePixelRatio : 1.0;
+
   Rect _screenRectToLocal(Rect rect) {
+    final double dpr = _dpr;
     return Rect.fromLTWH(
-      rect.left - _virtualOrigin.dx,
-      rect.top - _virtualOrigin.dy,
-      rect.width,
-      rect.height,
+      (rect.left - _virtualOrigin.dx) / dpr,
+      (rect.top - _virtualOrigin.dy) / dpr,
+      rect.width / dpr,
+      rect.height / dpr,
     );
   }
 
   Rect _localRectToScreen(Rect rect) {
+    final double dpr = _dpr;
     return Rect.fromLTWH(
-      rect.left + _virtualOrigin.dx,
-      rect.top + _virtualOrigin.dy,
-      rect.width,
-      rect.height,
+      rect.left * dpr + _virtualOrigin.dx,
+      rect.top * dpr + _virtualOrigin.dy,
+      rect.width * dpr,
+      rect.height * dpr,
     );
   }
 
@@ -614,6 +622,16 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
     if (!_autoStopTriggered && _maxDurationMinutes > 0 && _elapsed.inSeconds >= _maxDurationMinutes * 60) {
       _autoStopTriggered = true;
       _stopRecording();
+    }
+    // The native recorder can stop on its own (e.g. the captured window was
+    // closed). Poll its status so the file gets finalized instead of the HUD
+    // counting forever against a dead capture.
+    if (_videoSource == VideoSource.wgc && !_stoppingRecording) {
+      getScreenRecordingStatus().then((ScreenRecordingStatus status) {
+        if (mounted && _recording && !_stoppingRecording && !status.isRecording) {
+          _stopRecording();
+        }
+      });
     }
   }
 
@@ -764,45 +782,45 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   // ---------------------------------------------------------------------------
   // FFmpeg recording
   // ---------------------------------------------------------------------------
-  Future<void> _checkVirtualAudioCapturer() async {
-    if (_videoSource != VideoSource.ffmpeg) {
-      if (mounted) {
-        setState(() => _missingVirtualAudioCapturer = false);
-      }
-      return;
-    }
+  // Future<void> _checkVirtualAudioCapturer() async {
+  //   if (_videoSource != VideoSource.ffmpeg) {
+  //     if (mounted) {
+  //       setState(() => _missingVirtualAudioCapturer = false);
+  //     }
+  //     return;
+  //   }
 
-    if (_audioMode != ScreenRecordingAudioMode.system && _audioMode != ScreenRecordingAudioMode.systemAndMic) {
-      if (mounted) {
-        setState(() => _missingVirtualAudioCapturer = false);
-      }
-      return;
-    }
+  //   if (_audioMode != ScreenRecordingAudioMode.system && _audioMode != ScreenRecordingAudioMode.systemAndMic) {
+  //     if (mounted) {
+  //       setState(() => _missingVirtualAudioCapturer = false);
+  //     }
+  //     return;
+  //   }
 
-    try {
-      final ProcessResult result = await Process.run(
-        'ffmpeg.exe',
-        <String>['-list_devices', 'true', '-f', 'dshow', '-i', 'dummy'],
-        runInShell: false,
-      );
+  //   try {
+  //     final ProcessResult result = await Process.run(
+  //       'ffmpeg.exe',
+  //       <String>['-list_devices', 'true', '-f', 'dshow', '-i', 'dummy'],
+  //       runInShell: false,
+  //     );
 
-      final String output = (result.stderr as String?) ?? '';
+  //     final String output = (result.stderr as String?) ?? '';
 
-      final bool installed = output.toLowerCase().contains('virtual-audio-capturer');
+  //     final bool installed = output.toLowerCase().contains('virtual-audio-capturer');
 
-      if (mounted) {
-        setState(() {
-          _missingVirtualAudioCapturer = !installed;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _missingVirtualAudioCapturer = true;
-        });
-      }
-    }
-  }
+  //     if (mounted) {
+  //       setState(() {
+  //         _missingVirtualAudioCapturer = !installed;
+  //       });
+  //     }
+  //   } catch (_) {
+  //     if (mounted) {
+  //       setState(() {
+  //         _missingVirtualAudioCapturer = true;
+  //       });
+  //     }
+  //   }
+  // }
 
   static String get _ffmpegDebugLogPath => '${WinUtils.getTabameAppDataFolder(settings: true)}\\ffmpeg_debug.log';
 
@@ -969,7 +987,9 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
         }
       } else if (config.targetType == ScreenRecordingTargetType.window && config.hWnd != null) {
         final String title = _windowTitle(config.hWnd!);
-        if (title.isNotEmpty) {
+        // A quote in the title would break the naively-tokenized command line,
+        // so treat such titles as unavailable and use the rect instead.
+        if (title.isNotEmpty && !title.contains('"')) {
           windowTitle = title;
         } else {
           // Title unavailable — fall back to the window's current rect.
@@ -1043,6 +1063,12 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
     });
 
     try {
+      // Start each recording with a fresh debug log (truncating here instead of
+      // at page launch keeps the previous session's log around until it's
+      // actually superseded).
+      try {
+        File(_ffmpegDebugLogPath).writeAsStringSync('');
+      } catch (_) {}
       final String outputPath = config.outputPath;
       _recordingPath = outputPath;
 
@@ -1102,20 +1128,23 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
         runInShell: false,
       );
 
-      _ffmpegLog('Process started. PID: ${_ffmpegProcess!.pid}');
+      final Process proc = _ffmpegProcess!;
+      _ffmpegLog('Process started. PID: ${proc.pid}');
 
       // Pipe stderr to debug log (ffmpeg writes all output to stderr).
-      _ffmpegProcess!.stderr.transform(const SystemEncoding().decoder).listen((String chunk) {
+      proc.stderr.transform(const SystemEncoding().decoder).listen((String chunk) {
         _ffmpegLog('[stderr] $chunk');
       });
-      _ffmpegProcess!.stdout.transform(const SystemEncoding().decoder).listen((String chunk) {
+      proc.stdout.transform(const SystemEncoding().decoder).listen((String chunk) {
         _ffmpegLog('[stdout] $chunk');
       });
 
-      // Watch for premature exit.
-      _ffmpegProcess!.exitCode.then((int code) {
+      // Watch for premature exit. Stop/cancel clear _ffmpegProcess before
+      // waiting on the exit code, so an intentional quit (which may return a
+      // non-zero code, e.g. after a kill) doesn't surface as an error.
+      proc.exitCode.then((int code) {
         _ffmpegLog('Process exited with code $code');
-        if (mounted && _recording && code != 0) {
+        if (mounted && _recording && identical(proc, _ffmpegProcess) && code != 0) {
           setState(() => _errorText = 'FFmpeg exited (code $code). See ffmpeg_debug.log in settings folder.');
         }
       });
@@ -1254,11 +1283,15 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   // ---------------------------------------------------------------------------
 
   Future<void> _stopRecording() async {
-    if (_videoSource == VideoSource.ffmpeg) {
-      await _stopFfmpegRecording();
-      return;
-    }
+    // Stop can be triggered from the HUD button, the global hotkey, and the
+    // auto-stop timer — guard against overlapping invocations.
+    if (_stoppingRecording) return;
+    _stoppingRecording = true;
     try {
+      if (_videoSource == VideoSource.ffmpeg) {
+        await _stopFfmpegRecording();
+        return;
+      }
       final ScreenRecordingStopResult result = await stopScreenRecording();
       await includeWindowFromCapture(RecordingOverlayWindow.hwnd);
       RecordingOverlayWindow.disableClickThrough();
@@ -1279,28 +1312,36 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
       setState(() {
         _errorText = error.message ?? error.code;
       });
+    } finally {
+      _stoppingRecording = false;
     }
   }
 
   Future<void> _cancelRecording() async {
-    if (_videoSource == VideoSource.ffmpeg) {
-      await _cancelFfmpegRecording();
-      return;
-    }
+    if (_stoppingRecording) return;
+    _stoppingRecording = true;
     try {
-      await cancelScreenRecording();
-      await includeWindowFromCapture(RecordingOverlayWindow.hwnd);
-      RecordingOverlayWindow.disableClickThrough();
-    } catch (_) {}
-    _hudTimer?.cancel();
-    if (!mounted) return;
-    setState(() {
-      _recording = false;
-      _recordingPath = '';
-      _activeRecordingRect = Rect.zero;
-    });
-    Navigator.of(context).maybePop();
-    await windowManager.close();
+      if (_videoSource == VideoSource.ffmpeg) {
+        await _cancelFfmpegRecording();
+        return;
+      }
+      try {
+        await cancelScreenRecording();
+        await includeWindowFromCapture(RecordingOverlayWindow.hwnd);
+        RecordingOverlayWindow.disableClickThrough();
+      } catch (_) {}
+      _hudTimer?.cancel();
+      if (!mounted) return;
+      setState(() {
+        _recording = false;
+        _recordingPath = '';
+        _activeRecordingRect = Rect.zero;
+      });
+      Navigator.of(context).maybePop();
+      await windowManager.close();
+    } finally {
+      _stoppingRecording = false;
+    }
   }
 
   Future<void> _handleAfterAction(String filePath) async {
@@ -1334,6 +1375,25 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
     // Without this, the continuous setState() calls steal focus from TextFields.
     _monitorTimer?.cancel();
     _monitorTimer = null;
+
+    // The modal's controls mutate state directly, so snapshot everything it can
+    // touch and restore on Cancel/dismiss — only Save keeps the changes.
+    final RecordingTargetMode prevTargetMode = _targetMode;
+    final RecordingAfterAction prevAfterAction = _afterAction;
+    final ScreenRecordingAudioMode prevAudioMode = _audioMode;
+    final int prevFrameRate = _frameRate;
+    final int prevVideoBitrateMbps = _videoBitrateMbps;
+    final bool prevCaptureCursor = _captureCursor;
+    final bool prevCaptureBorder = _captureBorder;
+    final int prevCountdownSeconds = _countdownSeconds;
+    final int prevMaxDurationMinutes = _maxDurationMinutes;
+    final VideoEncoder prevVideoEncoder = _videoEncoder;
+    final bool prevGlobalHotkeysEnabled = _globalHotkeysEnabled;
+    final String prevSelectedMicId = _selectedMicId;
+    final String prevSelectedSystemAudioId = _selectedSystemAudioId;
+    final VideoSource prevVideoSource = _videoSource;
+    final String prevFfmpegCommand = _ffmpegCommand;
+    bool saved = false;
 
     const double modalWidth = 500;
     final Rect mon = _currentMonitorRect;
@@ -2014,6 +2074,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                               RecordingSettingsStore.setString('systemAudioDeviceId', _selectedSystemAudioId);
                               RecordingSettingsStore.setString('videoSource', _videoSource.name);
                               RecordingSettingsStore.setString('ffmpegCommand', _ffmpegCommand);
+                              saved = true;
                               Navigator.of(context).pop();
                               setState(() {});
                             },
@@ -2059,6 +2120,26 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
       },
     );
 
+    if (!saved && mounted) {
+      setState(() {
+        _targetMode = prevTargetMode;
+        _afterAction = prevAfterAction;
+        _audioMode = prevAudioMode;
+        _frameRate = prevFrameRate;
+        _videoBitrateMbps = prevVideoBitrateMbps;
+        _captureCursor = prevCaptureCursor;
+        _captureBorder = prevCaptureBorder;
+        _countdownSeconds = prevCountdownSeconds;
+        _maxDurationMinutes = prevMaxDurationMinutes;
+        _videoEncoder = prevVideoEncoder;
+        _globalHotkeysEnabled = prevGlobalHotkeysEnabled;
+        _selectedMicId = prevSelectedMicId;
+        _selectedSystemAudioId = prevSelectedSystemAudioId;
+        _videoSource = prevVideoSource;
+        _ffmpegCommand = prevFfmpegCommand;
+      });
+    }
+
     // Resume the monitor/hover timer now that the dialog is closed.
     _monitorTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
       if (_recording) {
@@ -2073,6 +2154,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   void dispose() {
     _monitorTimer?.cancel();
     _hudTimer?.cancel();
+    _keyboardFocusNode.dispose();
     super.dispose();
   }
 
@@ -2124,11 +2206,19 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
         : (_windowHighlight ?? Rect.zero);
 
     return KeyboardListener(
-      focusNode: FocusNode()..requestFocus(),
+      focusNode: _keyboardFocusNode,
       autofocus: true,
       onKeyEvent: (KeyEvent event) {
         if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
-          Navigator.of(context).maybePop();
+          if (_dragStart != null) {
+            // Cancel the in-progress region drag.
+            setState(() {
+              _dragStart = null;
+              _dragCurrent = null;
+            });
+          } else if (!_startingRecording && !_countingDown) {
+            windowManager.close();
+          }
         }
       },
       child: Stack(
@@ -2342,9 +2432,10 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
     final Pointer<POINT> point = calloc<POINT>();
     try {
       if (GetCursorPos(point) == 0) return;
+      final double dpr = _dpr;
       final Offset localCursor = Offset(
-        point.ref.x.toDouble() - _virtualOrigin.dx,
-        point.ref.y.toDouble() - _virtualOrigin.dy,
+        (point.ref.x.toDouble() - _virtualOrigin.dx) / dpr,
+        (point.ref.y.toDouble() - _virtualOrigin.dy) / dpr,
       );
       final bool insideHud = _activeHudRect.contains(localCursor);
       RecordingOverlayWindow.setClickThrough(!insideHud);

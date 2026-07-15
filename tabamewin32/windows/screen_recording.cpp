@@ -305,15 +305,11 @@ ConvertCapturedFramesToStereoFloat(const BYTE *data, UINT32 frames,
   }
 
   GUID subtype = KSDATAFORMAT_SUBTYPE_PCM;
-  int validBitsPerSample = format->wBitsPerSample;
   if (format->wFormatTag == WAVE_FORMAT_EXTENSIBLE &&
       format->cbSize >= sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX)) {
     const auto *extensible =
         reinterpret_cast<const WAVEFORMATEXTENSIBLE *>(format);
     subtype = extensible->SubFormat;
-    validBitsPerSample = extensible->Samples.wValidBitsPerSample > 0
-                             ? extensible->Samples.wValidBitsPerSample
-                             : format->wBitsPerSample;
   }
 
   const bool isFloat = subtype == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT ||
@@ -334,7 +330,11 @@ ConvertCapturedFramesToStereoFloat(const BYTE *data, UINT32 frames,
       if (isFloat && format->wBitsPerSample == 32) {
         sample = *reinterpret_cast<const float *>(sampleBytes);
       } else {
-        sample = ReadPcmSample(sampleBytes, validBitsPerSample);
+        // Read by container width, not wValidBitsPerSample: PCM valid bits are
+        // MSB-justified inside the container (e.g. 24-in-32 has its top 24
+        // bits populated), so a full-width read scaled by the container range
+        // is correct for any valid-bit count.
+        sample = ReadPcmSample(sampleBytes, format->wBitsPerSample);
       }
 
       if (channel == 0) {
@@ -415,7 +415,7 @@ class ScreenRecordingSession {
 public:
   bool Start(const Config &config, std::string &errorCode,
              std::string &errorMessage) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
     if (isRecording_) {
       errorCode = "ALREADY_RECORDING";
       errorMessage = "A screen recording is already active.";
@@ -514,6 +514,7 @@ public:
     stopRequested_ = false;
     cancelRequested_ = false;
     paused_ = false;
+    targetLost_ = false;
     pausedDurationUs_ = 0;
     frameCount_ = 0;
     droppedFrames_ = 0;
@@ -548,7 +549,16 @@ public:
 
       if (audioEnabled_) {
         audioThread_ = std::thread([this]() { AudioLoop(); });
-        const DWORD wait = WaitForSingleObject(audioInitEvent_.get(), 15000);
+        // Audio init can take a while (device activation). Release the session
+        // mutex while we wait so GetStatus() and other sessions don't block
+        // behind it; starting_ keeps Finish() from tearing the session down
+        // (and freeing the event handle) inside this window.
+        const HANDLE initEvent = audioInitEvent_.get();
+        starting_ = true;
+        lock.unlock();
+        const DWORD wait = WaitForSingleObject(initEvent, 15000);
+        lock.lock();
+        starting_ = false;
         if (wait != WAIT_OBJECT_0 || !audioInitSucceeded_) {
           errorCode =
               audioErrorCode_.empty() ? "AUDIO_INIT_FAILED" : audioErrorCode_;
@@ -611,7 +621,10 @@ public:
   ScreenRecordingStatus GetStatus() {
     std::lock_guard<std::mutex> lock(mutex_);
     ScreenRecordingStatus status;
-    status.isRecording = isRecording_;
+    // Report not-recording once the capture target is gone (window closed);
+    // the session still needs Stop() to finalize the file, but callers polling
+    // status get to react instead of watching a dead capture.
+    status.isRecording = isRecording_ && !targetLost_.load();
     status.outputPath = Encoding::WideToUtf8(captureConfig_.outputPath);
     status.audioMode = captureConfig_.audioMode;
     status.frameCount = frameCount_.load();
@@ -621,7 +634,8 @@ public:
     if (isRecording_) {
       status.elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                              std::chrono::steady_clock::now() - startTime_)
-                             .count();
+                             .count() -
+                         PausedMillisLocked();
     }
     return status;
   }
@@ -664,11 +678,17 @@ private:
   bool Finish(bool cancel, ScreenRecordingStopResult &result,
               std::string &errorCode, std::string &errorMessage) {
     std::unique_lock<std::mutex> lock(mutex_);
-    if (!isRecording_) {
+    if (starting_) {
+      errorCode = "START_IN_PROGRESS";
+      errorMessage = "The recording is still starting up.";
+      return false;
+    }
+    if (!isRecording_ || finishing_) {
       errorCode = "NOT_RECORDING";
       errorMessage = "No screen recording is currently active.";
       return false;
     }
+    finishing_ = true;
 
     cancelRequested_ = cancel;
     stopRequested_ = true;
@@ -694,15 +714,20 @@ private:
     result.success = SUCCEEDED(finalizeHr) && !cancelRequested_;
     result.filePath = Encoding::WideToUtf8(captureConfig_.outputPath);
     result.frameCount = frameCount_.load();
+    // Report the mp4's actual timeline length: wall-clock elapsed minus time
+    // spent paused (both threads skip writing while paused and their
+    // timestamps subtract the paused span).
     result.durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                             std::chrono::steady_clock::now() - startTime_)
-                            .count();
+                            .count() -
+                        PausedMillisLocked();
 
     if (cancelRequested_) {
       _wremove(captureConfig_.outputPath.c_str());
     }
 
     CleanupResourcesLocked();
+    finishing_ = false;
 
     if (FAILED(finalizeHr) && !cancelRequested_) {
       errorCode = "FINALIZE_FAILED";
@@ -711,6 +736,18 @@ private:
     }
 
     return true;
+  }
+
+  // Total paused time in milliseconds, including a pause that is still in
+  // progress. Callers must hold mutex_ (pauseStartedAt_ is guarded by it).
+  int64_t PausedMillisLocked() {
+    int64_t pausedUs = pausedDurationUs_.load();
+    if (paused_) {
+      pausedUs += std::chrono::duration_cast<std::chrono::microseconds>(
+                      std::chrono::steady_clock::now() - pauseStartedAt_)
+                      .count();
+    }
+    return pausedUs / 1000;
   }
 
   bool ResolveCaptureItemLocked(const Config &config, std::string &errorCode,
@@ -1270,6 +1307,14 @@ private:
     if (audioInitEvent_)
       SetEvent(audioInitEvent_.get());
 
+    // Two independent devices never share a sample clock, so their queues
+    // drain at slightly different rates. Cap each backlog (drops the oldest
+    // samples of a source that runs ahead) so memory and A/V skew stay
+    // bounded over long recordings.
+    constexpr size_t kMaxPendingSamples =
+        static_cast<size_t>(kAudioSampleRate) * 2; // 1 s of stereo samples
+    auto lastWrite = std::chrono::steady_clock::now();
+
     while (!stopRequested_) {
       bool ok = true;
       for (AudioSource &source : audioSources_) {
@@ -1278,6 +1323,14 @@ private:
       if (!ok)
         break;
 
+      for (AudioSource &source : audioSources_) {
+        if (source.pendingStereo.size() > kMaxPendingSamples) {
+          source.pendingStereo.erase(
+              source.pendingStereo.begin(),
+              source.pendingStereo.end() - kMaxPendingSamples);
+        }
+      }
+
       // While paused, discard captured audio so the muxed track has no gap and
       // stays aligned with the paused-adjusted video timeline. Pumping above
       // still drains the WASAPI buffers so they don't back up.
@@ -1285,21 +1338,32 @@ private:
         for (AudioSource &source : audioSources_) {
           source.pendingStereo.clear();
         }
+        lastWrite = std::chrono::steady_clock::now();
         Sleep(5);
         continue;
       }
 
-      bool canWrite = true;
+      bool allReady = !audioSources_.empty();
+      bool anyReady = false;
       for (AudioSource &source : audioSources_) {
-        if (static_cast<int>(source.pendingStereo.size() / 2) <
+        if (static_cast<int>(source.pendingStereo.size() / 2) >=
             kAudioChunkFrames) {
-          canWrite = false;
-          break;
+          anyReady = true;
+        } else {
+          allReady = false;
         }
       }
-      if (canWrite) {
+      // Normally wait until every source has a full chunk, but if one device
+      // stops delivering (unplugged, driver stall) don't let it silence the
+      // whole track: after 500 ms, write anyway — starved sources contribute
+      // silence for the frames they're missing.
+      const bool stalledFlush =
+          anyReady && std::chrono::steady_clock::now() - lastWrite >
+                          std::chrono::milliseconds(500);
+      if (allReady || stalledFlush) {
         if (!WriteMixedAudioChunk(kAudioChunkFrames))
           break;
+        lastWrite = std::chrono::steady_clock::now();
       } else {
         Sleep(5);
       }
@@ -1341,9 +1405,13 @@ private:
     // Timestamp of the last frame we actually encoded, in microseconds
     // since the recording start.
     int64_t nextFrameDeadlineUs = 0;
+    // Size the frame pool was created with; when the captured window resizes,
+    // the pool must be recreated or WGC keeps delivering stale-sized textures.
+    auto poolSize = item_.Size();
 
     while (!stopRequested_) {
       if (targetWindow_ != nullptr && !IsWindow(targetWindow_)) {
+        targetLost_ = true;
         stopRequested_ = true;
         break;
       }
@@ -1363,6 +1431,22 @@ private:
         }
         if (!latestFrame)
           continue;
+
+        // Recreate the pool when the captured content changes size (window
+        // resized), otherwise subsequent frames keep the old dimensions and
+        // the new content arrives cropped or with stale borders. The output
+        // stream size is fixed for the whole recording, so ProcessFrame still
+        // crops/pads the new content to the original dimensions.
+        const auto contentSize = latestFrame.ContentSize();
+        if ((contentSize.Width != poolSize.Width ||
+             contentSize.Height != poolSize.Height) &&
+            contentSize.Width > 0 && contentSize.Height > 0) {
+          framePool_.Recreate(winrtDevice_,
+                              DirectXPixelFormat::B8G8R8A8UIntNormalized, 2,
+                              contentSize);
+          poolSize = contentSize;
+          continue; // the next frame arrives at the new size
+        }
 
         // Drop frames while paused (we still drained the pool above so it
         // doesn't back up). Timestamps subtract the accumulated paused span,
@@ -1541,6 +1625,7 @@ private:
     isRecording_ = false;
     stopRequested_ = false;
     paused_ = false;
+    targetLost_ = false;
     pausedDurationUs_ = 0;
     cancelRequested_ = false;
     audioEnabled_ = false;
@@ -1582,6 +1667,17 @@ private:
   std::mutex mutex_;
   std::mutex sinkWriterMutex_;
   bool isRecording_ = false;
+  // True while Start() is blocked waiting for audio init with mutex_ released;
+  // Finish() must not tear the session down during that window.
+  bool starting_ = false;
+  // True while a Finish() is in flight. Finish releases mutex_ to join the
+  // worker threads, so without this flag a concurrent Stop/Cancel/Shutdown
+  // could pass the isRecording_ check and finalize/clean up a second time.
+  bool finishing_ = false;
+  // Set by FrameLoop when the capture target disappears (window closed). The
+  // session still needs Stop() to finalize, but GetStatus() reports
+  // isRecording=false so callers know capture has ended.
+  std::atomic<bool> targetLost_{false};
   bool audioEnabled_ = false;
   std::atomic<bool> stopRequested_{false};
   std::atomic<bool> paused_{false};
@@ -1705,10 +1801,17 @@ static bool ConcatScreenRecordings(const std::vector<std::wstring> &inputs,
 
   const DWORD kVideoStream =
       static_cast<DWORD>(MF_SOURCE_READER_FIRST_VIDEO_STREAM);
+  const DWORD kAudioStream =
+      static_cast<DWORD>(MF_SOURCE_READER_FIRST_AUDIO_STREAM);
 
   winrt::com_ptr<IMFSinkWriter> writer;
-  DWORD outStreamIndex = 0;
+  DWORD outVideoIndex = 0;
+  DWORD outAudioIndex = 0;
   bool writerReady = false;
+  // Whether the output has an audio stream. Decided by the first readable
+  // segment: if it carries audio, audio is copied from every segment that has
+  // it; audio in later segments is dropped when the first had none.
+  bool audioInOutput = false;
   LONGLONG timeOffset = 0; // running offset (100ns units) applied to samples
 
   for (const std::wstring &input : inputs) {
@@ -1721,12 +1824,16 @@ static bool ConcatScreenRecordings(const std::vector<std::wstring> &inputs,
         static_cast<DWORD>(MF_SOURCE_READER_ALL_STREAMS), FALSE);
     reader->SetStreamSelection(kVideoStream, TRUE);
 
-    // Leaving the reader on its native (compressed) type means ReadSample
-    // returns H.264 samples verbatim — no decoder is inserted.
-    winrt::com_ptr<IMFMediaType> nativeType;
-    if (FAILED(reader->GetNativeMediaType(kVideoStream, 0, nativeType.put()))) {
+    // Leaving the reader on its native (compressed) types means ReadSample
+    // returns H.264/AAC samples verbatim — no decoder is inserted.
+    winrt::com_ptr<IMFMediaType> nativeVideoType;
+    if (FAILED(reader->GetNativeMediaType(kVideoStream, 0,
+                                          nativeVideoType.put()))) {
       continue;
     }
+    winrt::com_ptr<IMFMediaType> nativeAudioType;
+    const bool segmentHasAudio = SUCCEEDED(
+        reader->GetNativeMediaType(kAudioStream, 0, nativeAudioType.put()));
 
     if (!writerReady) {
       if (FAILED(MFCreateSinkWriterFromURL(outputPath.c_str(), nullptr, nullptr,
@@ -1735,10 +1842,22 @@ static bool ConcatScreenRecordings(const std::vector<std::wstring> &inputs,
         errorMessage = "Could not create output writer";
         return false;
       }
-      if (FAILED(writer->AddStream(nativeType.get(), &outStreamIndex)) ||
-          FAILED(writer->SetInputMediaType(outStreamIndex, nativeType.get(),
-                                           nullptr)) ||
-          FAILED(writer->BeginWriting())) {
+      if (FAILED(writer->AddStream(nativeVideoType.get(), &outVideoIndex)) ||
+          FAILED(writer->SetInputMediaType(outVideoIndex,
+                                           nativeVideoType.get(), nullptr))) {
+        errorCode = "sink_init_failed";
+        errorMessage = "Could not initialize output stream";
+        return false;
+      }
+      if (segmentHasAudio) {
+        audioInOutput =
+            SUCCEEDED(writer->AddStream(nativeAudioType.get(),
+                                        &outAudioIndex)) &&
+            SUCCEEDED(writer->SetInputMediaType(outAudioIndex,
+                                                nativeAudioType.get(),
+                                                nullptr));
+      }
+      if (FAILED(writer->BeginWriting())) {
         errorCode = "sink_init_failed";
         errorMessage = "Could not initialize output stream";
         return false;
@@ -1746,28 +1865,60 @@ static bool ConcatScreenRecordings(const std::vector<std::wstring> &inputs,
       writerReady = true;
     }
 
-    LONGLONG segmentEnd = timeOffset;
-    while (true) {
-      DWORD streamFlags = 0;
-      LONGLONG timestamp = 0;
-      winrt::com_ptr<IMFSample> sample;
-      if (FAILED(reader->ReadSample(kVideoStream, 0, nullptr, &streamFlags,
-                                    &timestamp, sample.put()))) {
-        break;
-      }
-      if (streamFlags & MF_SOURCE_READERF_ENDOFSTREAM)
-        break;
-      if (!sample)
-        continue;
+    const bool copyAudio = segmentHasAudio && audioInOutput;
+    if (copyAudio)
+      reader->SetStreamSelection(kAudioStream, TRUE);
 
-      LONGLONG sampleTime = 0;
-      sample->GetSampleTime(&sampleTime);
+    // One-sample lookahead per stream; samples are written in timestamp order
+    // so the sink writer can interleave without buffering a whole stream.
+    struct Pending {
+      winrt::com_ptr<IMFSample> sample;
+      LONGLONG time = 0;
+    };
+    auto readNext = [&reader](DWORD stream, Pending &slot) {
+      slot.sample = nullptr;
+      while (true) {
+        DWORD streamFlags = 0;
+        LONGLONG timestamp = 0;
+        winrt::com_ptr<IMFSample> sample;
+        if (FAILED(reader->ReadSample(stream, 0, nullptr, &streamFlags,
+                                      &timestamp, sample.put()))) {
+          return;
+        }
+        if (streamFlags & MF_SOURCE_READERF_ENDOFSTREAM)
+          return;
+        if (!sample)
+          continue;
+        LONGLONG sampleTime = 0;
+        sample->GetSampleTime(&sampleTime);
+        slot.sample = sample;
+        slot.time = sampleTime;
+        return;
+      }
+    };
+
+    Pending video;
+    Pending audio;
+    readNext(kVideoStream, video);
+    if (copyAudio)
+      readNext(kAudioStream, audio);
+
+    LONGLONG segmentEnd = timeOffset;
+    while (video.sample || audio.sample) {
+      const bool takeVideo =
+          video.sample && (!audio.sample || video.time <= audio.time);
+      Pending &current = takeVideo ? video : audio;
+
       LONGLONG duration = 0;
-      sample->GetSampleDuration(&duration);
-      const LONGLONG rebased = timeOffset + sampleTime;
-      sample->SetSampleTime(rebased);
-      writer->WriteSample(outStreamIndex, sample.get());
-      segmentEnd = rebased + (duration > 0 ? duration : 0);
+      current.sample->GetSampleDuration(&duration);
+      const LONGLONG rebased = timeOffset + current.time;
+      current.sample->SetSampleTime(rebased);
+      writer->WriteSample(takeVideo ? outVideoIndex : outAudioIndex,
+                          current.sample.get());
+      segmentEnd =
+          (std::max)(segmentEnd, rebased + (duration > 0 ? duration : 0));
+
+      readNext(takeVideo ? kVideoStream : kAudioStream, current);
     }
     timeOffset = segmentEnd; // next segment continues after this one
   }

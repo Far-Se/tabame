@@ -240,18 +240,23 @@ Notes:
 
 | Message | When | Fields |
 |---|---|---|
-| `init` | Once, right after your process starts | `query`: initial text after the keyword; `protocol`: int protocol version (currently 2); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"` |
-| `query` | On every keystroke while the keyword is active | `text`: current text after the keyword; `rev`: integer generation counter |
+| `init` | Once, right after your process starts | `query`: initial text after the keyword; `protocol`: int protocol version (currently 3); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"` |
+| `query` | On every keystroke while the keyword is active (not sent in `inputMode: "submit"`) | `text`: current text after the keyword; `rev`: integer generation counter |
+| `submitQuery` | **Enter** while the frame declared `inputMode: "submit"` — the whole query line at once (chat-style input) | `text`, `rev` |
 | `select` | When the highlighted item changes | `id`: the selected item's id; `rev` |
-| `action` | On **Enter** (fires `action` = `"default"`) or when the user picks a **Ctrl+K** action | `id`: the item's id; `action`: `"default"` or the chosen action's id |
-| `submit` | When the user submits a **form** view | `values`: `{fieldId: value}` — strings for text/dropdown fields, booleans for checkboxes |
+| `action` | On **Enter** (fires `action` = `"default"`), a **Ctrl+K** pick, an action **shortcut**, or the empty state's CTA | `id`: the item's id (`""` for frame-level actions and the empty-state button); `action`: `"default"` or the chosen action's id |
+| `submit` | When the user submits a **form** view | `values`: `{fieldId: value}` (strings, booleans, numbers, string lists — see §8); `button`: the pressed `form.buttons` id (absent for the default CTA) |
+| `change` | A form field with `"watch": true` changed | `id`: the field's id; `values`: all current field values |
+| `loadMore` | The user scrolled near the end of a frame with `hasMore: true` | `rev` — answer with a longer item list |
+| `storage` | Reply to a `storage` command with `op` `get`/`keys` | `requestId` (echoed), and `key`+`value` or `keys` |
+| `clipboard` | Reply to a `clipboardRead` command | `requestId` (echoed), `text` |
 | `back` | **Escape** on a frame that declared `canGoBack: true` | `rev` — respond by rendering the previous screen |
 | `tab` | **Tab** pressed | `id`: the highlighted item's id (`""` if none); `rev` — typically answered with a `setQuery` command |
 | `close` | When the plugin is being shut down | — |
 
 Example stdin lines:
 ```json
-{"type":"init","query":"rome","protocol":2,"theme":{"accent":"#63A0EA","text":"#E8E8E8","background":"#1B1D23","dark":true},"locale":"en-US"}
+{"type":"init","query":"rome","protocol":3,"theme":{"accent":"#63A0EA","text":"#E8E8E8","background":"#1B1D23","dark":true},"locale":"en-US"}
 {"type":"query","text":"rome","rev":1}
 {"type":"select","id":"item-2","rev":1}
 {"type":"action","id":"item-2","action":"copy"}
@@ -292,8 +297,12 @@ Instead of shelling out to `clip`/`start` yourself, ask the host:
 | `paste` | `text` | Puts `text` on the clipboard, **hides the launcher**, re-activates the previously focused window, and sends **Ctrl+V** — i.e. types the text where the user was working. |
 | `open` | `url` (or `path`) | Opens a URL in the default browser, or a file/folder with its default handler. |
 | `hide` | — | Hides the launcher. |
-| `toast` | `text` | Shows a transient confirmation chip over the results area. |
+| `toast` | `text`, `style`?, `progress`? | Shows a transient chip over the results area. `style`: `"success"` (default), `"error"`, `"info"`, or `"progress"`. A `progress` toast **stays pinned** (with a spinner, or a determinate ring when `progress` 0–1 is given) until a later `toast` replaces it — re-send to update it in place. |
 | `setQuery` | `text` | Rewrites the search field's **post-keyword** text (the keyword stays). Use it to autocomplete after a `tab` message or to drill down while keeping the query bar in sync. Triggers a normal `query` event back to you. |
+| `clipboardRead` | `requestId`? | Asks for the clipboard's text; the host answers with a `{"type":"clipboard","requestId","text"}` message. |
+| `notify` | `title`?, `text` | Fires a **native Windows notification** (works even while finishing in the background — see `background`). `title` defaults to the plugin name. |
+| `storage` | `op`, `key`?, `value`?, `secret`?, `requestId`? | Per-plugin persistent key-value store. `op` is `"set"`, `"get"`, `"delete"`, or `"keys"`. Plain values live in `.tabame-store.json` in the plugin folder; `"secret": true` routes the value to the **Windows Credential Manager** instead (strings only; not listed by `keys`). `get`/`keys` reply with a `{"type":"storage"}` message echoing `requestId`. |
+| `background` | `timeout`? | Requests shutdown grace: after the launcher hides / the user leaves, the process is **not killed** for up to `timeout` seconds (default 30, max 300) so it can finish work. While detached it can still use `storage` and `notify`, but frames and UI commands are dropped. Send it **before** `hide`. |
 
 Example stdout lines:
 ```json
@@ -355,6 +364,10 @@ slow response to "rom" from overwriting the fresh results for "rome".
   "form": { /* see §8, form */ },                  // only used by "form" view
   "preview": { "enabled": true },                  // split preview pane (list/grid)
   "canGoBack": false,                              // Escape sends {"type":"back"} instead of exiting
+  "actions": [ /* frame-level Ctrl+K actions, see §9 */ ],
+  "selectId": "item-3",                            // move the highlight to this item
+  "hasMore": false,                                // more items exist -> loadMore events
+  "inputMode": "submit",                           // Enter submits the query (chat-style)
   "items": [ /* see §7 */ ]
 }
 ```
@@ -365,16 +378,21 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `loading` | bool or object | When truthy and `items` empty, a spinner is shown. `{"progress": 0..1}` makes it determinate. |
 | `loadingText` | string | Optional caption shown **under the spinner** while `loading`. Use this (not `emptyText`) for "Searching…"-style progress text — `emptyText` is only shown when *not* loading. |
 | `emptyText` | string | Message when there are no items. Default `"No results"`. |
-| `empty` | object | Richer empty state: `{icon?, title?, hint?}` — icon name (§11), bold title, dimmed hint. Overrides `emptyText`. |
+| `empty` | object | Richer empty state: `{icon?, title?, hint?, action?}` — icon name (§11), bold title, dimmed hint, and an optional call-to-action button (`{id, title, icon?}`; clicking sends `{"type":"action","id":"","action":<id>}`). Overrides `emptyText`. |
 | `placeholder` | string | Replaces the search field's hint text while this frame is shown (good affordance for sub-screens). |
 | `grid.columns` | int 1–12 | Number of columns in grid view. Default 4. |
 | `grid.aspectRatio` | number | Tile width/height ratio. Default 1.0. |
 | `detail.markdown` | string | Markdown body for detail view. (You may also pass `"detail": "..."` as a plain string.) |
+| `detail.append` | string | **Streaming:** a chunk added to the *end* of the markdown currently on screen instead of replacing the document — send many small `append` frames (`rev: 0`) to stream an answer token by token. The view stays pinned to the bottom while the user is reading the end. See §13. |
 | `detail.metadata` | array | Key-value rows rendered under the markdown. See §7.1. |
 | `detail.wide` | bool | Widens the launcher window for the document (like the split preview does), restoring it when you leave. Default false. |
 | `form` | object | The form definition when `view` is `"form"`. See §8. |
 | `preview.enabled` | bool | When `true` (list/grid only), a split preview pane appears on the right showing the **selected item's** preview. The launcher window widens automatically and restores when you leave. (You may also pass `"preview": true`.) |
 | `canGoBack` | bool | When `true`, **Escape sends `{"type":"back"}`** (render your previous screen) instead of exiting the plugin. Leave it false on your root screen. Default false. |
+| `actions` | array | **Frame-level actions** shown in the Ctrl+K palette regardless of the highlighted item (refresh, create, sign out…), after the item's own actions. Same shape as item actions (§9), fired with an empty `id`. |
+| `selectId` | string | Moves the highlight to the item with this id — keep the cursor on the same row after a refresh/reorder (`rev: 0` re-render). |
+| `hasMore` | bool | List/grid: more items exist. Scrolling near the end sends `{"type":"loadMore","rev"}`; answer with a **longer full list** (a "Loading more…" footer shows meanwhile). See §13. |
+| `inputMode` | string | `"submit"`: keystrokes are **not** streamed to you; Enter sends one `{"type":"submitQuery","text","rev"}` with the whole line. A second Enter on unchanged text fires the selected item's default action instead. Right for chat/LLM plugins. |
 | `items` | array | The rows/tiles. See §7. |
 
 ---
@@ -413,7 +431,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `progress` | number 0–1 | List view: renders a thin progress bar under the row (downloads, timers). |
 | `tileColor` | string | Grid view: fills the tile with this `#RRGGBB` color; label flips black/white for contrast. Perfect for color pickers. |
 | `accessories` | array | Trailing badges. Each is a bare string or `{"text", "color"?, "icon"?}` — `color` tints the chip, `icon` is a §11 name. |
-| `actions` | array | Entries for the item's **Ctrl+K** menu. Each: `{id, title, icon?}`. `icon` optional. |
+| `actions` | array | Entries for the item's **Ctrl+K** menu. Each: `{id, title, icon?, shortcut?, destructive?, confirm?}` — see §9 for the last three. |
 | `preview` | object/string/null | Shown in the preview pane while this item is selected: `{"markdown"?, "metadata"?}` or a plain markdown string. Only visible when the frame sets `preview.enabled`. |
 
 ### 7.1 Metadata entries (`preview.metadata` / `detail.metadata`)
@@ -454,7 +472,9 @@ row, and colored/iconed accessories (§7).
 ### grid
 Tiles laid out in `grid.columns` columns; each tile shows the icon over the title
 and subtitle. Good for emoji/color/image pickers. Arrow keys move in 2-D. Give a
-tile `tileColor` to turn it into a filled swatch (labels auto-contrast).
+tile `tileColor` to turn it into a filled swatch (labels auto-contrast). Items
+with a `section` are grouped under slim headers, exactly like the list view
+(keep same-section items adjacent).
 
 ### detail
 A single full-width, scrollable **markdown document** (`detail.markdown`), plus
@@ -464,12 +484,17 @@ messages. Supports standard markdown: headings, lists, **bold**, `code`, fenced
 code blocks, and > quotes. Markdown **links are clickable** and open in the
 default browser.
 
+- **Text is selectable** (so users can copy from your answers), fenced code
+  blocks grow a hover **copy button**, and **images open in a zoomable
+  lightbox** on click.
 - **Keyboard**: ↑/↓ scroll the document, PageUp/PageDown jump by a page
   (Home/End stay with the search field's caret).
 - **`"wide": true`** widens the launcher window for the document — right for
   long-form answers (the text column is capped at a readable width).
 - The query line keeps working: each keystroke still sends you `query`, so a
-  "markdown answer" plugin can simply re-render the document per query.
+  "markdown answer" plugin can simply re-render the document per query. For
+  chat-style input use `inputMode: "submit"` instead, and stream long answers
+  with `detail.append` (§13).
 
 ### form
 A titled stack of inputs. Submitting sends you `{"type":"submit","values":{...}}`;
@@ -482,11 +507,22 @@ frame set `canGoBack: true`. Enter in a single-line field submits.
   "form": {
     "title": "New Issue",
     "submitLabel": "Create",              // optional, default "Submit"
+    "buttons": [                           // optional — replaces the single CTA
+      { "id": "create", "label": "Create" },
+      { "id": "delete", "label": "Delete", "destructive": true }
+    ],
     "fields": [
-      { "id": "title",  "type": "text",     "label": "Title", "placeholder": "Summary…" },
+      { "id": "title",  "type": "text",     "label": "Title", "placeholder": "Summary…",
+        "required": true, "description": "Shown under the field" },
       { "id": "desc",   "type": "textarea", "label": "Description" },
       { "id": "secret", "type": "password", "label": "API key" },
-      { "id": "team",   "type": "dropdown", "label": "Team", "value": "eng",
+      { "id": "count",  "type": "number",   "label": "Count", "value": 1, "min": 1, "max": 10 },
+      { "id": "due",    "type": "date",     "label": "Due date", "value": "2026-07-15" },
+      { "id": "attach", "type": "filepicker",   "label": "Attachment" },
+      { "id": "outdir", "type": "folderpicker", "label": "Output folder" },
+      { "id": "labels", "type": "tags", "label": "Labels", "value": ["bug"],
+        "options": [ "bug", "feature", { "value": "docs", "label": "Docs" } ] },
+      { "id": "team",   "type": "dropdown", "label": "Team", "value": "eng", "watch": true,
         "options": [ "eng", { "value": "ops", "label": "Operations" } ] },
       { "id": "urgent", "type": "checkbox", "label": "Urgent", "value": true }
     ]
@@ -494,15 +530,29 @@ frame set `canGoBack: true`. Enter in a single-line field submits.
 }
 ```
 
-- Field `type` is one of `text`, `password`, `textarea`, `dropdown`, `checkbox`
-  (unknown types fall back to `text`); `value` sets the initial value.
-- `values` in the `submit` message maps field ids to strings (text-likes and
-  dropdowns) or booleans (checkboxes).
+- Field `type` is one of `text`, `password`, `textarea`, `dropdown`, `checkbox`,
+  `number`, `date`, `filepicker`, `folderpicker`, `tags` (unknown types fall
+  back to `text`); `value` sets the initial value.
+- `values` in the `submit` message maps field ids to strings (text-likes,
+  dropdowns, dates as `yyyy-mm-dd`, picked paths), booleans (checkboxes),
+  numbers (`number`, null when empty), or string arrays (`tags`).
+- **Validation:** `required: true` fields must be non-empty (checked before the
+  submit reaches you, with an inline error); `number` bounds (`min`/`max`) are
+  enforced the same way. For your own server-side validation, re-render the
+  same form with an `"error": "…"` string on the offending field — typed values
+  survive because the field set is unchanged.
+- `description` renders a dimmed hint under the field.
+- `"watch": true` sends you `{"type":"change","id",<values>}` on every change of
+  that field — re-render the form to update dependent dropdowns.
+- `buttons` replaces the single CTA with several; the `submit` message then
+  carries the pressed button's id as `"button"`. `destructive: true` renders it
+  in the danger tint.
 - After a submit, respond with a new frame (a confirmation `detail`, back to a
   `list`, …) and/or commands (§5.2) — e.g. `toast` + `hide`.
 - Re-rendering the *same* form (same field ids) keeps what the user has typed;
   changing the field set resets it.
-- Great for create-flows and for a settings screen that writes `config.json`.
+- Great for create-flows and for a settings screen that writes `config.json`
+  (or better: the `storage` command, §5.2).
 
 ### preview pane (split)
 Set `"preview": {"enabled": true}` on a `list` or `grid` frame. The launcher
@@ -515,17 +565,43 @@ restores when the plugin exits. (Ignored for `detail` and `form` views.)
 
 ## 9. Actions & Ctrl+K
 
-- Each item can carry an `actions` array. These appear in a **Ctrl+K** command
-  palette for the highlighted item.
+- Each item can carry an `actions` array, and the **frame** can carry its own
+  `actions` array (frame-level: refresh, create, sign out…). Both appear in the
+  **Ctrl+K** palette — the item's first, then the frame's under a divider.
+  Frame actions also work on `detail` and `form` views (which have no items).
 - **Enter** on an item sends `{"type":"action","id":<item>,"action":"default"}`.
   Treat `"default"` as "the primary thing this item does" (open it, run it,
   create it, drill into it…).
-- Picking a Ctrl+K entry sends `{"type":"action","id":<item>,"action":<that id>}`.
+- Picking a Ctrl+K entry sends `{"type":"action","id":<item>,"action":<that id>}`;
+  frame-level actions arrive with `"id": ""`.
 - **You decide what each action does.** Common patterns: open a URL, copy text,
   toggle state, delete, or navigate your own internal screens.
 - After handling an action, respond with a **command** (§5.2 — e.g. `copy` +
   `hide` for "copy and dismiss", or `open` for a link) and/or a new render frame
   (with `rev: 0`) — e.g. a confirmation `detail` frame, or an updated list.
+
+Each action (item- or frame-level) supports:
+
+```jsonc
+{
+  "id": "delete", "title": "Delete issue", "icon": "trash",
+  "shortcut": "ctrl+shift+d",     // fires directly, without opening Ctrl+K
+  "destructive": true,             // danger tint in the palette
+  "confirm": {                     // host-shown "are you sure?" gate
+    "title": "Delete this issue?",
+    "message": "This cannot be undone.",
+    "confirmLabel": "Delete"
+  }
+}
+```
+
+- `shortcut` — lowercase `mod+key` (`ctrl`/`alt`/`shift` + a letter, digit,
+  `f1`–`f12`, or `enter`/`space`/`delete`/arrows…). Must include **Ctrl and/or
+  Alt** (bare or Shift-only combos would collide with typing and are ignored).
+- `confirm` — `true` for a generic prompt, or the object above. The action only
+  reaches you after the user accepts. Listing an action with `"id": "default"`
+  and a `confirm` also gates Enter on the item.
+- `destructive` — pairs naturally with `confirm`; tints the palette row red.
 
 ---
 
@@ -646,6 +722,58 @@ Pair drill-downs with a `setQuery` command (e.g. `setQuery: ""`) to clear the
 sub-screen's search text, and set `placeholder` so the user knows what the
 query now filters.
 
+### Streaming answers (chat / LLM plugins)
+Combine `inputMode: "submit"` with `detail.append`: render an intro `detail`
+frame with `"inputMode": "submit"`, wait for `{"type":"submitQuery"}`, then
+stream the answer chunk by chunk **from a worker thread** so the stdin loop
+stays responsive:
+
+```python
+def on_submit_query(prompt):
+    def run():
+        send({"type":"render","rev":0,"view":"detail","inputMode":"submit",
+              "canGoBack":True,"detail":{"markdown":f"# {prompt}\n\n"}})
+        for token in call_llm_stream(prompt):
+            send({"type":"render","rev":0,"view":"detail","inputMode":"submit",
+                  "canGoBack":True,"detail":{"append":token}})
+    threading.Thread(target=run, daemon=True).start()
+```
+
+The view keeps itself pinned to the bottom while the user is reading the end of
+the document (scrolling up detaches the follow).
+
+### Pagination (`hasMore` / `loadMore`)
+For large result sets, render the first page with `"hasMore": true`. When the
+user scrolls near the end you get `{"type":"loadMore","rev"}` — answer with the
+**full list so far plus the next page** (same `rev`), keeping `hasMore` until
+everything is loaded. Pair with `selectId` if you re-order.
+
+### Persistent state & secrets
+Use the `storage` command instead of hand-rolled files: `set`/`delete` are
+fire-and-forget; `get`/`keys` answer with a `{"type":"storage"}` message —
+correlate with `requestId`. Tokens go in with `"secret": true` (Credential
+Manager, never a plaintext file):
+
+```python
+send({"type":"command","command":"storage","op":"set","key":"token",
+      "value":"sk-…","secret":True})
+send({"type":"command","command":"storage","op":"get","key":"token",
+      "secret":True,"requestId":"tok"})
+# later, on stdin: {"type":"storage","requestId":"tok","key":"token","value":"sk-…"}
+```
+
+### Finishing work after the launcher closes
+For uploads/syncs that outlive the UI: send `background` (grace in seconds),
+then `hide`; keep working (a thread is fine) and fire `notify` when done. Join
+the worker before exiting on `close`:
+
+```python
+send({"type":"command","command":"background","timeout":60})
+send({"type":"command","command":"hide"})
+# … work …
+send({"type":"command","command":"notify","title":"Sync","text":"Done — 42 items."})
+```
+
 ### Error handling
 Never crash on bad input or a failed request. Catch errors and show them:
 ```python
@@ -674,9 +802,15 @@ except Exception as e:
 - [ ] Need libraries? Tabame auto-installs them on first run — **Python:** `"pip"` / `requirements.txt`; **Node/Bun:** a `package.json` (§4.1). Lazy-load heavy deps so a failed install degrades gracefully.
 - [ ] Icons must be a name from §11, a `#RRGGBB` color, or a `file://`/`https://` **raster** image.
 - [ ] Prefer `metadata` rows (§7.1) over markdown tables for structured facts.
-- [ ] Keep items sharing a `section` adjacent — headers appear on value *changes*.
+- [ ] Keep items sharing a `section` adjacent — headers appear on value *changes* (lists **and** grids).
 - [ ] Set `canGoBack: true` on sub-screens (and handle `back`); leave it off your root screen.
 - [ ] Never set `canGoBack` on a frame you can't navigate away from — Escape would be trapped.
+- [ ] Action `shortcut`s must include Ctrl and/or Alt; bare/Shift-only combos are ignored.
+- [ ] Gate destructive actions with `"confirm"` (and mark them `"destructive": true`).
+- [ ] Streaming: do slow/streamed work on a **thread**; every `detail.append` frame uses `rev: 0`.
+- [ ] `loadMore` answers must contain the full list (old pages + new), not just the new page.
+- [ ] Secrets go through `storage` with `"secret": true` — never into `config.json` you ship.
+- [ ] Send `background` **before** `hide` when work must outlive the launcher, and join workers on `close`.
 - [ ] Develop with `"dev": true` (hot reload + debug console); set it back to `false` before sharing.
 
 ---

@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show listEquals;
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:markdown_widget/markdown_widget.dart';
 
@@ -32,6 +33,10 @@ class PluginView extends StatefulWidget {
     required this.onHoverItem,
     required this.onFormSubmit,
     required this.onFormCancel,
+    required this.onFormChange,
+    required this.onLoadMore,
+    required this.onEmptyAction,
+    this.onOpenActions,
     this.detailScrollController,
   });
 
@@ -46,10 +51,23 @@ class PluginView extends StatefulWidget {
   final ScrollController? detailScrollController;
 
   /// Form view: the user pressed Enter/submit with these field values.
-  final void Function(Map<String, Object?> values) onFormSubmit;
+  /// [button] is the pressed `form.buttons` id, when the form declared any.
+  final void Function(Map<String, Object?> values, {String? button}) onFormSubmit;
 
   /// Form view: the user pressed Escape.
   final VoidCallback onFormCancel;
+
+  /// Form view: a `watch: true` field changed.
+  final void Function(String fieldId, Map<String, Object?> values) onFormChange;
+
+  /// The user scrolled near the end of a `hasMore` list/grid.
+  final VoidCallback onLoadMore;
+
+  /// The empty state's call-to-action button was clicked.
+  final void Function(PluginAction action) onEmptyAction;
+
+  /// Ctrl+K pressed inside a form (the launcher opens the actions palette).
+  final VoidCallback? onOpenActions;
 
   @override
   State<PluginView> createState() => _PluginViewState();
@@ -65,6 +83,10 @@ class _PluginViewState extends State<PluginView> {
   // selection changes scroll; hovering leaves the scroll offset alone so the
   // user can scroll manually.
   bool _selectionFromHover = false;
+
+  /// One `loadMore` per frame: set when the user nears the end of a `hasMore`
+  /// list, cleared when the plugin answers with a different item count.
+  bool _loadMoreRequested = false;
 
   @override
   void dispose() {
@@ -82,6 +104,39 @@ class _PluginViewState extends State<PluginView> {
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollActiveIntoView());
       }
     }
+    if (oldWidget.frame.items.length != widget.frame.items.length) _loadMoreRequested = false;
+    _followStreamingDetail(oldWidget);
+  }
+
+  /// Streaming `detail.append`: when the document grew and the user was
+  /// already reading its end, keep the view pinned to the bottom so new chunks
+  /// stay visible (scrolling up detaches — no forced follow).
+  void _followStreamingDetail(PluginView oldWidget) {
+    if (widget.frame.view != PluginViewType.detail) return;
+    final String previous = oldWidget.frame.detailMarkdown ?? '';
+    final String next = widget.frame.detailMarkdown ?? '';
+    if (next.length <= previous.length || !next.startsWith(previous)) return;
+    final ScrollController? controller = widget.detailScrollController;
+    if (controller == null || !controller.hasClients) return;
+    final ScrollPosition position = controller.position;
+    // Measured before this frame's content lands, so this is "was at bottom".
+    if (position.pixels < position.maxScrollExtent - 60) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !controller.hasClients) return;
+      controller.jumpTo(controller.position.maxScrollExtent);
+    });
+  }
+
+  /// Fires `loadMore` when the user scrolls near the end of a `hasMore` frame.
+  bool _onScrollNotification(ScrollNotification notification) {
+    if (!widget.frame.hasMore || _loadMoreRequested) return false;
+    final ScrollMetrics metrics = notification.metrics;
+    if (metrics.axis != Axis.vertical) return false;
+    if (metrics.pixels >= metrics.maxScrollExtent - 200) {
+      _loadMoreRequested = true;
+      widget.onLoadMore();
+    }
+    return false;
   }
 
   /// Reports a hover selection to the launcher, flagging the resulting
@@ -120,6 +175,8 @@ class _PluginViewState extends State<PluginView> {
         form: form,
         onSubmit: widget.onFormSubmit,
         onCancel: widget.onFormCancel,
+        onChanged: widget.onFormChange,
+        onOpenActions: widget.onOpenActions,
       );
     }
 
@@ -194,6 +251,13 @@ class _PluginViewState extends State<PluginView> {
             const SizedBox(height: 3),
             Text(empty.hint, style: TextStyle(fontSize: 11, color: Design.text.withAlpha(110))),
           ],
+          if (empty.action != null) ...<Widget>[
+            const SizedBox(height: 10),
+            _EmptyActionButton(
+              action: empty.action!,
+              onTap: () => widget.onEmptyAction(empty.action!),
+            ),
+          ],
         ],
       ),
     );
@@ -222,43 +286,66 @@ class _PluginViewState extends State<PluginView> {
     );
   }
 
-  Widget _buildList(PluginRenderFrame frame) {
-    return WindowsScrollView(
-      controller: _scrollController,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+  /// A dimmed "loading more…" row at the end of a `hasMore` list/grid.
+  Widget _loadMoreFooter() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          for (int i = 0; i < frame.items.length; i++) ...<Widget>[
-            if (frame.items[i].section != null && (i == 0 || frame.items[i].section != frame.items[i - 1].section))
-              _sectionHeader(frame.items[i].section!),
-            KeyedSubtree(
-              key: _keyFor(i),
-              child: Column(
-                children: <Widget>[
-                  LauncherResultRow(
-                    isSelected: i == widget.activeIndex,
-                    isRepeating: widget.isRepeating,
-                    accent: Design.accent,
-                    onSurface: Design.text,
-                    onTap: () => widget.onTapItem(i),
-                    onHover: () => _hoverSelect(i),
-                    icon: _PluginIcon(name: frame.items[i].icon, accent: Design.accent),
-                    title: frame.items[i].title,
-                    subtitle: frame.items[i].subtitle,
-                    badge: _accessoryBadge(frame.items[i]),
-                    inlineMarkup: true,
-                    subtitleMaxLines: frame.items[i].subtitleLines,
-                  ),
-                  if (frame.items[i].progress != null)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 0, 18, 4),
-                      child: _PluginProgressBar(value: frame.items[i].progress!),
-                    ),
-                ],
-              ),
-            ),
-          ],
+          SizedBox(
+            width: 11,
+            height: 11,
+            child: CircularProgressIndicator(strokeWidth: 1.5, color: Design.accent.withAlpha(150)),
+          ),
+          const SizedBox(width: 8),
+          Text('Loading more…', style: TextStyle(fontSize: 10.5, color: Design.text.withAlpha(110))),
         ],
+      ),
+    );
+  }
+
+  Widget _buildList(PluginRenderFrame frame) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: _onScrollNotification,
+      child: WindowsScrollView(
+        controller: _scrollController,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            for (int i = 0; i < frame.items.length; i++) ...<Widget>[
+              if (frame.items[i].section != null && (i == 0 || frame.items[i].section != frame.items[i - 1].section))
+                _sectionHeader(frame.items[i].section!),
+              KeyedSubtree(
+                key: _keyFor(i),
+                child: Column(
+                  children: <Widget>[
+                    LauncherResultRow(
+                      isSelected: i == widget.activeIndex,
+                      isRepeating: widget.isRepeating,
+                      accent: Design.accent,
+                      onSurface: Design.text,
+                      onTap: () => widget.onTapItem(i),
+                      onHover: () => _hoverSelect(i),
+                      icon: _PluginIcon(name: frame.items[i].icon, accent: Design.accent),
+                      title: frame.items[i].title,
+                      subtitle: frame.items[i].subtitle,
+                      badge: _accessoryBadge(frame.items[i]),
+                      inlineMarkup: true,
+                      subtitleMaxLines: frame.items[i].subtitleLines,
+                    ),
+                    if (frame.items[i].progress != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 0, 18, 4),
+                        child: _PluginProgressBar(value: frame.items[i].progress!),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+            if (frame.hasMore) _loadMoreFooter(),
+          ],
+        ),
       ),
     );
   }
@@ -282,31 +369,62 @@ class _PluginViewState extends State<PluginView> {
   }
 
   Widget _buildGrid(PluginRenderFrame frame) {
-    return WindowsScrollView(
-      controller: _scrollController,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: frame.items.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: frame.gridColumns,
-            childAspectRatio: frame.gridAspectRatio,
-            mainAxisSpacing: 6,
-            crossAxisSpacing: 6,
+    // Partition the items into runs sharing a `section`, each run its own grid
+    // under a header (sections are ignored inside a run — keep them adjacent,
+    // like the list view).
+    final List<(String?, int, int)> runs = <(String?, int, int)>[]; // (section, start, end-exclusive)
+    for (int i = 0; i < frame.items.length; i++) {
+      final String? section = frame.items[i].section;
+      if (runs.isEmpty || runs.last.$1 != section) {
+        runs.add((section, i, i + 1));
+      } else {
+        runs[runs.length - 1] = (section, runs.last.$2, i + 1);
+      }
+    }
+
+    Widget gridFor(int start, int end) {
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: end - start,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: frame.gridColumns,
+          childAspectRatio: frame.gridAspectRatio,
+          mainAxisSpacing: 6,
+          crossAxisSpacing: 6,
+        ),
+        itemBuilder: (BuildContext context, int offset) {
+          final int i = start + offset;
+          return KeyedSubtree(
+            key: _keyFor(i),
+            child: _PluginGridTile(
+              item: frame.items[i],
+              isSelected: i == widget.activeIndex,
+              onTap: () => widget.onTapItem(i),
+              onHover: () => _hoverSelect(i),
+            ),
+          );
+        },
+      );
+    }
+
+    return NotificationListener<ScrollNotification>(
+      onNotification: _onScrollNotification,
+      child: WindowsScrollView(
+        controller: _scrollController,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              for (final (String?, int, int) run in runs) ...<Widget>[
+                if (run.$1 != null) _sectionHeader(run.$1!),
+                gridFor(run.$2, run.$3),
+              ],
+              if (frame.hasMore) _loadMoreFooter(),
+            ],
           ),
-          itemBuilder: (BuildContext context, int i) {
-            return KeyedSubtree(
-              key: _keyFor(i),
-              child: _PluginGridTile(
-                item: frame.items[i],
-                isSelected: i == widget.activeIndex,
-                onTap: () => widget.onTapItem(i),
-                onHover: () => _hoverSelect(i),
-              ),
-            );
-          },
         ),
       ),
     );
@@ -325,12 +443,16 @@ class _PluginViewState extends State<PluginView> {
             : Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 820),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      if (hasMarkdown) MarkdownBlock(data: markdown, config: _markdownConfig),
-                      if (metadata.isNotEmpty) _PluginMetadataPane(entries: metadata, topGap: hasMarkdown),
-                    ],
+                  // Selectable: detail documents are the "answer" surface —
+                  // users copy from them constantly.
+                  child: SelectionArea(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        if (hasMarkdown) MarkdownBlock(data: markdown, config: _markdownConfig()),
+                        if (metadata.isNotEmpty) _PluginMetadataPane(entries: metadata, topGap: hasMarkdown),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -346,13 +468,17 @@ class _PluginViewState extends State<PluginView> {
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
         child: !hasMarkdown && item.previewMetadata.isEmpty
             ? Text('No preview', style: TextStyle(fontSize: 12, color: Design.text.withAlpha(90)))
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  if (hasMarkdown) MarkdownBlock(data: markdown, config: _markdownConfig),
-                  if (item.previewMetadata.isNotEmpty)
-                    _PluginMetadataPane(entries: item.previewMetadata, topGap: hasMarkdown),
-                ],
+            : SelectionArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    // Cap image width in the narrow preview pane so a portrait
+                    // poster reads as a thumbnail instead of filling the column.
+                    if (hasMarkdown) MarkdownBlock(data: markdown, config: _markdownConfig(maxImageWidth: 220)),
+                    if (item.previewMetadata.isNotEmpty)
+                      _PluginMetadataPane(entries: item.previewMetadata, topGap: hasMarkdown),
+                  ],
+                ),
               ),
       ),
     );
@@ -363,7 +489,7 @@ class _PluginViewState extends State<PluginView> {
   /// checkboxes, rules and syntax tokens with hardcoded light-mode grays/blacks
   /// (e.g. a 32px black `# H1` under a `#d7dde3` underline) that are unreadable
   /// and visually foreign against the launcher's themed backdrop.
-  MarkdownConfig get _markdownConfig {
+  MarkdownConfig _markdownConfig({double maxImageWidth = double.infinity}) {
     final Color text = Design.text;
     final Color accent = Design.accent;
 
@@ -452,7 +578,8 @@ configs: <WidgetConfig>[
             fontSize: 12.5,
           ),
         ),
-        // Fenced code blocks: theme-tinted syntax over a subtle panel.
+        // Fenced code blocks: theme-tinted syntax over a subtle panel, with a
+        // hover copy button in the corner.
         PreConfig(
           textStyle: const TextStyle(fontFamily: 'Consolas', fontSize: 12.5, height: 1.45),
           styleNotMatched: TextStyle(color: text),
@@ -463,6 +590,7 @@ configs: <WidgetConfig>[
             borderRadius: BorderRadius.circular(6),
           ),
           padding: const EdgeInsets.all(10),
+          wrapper: (Widget child, String code, String language) => _CodeBlockWrapper(code: code, child: child),
         ),
         BlockquoteConfig(
           sideColor: accent.withAlpha(150),
@@ -489,33 +617,233 @@ configs: <WidgetConfig>[
         ),
         // The package default only loads http rasters / Flutter assets;
         // plugins reference local `file://` images (including generated SVGs).
-        ImgConfig(builder: (String url, Map<String, String> attributes) => _markdownImage(url)),
+        ImgConfig(builder: (String url, Map<String, String> attributes) => _markdownImage(url, maxImageWidth)),
       ],
     );
   }
 
   /// Renders a markdown image from a `file://` path or http(s) URL, with SVG
-  /// support via flutter_svg, scaled down to the pane width.
-  Widget _markdownImage(String url) {
+  /// support via flutter_svg, scaled to the pane width but never wider than
+  /// [maxImageWidth] (so posters/thumbnails don't fill a narrow preview pane).
+  /// Clicking opens the image full-size in a lightbox overlay.
+  Widget _markdownImage(String url, double maxImageWidth) {
     final String value = url.trim();
     final Widget broken = Icon(Icons.broken_image_rounded, size: 16, color: Design.text.withAlpha(90));
     final bool isSvg = Uri.tryParse(value)?.path.toLowerCase().endsWith('.svg') ?? false;
     return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
-      final double? width = constraints.maxWidth.isFinite ? constraints.maxWidth : null;
+      double? width;
+      if (constraints.maxWidth.isFinite) {
+        width = constraints.maxWidth > maxImageWidth ? maxImageWidth : constraints.maxWidth;
+      } else if (maxImageWidth.isFinite) {
+        width = maxImageWidth;
+      }
+      Widget? image;
       if (value.startsWith('http://') || value.startsWith('https://')) {
-        return isSvg
+        image = isSvg
             ? SvgPicture.network(value, width: width, errorBuilder: (_, __, ___) => broken)
             : Image.network(value, width: width, errorBuilder: (_, __, ___) => broken);
-      }
-      if (value.startsWith('file://')) {
+      } else if (value.startsWith('file://')) {
         final File file = File(Uri.parse(value).toFilePath(windows: true));
         if (!file.existsSync()) return broken;
-        return isSvg
+        image = isSvg
             ? SvgPicture.file(file, width: width, errorBuilder: (_, __, ___) => broken)
             : Image.file(file, width: width, errorBuilder: (_, __, ___) => broken);
       }
-      return broken;
+      if (image == null) return broken;
+      return MouseRegion(
+        cursor: SystemMouseCursors.zoomIn,
+        child: GestureDetector(
+          onTap: () => _openImageLightbox(context, value, isSvg: isSvg),
+          child: image,
+        ),
+      );
     });
+  }
+
+  /// Shows [url] full-size over a dimmed backdrop: pinch/scroll to zoom, and
+  /// Escape / Enter / click anywhere to dismiss.
+  void _openImageLightbox(BuildContext context, String url, {required bool isSvg}) {
+    Widget full;
+    if (url.startsWith('file://')) {
+      final File file = File(Uri.parse(url).toFilePath(windows: true));
+      full = isSvg ? SvgPicture.file(file) : Image.file(file, filterQuality: FilterQuality.medium);
+    } else {
+      full = isSvg ? SvgPicture.network(url) : Image.network(url, filterQuality: FilterQuality.medium);
+    }
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withAlpha(190),
+      builder: (BuildContext dialogContext) => _ImageLightbox(child: full),
+    );
+  }
+}
+
+/// Fullscreen zoomable image overlay used by [_PluginViewState._openImageLightbox].
+class _ImageLightbox extends StatefulWidget {
+  const _ImageLightbox({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_ImageLightbox> createState() => _ImageLightboxState();
+}
+
+class _ImageLightboxState extends State<_ImageLightbox> {
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.requestFocus();
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.escape ||
+        event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+      Navigator.of(context).pop();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      focusNode: _focusNode,
+      onKeyEvent: _onKey,
+      child: GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: InteractiveViewer(
+            maxScale: 8,
+            child: Center(child: widget.child),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Hover shell around a fenced code block adding a copy-to-clipboard button in
+/// the top-right corner (flips to a check for a moment after copying).
+class _CodeBlockWrapper extends StatefulWidget {
+  const _CodeBlockWrapper({required this.code, required this.child});
+
+  final String code;
+  final Widget child;
+
+  @override
+  State<_CodeBlockWrapper> createState() => _CodeBlockWrapperState();
+}
+
+class _CodeBlockWrapperState extends State<_CodeBlockWrapper> {
+  bool _hovered = false;
+  bool _copied = false;
+  Timer? _resetTimer;
+
+  @override
+  void dispose() {
+    _resetTimer?.cancel();
+    super.dispose();
+  }
+
+  void _copy() {
+    Clipboard.setData(ClipboardData(text: widget.code));
+    setState(() => _copied = true);
+    _resetTimer?.cancel();
+    _resetTimer = Timer(const Duration(milliseconds: 1400), () {
+      _resetTimer = null;
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Stack(
+        children: <Widget>[
+          widget.child,
+          Positioned(
+            top: 6,
+            right: 6,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 100),
+              opacity: _hovered || _copied ? 1 : 0,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: _copy,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Design.background.withAlpha(220),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(color: Design.accent.withAlpha(_copied ? 150 : 50)),
+                    ),
+                    child: Icon(
+                      _copied ? Icons.check_rounded : Icons.copy_rounded,
+                      size: 13,
+                      color: _copied ? Design.accent : Design.text.withAlpha(170),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The empty state's call-to-action ("No config found → Set up").
+class _EmptyActionButton extends StatelessWidget {
+  const _EmptyActionButton({required this.action, required this.onTap});
+
+  final PluginAction action;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: Design.accent.withAlpha(30),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Design.accent.withAlpha(120)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (action.icon != null) ...<Widget>[
+                Icon(PluginIcons.resolve(action.icon), size: 13, color: Design.accent),
+                const SizedBox(width: 6),
+              ],
+              Text(
+                action.title,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Design.accent),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -826,6 +1154,44 @@ class _PluginMetadataPane extends StatelessWidget {
   }
 }
 
+/// Builds a cover-fit image for a grid tile whose `icon` is a raster URL/path
+/// (poster/thumbnail), so it fills the tile instead of rendering as a small
+/// centered icon. Returns null for named/emoji/color icons, SVGs and missing
+/// files, which keep the default small-icon layout.
+Widget? _pluginGridImage(String? name) {
+  final String? value = name?.trim();
+  if (value == null || value.isEmpty) return null;
+  if (parsePluginColor(value) != null) return null;
+  final bool isSvg = Uri.tryParse(value)?.path.toLowerCase().endsWith('.svg') ?? false;
+  if (isSvg) return null;
+  Widget fallback() => Container(
+        alignment: Alignment.center,
+        color: Design.text.withAlpha(10),
+        child: Icon(PluginIcons.fallback, color: Design.text.withAlpha(90)),
+      );
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    return Image.network(
+      value,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (_, __, ___) => fallback(),
+    );
+  }
+  if (value.startsWith('file://')) {
+    final File file = File(Uri.parse(value).toFilePath(windows: true));
+    if (!file.existsSync()) return null;
+    return Image.file(
+      file,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (_, __, ___) => fallback(),
+    );
+  }
+  return null;
+}
+
 /// A single grid tile: icon over title/subtitle, with an accent selection
 /// treatment matching the launcher's design language.
 class _PluginGridTile extends StatelessWidget {
@@ -852,6 +1218,61 @@ class _PluginGridTile extends StatelessWidget {
     final Color? tile = item.tileColor;
     final Color labelColor = tile == null ? onSurface : (tile.computeLuminance() > 0.5 ? Colors.black : Colors.white);
 
+    // A raster `icon` with no tileColor fills the tile as a cover image (a
+    // poster-wall look) with the label beneath; named/emoji/color icons keep
+    // the small centered-icon layout.
+    final Widget? poster = tile == null ? _pluginGridImage(item.icon) : null;
+
+    final Widget label = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        if (item.title.isNotEmpty)
+          Text(
+            item.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isSelected ? labelColor : labelColor.withAlpha(210),
+            ),
+          ),
+        if (item.subtitle.isNotEmpty)
+          Text(
+            item.subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 9, color: labelColor.withAlpha(130)),
+          ),
+      ],
+    );
+
+    final Widget content = poster != null
+        ? Column(
+            children: <Widget>[
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(5),
+                  child: SizedBox(width: double.infinity, child: poster),
+                ),
+              ),
+              if (item.title.isNotEmpty || item.subtitle.isNotEmpty)
+                Padding(padding: const EdgeInsets.only(top: 4), child: label),
+            ],
+          )
+        : Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              if (tile == null || item.icon != null) _PluginIcon(name: item.icon, accent: accent, size: 22),
+              if (item.title.isNotEmpty || item.subtitle.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 4),
+                label,
+              ],
+            ],
+          );
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onHover: (PointerHoverEvent event) {
@@ -862,7 +1283,7 @@ class _PluginGridTile extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.all(6),
+          padding: EdgeInsets.all(poster != null ? 4 : 6),
           decoration: BoxDecoration(
             color: tile ?? (isSelected ? accent.withAlpha(40) : onSurface.withAlpha(8)),
             borderRadius: BorderRadius.circular(8),
@@ -873,34 +1294,7 @@ class _PluginGridTile extends StatelessWidget {
               width: tile != null && isSelected ? 2 : 1,
             ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              if (tile == null || item.icon != null) _PluginIcon(name: item.icon, accent: accent, size: 22),
-              if (item.title.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 4),
-                Text(
-                  item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected ? labelColor : labelColor.withAlpha(210),
-                  ),
-                ),
-              ],
-              if (item.subtitle.isNotEmpty)
-                Text(
-                  item.subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 9, color: labelColor.withAlpha(130)),
-                ),
-            ],
-          ),
+          child: content,
         ),
       ),
     );

@@ -488,7 +488,8 @@ function renderMediaFrame(rev, medias, opts) {
     emptyText: (opts && opts.emptyText) || 'No results',
   };
   if (opts && opts.placeholder) frame.placeholder = opts.placeholder;
-  if (view === 'grid') frame.grid = { columns: 5, aspectRatio: 0.66 };
+  // Poster wall: 4 columns, tile a touch taller than 2:3 to fit the caption.
+  if (view === 'grid') frame.grid = { columns: 4, aspectRatio: 0.6 };
   render(rev, view, frame);
 }
 

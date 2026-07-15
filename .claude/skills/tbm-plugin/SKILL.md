@@ -18,7 +18,7 @@ The complete, authoritative protocol spec lives in the repo. **Read it before wr
 
 - **Full spec:** [plugins/TABAME_PLUGIN_SKILL.md](../../../plugins/TABAME_PLUGIN_SKILL.md) — every message type, render-frame field, item field, view type, icon name, and pattern.
 - **Working examples** to copy from:
-  - `plugins/echo/` — Python demo exercising list/grid/detail/preview + actions.
+  - `plugins/echo/` — Python demo exercising list/grid/detail/preview, actions (shortcuts/confirm), forms v2, streaming chat, pagination, storage, and background notify.
   - `plugins/linear/` — Node.js plugin with an HTTP API and `config.json` secrets.
   - `plugins/caniuse/` — Node.js plugin with fetched data and detail views.
 
@@ -63,11 +63,15 @@ Messages you receive on **stdin**:
 
 | Message  | When                                                | Key fields                         |
 | -------- | --------------------------------------------------- | ---------------------------------- |
-| `init`   | Once at startup                                     | `query`, `protocol` (2), `theme` (`{accent,text,background,dark}` hex + flag), `locale` |
-| `query`  | Every keystroke                                     | `text`, `rev` (generation counter) |
+| `init`   | Once at startup                                     | `query`, `protocol` (3), `theme` (`{accent,text,background,dark}` hex + flag), `locale` |
+| `query`  | Every keystroke (not in `inputMode:"submit"`)       | `text`, `rev` (generation counter) |
+| `submitQuery` | Enter on an `inputMode:"submit"` frame — the whole line at once (chat) | `text`, `rev` |
 | `select` | Highlighted item changed                            | `id`, `rev`                        |
-| `action` | **Enter** (`action:"default"`) or a **Ctrl+K** pick | `id`, `action` (no `rev`)          |
-| `submit` | User submits a `form` view                          | `values` (`{fieldId: value}`)      |
+| `action` | **Enter** (`action:"default"`), a **Ctrl+K** pick, an action `shortcut`, or the empty-state CTA | `id` (`""` for frame-level/empty-state), `action` (no `rev`) |
+| `submit` | User submits a `form` view                          | `values` (`{fieldId: value}`), `button` (pressed `form.buttons` id) |
+| `change` | A `watch: true` form field changed                  | `id`, `values`                     |
+| `loadMore` | Scrolled near the end of a `hasMore` frame        | `rev` — answer with a longer full list |
+| `storage` / `clipboard` | Replies to `storage` get/keys and `clipboardRead` commands | `requestId` (echoed), `value`/`keys`/`text` |
 | `back`   | Escape on a frame with `canGoBack: true`            | `rev` — render the previous screen |
 | `tab`    | Tab pressed                                          | `id` of highlighted item, `rev` — answer with `setQuery` |
 | `close`  | Shutting down                                       | —                                  |
@@ -85,7 +89,7 @@ Minimal render frame you print to **stdout**:
 }
 ```
 
-Full frame/item fields are documented in spec §6–§8: views `list`/`grid`/`detail`/`form`; frame `loading` (bool or `{progress}`), `emptyText`, `empty` (`{icon,title,hint}`), `placeholder`, `canGoBack`, `grid`, `detail` (`{markdown, metadata, wide}` — a markdown-only document view with no list; ↑/↓/PageUp/PageDown scroll it, `wide: true` widens the window), `form`, `preview`; item `accessories` (tintable via `color`, own `icon`), `actions`, `preview` (`{markdown, metadata}`), `section` headers, `lines` (subtitle wrap), `progress` bar, grid `tileColor`, and `**bold**`/`` `code` `` spans in title/subtitle. `metadata` entries (spec §7.1) are aligned key-value rows supporting `color` dots, `icon`, clickable `url`, `sparkline` arrays, and `{"separator":true}` dividers. Icons accept a §11 name, a `#RRGGBB` color swatch, or a raster URL.
+Full frame/item fields are documented in spec §6–§9: views `list`/`grid`/`detail`/`form`; frame `loading` (bool or `{progress}`), `emptyText`, `empty` (`{icon,title,hint,action}` — `action` is a clickable CTA), `placeholder`, `canGoBack`, `grid`, `detail` (`{markdown, metadata, wide, append}` — a markdown-only document view; `append` streams chunks onto the current document, `wide: true` widens the window; text is selectable, code blocks get a copy button, images open in a lightbox), `form`, `preview`, frame-level `actions` (Ctrl+K entries independent of the highlighted item), `selectId` (move the highlight), `hasMore` (pagination via `loadMore`), `inputMode: "submit"` (Enter delivers the whole query — chat-style); item `accessories` (tintable via `color`, own `icon`), `actions`, `preview` (`{markdown, metadata}`), `section` headers (lists **and** grids), `lines` (subtitle wrap), `progress` bar, grid `tileColor`, and `**bold**`/`` `code` `` spans in title/subtitle. Actions (item- or frame-level) support `shortcut` (`"ctrl+shift+c"` — must include ctrl/alt), `destructive` (danger tint), and `confirm` (host-shown are-you-sure gate). Forms (spec §8) support `text`/`password`/`textarea`/`dropdown`/`checkbox`/`number`(+`min`/`max`)/`date`/`filepicker`/`folderpicker`/`tags` fields with `required`, `description`, plugin-set `error`, `watch` (change events), and multi-`buttons` submits. `metadata` entries (spec §7.1) are aligned key-value rows supporting `color` dots, `icon`, clickable `url`, `sparkline` arrays, and `{"separator":true}` dividers. Icons accept a §11 name, a `#RRGGBB` color swatch, or a raster URL.
 
 You can also print **commands** — side effects the host executes for you (spec §5.2). No `rev`, fire-and-forget; combine by printing several lines (e.g. `copy` then `hide`):
 
@@ -94,8 +98,12 @@ You can also print **commands** — side effects the host executes for you (spec
 {"type":"command","command":"paste","text":"..."}  // clipboard + hide + Ctrl+V into the previous window
 {"type":"command","command":"open","url":"..."}    // URL or file/folder path
 {"type":"command","command":"hide"}                 // hide the launcher (your process gets `close`)
-{"type":"command","command":"toast","text":"..."}  // transient confirmation chip
+{"type":"command","command":"toast","text":"...","style":"success|error|info|progress","progress":0.5} // chip; progress pins until replaced
 {"type":"command","command":"setQuery","text":"..."} // rewrite post-keyword search text (autocomplete)
+{"type":"command","command":"clipboardRead","requestId":"r1"}  // replies {"type":"clipboard","requestId","text"}
+{"type":"command","command":"notify","title":"...","text":"..."} // native Windows notification (works detached)
+{"type":"command","command":"storage","op":"set|get|delete|keys","key":"k","value":...,"secret":true,"requestId":"r2"} // per-plugin store; secret -> Credential Manager; get/keys reply {"type":"storage"}
+{"type":"command","command":"background","timeout":60} // grace to finish work after hide (send BEFORE hide)
 ```
 
 ## Non-negotiable rules (get these right)
@@ -107,7 +115,9 @@ You can also print **commands** — side effects the host executes for you (spec
 - **Exit on `close` and on stdin EOF.** After `close`, ~2s grace then the process is killed.
 - **Read stdin line by line**; never block for all input.
 - **Escape exits the whole plugin** unless the frame set `"canGoBack": true` — then you get `{"type":"back"}` and should render the previous screen. Keep your own `screen` state; leave `canGoBack` off the root screen (and never set it on a screen you can't leave, or Escape is trapped).
-- **Slow work:** emit a `loading:true` frame (echoing the rev) first, then the result frame.
+- **Slow work:** emit a `loading:true` frame (echoing the rev) first, then the result frame. Streamed/long work belongs on a **worker thread** (`detail.append` frames use `rev: 0`).
+- **`loadMore` answers carry the full list** (all pages so far), not just the new page.
+- **Secrets** go through the `storage` command with `"secret": true` (Windows Credential Manager) — not a shipped `config.json`.
 - **Never crash on bad input** — wrap handlers in try/except and render the error as a `detail` frame.
 - **Icons** must be a name from spec §11 (case-insensitive), a `#RRGGBB` color swatch, or a `file://`/`https://` **raster** (PNG/JPG, no SVG).
 - On Windows, Tabame sets `PYTHONIOENCODING=utf-8` / `PYTHONUTF8=1` for Python; Node/Bun are UTF-8 already.
