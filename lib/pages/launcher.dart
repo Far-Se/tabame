@@ -165,6 +165,9 @@ class Launcher extends StatefulWidget {
 }
 
 class LauncherState extends State<Launcher> with QuickMenuTriggers {
+  static const double _minResultsHeight = 300;
+  static const double _maxResultsHeight = 405;
+
   final LauncherSearchToken _searchToken = LauncherSearchToken();
 
   final TextEditingController _controller = TextEditingController();
@@ -187,6 +190,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   bool _isRepairingFileIndex = false;
   final List<String> _copiedFiles = <String>[];
   LauncherDesign _design = LauncherDesign.serene;
+  double _resultsMaxHeight = _maxResultsHeight;
+  bool _isResizeHandleHovered = false;
+  bool _isResizingResults = false;
 
   final List<String> _folderBrowsingStack = <String>[];
 
@@ -1191,6 +1197,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     super.initState();
     QuickMenuFunctions.addListener(this);
     _design = user.launcherDesign;
+    _resultsMaxHeight = (Boxes.pref.getDouble('launcherResultsHeight') ?? _maxResultsHeight)
+        .clamp(_minResultsHeight, _maxResultsHeight);
     // Rescan the plugins folder so freshly-dropped plugins are available without
     // an app restart. If a keyword becomes matchable after the scan, re-run the
     // current query so it activates.
@@ -3857,7 +3865,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     final LauncherThemeData launcherTheme = LauncherThemeData(design: _design);
 
     // Build the shared inner content once — no per-design duplication.
-    final Widget innerContent = Column(
+    final Widget layoutContent = Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         // ── Search bar ──────────────────────────────────────────────────────
@@ -3907,7 +3915,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         Material(
           type: MaterialType.transparency,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 260, maxHeight: 320),
+            constraints: BoxConstraints(minHeight: 260, maxHeight: _resultsMaxHeight),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -3991,6 +3999,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         ),
       ],
     );
+    final Widget innerContent = Stack(
+      children: <Widget>[
+        layoutContent,
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: _buildHeightResizeHandle(accent, onSurface),
+        ),
+      ],
+    );
 
     // ── Outer frame: chosen once, wraps the shared content ──────────────────
     // Each frame widget also injects a LauncherTheme so descendants can
@@ -4066,6 +4085,65 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         onTap: _resetSelection,
         onSecondaryTap: _openActionsForActiveResult,
         child: frame,
+      ),
+    );
+  }
+
+  Widget _buildHeightResizeHandle(Color accent, Color onSurface) {
+    final bool isVisible = _isResizeHandleHovered || _isResizingResults;
+    final bool disableAnimations = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeUpDown,
+      onEnter: (_) {
+        if (!_isResizeHandleHovered) setState(() => _isResizeHandleHovered = true);
+      },
+      onExit: (_) {
+        if (_isResizeHandleHovered) setState(() => _isResizeHandleHovered = false);
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragStart: (_) {
+          if (!_isResizingResults) setState(() => _isResizingResults = true);
+        },
+        onVerticalDragEnd: (_) {
+          if (_isResizingResults) setState(() => _isResizingResults = false);
+          unawaited(Boxes.updateSettings('launcherResultsHeight', _resultsMaxHeight));
+        },
+        onVerticalDragCancel: () {
+          if (_isResizingResults) setState(() => _isResizingResults = false);
+          unawaited(Boxes.updateSettings('launcherResultsHeight', _resultsMaxHeight));
+        },
+        onVerticalDragUpdate: (DragUpdateDetails details) {
+          final double nextHeight =
+              (_resultsMaxHeight + details.delta.dy).clamp(_minResultsHeight, _maxResultsHeight).toDouble();
+          if (nextHeight == _resultsMaxHeight) return;
+
+          setState(() => _resultsMaxHeight = nextHeight);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            final RenderObject? renderObject = context.findRenderObject();
+            if (renderObject is RenderBox) Globals.launcherCurrentSize = renderObject.size;
+          });
+        },
+        child: SizedBox(
+          height: 16,
+          child: Center(
+            child: AnimatedOpacity(
+              opacity: isVisible ? 1 : 0,
+              duration: disableAnimations ? Duration.zero : Duration(milliseconds: isVisible ? 140 : 90),
+              curve: Curves.easeOutQuart,
+              child: Container(
+                width: 64,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: Color.alphaBlend(accent.withAlpha(80), onSurface.withAlpha(35)),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
