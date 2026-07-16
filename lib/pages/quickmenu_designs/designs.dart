@@ -17,6 +17,7 @@ import 'design_player.dart';
 import 'design_serene.dart';
 import 'design_steam.dart';
 import 'design_terminal.dart';
+import 'design_vector.dart';
 
 class LoadQuickMenuDesign extends StatefulWidget {
   const LoadQuickMenuDesign({super.key});
@@ -91,6 +92,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.player => MainMenuPlayerWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.steam => MainMenuSteamWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.manifesto => MainMenuManifestoWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.vector => MainMenuVectorWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }
 }

@@ -304,6 +304,19 @@ class QuickMenuModalFrame extends StatelessWidget {
             ),
           ],
         ),
+      QuickMenuDesigns.vector => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.97),
+            border: Border.all(color: text.withValues(alpha: isDark ? 0.14 : 0.18), width: 0.5),
+          ),
+          underlays: <Widget>[
+            CustomPaint(painter: _VectorScanPainter(text.withValues(alpha: isDark ? 0.05 : 0.04))),
+          ],
+          overlays: <Widget>[
+            CustomPaint(painter: _VectorBracketPainter(accent)),
+          ],
+        ),
     };
 
     final bool hasBevel = spec.bevel != null;
@@ -451,4 +464,61 @@ class _ManifestoRulePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ManifestoRulePainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Soft CRT scanlines, same as the Vector design's background texture.
+class _VectorScanPainter extends CustomPainter {
+  const _VectorScanPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 0.5;
+    for (double y = 1.5; y < size.height; y += 3) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _VectorScanPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Corner reticle brackets used by the Vector design's panel and popups.
+class _VectorBracketPainter extends CustomPainter {
+  const _VectorBracketPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.square;
+    const double inset = 3;
+    const double len = 9;
+    final double right = size.width - inset;
+    final double bottom = size.height - inset;
+    final Path corners = Path()
+      ..moveTo(inset, inset + len)
+      ..lineTo(inset, inset)
+      ..lineTo(inset + len, inset)
+      ..moveTo(right - len, inset)
+      ..lineTo(right, inset)
+      ..lineTo(right, inset + len)
+      ..moveTo(right, bottom - len)
+      ..lineTo(right, bottom)
+      ..lineTo(right - len, bottom)
+      ..moveTo(inset + len, bottom)
+      ..lineTo(inset, bottom)
+      ..lineTo(inset, bottom - len);
+    canvas.drawPath(corners, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _VectorBracketPainter oldDelegate) => oldDelegate.color != color;
 }

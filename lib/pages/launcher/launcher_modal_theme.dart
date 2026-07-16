@@ -83,6 +83,15 @@ class LauncherModalTokens {
           onSurface: ManifestoTokens.fg(isDark),
           dim: ManifestoTokens.dim(isDark),
         );
+      case LauncherDesign.orbit:
+        return LauncherModalTokens._(
+          design: design,
+          isDark: isDark,
+          surface: OrbitTokens.bg(isDark),
+          accent: Design.accent,
+          onSurface: OrbitTokens.fg(isDark),
+          dim: OrbitTokens.dim(isDark),
+        );
       case LauncherDesign.classic:
       case LauncherDesign.serene:
       case LauncherDesign.command:
@@ -125,6 +134,7 @@ class LauncherModalTokens {
         LauncherDesign.transit => 8.0,
         LauncherDesign.fluent => 4.0,
         LauncherDesign.manifesto => 0.0,
+        LauncherDesign.orbit => 4.0,
       };
 
   /// Designs whose controls carry a visible accent outline (console/drafting
@@ -133,6 +143,7 @@ class LauncherModalTokens {
       design == LauncherDesign.command ||
       design == LauncherDesign.terminal ||
       design == LauncherDesign.blueprint ||
+      design == LauncherDesign.orbit ||
       design == LauncherDesign.manifesto;
 
   /// The design voice — same font family the launcher rows use.
@@ -157,6 +168,8 @@ class LauncherModalTokens {
       LauncherDesign.fluent => FluentTokens.segoe(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       LauncherDesign.manifesto => ManifestoTokens.body(
+          fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
+      LauncherDesign.orbit => OrbitTokens.disp(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       _ => TextStyle(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
@@ -223,6 +236,12 @@ class LauncherModalFrame extends StatelessWidget {
           Positioned.fill(
             child: IgnorePointer(
               child: CustomPaint(painter: _ModalManifestoPainter(ink: tokens.onSurface.withAlpha(20))),
+            ),
+          ),
+        if (design == LauncherDesign.orbit)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: _ModalOrbitPainter(ink: tokens.accent, isDark: tokens.isDark)),
             ),
           ),
         if (design == LauncherDesign.glass) ...<Widget>[
@@ -405,6 +424,12 @@ class LauncherModalHeader extends StatelessWidget {
           color: tokens.onSurface,
           border: Border.all(color: tokens.onSurface, width: 1.5),
         ),
+      // Instrument chip — square, thin phosphor outline.
+      LauncherDesign.orbit => BoxDecoration(
+          color: tokens.accent.withAlpha(16),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: tokens.accent.withAlpha(70)),
+        ),
       _ => BoxDecoration(
           color: accent.withAlpha(28),
           borderRadius: BorderRadius.circular(8),
@@ -415,6 +440,7 @@ class LauncherModalHeader extends StatelessWidget {
   bool get _uppercaseVoice =>
       tokens.design == LauncherDesign.blueprint ||
       tokens.design == LauncherDesign.command ||
+      tokens.design == LauncherDesign.orbit ||
       tokens.design == LauncherDesign.manifesto;
 
   @override
@@ -514,6 +540,7 @@ class LauncherModalFooter extends StatelessWidget {
       LauncherDesign.terminal => tokens.accent.withAlpha(40),
       LauncherDesign.blueprint => tokens.accent.withAlpha(80),
       LauncherDesign.transit => tokens.accent.withAlpha(90),
+      LauncherDesign.orbit => tokens.accent.withAlpha(50),
       LauncherDesign.manifesto => tokens.onSurface,
       _ => tokens.onSurface.withAlpha(16),
     };
@@ -526,7 +553,9 @@ class LauncherModalFooter extends StatelessWidget {
                 ? TransitTokens.chrome(tokens.isDark)
                 : tokens.design == LauncherDesign.fluent
                     ? FluentTokens.chrome(tokens.isDark)
-                    : null,
+                    : tokens.design == LauncherDesign.orbit
+                        ? OrbitTokens.chrome(tokens.isDark)
+                        : null,
         border: Border(top: BorderSide(color: lineColor)),
       ),
       child: Row(
@@ -711,4 +740,45 @@ class _ModalManifestoPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ModalManifestoPainter oldDelegate) => oldDelegate.ink != ink;
+}
+
+/// Faint range rings radiating from beyond the top-right corner, with bearing
+/// ticks down the left edge (Orbit design) — a private copy of the launcher
+/// frame's scope texture.
+class _ModalOrbitPainter extends CustomPainter {
+  const _ModalOrbitPainter({required this.ink, required this.isDark});
+
+  final Color ink;
+  final bool isDark;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint ring = Paint()
+      ..color = ink.withAlpha(isDark ? 11 : 14)
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+    final Offset origin = Offset(size.width * 1.02, -size.height * 0.08);
+    for (double r = 42; r < size.width * 1.1; r += 42) {
+      canvas.drawCircle(origin, r, ring);
+    }
+
+    final Paint cross = Paint()
+      ..color = ink.withAlpha(isDark ? 36 : 42)
+      ..strokeWidth = 1;
+    canvas.drawLine(origin + const Offset(-5, 0), origin + const Offset(5, 0), cross);
+    canvas.drawLine(origin + const Offset(0, -5), origin + const Offset(0, 5), cross);
+
+    final Paint tick = Paint()
+      ..color = ink.withAlpha(isDark ? 22 : 26)
+      ..strokeWidth = 1;
+    int i = 0;
+    for (double y = 20; y < size.height; y += 20) {
+      final double len = i % 4 == 0 ? 6 : 3;
+      canvas.drawLine(Offset(0.5, y), Offset(0.5 + len, y), tick);
+      i++;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ModalOrbitPainter oldDelegate) => oldDelegate.ink != ink || oldDelegate.isDark != isDark;
 }

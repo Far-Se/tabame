@@ -42,6 +42,7 @@ enum QuickMenuDesigns {
   player,
   steam,
   manifesto,
+  vector,
   ;
 
   String get name {
@@ -59,6 +60,7 @@ enum QuickMenuDesigns {
       QuickMenuDesigns.player => "Player",
       QuickMenuDesigns.steam => "Steam",
       QuickMenuDesigns.manifesto => "Manifesto",
+      QuickMenuDesigns.vector => "Vector",
     };
   }
 }
@@ -74,6 +76,10 @@ enum LauncherDesign {
   transit,
   fluent,
   manifesto,
+
+  /// Spacecraft guidance-computer HUD. Persisted by index — always append new
+  /// designs at the end so stored preferences keep pointing at the right design.
+  orbit,
 }
 
 enum LightSwitchMode { off, fixed, sunrise }
@@ -627,6 +633,32 @@ class Settings {
           uiFontFamily: 'Bahnschrift',
           uiFontWeight: 500,
           entryFontFamily: 'Bahnschrift',
+          entryFontWeight: 700,
+          borderRadius: 0,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.vector.name: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffEEF3EE),
+          textColor: const Color(0xff15211B),
+          accentColor: const Color(0xff0C7A45),
+          gradientAlpha: 55,
+          uiFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
+          borderRadius: 0,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff0B100E),
+          textColor: const Color(0xffCFE3D6),
+          accentColor: const Color(0xff3CE68C),
+          gradientAlpha: 70,
+          uiFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontFamily: 'Consolas',
           entryFontWeight: 700,
           borderRadius: 0,
           baseFontSize: 10,

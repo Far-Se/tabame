@@ -334,6 +334,74 @@ abstract final class ManifestoTokens {
   }
 }
 
+/// Shared visual tokens for the Orbit (spacecraft guidance HUD) launcher design.
+///
+/// Like [TerminalTokens] this forces its own palette so the launcher always
+/// reads as a guidance computer — a deep-space scope in dark mode, a daylight
+/// instrument panel in light mode. The user accent stays in charge as the
+/// "lock" color: reticle brackets, the radar sweep, track markers and telemetry
+/// readouts are all drawn in it.
+abstract final class OrbitTokens {
+  // Dark — deep-space scope.
+  static const Color _bgDark = Color(0xFF04090E);
+  static const Color _chromeDark = Color(0xFF0A121A);
+  static const Color _fgDark = Color(0xFFD9E8E4);
+  static const Color _dimDark = Color(0xFF64787F);
+
+  // Light — daylight instrument panel.
+  static const Color _bgLight = Color(0xFFEEF3EF);
+  static const Color _chromeLight = Color(0xFFE0E9E3);
+  static const Color _fgLight = Color(0xFF1C2A28);
+  static const Color _dimLight = Color(0xFF5E706B);
+
+  /// Scope background.
+  static Color bg(bool isDark) => isDark ? _bgDark : _bgLight;
+
+  /// Slightly raised chrome (telemetry strip).
+  static Color chrome(bool isDark) => isDark ? _chromeDark : _chromeLight;
+
+  /// Primary phosphor foreground.
+  static Color fg(bool isDark) => isDark ? _fgDark : _fgLight;
+
+  /// Dimmed foreground (captions, minor ticks).
+  static Color dim(bool isDark) => isDark ? _dimDark : _dimLight;
+
+  /// Display voice — Space Grotesk, the geometric-technical face of flight
+  /// instrumentation labels.
+  static TextStyle disp({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return GoogleFonts.spaceGrotesk(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    );
+  }
+
+  /// Telemetry voice — IBM Plex Mono for readouts, micro labels and kbd hints.
+  static TextStyle tele({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return GoogleFonts.ibmPlexMono(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    );
+  }
+}
+
 @immutable
 class LauncherThemeData {
   const LauncherThemeData({required this.design});
@@ -350,10 +418,11 @@ class LauncherThemeData {
   bool get isTransit => design == LauncherDesign.transit;
   bool get isFluent => design == LauncherDesign.fluent;
   bool get isManifesto => design == LauncherDesign.manifesto;
+  bool get isOrbit => design == LauncherDesign.orbit;
 
   /// Leading glyph in the search bar — a chevron prompt for the Command/Terminal
-  /// consoles, a leaf for Zen, a drafting compass for Blueprint, a magnifier
-  /// otherwise.
+  /// consoles, a leaf for Zen, a drafting compass for Blueprint, a radar scope
+  /// for Orbit, a magnifier otherwise.
   IconData get searchIcon => switch (design) {
         LauncherDesign.command => Icons.chevron_right_rounded,
         LauncherDesign.terminal => Icons.chevron_right_rounded,
@@ -365,6 +434,7 @@ class LauncherThemeData {
         LauncherDesign.transit => Icons.near_me_rounded,
         LauncherDesign.fluent => Icons.search_rounded,
         LauncherDesign.manifesto => Icons.arrow_forward,
+        LauncherDesign.orbit => Icons.radar,
       };
 
   double get searchIconSize => switch (design) {
@@ -378,6 +448,7 @@ class LauncherThemeData {
         LauncherDesign.transit => 16.0,
         LauncherDesign.fluent => 18.0,
         LauncherDesign.manifesto => 18.0,
+        LauncherDesign.orbit => 19.0,
       };
 
   bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent;
@@ -393,6 +464,7 @@ class LauncherThemeData {
         LauncherDesign.transit => 15.0,
         LauncherDesign.fluent => 15.0,
         LauncherDesign.manifesto => 17.0,
+        LauncherDesign.orbit => 15.0,
       };
   FontWeight? get searchFontWeight => switch (design) {
         LauncherDesign.serene => FontWeight.w400,
@@ -405,6 +477,7 @@ class LauncherThemeData {
         LauncherDesign.transit => FontWeight.w600,
         LauncherDesign.fluent => FontWeight.w400,
         LauncherDesign.manifesto => FontWeight.w600,
+        LauncherDesign.orbit => FontWeight.w500,
       };
 
   double get frameRadius => switch (design) {
@@ -418,6 +491,7 @@ class LauncherThemeData {
         LauncherDesign.transit => 16.0,
         LauncherDesign.fluent => 8.0,
         LauncherDesign.manifesto => 0.0,
+        LauncherDesign.orbit => 10.0,
       };
 
   EdgeInsets get resultsListPadding => const EdgeInsets.all(8.0);

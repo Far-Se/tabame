@@ -4,6 +4,7 @@
 - ..
 
 ## Feature:
+- __Orbit Launcher Design (spacecraft guidance HUD)__
 - __CharMap Button__
 - __Shutdown Scheduler Button__
 - __Wizardly hosts editor__

@@ -228,7 +228,7 @@ class _PluginActionRow extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 color: action.destructive
                     ? tint.withAlpha(isSelected ? 255 : 220)
-                    : isSelected && tokens.design == LauncherDesign.terminal
+                    : isSelected && (tokens.design == LauncherDesign.terminal || tokens.design == LauncherDesign.orbit)
                         ? tokens.accent
                         : isSelected
                             ? tokens.onSurface

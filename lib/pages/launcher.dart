@@ -3792,6 +3792,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     final bool isTransit = _design == LauncherDesign.transit;
     final bool isFluent = _design == LauncherDesign.fluent;
     final bool isManifesto = _design == LauncherDesign.manifesto;
+    final bool isOrbit = _design == LauncherDesign.orbit;
     // Terminal, Zen, Blueprint, Transit and Fluent force their own palette +
     // text theme. Every result builder reads its colors from this theme, so
     // they all inherit the look without per-builder branching. Terminal,
@@ -3874,9 +3875,19 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
                                   displayColor: ManifestoTokens.fg(isDark),
                                 ),
                               )
-                            : isGlass
-                                ? baseTheme.copyWith(textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme))
-                                : baseTheme;
+                            : isOrbit
+                                ? baseTheme.copyWith(
+                                    colorScheme: baseTheme.colorScheme.copyWith(
+                                      surface: OrbitTokens.bg(isDark),
+                                      onSurface: OrbitTokens.fg(isDark),
+                                    ),
+                                    highlightColor: accent.withAlpha(30),
+                                    textTheme: GoogleFonts.spaceGroteskTextTheme(baseTheme.textTheme)
+                                        .apply(bodyColor: OrbitTokens.fg(isDark), displayColor: OrbitTokens.fg(isDark)),
+                                  )
+                                : isGlass
+                                    ? baseTheme.copyWith(textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme))
+                                    : baseTheme;
     final Color onSurface = theme.colorScheme.onSurface;
     final bool hasInput = _controller.text.trim().isNotEmpty;
     final LauncherThemeData launcherTheme = LauncherThemeData(design: _design);
@@ -4096,10 +4107,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
           resultCount: _results.length,
           child: innerContent,
         ),
+      LauncherDesign.orbit => OrbitLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent,
+        ),
     };
 
     return Theme(
-      data: (isTerminal || isZen || isGlass || isBlueprint || isTransit || isFluent || isManifesto)
+      data: (isTerminal || isZen || isGlass || isBlueprint || isTransit || isFluent || isManifesto || isOrbit)
           ? theme
           : theme.copyWith(
               textTheme: GoogleFonts.getTextTheme(Design.entryFontFamily),
