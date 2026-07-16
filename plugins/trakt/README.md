@@ -19,21 +19,15 @@ and see your upcoming **calendar**, all from the Tabame launcher.
 
    Save it, then copy the **Client ID** and **Client Secret**.
 
-2. **Create `config.json`** next to `main.js` (copy `config.example.json`):
+2. **Enter the credentials in Tabame.** Open the launcher, type `trakt`, and
+   fill in the setup form. The Client Secret is stored in Windows Credential
+   Manager rather than a plaintext configuration file. The form includes
+   **Copy URL** and **Copy URI** buttons for creating the Trakt application.
 
-   ```json
-   {
-     "clientId": "your_trakt_client_id",
-     "clientSecret": "your_trakt_client_secret",
-     "tmdbApiKey": ""
-   }
-   ```
-
-   - `clientId` — required for search & browsing.
-   - `clientSecret` — required for logging in (watchlist / history / calendar).
-   - `tmdbApiKey` — **optional**. A free [TMDB](https://www.themoviedb.org/settings/api)
-     v3 API key. With it, results show real **poster thumbnails** in a grid;
-     without it, they fall back to icons. Trakt itself serves no images.
+   - **Client ID** — required for search & browsing.
+   - **Client Secret** — required for logging in (watchlist / history / calendar).
+   - **TMDB v3 API Key** — optional. A free [TMDB](https://www.themoviedb.org/settings/api)
+     key adds real poster thumbnails; without it, results use icons.
 
 3. **Install:** drop this folder into `%localappdata%\Tabame\plugins\trakt\`,
    then re-open the launcher (it rescans on every open) and type `trakt`.
@@ -45,8 +39,10 @@ Run **Log in to Trakt** from the command list. The plugin uses Trakt's OAuth
 browser, you enter the code and approve — the plugin polls in the background and
 signs you in automatically. Your password is never seen by the plugin.
 
-Tokens are stored in `tokens.json` in this folder and refreshed automatically.
-**Log out** deletes them. Don't commit `tokens.json` or `config.json`.
+Credentials entered in the form are stored by Tabame. Existing environment
+variables and `config.json` files are still read as a backwards-compatible
+migration path. Tokens are stored in `tokens.json` and refreshed automatically;
+**Log out** deletes them.
 
 ## Usage
 

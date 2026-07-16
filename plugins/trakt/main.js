@@ -10,10 +10,9 @@
  *
  * Runtime: Node 18+ (global fetch) or Bun. Plain JS, no dependencies.
  *
- * Setup: create `config.json` next to this file (see config.example.json):
- *   { "clientId": "...", "clientSecret": "...", "tmdbApiKey": "" }
- * Register a free API app at https://trakt.tv/oauth/applications with the
- * redirect URI `urn:ietf:wg:oauth:2.0:oob` to get the Client ID + Secret.
+ * Setup is handled by an in-app form. Register a free API app at
+ * https://trakt.tv/oauth/applications with redirect URI
+ * `urn:ietf:wg:oauth:2.0:oob`, then paste its Client ID + Secret into Tabame.
  * `tmdbApiKey` is optional (free TMDB v3 key) — with it, browse/search show
  * poster thumbnails; without it they fall back to icons.
  */
@@ -24,6 +23,7 @@ const fs = require("fs");
 const path = require("path");
 
 const TRAKT_API = "https://api.trakt.tv";
+const TRAKT_APPS_URL = "https://trakt.tv/oauth/applications";
 const TMDB_API = "https://api.themoviedb.org/3";
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 const OOB = "urn:ietf:wg:oauth:2.0:oob";
@@ -60,6 +60,27 @@ const cmdOpen = (u) => command("open", { url: u });
 const cmdToast = (t) => command("toast", { text: t });
 const cmdHide = () => command("hide");
 const cmdSetQuery = (t) => command("setQuery", { text: t });
+const storageRequests = new Map();
+let storageRequestId = 0;
+
+function storageGet(key, secret = false) {
+  return new Promise((resolve) => {
+    const requestId = `trakt-storage-${++storageRequestId}`;
+    const timer = setTimeout(() => {
+      storageRequests.delete(requestId);
+      resolve(undefined);
+    }, 1500);
+    storageRequests.set(requestId, (value) => {
+      clearTimeout(timer);
+      resolve(value);
+    });
+    command("storage", { op: "get", key, secret, requestId });
+  });
+}
+
+function storageSet(key, value, secret = false) {
+  command("storage", { op: "set", key, value, secret });
+}
 
 function loadingFrame(rev, text) {
   render(rev, "list", {
@@ -107,6 +128,24 @@ function loadConfig() {
   return cfg;
 }
 const config = loadConfig();
+let configReady = null;
+
+function ensureConfigLoaded() {
+  if (configReady) return configReady;
+  configReady = Promise.all([
+    storageGet("clientId"),
+    storageGet("clientSecret", true),
+    storageGet("tmdbApiKey", true),
+  ]).then(([clientId, clientSecret, tmdbApiKey]) => {
+    // Stored form values take precedence, while env/config.json remain a
+    // backwards-compatible migration path for existing installs.
+    if (typeof clientId === "string" && clientId) config.clientId = clientId;
+    if (typeof clientSecret === "string" && clientSecret)
+      config.clientSecret = clientSecret;
+    if (typeof tmdbApiKey === "string") config.tmdbApiKey = tmdbApiKey;
+  });
+  return configReady;
+}
 const hasPosters = () => !!config.tmdbApiKey;
 
 // OAuth tokens live in their own file so we never rewrite the user's config.
@@ -587,6 +626,13 @@ function buildCommands() {
       icon: "key",
     });
   }
+  cmds.push({
+    id: "setup",
+    section: "Account",
+    title: "Trakt API Settings",
+    subtitle: "Edit Client ID, Client Secret & optional TMDB key",
+    icon: "settings",
+  });
   return cmds;
 }
 
@@ -829,23 +875,7 @@ async function pollLogin() {
 
 function renderLogin(rev) {
   if (!config.clientSecret) {
-    return render(rev, "detail", {
-      detail: {
-        markdown: [
-          "## Trakt login needs a Client Secret",
-          "",
-          "Add `clientSecret` to `config.json` next to the plugin, then re-open",
-          "this command:",
-          "",
-          "```json",
-          '{ "clientId": "…", "clientSecret": "…" }',
-          "```",
-          "",
-          "Create an app (redirect URI `urn:ietf:wg:oauth:2.0:oob`) at",
-          "[trakt.tv/oauth/applications](https://trakt.tv/oauth/applications).",
-        ].join("\n"),
-      },
-    });
+    return renderSetup(rev, "A Client Secret is required to log in");
   }
 
   let statusLine = "Waiting for you to authorize…";
@@ -930,32 +960,88 @@ async function renderAccount(rev) {
 }
 
 // ── screen dispatch ──────────────────────────────────────────────────────────
-function renderSetup(rev) {
-  render(rev, "detail", {
-    detail: {
-      markdown: [
-        "## Trakt — setup needed",
-        "",
-        "Create a file named `config.json` next to this plugin with your Trakt",
-        "API credentials:",
-        "",
-        "```json",
-        '{ "clientId": "…", "clientSecret": "…", "tmdbApiKey": "" }',
-        "```",
-        "",
-        "1. Sign in at [trakt.tv](https://trakt.tv) and open",
-        "   **[trakt.tv/oauth/applications](https://trakt.tv/oauth/applications)**.",
-        "2. Create an app with redirect URI `urn:ietf:wg:oauth:2.0:oob`.",
-        "3. Copy the **Client ID** and **Client Secret** into `config.json`.",
-        "4. *(optional)* add a free **TMDB v3** `tmdbApiKey` to show posters.",
-        "",
-        "Then re-open the launcher and type `trakt`.",
-      ].join("\n"),
+function renderSetup(rev, note = "") {
+  render(rev, "form", {
+    actions: [
+      {
+        id: "open_trakt_apps",
+        title: "Open Trakt API Applications",
+        icon: "open",
+      },
+    ],
+    form: {
+      title: note ? `Trakt setup — ${note}` : "Connect Trakt",
+      buttons: [
+        { id: "save", label: "Save & Log in" },
+        { id: "copy_url", label: "Copy URL" },
+        { id: "copy_uri", label: "Copy URI" },
+      ],
+      fields: [
+        {
+          id: "clientId",
+          type: "text",
+          label: "Trakt Client ID",
+          placeholder: "Paste the Client ID from your Trakt API app",
+          value: config.clientId || "",
+          description:
+            "Create an app at trakt.tv/oauth/applications with redirect URI urn:ietf:wg:oauth:2.0:oob.",
+        },
+        {
+          id: "clientSecret",
+          type: "password",
+          label: "Trakt Client Secret",
+          placeholder: "Paste the Client Secret",
+          value: config.clientSecret || "",
+          description: "Stored securely in Windows Credential Manager.",
+        },
+        {
+          id: "tmdbApiKey",
+          type: "password",
+          label: "TMDB v3 API Key (optional)",
+          placeholder: "Adds poster artwork to results",
+          value: config.tmdbApiKey || "",
+          description: "Leave empty to use icon-based results.",
+        },
+      ],
     },
   });
 }
 
+async function submitSetup(values) {
+  const clientId = String(values.clientId || "").trim();
+  const clientSecret = String(values.clientSecret || "").trim();
+  const tmdbApiKey = String(values.tmdbApiKey || "").trim();
+  if (!clientId || !clientSecret) {
+    return renderSetup(0, "Client ID and Client Secret are required");
+  }
+
+  config.clientId = clientId;
+  config.clientSecret = clientSecret;
+  config.tmdbApiKey = tmdbApiKey;
+  posterCache.clear();
+  storageSet("clientId", clientId);
+  storageSet("clientSecret", clientSecret, true);
+  storageSet("tmdbApiKey", tmdbApiKey, true);
+  cmdToast("Trakt credentials saved securely");
+
+  stopLogin();
+  login.status = "idle";
+  state.stack = [
+    { screen: "root", ctx: {}, savedQuery: "" },
+    { screen: "login", ctx: {}, savedQuery: "" },
+  ];
+  cmdSetQuery("");
+  return startLogin();
+}
+
+function handleSetupSubmit(values, button) {
+  if (button === "copy_url") return cmdCopy(TRAKT_APPS_URL);
+  if (button === "copy_uri") return cmdCopy(OOB);
+  return submitSetup(values);
+}
+
 async function renderScreen(rev, text) {
+  await ensureConfigLoaded();
   if (!config.clientId) return renderSetup(rev);
   try {
     switch (top().screen) {
@@ -1023,6 +1109,8 @@ async function renderScreen(rev, text) {
         // re-triggering on every keystroke.
         if (login.status === "idle") return startLogin();
         return renderLogin(rev);
+      case "setup":
+        return renderSetup(rev);
       case "account":
         return renderAccount(rev);
       default:
@@ -1082,6 +1170,9 @@ async function handleMediaAction(m, action) {
 }
 
 async function handleAction(id, action) {
+  if (!id && action === "open_trakt_apps") {
+    return cmdOpen(TRAKT_APPS_URL);
+  }
   if (id.startsWith("cmd:")) {
     const c = id.slice(4);
     if (c === "logout") {
@@ -1153,6 +1244,27 @@ async function handleLine(line) {
         cmdToast(`Error: ${err.message}`);
       }
       break;
+    case "submit":
+      try {
+        if (
+          top().screen === "setup" ||
+          !config.clientId ||
+          (top().screen === "login" && !config.clientSecret)
+        )
+          await handleSetupSubmit(msg.values || {}, msg.button || "save");
+      } catch (err) {
+        cmdToast(`Error: ${err.message}`);
+        renderSetup(0, err.message);
+      }
+      break;
+    case "storage": {
+      const resolve = storageRequests.get(msg.requestId);
+      if (resolve) {
+        storageRequests.delete(msg.requestId);
+        resolve(msg.value);
+      }
+      break;
+    }
     case "back":
       await popScreen();
       break;
