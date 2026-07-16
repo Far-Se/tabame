@@ -3,8 +3,8 @@ import 'dart:async';
 import 'dart:ffi' hide Size;
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/src/gestures/events.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 import 'package:window_manager/window_manager.dart';

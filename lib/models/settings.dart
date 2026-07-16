@@ -41,6 +41,7 @@ enum QuickMenuDesigns {
   gazette,
   player,
   steam,
+  manifesto,
   ;
 
   String get name {
@@ -57,6 +58,7 @@ enum QuickMenuDesigns {
       QuickMenuDesigns.gazette => "Gazette",
       QuickMenuDesigns.player => "Player",
       QuickMenuDesigns.steam => "Steam",
+      QuickMenuDesigns.manifesto => "Manifesto",
     };
   }
 }
@@ -71,6 +73,7 @@ enum LauncherDesign {
   blueprint,
   transit,
   fluent,
+  manifesto,
 }
 
 enum LightSwitchMode { off, fixed, sunrise }
@@ -600,6 +603,32 @@ class Settings {
           entryFontFamily: 'Segoe UI',
           entryFontWeight: 600,
           borderRadius: 4,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.manifesto.name: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffF2EEDB),
+          textColor: const Color(0xff171713),
+          accentColor: const Color(0xffE13A27),
+          gradientAlpha: 0,
+          uiFontFamily: 'Bahnschrift',
+          uiFontWeight: 500,
+          entryFontFamily: 'Bahnschrift',
+          entryFontWeight: 700,
+          borderRadius: 0,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff171713),
+          textColor: const Color(0xffF2EEDB),
+          accentColor: const Color(0xffF0D83A),
+          gradientAlpha: 0,
+          uiFontFamily: 'Bahnschrift',
+          uiFontWeight: 500,
+          entryFontFamily: 'Bahnschrift',
+          entryFontWeight: 700,
+          borderRadius: 0,
           baseFontSize: 10,
         ),
       ),

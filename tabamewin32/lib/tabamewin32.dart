@@ -1810,8 +1810,9 @@ class ClipboardExtended {
     final Map<String, dynamic> formats = <String, dynamic>{};
     if (text != null) formats['text/plain'] = text;
     if (html != null) formats['text/html'] = html;
-    if (pngBytes != null)
+    if (pngBytes != null) {
       formats['image/png'] = pngBytes; // typed data (Uint8List) — single buffer, not a boxed int list
+    }
 
     final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
       'clipboardExtendedCopyMultiple',
@@ -2412,7 +2413,7 @@ class HDR {
 /// A connected display along with its hardware brightness range/state.
 class BrightnessDisplay {
   /// Opaque identity used to re-resolve the display when setting brightness
-  /// (e.g. "ddc:0:0" for DDC-CI, or "wmi:<instance>" for an internal panel).
+  /// (e.g. "ddc:0:0" for DDC-CI, or "wmi:\<instance\>" for an internal panel).
   final String id;
 
   /// Friendly monitor description, or "Display" / "Built-in display".

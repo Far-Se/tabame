@@ -288,6 +288,22 @@ class QuickMenuModalFrame extends StatelessWidget {
             ),
           ],
         ),
+      QuickMenuDesigns.manifesto => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.98),
+            border: Border.all(color: text, width: 2),
+          ),
+          underlays: <Widget>[
+            CustomPaint(painter: _ManifestoRulePainter(text.withValues(alpha: isDark ? 0.10 : 0.075))),
+          ],
+          overlays: <Widget>[
+            Align(
+              alignment: Alignment.topRight,
+              child: Container(width: 28, height: 6, color: accent),
+            ),
+          ],
+        ),
     };
 
     final bool hasBevel = spec.bevel != null;
@@ -415,4 +431,24 @@ class _BrushedPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _BrushedPainter oldDelegate) => oldDelegate.isDark != isDark;
+}
+
+/// Sparse editorial rules used by the Manifesto panel and its popups.
+class _ManifestoRulePainter extends CustomPainter {
+  const _ManifestoRulePainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 0.5;
+    for (double y = 18; y < size.height; y += 18) {
+      canvas.drawLine(Offset.zero.translate(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ManifestoRulePainter oldDelegate) => oldDelegate.color != color;
 }

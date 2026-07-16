@@ -74,6 +74,15 @@ class LauncherModalTokens {
           onSurface: FluentTokens.fg(isDark),
           dim: FluentTokens.dim(isDark),
         );
+      case LauncherDesign.manifesto:
+        return LauncherModalTokens._(
+          design: design,
+          isDark: isDark,
+          surface: ManifestoTokens.bg(isDark),
+          accent: ManifestoTokens.accent(isDark),
+          onSurface: ManifestoTokens.fg(isDark),
+          dim: ManifestoTokens.dim(isDark),
+        );
       case LauncherDesign.classic:
       case LauncherDesign.serene:
       case LauncherDesign.command:
@@ -115,12 +124,16 @@ class LauncherModalTokens {
         LauncherDesign.classic => 10.0,
         LauncherDesign.transit => 8.0,
         LauncherDesign.fluent => 4.0,
+        LauncherDesign.manifesto => 0.0,
       };
 
   /// Designs whose controls carry a visible accent outline (console/drafting
   /// looks); the soft designs use borderless fills instead.
   bool get outlinedControls =>
-      design == LauncherDesign.command || design == LauncherDesign.terminal || design == LauncherDesign.blueprint;
+      design == LauncherDesign.command ||
+      design == LauncherDesign.terminal ||
+      design == LauncherDesign.blueprint ||
+      design == LauncherDesign.manifesto;
 
   /// The design voice — same font family the launcher rows use.
   TextStyle text({
@@ -142,6 +155,8 @@ class LauncherModalTokens {
       LauncherDesign.transit => TransitTokens.sign(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       LauncherDesign.fluent => FluentTokens.segoe(
+          fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
+      LauncherDesign.manifesto => ManifestoTokens.body(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       _ => TextStyle(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
@@ -204,6 +219,12 @@ class LauncherModalFrame extends StatelessWidget {
               ),
             ),
           ),
+        if (design == LauncherDesign.manifesto)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: _ModalManifestoPainter(ink: tokens.onSurface.withAlpha(20))),
+            ),
+          ),
         if (design == LauncherDesign.glass) ...<Widget>[
           // Specular sheen from the top-left.
           Positioned.fill(
@@ -241,10 +262,13 @@ class LauncherModalFrame extends StatelessWidget {
           ),
         ],
         Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
-            ),
-            child: child),
+          decoration: BoxDecoration(
+            color: design == LauncherDesign.manifesto
+                ? tokens.surface.withValues(alpha: 0.96)
+                : Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
+          ),
+          child: child,
+        ),
         // Foreground flourishes.
         if (design == LauncherDesign.terminal)
           Positioned.fill(
@@ -267,6 +291,14 @@ class LauncherModalFrame extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+        if (design == LauncherDesign.manifesto)
+          Positioned(
+            top: 0,
+            right: 0,
+            width: 34,
+            height: 7,
+            child: IgnorePointer(child: ColoredBox(color: accent)),
           ),
       ],
     );
@@ -369,6 +401,10 @@ class LauncherModalHeader extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: FluentTokens.stroke(tokens.isDark)),
         ),
+      LauncherDesign.manifesto => BoxDecoration(
+          color: tokens.onSurface,
+          border: Border.all(color: tokens.onSurface, width: 1.5),
+        ),
       _ => BoxDecoration(
           color: accent.withAlpha(28),
           borderRadius: BorderRadius.circular(8),
@@ -376,7 +412,10 @@ class LauncherModalHeader extends StatelessWidget {
     };
   }
 
-  bool get _uppercaseVoice => tokens.design == LauncherDesign.blueprint || tokens.design == LauncherDesign.command;
+  bool get _uppercaseVoice =>
+      tokens.design == LauncherDesign.blueprint ||
+      tokens.design == LauncherDesign.command ||
+      tokens.design == LauncherDesign.manifesto;
 
   @override
   Widget build(BuildContext context) {
@@ -475,6 +514,7 @@ class LauncherModalFooter extends StatelessWidget {
       LauncherDesign.terminal => tokens.accent.withAlpha(40),
       LauncherDesign.blueprint => tokens.accent.withAlpha(80),
       LauncherDesign.transit => tokens.accent.withAlpha(90),
+      LauncherDesign.manifesto => tokens.onSurface,
       _ => tokens.onSurface.withAlpha(16),
     };
     return Container(
@@ -548,7 +588,9 @@ class LauncherModalKbd extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: onSurface.withAlpha(12),
-            borderRadius: BorderRadius.circular(tokens.design == LauncherDesign.blueprint ? 2 : 4),
+            borderRadius: BorderRadius.circular(
+              tokens.design == LauncherDesign.manifesto ? 0 : (tokens.design == LauncherDesign.blueprint ? 2 : 4),
+            ),
             border: Border.all(
               color: tokens.outlinedControls ? tokens.accent.withAlpha(70) : onSurface.withAlpha(28),
             ),
@@ -645,4 +687,28 @@ class _ModalSheetPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ModalSheetPainter oldDelegate) => oldDelegate.ink != ink;
+}
+
+class _ModalManifestoPainter extends CustomPainter {
+  const _ModalManifestoPainter({required this.ink});
+
+  final Color ink;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = ink
+      ..strokeWidth = 0.5;
+    for (double y = 18; y < size.height; y += 18) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+    final Paint mark = Paint()
+      ..color = ink.withAlpha(120)
+      ..strokeWidth = 1;
+    canvas.drawLine(const Offset(6, 9), const Offset(18, 9), mark);
+    canvas.drawLine(const Offset(12, 3), const Offset(12, 15), mark);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ModalManifestoPainter oldDelegate) => oldDelegate.ink != ink;
 }

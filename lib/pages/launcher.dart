@@ -3791,6 +3791,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     final bool isBlueprint = _design == LauncherDesign.blueprint;
     final bool isTransit = _design == LauncherDesign.transit;
     final bool isFluent = _design == LauncherDesign.fluent;
+    final bool isManifesto = _design == LauncherDesign.manifesto;
     // Terminal, Zen, Blueprint, Transit and Fluent force their own palette +
     // text theme. Every result builder reads its colors from this theme, so
     // they all inherit the look without per-builder branching. Terminal,
@@ -3802,7 +3803,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
         ? ZenTokens.accent(isDark)
         : isBlueprint
             ? BlueprintTokens.accent(isDark)
-            : Design.accent;
+            : isManifesto
+                ? ManifestoTokens.accent(isDark)
+                : Design.accent;
     final ThemeData theme = isTerminal
         ? baseTheme.copyWith(
             colorScheme: baseTheme.colorScheme.copyWith(
@@ -3857,9 +3860,23 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
                               displayColor: FluentTokens.fg(isDark),
                             ),
                           )
-                        : isGlass
-                            ? baseTheme.copyWith(textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme))
-                            : baseTheme;
+                        : isManifesto
+                            ? baseTheme.copyWith(
+                                colorScheme: baseTheme.colorScheme.copyWith(
+                                  surface: ManifestoTokens.bg(isDark),
+                                  onSurface: ManifestoTokens.fg(isDark),
+                                ),
+                                highlightColor: accent.withAlpha(32),
+                                textTheme: baseTheme.textTheme.apply(
+                                  fontFamily: 'Segoe UI Variable Text',
+                                  fontFamilyFallback: const <String>['Segoe UI'],
+                                  bodyColor: ManifestoTokens.fg(isDark),
+                                  displayColor: ManifestoTokens.fg(isDark),
+                                ),
+                              )
+                            : isGlass
+                                ? baseTheme.copyWith(textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme))
+                                : baseTheme;
     final Color onSurface = theme.colorScheme.onSurface;
     final bool hasInput = _controller.text.trim().isNotEmpty;
     final LauncherThemeData launcherTheme = LauncherThemeData(design: _design);
@@ -4072,10 +4089,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
           resultCount: _results.length,
           child: innerContent,
         ),
+      LauncherDesign.manifesto => ManifestoLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent,
+        ),
     };
 
     return Theme(
-      data: (isTerminal || isZen || isGlass || isBlueprint || isTransit || isFluent)
+      data: (isTerminal || isZen || isGlass || isBlueprint || isTransit || isFluent || isManifesto)
           ? theme
           : theme.copyWith(
               textTheme: GoogleFonts.getTextTheme(Design.entryFontFamily),

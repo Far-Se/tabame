@@ -11,6 +11,7 @@ import 'design_fluent.dart';
 import 'design_gazette.dart';
 import 'design_interface.dart';
 import 'design_matrix.dart';
+import 'design_manifesto.dart';
 import 'design_modern.dart';
 import 'design_player.dart';
 import 'design_serene.dart';
@@ -89,6 +90,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.gazette => MainMenuGazetteWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.player => MainMenuPlayerWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.steam => MainMenuSteamWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.manifesto => MainMenuManifestoWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }
 }

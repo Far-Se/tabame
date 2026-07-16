@@ -280,6 +280,60 @@ abstract final class FluentTokens {
   }
 }
 
+/// Shared palette and typography for the Manifesto editorial launcher.
+abstract final class ManifestoTokens {
+  static const Color _bgLight = Color(0xFFF2EEDB);
+  static const Color _fgLight = Color(0xFF171713);
+  static const Color _dimLight = Color(0xFF6C685C);
+  static const Color _accentLight = Color(0xFFE13A27);
+
+  static const Color _bgDark = Color(0xFF171713);
+  static const Color _fgDark = Color(0xFFF2EEDB);
+  static const Color _dimDark = Color(0xFFA7A28F);
+  static const Color _accentDark = Color(0xFFF0D83A);
+
+  static Color bg(bool isDark) => isDark ? _bgDark : _bgLight;
+  static Color fg(bool isDark) => isDark ? _fgDark : _fgLight;
+  static Color dim(bool isDark) => isDark ? _dimDark : _dimLight;
+  static Color accent(bool isDark) => isDark ? _accentDark : _accentLight;
+
+  static TextStyle display({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return TextStyle(
+      fontFamily: 'Bahnschrift Condensed',
+      fontFamilyFallback: const <String>['Bahnschrift', 'Segoe UI'],
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    );
+  }
+
+  static TextStyle body({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return TextStyle(
+      fontFamily: 'Segoe UI Variable Text',
+      fontFamilyFallback: const <String>['Segoe UI'],
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    );
+  }
+}
+
 @immutable
 class LauncherThemeData {
   const LauncherThemeData({required this.design});
@@ -295,6 +349,7 @@ class LauncherThemeData {
   bool get isBlueprint => design == LauncherDesign.blueprint;
   bool get isTransit => design == LauncherDesign.transit;
   bool get isFluent => design == LauncherDesign.fluent;
+  bool get isManifesto => design == LauncherDesign.manifesto;
 
   /// Leading glyph in the search bar — a chevron prompt for the Command/Terminal
   /// consoles, a leaf for Zen, a drafting compass for Blueprint, a magnifier
@@ -309,6 +364,7 @@ class LauncherThemeData {
         LauncherDesign.blueprint => Icons.architecture_rounded,
         LauncherDesign.transit => Icons.near_me_rounded,
         LauncherDesign.fluent => Icons.search_rounded,
+        LauncherDesign.manifesto => Icons.arrow_forward,
       };
 
   double get searchIconSize => switch (design) {
@@ -321,6 +377,7 @@ class LauncherThemeData {
         LauncherDesign.blueprint => 20.0,
         LauncherDesign.transit => 16.0,
         LauncherDesign.fluent => 18.0,
+        LauncherDesign.manifesto => 18.0,
       };
 
   bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent;
@@ -335,6 +392,7 @@ class LauncherThemeData {
         LauncherDesign.blueprint => 15.0,
         LauncherDesign.transit => 15.0,
         LauncherDesign.fluent => 15.0,
+        LauncherDesign.manifesto => 17.0,
       };
   FontWeight? get searchFontWeight => switch (design) {
         LauncherDesign.serene => FontWeight.w400,
@@ -346,6 +404,7 @@ class LauncherThemeData {
         LauncherDesign.blueprint => FontWeight.w500,
         LauncherDesign.transit => FontWeight.w600,
         LauncherDesign.fluent => FontWeight.w400,
+        LauncherDesign.manifesto => FontWeight.w600,
       };
 
   double get frameRadius => switch (design) {
@@ -358,6 +417,7 @@ class LauncherThemeData {
         LauncherDesign.blueprint => 3.0,
         LauncherDesign.transit => 16.0,
         LauncherDesign.fluent => 8.0,
+        LauncherDesign.manifesto => 0.0,
       };
 
   EdgeInsets get resultsListPadding => const EdgeInsets.all(8.0);

@@ -272,7 +272,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   bool _globalHotkeysEnabled = true;
   String _selectedMicId = '';
   String _selectedSystemAudioId = '';
-  bool _missingVirtualAudioCapturer = false;
+  final bool _missingVirtualAudioCapturer = false;
   // Video source selection
   VideoSource _videoSource = VideoSource.ffmpeg;
   String _ffmpegCommand = '';

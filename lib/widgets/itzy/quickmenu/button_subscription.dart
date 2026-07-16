@@ -157,7 +157,7 @@ class _SubscriptionPanelState extends State<SubscriptionPanel> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         border: Border(
           bottom: BorderSide(
             // color: accent.withAlpha(40),
