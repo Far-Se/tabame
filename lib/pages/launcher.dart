@@ -36,6 +36,7 @@ import '../widgets/itzy/quickmenu/button_steam.dart';
 import '../widgets/itzy/quickmenu/button_timers.dart';
 import '../widgets/itzy/quickmenu/button_workspaces.dart';
 import '../widgets/itzy/quickmenu/button_persistent_reminders.dart';
+import '../widgets/itzy/quickmenu/button_plugin_manager.dart';
 import 'launcher/result/result_item_app.dart';
 import 'launcher/result/result_item_bookmark.dart';
 import 'launcher/result/result_item_browser_tab.dart';
@@ -409,6 +410,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       caption: 'Workspaces',
       prefix: 'ws ',
       icon: Icons.dashboard_customize_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'plugins',
+      caption: 'Plugins',
+      prefix: '',
+      icon: Icons.extension_outlined,
+      opensPluginManager: true,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: r'$',
@@ -3484,6 +3492,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   // ---------------------------------------------------------------------------
 
   void _onShortcutPressed(LauncherShortcut shortcut) {
+    if (shortcut.opensPluginManager) {
+      _openLauncherPanel(context, const PluginManagerPanel());
+      return;
+    }
+
     _controller.text = shortcut.prefix;
     // _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
     _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
@@ -4328,7 +4341,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
                       ),
                     ),
                     Text(
-                      'Press ${!shortcut.label.startsWith('>') && shortcut.label.length > 1 ? "'${shortcut.label}'" : shortcut.label} to search',
+                      shortcut.opensPluginManager
+                          ? 'Install, enable, or disable launcher plugins'
+                          : 'Press ${!shortcut.label.startsWith('>') && shortcut.label.length > 1 ? "'${shortcut.label}'" : shortcut.label} to search',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: onSurface.withAlpha(140),
                       ),

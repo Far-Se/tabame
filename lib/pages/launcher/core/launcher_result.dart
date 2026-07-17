@@ -15,12 +15,14 @@ class LauncherShortcut {
   final String caption;
   final String prefix;
   final IconData icon;
+  final bool opensPluginManager;
 
   const LauncherShortcut({
     required this.label,
     required this.caption,
     required this.prefix,
     required this.icon,
+    this.opensPluginManager = false,
   });
 }
 

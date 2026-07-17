@@ -160,7 +160,9 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
                     duration: const Duration(milliseconds: 180),
                     child: _editMode
                         ? _buildColorEditorPage()
-                        : (_settingsMode ? _buildSettingsPage(sample) : _buildPickerView(capture, sample, formattedValue)),
+                        : (_settingsMode
+                            ? _buildSettingsPage(sample)
+                            : _buildPickerView(capture, sample, formattedValue)),
                   ),
                 ),
               ],
@@ -268,8 +270,9 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
     final Color swatch = selectedSample.color;
     final bool hasEnabledFormats = _formatController.enabledFormats.isNotEmpty;
     final String displayValue = formattedValue ?? (hasEnabledFormats ? selectedSample.hex : 'No enabled format');
-    final String colorNameText =
-        _formatController.isFetchingColorName ? 'Searching ...' : (_formatController.selectedColorName ?? 'Unknown color');
+    final String colorNameText = _formatController.isFetchingColorName
+        ? 'Searching ...'
+        : (_formatController.selectedColorName ?? 'Unknown color');
 
     return InkWell(
       onTap: formattedValue == null ? null : () => _copyOutput(formattedValue),
@@ -416,6 +419,16 @@ class _ColorPickerPanelState extends State<ColorPickerPanel> {
           const SizedBox(height: 8),
           Text(
             "Tap any sampled square to inspect it. The accent outline marks the center pixel captured by the script.",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: Design.baseFontSize + 1,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.66),
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Color Names by www.thecolorapi.com",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: Design.baseFontSize + 1,

@@ -2,6 +2,22 @@
   "version": 1,
   "plugins": [
     {
+      "id": "echo",
+      "name": "Plugin Features Demo",
+      "keyword": "echo",
+      "description": "Demonstrates the launcher plugin protocol (list / grid / detail / preview + actions).",
+      "icon": "extension",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/echo",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/echo/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/echo/main.js",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/echo/README.md"
+      }
+    },
+    {
       "id": "caniuse",
       "name": "Can I Use",
       "keyword": "ciu",
