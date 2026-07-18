@@ -8,7 +8,9 @@ import 'dart:ui' show Color;
 ///     `detail.append`, form v2 (validation, number/date/file/tags fields,
 ///     buttons, change events), storage/clipboardRead/notify/background
 ///     commands, and toast styles.
-const int pluginProtocolVersion = 3;
+/// 4 = metadata image URLs.
+/// 5 = metadata action buttons, image widths, and preview-side images.
+const int pluginProtocolVersion = 5;
 
 /// The layout a plugin render frame requests.
 enum PluginViewType { list, grid, detail, form }
@@ -87,9 +89,12 @@ class PluginMetadataEntry {
     required this.text,
     this.color,
     this.icon,
+    this.image,
+    this.imageWidth,
     this.url,
     this.separator = false,
     this.sparkline,
+    this.actions = const <PluginAction>[],
   });
 
   final String label;
@@ -101,6 +106,13 @@ class PluginMetadataEntry {
   /// Optional icon name shown before the value.
   final String? icon;
 
+  /// Optional remote raster image shown above the value. Only HTTP(S) URLs
+  /// are accepted so malformed or local values safely degrade to text.
+  final String? image;
+
+  /// Display width of [image], in logical pixels.
+  final double? imageWidth;
+
   /// When set, the value renders as a link and opens this on click.
   final String? url;
 
@@ -109,6 +121,9 @@ class PluginMetadataEntry {
 
   /// Optional inline mini-chart values, drawn before the value text.
   final List<double>? sparkline;
+
+  /// Clickable actions rendered as buttons below the metadata value.
+  final List<PluginAction> actions;
 
   static PluginMetadataEntry? fromJson(Object? json) {
     if (json is! Map) return null;
@@ -123,15 +138,26 @@ class PluginMetadataEntry {
     }
     if (text is! String && sparkline == null) return null;
     final Object? icon = json['icon'];
+    final Object? image = json['image'];
+    final Object? imageWidth = json['width'];
     final Object? url = json['url'];
+    final String? imageUrl = image is String && _isHttpUrl(image) ? image.trim() : null;
     return PluginMetadataEntry(
       label: label is String ? label : '',
       text: text is String ? text : '',
       color: parsePluginColor(json['color']),
       icon: icon is String ? icon : null,
+      image: imageUrl,
+      imageWidth: imageUrl != null && imageWidth is num ? imageWidth.toDouble().clamp(48.0, 280.0) : null,
       url: url is String ? url : null,
       sparkline: sparkline,
+      actions: PluginAction.listFromJson(json['actions']),
     );
+  }
+
+  static bool _isHttpUrl(String value) {
+    final Uri? uri = Uri.tryParse(value.trim());
+    return uri != null && (uri.scheme == 'http' || uri.scheme == 'https') && uri.host.isNotEmpty;
   }
 
   static List<PluginMetadataEntry> listFromJson(Object? json) {
@@ -223,6 +249,8 @@ class PluginItem {
     required this.actions,
     required this.previewMarkdown,
     required this.previewMetadata,
+    this.previewImageUrl,
+    this.previewImageWidth,
     this.tileColor,
     this.section,
     this.progress,
@@ -241,6 +269,12 @@ class PluginItem {
 
   /// Structured key-value rows shown under the preview markdown.
   final List<PluginMetadataEntry> previewMetadata;
+
+  /// Optional remote raster image shown to the right of preview markdown.
+  final String? previewImageUrl;
+
+  /// Display width of [previewImageUrl], in logical pixels.
+  final double? previewImageWidth;
 
   /// Grid view only: fills the tile with this color (color/theme pickers).
   final Color? tileColor;
@@ -266,10 +300,21 @@ class PluginItem {
 
     String? previewMarkdown;
     List<PluginMetadataEntry> previewMetadata = const <PluginMetadataEntry>[];
+    String? previewImageUrl;
+    double? previewImageWidth;
     if (rawPreview is Map) {
       final Object? md = rawPreview['markdown'];
       if (md is String) previewMarkdown = md;
       previewMetadata = PluginMetadataEntry.listFromJson(rawPreview['metadata']);
+      final Object? rawImage = rawPreview['image'];
+      if (rawImage is Map) {
+        final Object? url = rawImage['url'];
+        final Object? width = rawImage['width'];
+        if (url is String && PluginMetadataEntry._isHttpUrl(url)) {
+          previewImageUrl = url.trim();
+          previewImageWidth = width is num ? width.toDouble().clamp(48.0, 280.0) : null;
+        }
+      }
     } else if (rawPreview is String) {
       previewMarkdown = rawPreview;
     }
@@ -290,6 +335,8 @@ class PluginItem {
           : const <PluginAction>[],
       previewMarkdown: previewMarkdown,
       previewMetadata: previewMetadata,
+      previewImageUrl: previewImageUrl,
+      previewImageWidth: previewImageWidth,
       tileColor: parsePluginColor(json['tileColor']),
       section: rawSection is String && rawSection.trim().isNotEmpty ? rawSection.trim() : null,
       progress: rawProgress is num ? rawProgress.toDouble().clamp(0.0, 1.0) : null,

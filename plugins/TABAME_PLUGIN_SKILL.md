@@ -240,7 +240,7 @@ Notes:
 
 | Message | When | Fields |
 |---|---|---|
-| `init` | Once, right after your process starts | `query`: initial text after the keyword; `protocol`: int protocol version (currently 3); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"` |
+| `init` | Once, right after your process starts | `query`: initial text after the keyword; `protocol`: int protocol version (currently 5); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"` |
 | `query` | On every keystroke while the keyword is active (not sent in `inputMode: "submit"`) | `text`: current text after the keyword; `rev`: integer generation counter |
 | `submitQuery` | **Enter** while the frame declared `inputMode: "submit"` — the whole query line at once (chat-style input) | `text`, `rev` |
 | `select` | When the highlighted item changes | `id`: the selected item's id; `rev` |
@@ -415,6 +415,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
   ],
   "preview": {                                  // shown in the preview pane when selected
     "markdown": "## Details...",
+    "image": { "url": "https://example.com/poster.webp", "width": 160 }, // right of markdown
     "metadata": [ /* see §7.1 */ ]
   }
 }
@@ -432,7 +433,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `tileColor` | string | Grid view: fills the tile with this `#RRGGBB` color; label flips black/white for contrast. Perfect for color pickers. |
 | `accessories` | array | Trailing badges. Each is a bare string or `{"text", "color"?, "icon"?}` — `color` tints the chip, `icon` is a §11 name. |
 | `actions` | array | Entries for the item's **Ctrl+K** menu. Each: `{id, title, icon?, shortcut?, destructive?, confirm?}` — see §9 for the last three. |
-| `preview` | object/string/null | Shown in the preview pane while this item is selected: `{"markdown"?, "metadata"?}` or a plain markdown string. Only visible when the frame sets `preview.enabled`. |
+| `preview` | object/string/null | Shown in the preview pane while this item is selected: `{"markdown"?, "image": {"url", "width"?}, "metadata"?}` or a plain markdown string. `image` is an HTTP(S) raster displayed to the right of markdown; `width` is 48–280 px (default 160). Only visible when the frame sets `preview.enabled`. |
 
 ### 7.1 Metadata entries (`preview.metadata` / `detail.metadata`)
 
@@ -445,7 +446,9 @@ key-value row:
   { "label": "Assignee", "text": "far-se", "icon": "person" },          // icon before the value
   { "separator": true },                                                  // thin divider
   { "label": "Docs",     "text": "tailwindcss.com", "url": "https://..." },  // clickable link
-  { "label": "Trend",    "sparkline": [12, 14, 11, 9], "text": "−3°" }  // inline mini-chart
+  { "label": "Trend",    "sparkline": [12, 14, 11, 9], "text": "−3°" }, // inline mini-chart
+  { "label": "Poster",   "text": "Poster Name", "image": "https://example.com/poster.webp", "width": 180 }, // remote image
+  { "label": "Site",     "text": "Example", "actions": [{ "id": "open", "title": "Open", "icon": "open" }] } // action button
 ]
 ```
 
@@ -455,6 +458,9 @@ key-value row:
 | `text` | Right column value. Required unless `sparkline` is present. |
 | `color` | `#RRGGBB` — tints the value and draws a small dot before it (or tints the sparkline/icon). |
 | `icon` | Icon name (§11) shown before the value. |
+| `image` | HTTP(S) URL of a raster image (PNG, JPG, or WebP), shown above the value. Invalid URLs or failed loads leave the text visible. |
+| `width` | Image width in px (48–280); used with `image`. Default 132. |
+| `actions` | Buttons below the value. Same shape and behavior as Ctrl+K actions: `{id, title, icon?, destructive?, confirm?}`. Clicking one sends an `action` message for the selected item (or `id: ""` in a detail view). |
 | `url` | Makes the value a clickable link (opens in the default browser). |
 | `sparkline` | Array of ≥2 numbers, drawn as a small axis-free line chart before the value text. |
 | `separator` | `{"separator": true}` renders a divider row. |

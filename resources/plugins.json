@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "plugins": [
     {
@@ -37,7 +37,7 @@
       "id": "github",
       "name": "GitHub",
       "keyword": "gh",
-      "description": "Search and manage GitHub — pull requests, issues, repos, branches, Actions runs, notifications, discussions, projects and repo downloads. Needs a Personal Access Token (asked for on first run).",
+      "description": "Search and manage GitHub â€” pull requests, issues, repos, branches, Actions runs, notifications, discussions, projects and repo downloads. Needs a Personal Access Token (asked for on first run).",
       "icon": "code",
       "runtime": "node",
       "author": "Far-Se",
@@ -71,7 +71,7 @@
       "id": "tailwind",
       "name": "Tailwind CSS",
       "keyword": "tw",
-      "description": "Search & inspect Tailwind CSS utilities — see the generated CSS, copy the class, and jump to the docs.",
+      "description": "Search \u0026 inspect Tailwind CSS utilities â€” see the generated CSS, copy the class, and jump to the docs.",
       "icon": "palette",
       "runtime": "node",
       "author": "Far-Se",
@@ -86,7 +86,7 @@
       "id": "kao",
       "name": "Kaomoji Search",
       "keyword": "kao",
-      "description": "Search Kaomoji ♥(ˆ⌣ˆԅ)",
+      "description": "Search Kaomoji â™¥(Ë†âŒ£Ë†Ô…)",
       "icon": "emoji",
       "runtime": "node",
       "author": "Far-Se",
@@ -99,7 +99,7 @@
     },
     {
       "id": "symbols",
-      "name": "Symbols & Characters",
+      "name": "Symbols \u0026 Characters",
       "keyword": "sym",
       "description": "Search and copy special characters, math symbols, punctuation, and language characters.",
       "icon": "tag",
@@ -116,7 +116,7 @@
       "id": "weather",
       "name": "Weather",
       "keyword": "weather",
-      "description": "Today's weather and 7-day forecast",
+      "description": "Today\u0027s weather and 7-day forecast",
       "icon": "tag",
       "runtime": "node",
       "author": "Far-Se",
@@ -146,7 +146,7 @@
       "id": "trakt",
       "name": "Trakt",
       "keyword": "trakt",
-      "description": "Search movies & shows, browse trending/popular, and manage your Trakt watchlist, history & calendar.",
+      "description": "Search movies \u0026 shows, browse trending/popular, and manage your Trakt watchlist, history \u0026 calendar.",
       "icon": "video",
       "runtime": "node",
       "author": "Far-Se",
@@ -185,6 +185,21 @@
       "files": {
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/paste.rs/plugin.json",
         "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/paste.rs/main.py"
+      }
+    },
+    {
+      "id": "mdblist",
+      "name": "MDBList",
+      "keyword": "mdb",
+      "description": "Search movies \u0026 shows, browse lists, and manage your watchlist via mdblist.com",
+      "icon": "star",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/mdblist",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/mdblist/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/mdblist/main.js"
       }
     }
   ]

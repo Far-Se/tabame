@@ -36,7 +36,9 @@ class PluginView extends StatefulWidget {
     required this.onFormChange,
     required this.onLoadMore,
     required this.onEmptyAction,
+    required this.onMetadataAction,
     this.onOpenActions,
+    this.onMarkdownKeyEvent,
     this.detailScrollController,
   });
 
@@ -66,8 +68,16 @@ class PluginView extends StatefulWidget {
   /// The empty state's call-to-action button was clicked.
   final void Function(PluginAction action) onEmptyAction;
 
+  /// A metadata action button was clicked. Preview metadata belongs to its
+  /// selected item; detail metadata uses an empty item id.
+  final void Function(String itemId, PluginAction action) onMetadataAction;
+
   /// Ctrl+K pressed inside a form (the launcher opens the actions palette).
   final VoidCallback? onOpenActions;
+
+  /// Forwards shortcuts pressed while a selectable markdown region owns focus
+  /// back to the launcher's plugin keyboard handler.
+  final KeyEventResult Function(KeyEvent event)? onMarkdownKeyEvent;
 
   @override
   State<PluginView> createState() => _PluginViewState();
@@ -445,12 +455,17 @@ class _PluginViewState extends State<PluginView> {
                   constraints: const BoxConstraints(maxWidth: 820),
                   // Selectable: detail documents are the "answer" surface —
                   // users copy from them constantly.
-                  child: SelectionArea(
-                    child: Column(
+                  child: _selectableContent(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         if (hasMarkdown) MarkdownBlock(data: markdown, config: _markdownConfig()),
-                        if (metadata.isNotEmpty) _PluginMetadataPane(entries: metadata, topGap: hasMarkdown),
+                        if (metadata.isNotEmpty)
+                          _PluginMetadataPane(
+                            entries: metadata,
+                            topGap: hasMarkdown,
+                            onAction: (PluginAction action) => widget.onMetadataAction('', action),
+                          ),
                       ],
                     ),
                   ),
@@ -466,21 +481,47 @@ class _PluginViewState extends State<PluginView> {
     return WindowsScrollView(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        child: !hasMarkdown && item.previewMetadata.isEmpty
+        child: !hasMarkdown && item.previewImageUrl == null && item.previewMetadata.isEmpty
             ? Text('No preview', style: TextStyle(fontSize: 12, color: Design.text.withAlpha(90)))
-            : SelectionArea(
-                child: Column(
+            : _selectableContent(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    // Cap image width in the narrow preview pane so a portrait
-                    // poster reads as a thumbnail instead of filling the column.
-                    if (hasMarkdown) MarkdownBlock(data: markdown, config: _markdownConfig(maxImageWidth: 220)),
+                    if (hasMarkdown || item.previewImageUrl != null)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          if (hasMarkdown)
+                            Expanded(child: MarkdownBlock(data: markdown, config: _markdownConfig(maxImageWidth: 220))),
+                          if (hasMarkdown && item.previewImageUrl != null) const SizedBox(width: 10),
+                          if (item.previewImageUrl != null)
+                            Image.network(
+                              item.previewImageUrl!,
+                              width: item.previewImageWidth ?? 160,
+                              fit: BoxFit.contain,
+                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const SizedBox.shrink(),
+                            ),
+                        ],
+                      ),
                     if (item.previewMetadata.isNotEmpty)
-                      _PluginMetadataPane(entries: item.previewMetadata, topGap: hasMarkdown),
+                      _PluginMetadataPane(
+                        entries: item.previewMetadata,
+                        topGap: hasMarkdown || item.previewImageUrl != null,
+                        onAction: (PluginAction action) => widget.onMetadataAction(item.id, action),
+                      ),
                   ],
                 ),
               ),
       ),
+    );
+  }
+
+  /// Keeps native selection/copy available while delegating launcher shortcuts
+  /// when [SelectionArea] becomes the primary focus after a mouse selection.
+  Widget _selectableContent(Widget child) {
+    return Focus(
+      onKeyEvent: (_, KeyEvent event) => widget.onMarkdownKeyEvent?.call(event) ?? KeyEventResult.ignored,
+      child: SelectionArea(child: child),
     );
   }
 
@@ -1054,14 +1095,15 @@ class _SparklinePainter extends CustomPainter {
 }
 
 /// Dense key-value rows shown under preview/detail markdown: label column on
-/// the left, value (with optional icon, tint, and link) on the right.
+/// the left, value (with optional icon, image, tint, and link) on the right.
 class _PluginMetadataPane extends StatelessWidget {
-  const _PluginMetadataPane({required this.entries, required this.topGap});
+  const _PluginMetadataPane({required this.entries, required this.topGap, required this.onAction});
 
   final List<PluginMetadataEntry> entries;
 
   /// Whether markdown precedes the pane (adds a separating divider).
   final bool topGap;
+  final void Function(PluginAction action) onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -1149,12 +1191,89 @@ class _PluginMetadataPane extends StatelessWidget {
         Flexible(child: text),
       ],
     );
-    if (entry.url == null) return value;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () => WinUtils.open(entry.url!.trim()),
-        child: value,
+    final Widget visualContent = entry.image == null
+        ? value
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.network(
+                  entry.image!,
+                  width: entry.imageWidth ?? 132,
+                  height: 176,
+                  fit: BoxFit.cover,
+                  errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const SizedBox.shrink(),
+                ),
+              ),
+              if (entry.text.isNotEmpty) const SizedBox(height: 4),
+              value,
+            ],
+          );
+    final Widget linkableContent = entry.url == null
+        ? visualContent
+        : MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => WinUtils.open(entry.url!.trim()),
+              child: visualContent,
+            ),
+          );
+    final Widget content = entry.actions.isEmpty
+        ? linkableContent
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              linkableContent,
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: entry.actions
+                    .map((PluginAction action) => _MetadataActionButton(action: action, onTap: () => onAction(action)))
+                    .toList(growable: false),
+              ),
+            ],
+          );
+    return content;
+  }
+}
+
+class _MetadataActionButton extends StatelessWidget {
+  const _MetadataActionButton({required this.action, required this.onTap});
+
+  final PluginAction action;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = action.destructive ? const Color(0xFFE5534B) : Design.accent;
+    return SelectionContainer.disabled(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            decoration: BoxDecoration(
+              color: color.withAlpha(24),
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(color: color.withAlpha(110)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (action.icon != null) ...<Widget>[
+                  Icon(PluginIcons.resolve(action.icon), size: 12, color: color),
+                  const SizedBox(width: 5),
+                ],
+                Text(action.title, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

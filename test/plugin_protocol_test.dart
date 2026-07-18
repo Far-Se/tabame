@@ -52,27 +52,42 @@ void main() {
       expect(item.subtitleLines, 2);
     });
 
-    test('parses preview metadata with separators, links, and sparklines', () {
+    test('parses preview metadata with images, widths, and actions', () {
       final PluginItem item = PluginItem.fromJson(<String, dynamic>{
         'id': 'x',
         'preview': <String, Object?>{
           'markdown': '# hi',
+          'image': <String, Object?>{'url': 'https://example.com/cover.jpg', 'width': 180},
           'metadata': <Object?>[
             <String, Object?>{'label': 'Status', 'text': 'Open', 'color': '#00FF00'},
             <String, Object?>{'separator': true},
             <String, Object?>{'label': 'Docs', 'text': 'site', 'url': 'https://x.dev'},
             <String, Object?>{'label': 'Trend', 'sparkline': <num>[1, 2, 3]},
+            <String, Object?>{
+              'label': 'Poster',
+              'text': 'Poster Name',
+              'image': 'https://example.com/poster.webp',
+              'width': 180,
+              'actions': <Object?>[<String, Object?>{'id': 'open', 'title': 'Open', 'icon': 'open'}],
+            },
+            <String, Object?>{'label': 'invalid image', 'text': 'Text remains', 'image': 'file:///poster.png'},
             <String, Object?>{'label': 'bad entry'},
             <String, Object?>{'label': 'too short', 'sparkline': <num>[1]},
           ],
         },
       }, 0);
       expect(item.previewMarkdown, '# hi');
+      expect(item.previewImageUrl, 'https://example.com/cover.jpg');
+      expect(item.previewImageWidth, 180);
       // Bad entries (no text, sparkline < 2 points) are dropped.
-      expect(item.previewMetadata, hasLength(4));
+      expect(item.previewMetadata, hasLength(6));
       expect(item.previewMetadata[1].separator, isTrue);
       expect(item.previewMetadata[2].url, 'https://x.dev');
       expect(item.previewMetadata[3].sparkline, <double>[1, 2, 3]);
+      expect(item.previewMetadata[4].image, 'https://example.com/poster.webp');
+      expect(item.previewMetadata[4].imageWidth, 180);
+      expect(item.previewMetadata[4].actions.single.id, 'open');
+      expect(item.previewMetadata[5].image, isNull);
     });
   });
 

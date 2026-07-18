@@ -1003,7 +1003,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
                 onFormChange: _onPluginFormChange,
                 onLoadMore: _pluginHost.sendLoadMore,
                 onEmptyAction: (PluginAction action) => _firePluginAction('', action),
+                onMetadataAction: _firePluginAction,
                 onOpenActions: _openPluginActions,
+                onMarkdownKeyEvent: _handlePluginKey,
                 detailScrollController: _pluginDetailScroll,
               );
             },
