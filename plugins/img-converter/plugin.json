@@ -1,0 +1,10 @@
+{
+  "name": "Image Converter",
+  "keyword": "img",
+  "runtime": "python",
+  "entry": "main.py",
+  "description": "Convert, resize, rotate and batch-process images between PNG, JPEG, WebP, BMP, GIF, TIFF, ICO and PDF",
+  "icon": "image",
+  "pip": ["Pillow"],
+  "dev": false
+}

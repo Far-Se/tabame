@@ -1,0 +1,8 @@
+{
+  "name": "Crates.io",
+  "keyword": "crate",
+  "runtime": "node",
+  "entry": "main.js",
+  "description": "Search Rust crates on crates.io",
+  "icon": "download"
+}

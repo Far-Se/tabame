@@ -1,206 +1,275 @@
 ﻿{
-  "version": 1,
-  "plugins": [
-    {
-      "id": "echo",
-      "name": "Plugin Features Demo",
-      "keyword": "echo",
-      "description": "Demonstrates the launcher plugin protocol (list / grid / detail / preview + actions).",
-      "icon": "extension",
-      "runtime": "node",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/echo",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/echo/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/echo/main.js",
-        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/echo/README.md"
-      }
-    },
-    {
-      "id": "caniuse",
-      "name": "Can I Use",
-      "keyword": "ciu",
-      "description": "Search caniuse.com for web-platform feature browser compatibility.",
-      "icon": "globe",
-      "runtime": "node",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/caniuse",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/caniuse/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/caniuse/main.js",
-        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/caniuse/README.md"
-      }
-    },
-    {
-      "id": "github",
-      "name": "GitHub",
-      "keyword": "gh",
-      "description": "Search and manage GitHub â€” pull requests, issues, repos, branches, Actions runs, notifications, discussions, projects and repo downloads. Needs a Personal Access Token (asked for on first run).",
-      "icon": "code",
-      "runtime": "node",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/github",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/github/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/github/main.js",
-        "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/github/config.example.json",
-        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/github/README.md"
-      }
-    },
-    {
-      "id": "linear",
-      "name": "Linear",
-      "keyword": "lin",
-      "description": "Create, search and manage Linear issues, projects, docs and notifications. Needs an API key in config.json (see config.example.json).",
-      "icon": "list",
-      "runtime": "node",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/linear",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/linear/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/linear/main.js",
-        "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/linear/config.example.json",
-        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/linear/README.md"
-      }
-    },
-    {
-      "id": "tailwind",
-      "name": "Tailwind CSS",
-      "keyword": "tw",
-      "description": "Search \u0026 inspect Tailwind CSS utilities â€” see the generated CSS, copy the class, and jump to the docs.",
-      "icon": "palette",
-      "runtime": "node",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/tailwind",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/tailwind/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/tailwind/main.js"
-      }
-    },
-    {
-      "id": "kao",
-      "name": "Kaomoji Search",
-      "keyword": "kao",
-      "description": "Search Kaomoji â™¥(Ë†âŒ£Ë†Ô…)",
-      "icon": "emoji",
-      "runtime": "node",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/kaomoji",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/main.js"
-      }
-    },
-    {
-      "id": "symbols",
-      "name": "Symbols \u0026 Characters",
-      "keyword": "sym",
-      "description": "Search and copy special characters, math symbols, punctuation, and language characters.",
-      "icon": "tag",
-      "runtime": "node",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/symbols",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/symbols/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/symbols/main.js"
-      }
-    },
-    {
-      "id": "weather",
-      "name": "Weather",
-      "keyword": "weather",
-      "description": "Today\u0027s weather and 7-day forecast",
-      "icon": "tag",
-      "runtime": "node",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/weather",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather/main.js"
-      }
-    },
-    {
-      "id": "font-sniffer",
-      "name": "Font Sniffer",
-      "keyword": "fonts",
-      "description": "Load any website in headless Chrome and list every font it actually renders, ranked by usage.",
-      "icon": "language",
-      "runtime": "node",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/font-sniffer",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/font-sniffer/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/font-sniffer/main.js"
-      }
-    },
-    {
-      "id": "trakt",
-      "name": "Trakt",
-      "keyword": "trakt",
-      "description": "Search movies \u0026 shows, browse trending/popular, and manage your Trakt watchlist, history \u0026 calendar.",
-      "icon": "video",
-      "runtime": "node",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/trakt",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/trakt/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/trakt/main.js"
-      }
-    },
-    {
-      "id": "timezone",
-      "name": "Timezone Converter",
-      "keyword": "tz",
-      "description": "Convert times between timezones",
-      "icon": "clock",
-      "runtime": "python",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/timezone",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/timezone/plugin.json",
-        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/timezone/main.py"
-      }
-    },
-    {
-      "id": "paste-rs",
-      "name": "paste.rs",
-      "keyword": "paste",
-      "description": "Upload text or files to paste.rs, with local link history.",
-      "icon": "upload",
-      "runtime": "python",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/paste.rs",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/paste.rs/plugin.json",
-        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/paste.rs/main.py"
-      }
-    },
-    {
-      "id": "mdblist",
-      "name": "MDBList",
-      "keyword": "mdb",
-      "description": "Search movies \u0026 shows, browse lists, and manage your watchlist via mdblist.com",
-      "icon": "star",
-      "runtime": "node",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/mdblist",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/mdblist/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/mdblist/main.js"
-      }
-    }
-  ]
+    "version":  1,
+    "plugins":  [
+                    {
+                        "id":  "echo",
+                        "name":  "Plugin Features Demo",
+                        "keyword":  "echo",
+                        "description":  "Demonstrates the launcher plugin protocol (list / grid / detail / preview + actions).",
+                        "icon":  "extension",
+                        "runtime":  "node",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/echo",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/echo/plugin.json",
+                                      "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/echo/main.js",
+                                      "README.md":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/echo/README.md"
+                                  }
+                    },
+                    {
+                        "id":  "caniuse",
+                        "name":  "Can I Use",
+                        "keyword":  "ciu",
+                        "description":  "Search caniuse.com for web-platform feature browser compatibility.",
+                        "icon":  "globe",
+                        "runtime":  "node",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/caniuse",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/caniuse/plugin.json",
+                                      "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/caniuse/main.js",
+                                      "README.md":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/caniuse/README.md"
+                                  }
+                    },
+                    {
+                        "id":  "github",
+                        "name":  "GitHub",
+                        "keyword":  "gh",
+                        "description":  "Search and manage GitHub â€” pull requests, issues, repos, branches, Actions runs, notifications, discussions, projects and repo downloads. Needs a Personal Access Token (asked for on first run).",
+                        "icon":  "code",
+                        "runtime":  "node",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/github",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/github/plugin.json",
+                                      "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/github/main.js",
+                                      "config.example.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/github/config.example.json",
+                                      "README.md":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/github/README.md"
+                                  }
+                    },
+                    {
+                        "id":  "linear",
+                        "name":  "Linear",
+                        "keyword":  "lin",
+                        "description":  "Create, search and manage Linear issues, projects, docs and notifications. Needs an API key in config.json (see config.example.json).",
+                        "icon":  "list",
+                        "runtime":  "node",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/linear",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/linear/plugin.json",
+                                      "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/linear/main.js",
+                                      "config.example.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/linear/config.example.json",
+                                      "README.md":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/linear/README.md"
+                                  }
+                    },
+                    {
+                        "id":  "tailwind",
+                        "name":  "Tailwind CSS",
+                        "keyword":  "tw",
+                        "description":  "Search \u0026 inspect Tailwind CSS utilities â€” see the generated CSS, copy the class, and jump to the docs.",
+                        "icon":  "palette",
+                        "runtime":  "node",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/tailwind",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/tailwind/plugin.json",
+                                      "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/tailwind/main.js"
+                                  }
+                    },
+                    {
+                        "id":  "kao",
+                        "name":  "Kaomoji Search",
+                        "keyword":  "kao",
+                        "description":  "Search Kaomoji â™¥(Ë†âŒ£Ë†Ô…)",
+                        "icon":  "emoji",
+                        "runtime":  "node",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/kaomoji",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/plugin.json",
+                                      "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/main.js"
+                                  }
+                    },
+                    {
+                        "id":  "symbols",
+                        "name":  "Symbols \u0026 Characters",
+                        "keyword":  "sym",
+                        "description":  "Search and copy special characters, math symbols, punctuation, and language characters.",
+                        "icon":  "tag",
+                        "runtime":  "node",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/symbols",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/symbols/plugin.json",
+                                      "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/symbols/main.js"
+                                  }
+                    },
+                    {
+                        "id":  "weather",
+                        "name":  "Weather",
+                        "keyword":  "weather",
+                        "description":  "Today\u0027s weather and 7-day forecast",
+                        "icon":  "tag",
+                        "runtime":  "node",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/weather",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather/plugin.json",
+                                      "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather/main.js"
+                                  }
+                    },
+                    {
+                        "id":  "font-sniffer",
+                        "name":  "Font Sniffer",
+                        "keyword":  "fonts",
+                        "description":  "Load any website in headless Chrome and list every font it actually renders, ranked by usage.",
+                        "icon":  "language",
+                        "runtime":  "node",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/font-sniffer",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/font-sniffer/plugin.json",
+                                      "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/font-sniffer/main.js"
+                                  }
+                    },
+                    {
+                        "id":  "trakt",
+                        "name":  "Trakt",
+                        "keyword":  "trakt",
+                        "description":  "Search movies \u0026 shows, browse trending/popular, and manage your Trakt watchlist, history \u0026 calendar.",
+                        "icon":  "video",
+                        "runtime":  "node",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/trakt",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/trakt/plugin.json",
+                                      "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/trakt/main.js"
+                                  }
+                    },
+                    {
+                        "id":  "timezone",
+                        "name":  "Timezone Converter",
+                        "keyword":  "tz",
+                        "description":  "Convert times between timezones",
+                        "icon":  "clock",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/timezone",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/timezone/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/timezone/main.py"
+                                  }
+                    },
+                    {
+                        "id":  "paste-rs",
+                        "name":  "paste.rs",
+                        "keyword":  "paste",
+                        "description":  "Upload text or files to paste.rs, with local link history.",
+                        "icon":  "upload",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/paste.rs",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/paste.rs/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/paste.rs/main.py"
+                                  }
+                    },
+                    {
+                        "id":  "mdblist",
+                        "name":  "MDBList",
+                        "keyword":  "mdb",
+                        "description":  "Search movies \u0026 shows, browse lists, and manage your watchlist via mdblist.com",
+                        "icon":  "star",
+                        "runtime":  "node",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/mdblist",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/mdblist/plugin.json",
+                                      "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/mdblist/main.js"
+                                  }
+                    },
+                    {
+                        "id":  "stock",
+                        "name":  "Stocks",
+                        "keyword":  "stock",
+                        "description":  "Stock [ticker] [period] - e.g. 1d, 2m, 1y - price chart rendered as an image",
+                        "icon":  "chart",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/stock_plugin",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/stock_plugin/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/stock_plugin/main.py",
+                                      "README.md":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/stock_plugin/README.md",
+                                      "stock_render.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/stock_plugin/stock_render.py",
+                                      "fonts/Lato-Bold.ttf":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/stock_plugin/fonts/Lato-Bold.ttf",
+                                      "fonts/Lato-Regular.ttf":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/stock_plugin/fonts/Lato-Regular.ttf"
+                                  }
+                    },
+                    {
+                        "id":  "weatherImage",
+                        "name":  "Weather Image",
+                        "keyword":  "wt",
+                        "description":  "wt [city] [weekly|w] - today\u0027s forecast or a 7-day strip, rendered as an image",
+                        "icon":  "weather",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/weather_plugin",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/main.py",
+                                      "weather_icon.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/weather_icon.py",
+                                      "weather_render.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/weather_render.py",
+                                      "README.md":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/README.md",
+                                      "fonts/Lato-Bold.ttf":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/stock_plugin/fonts/Lato-Bold.ttf",
+                                      "fonts/Lato-Regular.ttf":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/stock_plugin/fonts/Lato-Regular.ttf"
+                                  }
+                    },
+                    {
+                        "id":  "palette",
+                        "name":  "Color Palette",
+                        "keyword":  "palette",
+                        "description":  "Save, edit, and copy colors into named palettes for Figma, Photoshop, and more.",
+                        "icon":  "palette",
+                        "runtime":  "node",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/palette",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/palette/plugin.json",
+                                      "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/palette/main.js"
+                                  }
+                    },
+                    {
+                        "id":  "crates",
+                        "name":  "Crates.io",
+                        "keyword":  "crate",
+                        "description":  "Search Rust crates on crates.io",
+                        "icon":  "download",
+                        "runtime":  "node",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/crates",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/crates/plugin.json",
+                                      "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/crates/main.js"
+                                  }
+                    }
+                ]
 }

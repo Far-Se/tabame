@@ -11,6 +11,7 @@ import 'package:tabamewin32/tabamewin32.dart' show BrowserTab, BrowserTabs, Medi
 import 'package:window_manager/window_manager.dart';
 import '../models/tray_watcher.dart';
 import '../models/util/quickmenu_modal.dart';
+import 'launcher/plugins/plugin_icons.dart';
 import 'launcher_actions_panel.dart';
 
 import '../models/classes/boxes.dart';
@@ -165,7 +166,7 @@ class Launcher extends StatefulWidget {
   LauncherState createState() => LauncherState();
 }
 
-class LauncherState extends State<Launcher> with QuickMenuTriggers {
+class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTickerProviderStateMixin {
   static const double _minResultsHeight = 300;
   static const double _maxResultsHeight = 405;
 
@@ -218,6 +219,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   bool _pluginSubmitPending = false;
   bool _pluginWindowWidened = false;
   Timer? _pluginWidthCollapseTimer;
+  late final AnimationController _pluginWindowTransitionController;
+  double _pluginWindowOpacity = 1;
+  int _pluginWindowTransitionVersion = 0;
   String? _pluginToast;
   Timer? _pluginToastTimer;
 
@@ -721,11 +725,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
       _pluginWidthCollapseTimer = null;
       if (_pluginWindowWidened) return;
       _pluginWindowWidened = true;
-      WindowManager.instance.setSize(Size(_pluginPreviewWidth, Globals.launcherSize.height)).then((_) async {
-        WinUtils.fixDrawBug();
-        Win32.setCenter(useMouse: true);
-        if (mounted) setState(() {});
-      });
+      unawaited(_animatePluginWindowWidth(_pluginPreviewWidth));
       return;
     }
 
@@ -735,22 +735,85 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     // letter, causing jitter. Only shrink once the plugin has stayed narrow.
     if (!_pluginWindowWidened) return;
     _pluginWidthCollapseTimer?.cancel();
-    _pluginWidthCollapseTimer = Timer(const Duration(milliseconds: 400), () {
+    _pluginWidthCollapseTimer = Timer(const Duration(milliseconds: 300), () {
       _pluginWidthCollapseTimer = null;
       if (mounted) _restorePluginWindowWidth();
     });
   }
 
-  void _restorePluginWindowWidth() {
+  void _restorePluginWindowWidth({bool animate = true}) {
     _pluginWidthCollapseTimer?.cancel();
     _pluginWidthCollapseTimer = null;
     if (!_pluginWindowWidened) return;
     _pluginWindowWidened = false;
-    WindowManager.instance.setSize(Size(Boxes.launcherSizeWidth, Globals.launcherSize.height)).then((_) async {
-      WinUtils.fixDrawBug();
-      Win32.setCenter(useMouse: true);
-      if (mounted) setState(() {});
-    });
+    if (!animate) {
+      unawaited(_setPluginWindowWidth(Boxes.launcherSizeWidth, finalize: true));
+      return;
+    }
+    unawaited(_animatePluginWindowWidth(Boxes.launcherSizeWidth));
+  }
+
+  /// Hides the native resize behind a short fade so the launcher changes modes
+  /// without the window's edges visibly stretching across the screen.
+  Future<void> _animatePluginWindowWidth(double targetWidth) async {
+    final int transitionVersion = ++_pluginWindowTransitionVersion;
+    final bool reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    _pluginWindowTransitionController.stop();
+
+    if (reduceMotion) {
+      _pluginWindowOpacity = 1;
+      await WindowManager.instance.setOpacity(1);
+      await _setPluginWindowWidth(targetWidth, finalize: true);
+      return;
+    }
+
+    final bool fadedOut = await _fadePluginWindowTo(0, transitionVersion, curve: Curves.easeInCubic);
+    if (!fadedOut) return;
+
+    await _setPluginWindowWidth(targetWidth);
+    if (!mounted || transitionVersion != _pluginWindowTransitionVersion) return;
+
+    WinUtils.fixDrawBug();
+    final bool fadedIn = await _fadePluginWindowTo(1, transitionVersion, curve: Curves.easeOutCubic);
+    if (!fadedIn) return;
+    if (mounted && transitionVersion == _pluginWindowTransitionVersion) setState(() {});
+  }
+
+  Future<bool> _fadePluginWindowTo(double targetOpacity, int transitionVersion, {required Curve curve}) async {
+    final double startOpacity = _pluginWindowOpacity;
+    if ((startOpacity - targetOpacity).abs() < 0.01)
+      return mounted && transitionVersion == _pluginWindowTransitionVersion;
+
+    final Animation<double> opacity = Tween<double>(begin: startOpacity, end: targetOpacity).animate(
+      CurvedAnimation(parent: _pluginWindowTransitionController, curve: curve),
+    );
+    void onTick() {
+      _pluginWindowOpacity = opacity.value;
+      unawaited(WindowManager.instance.setOpacity(_pluginWindowOpacity));
+    }
+
+    _pluginWindowTransitionController
+      ..duration = const Duration(milliseconds: 120)
+      ..addListener(onTick);
+    try {
+      await _pluginWindowTransitionController.forward(from: 0).orCancel;
+    } on TickerCanceled {
+      // A newer plugin frame superseded this transition.
+    } finally {
+      _pluginWindowTransitionController.removeListener(onTick);
+    }
+    if (!mounted || transitionVersion != _pluginWindowTransitionVersion) return false;
+    _pluginWindowOpacity = targetOpacity;
+    await WindowManager.instance.setOpacity(targetOpacity);
+    return mounted && transitionVersion == _pluginWindowTransitionVersion;
+  }
+
+  Future<void> _setPluginWindowWidth(double width, {bool finalize = false}) async {
+    await WindowManager.instance.setSize(Size(width, Globals.launcherSize.height));
+    if (!mounted) return;
+    Win32.setCenter(useMouse: true);
+    if (!finalize) return;
+    WinUtils.fixDrawBug();
   }
 
   /// Moves the plugin selection and notifies the script (drives the preview).
@@ -1087,7 +1150,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
             label: m.keyword,
             caption: m.name,
             prefix: '${m.keyword} ',
-            icon: Icons.extension_rounded,
+            icon: PluginIcons.resolve(m.icon),
           )),
     ];
   }
@@ -1205,6 +1268,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
   @override
   void initState() {
     super.initState();
+    _pluginWindowTransitionController = AnimationController(vsync: this);
     QuickMenuFunctions.addListener(this);
     _design = user.launcherDesign;
     _resultsMaxHeight = (Boxes.pref.getDouble('launcherResultsHeight') ?? _maxResultsHeight)
@@ -1263,7 +1327,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     _pluginToastTimer?.cancel();
     _pluginDetailScroll.dispose();
     _pluginHost.dispose();
-    _restorePluginWindowWidth();
+    _pluginWindowTransitionVersion++;
+    _pluginWindowTransitionController.stop();
+    _restorePluginWindowWidth(animate: false);
+    unawaited(WindowManager.instance.setOpacity(1));
+    _pluginWindowTransitionController.dispose();
     _resultKeys.clear();
     _quickActionKeys.clear();
 
@@ -1371,6 +1439,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   void _handleKeyStep(LogicalKeyboardKey key, {bool initial = false}) {
     if (_results.isEmpty) return;
+    _hasKeyboardNavigatedCurrentQuery = true;
     if (key == LogicalKeyboardKey.arrowDown) {
       _activeIndexNotifier.value = ((_activeIndexNotifier.value + 1) % _results.length).toInt();
     } else if (key == LogicalKeyboardKey.arrowUp) {
@@ -1585,6 +1654,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   int _searchGeneration = 0;
 
+  /// Once the user navigates a query with the keyboard, late search/indexing
+  /// updates must not take selection back to the first result.
+  bool _hasKeyboardNavigatedCurrentQuery = false;
+  String _keyboardNavigationQuery = '';
+
   /// The query text that produced the currently displayed [_results].
   /// Selection is only carried over between result sets of the same query —
   /// results for a different query always start at the first row.
@@ -1592,6 +1666,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
 
   void _onSearchChanged(String query) {
     user.launcherSearchText = query;
+
+    if (query != _keyboardNavigationQuery) {
+      _keyboardNavigationQuery = query;
+      _hasKeyboardNavigatedCurrentQuery = false;
+    }
 
     // Plugin routing takes precedence: a keyword owns the launcher until the
     // query leaves it. Leaving the keyword tears the plugin down.
@@ -3377,7 +3456,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers {
     // different query, the carried-over id would re-select a stale item at a
     // random position — force a reset then. Keyed on the query text (not the
     // search generation) because same-text re-runs bump the generation.
-    final bool keepSelection = !resetSelection && _resultsQuery == _controller.text;
+    final bool keepSelection =
+        _resultsQuery == _controller.text && (!resetSelection || _hasKeyboardNavigatedCurrentQuery);
     _resultsQuery = _controller.text;
 
     int nextIndex = 0;

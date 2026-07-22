@@ -1,0 +1,11 @@
+{
+  "name": "Stocks",
+  "id": "stock",
+  "keyword": "stock",
+  "runtime": "python",
+  "entry": "main.py",
+  "description": "Stock [ticker] [period] — e.g. 1d, 2m, 1y — price chart rendered as an image",
+  "icon": "chart",
+  "pip": ["pillow>=10"],
+  "dev": false
+}

@@ -1,0 +1,10 @@
+{
+  "name": "Image Converter",
+  "keyword": "img",
+  "runtime": "python",
+  "entry": "main.py",
+  "description": "Convert, resize, compress, and transform images. Supports 20+ formats.",
+  "icon": "image",
+  "pip": ["pillow>=10", "pillow-avif-plugin>=1.4"],
+  "dev": false
+}

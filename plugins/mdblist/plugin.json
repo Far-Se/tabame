@@ -1,0 +1,9 @@
+{
+  "name": "MDBList",
+  "keyword": "mdb",
+  "runtime": "node",
+  "entry": "main.js",
+  "description": "Search movies & shows, browse lists, and manage your watchlist via mdblist.com",
+  "icon": "star",
+  "dev": false
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Color Palette",
+  "keyword": "palette",
+  "runtime": "node",
+  "entry": "main.js",
+  "icon": "palette",
+  "description": "Save, edit, and copy colors into named palettes for Figma, Photoshop, and more.",
+  "dev": false
+}

@@ -39,6 +39,7 @@ class PluginActionsPanel extends StatefulWidget {
 class _PluginActionsPanelState extends State<PluginActionsPanel> {
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
+  final Map<int, GlobalKey> _actionKeys = <int, GlobalKey>{};
   int _activeIndex = 0;
 
   @override
@@ -59,6 +60,27 @@ class _PluginActionsPanelState extends State<PluginActionsPanel> {
   /// Flat navigation order: item actions, then frame actions.
   List<PluginAction> get _actions => <PluginAction>[..._itemActions, ...widget.frameActions];
 
+  GlobalKey _keyFor(int index) => _actionKeys.putIfAbsent(index, () => GlobalKey());
+
+  void _scrollActiveIntoView() {
+    if (!mounted) return;
+    final BuildContext? actionContext = _actionKeys[_activeIndex]?.currentContext;
+    if (actionContext == null) return;
+    Scrollable.ensureVisible(
+      actionContext,
+      alignment: 0.5,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _moveActive(int offset) {
+    final int actionCount = _actions.length;
+    if (actionCount == 0) return;
+    setState(() => _activeIndex = (_activeIndex + offset).clamp(0, actionCount - 1));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollActiveIntoView());
+  }
+
   void _execute(int index) {
     final List<PluginAction> actions = _actions;
     if (index < 0 || index >= actions.length) return;
@@ -76,11 +98,11 @@ class _PluginActionsPanelState extends State<PluginActionsPanel> {
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-      setState(() => _activeIndex = (_activeIndex + 1).clamp(0, _actions.length - 1));
+      _moveActive(1);
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-      setState(() => _activeIndex = (_activeIndex - 1).clamp(0, _actions.length - 1));
+      _moveActive(-1);
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
@@ -153,6 +175,7 @@ class _PluginActionsPanelState extends State<PluginActionsPanel> {
                                       child: Container(height: 1, color: tokens.onSurface.withAlpha(18)),
                                     ),
                                   _PluginActionRow(
+                                    key: _keyFor(i),
                                     action: actions[i],
                                     isSelected: i == _activeIndex,
                                     tokens: tokens,
@@ -183,6 +206,7 @@ class _PluginActionsPanelState extends State<PluginActionsPanel> {
 
 class _PluginActionRow extends StatelessWidget {
   const _PluginActionRow({
+    super.key,
     required this.action,
     required this.isSelected,
     required this.tokens,
@@ -298,8 +322,8 @@ class _PluginConfirmPanelState extends State<PluginConfirmPanel> {
   @override
   Widget build(BuildContext context) {
     final LauncherModalTokens tokens = LauncherModalTokens.of(context);
-    final PluginConfirm confirm = widget.action.confirm ??
-        const PluginConfirm(title: 'Are you sure?', message: '', confirmLabel: 'Confirm');
+    final PluginConfirm confirm =
+        widget.action.confirm ?? const PluginConfirm(title: 'Are you sure?', message: '', confirmLabel: 'Confirm');
     final Color tint = widget.action.destructive ? const Color(0xFFE5534B) : tokens.accent;
 
     return Material(

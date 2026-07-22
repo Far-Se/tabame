@@ -1,0 +1,11 @@
+{
+  "name": "Weather Image",
+  "id": "weatherImage",
+  "keyword": "wt",
+  "runtime": "python",
+  "entry": "main.py",
+  "description": "wt [city] [weekly|w] [f] — forecast image; add f for Fahrenheit",
+  "icon": "weather",
+  "pip": ["pillow>=10"],
+  "dev": false
+}
