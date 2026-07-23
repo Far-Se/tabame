@@ -5,9 +5,10 @@ Everything is drawn at 2x resolution and downscaled at the end so lines,
 curves and text all come out anti-aliased.
 """
 
-import os
 import datetime
-from PIL import Image, ImageDraw, ImageFont, ImageChops
+import os
+
+from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FONT_DIR = os.path.join(HERE, "fonts")
@@ -21,7 +22,9 @@ def font(weight, size):
     key = (weight, size)
     if key not in _FONT_CACHE:
         name = "Lato-Bold.ttf" if weight == "bold" else "Lato-Regular.ttf"
-        _FONT_CACHE[key] = ImageFont.truetype(os.path.join(FONT_DIR, name), size * SCALE)
+        _FONT_CACHE[key] = ImageFont.truetype(
+            os.path.join(FONT_DIR, name), size * SCALE
+        )
     return _FONT_CACHE[key]
 
 
@@ -97,7 +100,7 @@ def render_chart(data, out_path):
     up = data["change"] >= 0
     trend = GREEN if up else RED
     trend_dim = GREEN_DIM if up else RED_DIM
-    arrow = "▲" if up else "▼"
+    arrow = "↑" if up else "↓"
 
     f_symbol = font("bold", 40)
     f_name = font("regular", 19)
@@ -123,7 +126,12 @@ def render_chart(data, out_path):
         chip_y = pad + S(8)
         chip = _round_card((chip_w, chip_h), chip_h // 2, CHIP_BG)
         canvas.alpha_composite(chip, (int(chip_x), int(chip_y)))
-        draw.text((chip_x + chip_pad_x, chip_y + chip_h / 2 - S(9)), exch, font=f_chip, fill=AXIS_TEXT)
+        draw.text(
+            (chip_x + chip_pad_x, chip_y + chip_h / 2 - S(9)),
+            exch,
+            font=f_chip,
+            fill=AXIS_TEXT,
+        )
     draw.text((pad, pad + S(48)), data["name"], font=f_name, fill=TEXT_MUTED)
 
     price_text = _fmt_price(data["price"], data["currency_symbol"])
@@ -174,7 +182,11 @@ def render_chart(data, out_path):
 
         # Area fill under the line, shaded by trend color.
         area = coords + [(chart_right, chart_bottom), (chart_left, chart_bottom)]
-        grad = Image.new("RGBA", (int(chart_right - chart_left), int(chart_bottom - chart_top)), (0, 0, 0, 0))
+        grad = Image.new(
+            "RGBA",
+            (int(chart_right - chart_left), int(chart_bottom - chart_top)),
+            (0, 0, 0, 0),
+        )
         gd = ImageDraw.Draw(grad)
         for gy in range(grad.height):
             t = 1 - (gy / max(grad.height - 1, 1))
@@ -183,7 +195,9 @@ def render_chart(data, out_path):
         mask = Image.new("L", (int(W), int(H)), 0)
         md = ImageDraw.Draw(mask)
         md.polygon(area, fill=255)
-        mask_crop = mask.crop((int(chart_left), int(chart_top), int(chart_right), int(chart_bottom)))
+        mask_crop = mask.crop(
+            (int(chart_left), int(chart_top), int(chart_right), int(chart_bottom))
+        )
         grad_alpha = grad.split()[3]
         grad.putalpha(ImageChops.multiply(grad_alpha, mask_crop))
         canvas.alpha_composite(grad, (int(chart_left), int(chart_top)))
@@ -210,7 +224,12 @@ def render_chart(data, out_path):
         msg = "Not enough data for this period"
         f_msg = font("regular", 18)
         mw = _text_w(draw, msg, f_msg)
-        draw.text(((W - mw) / 2, (chart_top + chart_bottom) / 2), msg, font=f_msg, fill=TEXT_MUTED)
+        draw.text(
+            ((W - mw) / 2, (chart_top + chart_bottom) / 2),
+            msg,
+            font=f_msg,
+            fill=TEXT_MUTED,
+        )
 
     # ---- volume strip ----
     vol_top = S(395)
@@ -224,8 +243,14 @@ def render_chart(data, out_path):
         for i, (_, vol, bar_up) in enumerate(volumes):
             x = chart_left + (i / max(n - 1, 1)) * (chart_right - chart_left)
             h = (vol / vmax) * (vol_bottom - vol_top)
-            color = (GREEN[0], GREEN[1], GREEN[2], 150) if bar_up else (RED[0], RED[1], RED[2], 150)
-            draw.rectangle([x - bar_w / 2, vol_bottom - h, x + bar_w / 2, vol_bottom], fill=color)
+            color = (
+                (GREEN[0], GREEN[1], GREEN[2], 150)
+                if bar_up
+                else (RED[0], RED[1], RED[2], 150)
+            )
+            draw.rectangle(
+                [x - bar_w / 2, vol_bottom - h, x + bar_w / 2, vol_bottom], fill=color
+            )
 
     # ---- stats card ----
     card_top = S(460)
@@ -245,12 +270,21 @@ def render_chart(data, out_path):
     for i, (label, value) in enumerate(stats):
         cx = pad + col_w * i + col_w / 2
         lw = _text_w(draw, label, f_stat_label)
-        draw.text((cx - lw / 2, card_top + S(20)), label, font=f_stat_label, fill=TEXT_MUTED)
+        draw.text(
+            (cx - lw / 2, card_top + S(20)), label, font=f_stat_label, fill=TEXT_MUTED
+        )
         vw = _text_w(draw, value, f_stat_value)
-        draw.text((cx - vw / 2, card_top + S(46)), value, font=f_stat_value, fill=TEXT_WHITE)
+        draw.text(
+            (cx - vw / 2, card_top + S(46)), value, font=f_stat_value, fill=TEXT_WHITE
+        )
         if i > 0:
             draw.line(
-                [pad + col_w * i, card_top + S(16), pad + col_w * i, card_top + card_h - S(16)],
+                [
+                    pad + col_w * i,
+                    card_top + S(16),
+                    pad + col_w * i,
+                    card_top + card_h - S(16),
+                ],
                 fill=(255, 255, 255, 24),
                 width=S(1),
             )
@@ -276,7 +310,12 @@ def render_watchlist(data_items, out_path, cache_dir):
     image = _vertical_gradient((width, height), BG_TOP, BG_BOTTOM).convert("RGB")
     draw = ImageDraw.Draw(image)
     draw.text((32, 16), "WATCHLIST", font=font("bold", 13), fill=TEXT_WHITE)
-    draw.text((32, 46), f"{len(cards)} stock{'s' if len(cards) != 1 else ''} · {data_items[0]['period_label']}", font=font("regular", 8), fill=TEXT_MUTED)
+    draw.text(
+        (32, 46),
+        f"{len(cards)} stock{'s' if len(cards) != 1 else ''} · {data_items[0]['period_label']}",
+        font=font("regular", 8),
+        fill=TEXT_MUTED,
+    )
     y = header_height
     for card in cards:
         image.paste(card, (0, y))

@@ -270,6 +270,131 @@
                                       "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/crates/plugin.json",
                                       "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/crates/main.js"
                                   }
+                    },
+                    {
+                        "id":  "image-palette",
+                        "name":  "Image Palette",
+                        "keyword":  "imgpal",
+                        "description":  "Extract dominant colors from an image",
+                        "icon":  "palette",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/image-palette",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/image-palette/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/image-palette/main.py"
+                                  }
+                    },
+                    {
+                        "id":  "img-converter",
+                        "name":  "Image Converter",
+                        "keyword":  "imgcon",
+                        "description":  "Convert, resize, rotate and batch-process images between PNG, JPEG, WebP, BMP, GIF, TIFF, ICO and PDF",
+                        "icon":  "image",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/img-converter",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/img-converter/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/img-converter/main.py",
+                                      "README.md":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/img-converter/README.md"
+                                  }
+                    },
+                    {
+                        "id":  "ip-domain-lookup",
+                        "name":  "IP \u0026 Domain Lookup",
+                        "keyword":  "ip",
+                        "description":  "Geolocate IP addresses and look up domain WHOIS/DNS info",
+                        "icon":  "globe",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/ip-domain-lookup",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/ip-domain-lookup/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/ip-domain-lookup/main.py"
+                                  }
+                    },
+                    {
+                        "id":  "sysmon",
+                        "name":  "System Monitor",
+                        "keyword":  "sys",
+                        "description":  "Live CPU, RAM, disk, and uptime",
+                        "icon":  "chart",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/sysmon",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/sysmon/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/sysmon/main.py"
+                                  }
+                    },
+                    {
+                        "id":  "todo-reminders",
+                        "name":  "To-Do \u0026 Reminders",
+                        "keyword":  "todo",
+                        "description":  "Quick-add and manage to-dos with due dates, priorities, and tags right from the launcher.",
+                        "icon":  "check",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/todo",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/todo/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/todo/main.py",
+                                      "reminder_watcher.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/todo/reminder_watcher.py",
+                                      "README.md":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/todo/README.md"
+                                  }
+                    },
+                    {
+                        "id":  "crypto",
+                        "name":  "Crypto",
+                        "keyword":  "crypto",
+                        "description":  "Crypto [ticker] [period] â€” e.g. 1d, 2m, 1y â€” price chart rendered as an image",
+                        "icon":  "chart",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/crypto_plugin",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/crypto_plugin/plugin.json",
+                                      "crypto_render.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/crypto_plugin/crypto_render.py",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/crypto_plugin/main.py",
+                                      "README.md":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/crypto_plugin/README.md"
+                                  }
+                    },
+                    {
+                        "id":  "sysnet",
+                        "name":  "SysNet",
+                        "keyword":  "sysnet",
+                        "description":  "System \u0026 network toolbox: ports, processes, WiFi, adapters, ping, public IP, DNS flush.",
+                        "icon":  "server",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/sysnet",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/sysnet/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/sysnet/main.py"
+                                  }
+                    },
+                    {
+                        "id":  "cron",
+                        "name":  "Cron",
+                        "keyword":  "cron",
+                        "description":  "Parse cron expressions, preview next run times, and generate cron from natural language",
+                        "icon":  "clock",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/cron",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/cron/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/cron/main.py"
+                                  }
                     }
                 ]
 }

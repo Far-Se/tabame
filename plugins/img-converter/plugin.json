@@ -1,6 +1,6 @@
 {
   "name": "Image Converter",
-  "keyword": "img",
+  "keyword": "imgcon",
   "runtime": "python",
   "entry": "main.py",
   "description": "Convert, resize, rotate and batch-process images between PNG, JPEG, WebP, BMP, GIF, TIFF, ICO and PDF",
