@@ -1141,17 +1141,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
   /// Launcher home shortcuts plus a discovery hint per installed plugin.
   List<LauncherSearchResultItem> _shortcutResults() {
-    if (PluginRegistry.manifests.isEmpty) return _launcherShortcuts;
+    final List<PluginManifest> enabledPlugins =
+        PluginRegistry.manifests.where((PluginManifest manifest) => manifest.enabled).toList(growable: false);
+    if (enabledPlugins.isEmpty) return _launcherShortcuts;
+
     return <LauncherSearchResultItem>[
       ..._launcherShortcuts,
-      for (final PluginManifest m in PluginRegistry.manifests)
-        if (m.enabled)
-          LauncherSearchResultItem.shortcut(LauncherShortcut(
-            label: m.keyword,
-            caption: m.name,
-            prefix: '${m.keyword} ',
-            icon: PluginIcons.resolve(m.icon),
-          )),
+      for (final (int index, PluginManifest plugin) in enabledPlugins.indexed)
+        LauncherSearchResultItem.shortcut(LauncherShortcut(
+          label: plugin.keyword,
+          caption: plugin.name,
+          prefix: '${plugin.keyword} ',
+          icon: PluginIcons.resolve(plugin.icon),
+          showDividerBefore: index == 0,
+        )),
     ];
   }
 
@@ -4098,13 +4101,28 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                                     resultWidget = _buildQuickActionResult(
                                         context, theme, result.quickAction!, index, isSelected, isRepeatingKey);
                                   }
+                                  final Widget resultWithDivider = result.shortcut?.showDividerBefore == true
+                                      ? Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: <Widget>[
+                                            Divider(
+                                              height: 17,
+                                              thickness: 1,
+                                              indent: 12,
+                                              endIndent: 12,
+                                              color: theme.colorScheme.outlineVariant.withAlpha(150),
+                                            ),
+                                            resultWidget,
+                                          ],
+                                        )
+                                      : resultWidget;
                                   return KeyedSubtree(
                                     key: _resultKeys[_resultKeyId(result, index)],
                                     child: MouseRegion(
                                       onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
                                       child: Stack(
                                         alignment: Alignment.centerRight,
-                                        children: <Widget>[resultWidget],
+                                        children: <Widget>[resultWithDivider],
                                       ),
                                     ),
                                   );

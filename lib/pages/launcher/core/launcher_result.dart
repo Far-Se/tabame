@@ -16,6 +16,7 @@ class LauncherShortcut {
   final String prefix;
   final IconData icon;
   final bool opensPluginManager;
+  final bool showDividerBefore;
 
   const LauncherShortcut({
     required this.label,
@@ -23,6 +24,7 @@ class LauncherShortcut {
     required this.prefix,
     required this.icon,
     this.opensPluginManager = false,
+    this.showDividerBefore = false,
   });
 }
 
