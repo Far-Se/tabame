@@ -251,9 +251,9 @@ class LauncherResultRow extends StatelessWidget {
                               )),
                               const SizedBox(height: 1),
                               _subtitleText(OrbitTokens.tele(
-                                fontSize: Design.baseFontSize - 1,
+                                fontSize: Design.baseFontSize + 0.5,
                                 color: isSelected ? onSurface.withAlpha(180) : OrbitTokens.dim(isDark),
-                                letterSpacing: 0.1,
+                                // letterSpacing: 0.1,
                                 height: 1.2,
                               )),
                             ],

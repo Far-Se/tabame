@@ -325,10 +325,7 @@ class PluginItem {
       subtitle: json['subtitle'] is String ? json['subtitle'] as String : '',
       icon: json['icon'] is String ? json['icon'] as String : null,
       accessories: rawAccessories is List
-          ? rawAccessories
-              .map(PluginAccessory.fromJson)
-              .whereType<PluginAccessory>()
-              .toList(growable: false)
+          ? rawAccessories.map(PluginAccessory.fromJson).whereType<PluginAccessory>().toList(growable: false)
           : const <PluginAccessory>[],
       actions: rawActions is List
           ? rawActions.map(PluginAction.fromJson).whereType<PluginAction>().toList(growable: false)
@@ -563,7 +560,7 @@ class PluginCommand {
 
   static const Set<String> knownCommands = <String>{
     'copy', 'paste', 'open', 'hide', 'toast', 'setquery', //
-    'storage', 'clipboardread', 'notify', 'background',
+    'storage', 'clipboardread', 'clipboardhistory', 'notify', 'background',
   };
 
   /// Parses a decoded `{"type":"command"}` message. Returns null when the

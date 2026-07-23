@@ -416,13 +416,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       icon: Icons.dashboard_customize_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
-      label: 'plugins',
-      caption: 'Plugins',
-      prefix: '',
-      icon: Icons.extension_outlined,
-      opensPluginManager: true,
-    )),
-    const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: r'$',
       caption: 'Functions',
       prefix: r'$',
@@ -439,6 +432,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       title: 'Ctrl+C',
       subtitle: 'Copy file/folder. Only for File Search',
       icon: Icons.menu_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'plugins',
+      caption: 'Plugins',
+      prefix: '',
+      icon: Icons.extension_outlined,
+      opensPluginManager: true,
     )),
   ];
   void _copyItem() {

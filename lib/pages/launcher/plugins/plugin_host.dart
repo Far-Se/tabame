@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 
 import '../../../logic/error_handler.dart';
+import '../../../models/clipboard_history.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import 'plugin_debug.dart';
@@ -163,8 +164,7 @@ class LauncherPluginHost {
 
   /// Folder Tabame installs a plugin's vendored Python packages into. Kept
   /// inside the plugin folder so the plugin stays self-contained and portable.
-  static String _libsDir(PluginManifest manifest) =>
-      '${manifest.directory}${Platform.pathSeparator}.pluginlibs';
+  static String _libsDir(PluginManifest manifest) => '${manifest.directory}${Platform.pathSeparator}.pluginlibs';
 
   /// Builds the child process environment: UTF-8 defaults, a `PYTHONPATH` that
   /// includes the vendored `.pluginlibs` folder (when present), then the
@@ -180,8 +180,7 @@ class LauncherPluginHost {
     if (libs.existsSync()) {
       final String sep = Platform.isWindows ? ';' : ':';
       final String? existing = Platform.environment['PYTHONPATH'];
-      env['PYTHONPATH'] =
-          existing == null || existing.isEmpty ? libs.path : '${libs.path}$sep$existing';
+      env['PYTHONPATH'] = existing == null || existing.isEmpty ? libs.path : '${libs.path}$sep$existing';
     }
     // Author-declared vars win, so a plugin can override anything above.
     env.addAll(manifest.env);
@@ -219,8 +218,8 @@ class LauncherPluginHost {
     final bool isBun = manifest.runtime.toLowerCase().contains('bun');
     final String tool = isBun ? 'bun' : 'npm';
 
-    onFrame(PluginRenderFrame.statusFrame(
-        'Installing dependencies for "${manifest.name}"… (first run can take a minute)'));
+    onFrame(
+        PluginRenderFrame.statusFrame('Installing dependencies for "${manifest.name}"… (first run can take a minute)'));
     debugLog.add(PluginDebugKind.info, '$tool install → node_modules');
     try {
       final ProcessResult result = await Process.run(
@@ -475,7 +474,8 @@ class LauncherPluginHost {
         debugLog.add(PluginDebugKind.error, 'Unknown command "${command.name}"');
         return;
       }
-      debugLog.add(PluginDebugKind.command, 'command ${command.name}${command.text != null ? ' text=${_truncate(command.text!)}' : ''}${command.url != null ? ' url=${_truncate(command.url!)}' : ''}');
+      debugLog.add(PluginDebugKind.command,
+          'command ${command.name}${command.text != null ? ' text=${_truncate(command.text!)}' : ''}${command.url != null ? ' url=${_truncate(command.url!)}' : ''}');
       // Host services (storage, clipboard, notifications, background grace)
       // are executed here; UI side effects are forwarded to the launcher.
       if (_handleHostCommand(command, manifest, live: live)) return;
@@ -508,6 +508,10 @@ class LauncherPluginHost {
           });
         }));
         return true;
+      case 'clipboardhistory':
+        if (!live) return true;
+        _handleClipboardHistoryCommand(command);
+        return true;
       case 'notify':
         // Works even from a background-finishing process — that's its point.
         final Object? title = command.data['title'];
@@ -526,6 +530,85 @@ class LauncherPluginHost {
         return true;
     }
     return false;
+  }
+
+  /// Gives plugins bounded, read-only access to Tabame's clipboard history.
+  /// List replies contain the model's short summaries; entry previews are
+  /// capped so a huge pasted code file cannot become a huge render frame.
+  void _handleClipboardHistoryCommand(PluginCommand command) {
+    final Object? requestId = command.data['requestId'];
+    final String op = command.data['op'] is String ? (command.data['op'] as String).toLowerCase() : 'list';
+    unawaited(() async {
+      if (op == 'copy') {
+        final Object? rawId = command.data['id'];
+        if (rawId is String && rawId.isNotEmpty) {
+          final ClipboardHistoryEntry? entry = await ClipboardHistoryStore.getFullEntry(rawId);
+          if (entry != null) {
+            await ClipboardHistoryStore.copyEntry(entry);
+            onCommand(const PluginCommand(name: 'toast', text: 'Copied to clipboard'));
+          }
+        }
+        return;
+      }
+
+      if (op == 'entry') {
+        final Object? rawId = command.data['id'];
+        final ClipboardHistoryEntry? entry = rawId is String ? await ClipboardHistoryStore.getFullEntry(rawId) : null;
+        _send(<String, Object?>{
+          'type': 'clipboardHistory',
+          if (requestId != null) 'requestId': requestId,
+          'op': 'entry',
+          'entry': entry == null ? null : _clipboardHistoryEntryMap(entry, previewLimit: 12000),
+        });
+        return;
+      }
+
+      final int offset =
+          (command.data['offset'] is num ? (command.data['offset'] as num).toInt() : 0).clamp(0, 1000000);
+      final int limit = (command.data['limit'] is num ? (command.data['limit'] as num).toInt() : 30).clamp(1, 100);
+      final String query = command.data['query'] is String ? command.data['query'] as String : '';
+      final String normalizedQuery = query.trim().toLowerCase();
+      final List<ClipboardHistoryEntry> pinned = (await ClipboardHistoryStore.loadPinned())
+          .where((ClipboardHistoryEntry entry) =>
+              normalizedQuery.isEmpty || entry.text.toLowerCase().contains(normalizedQuery))
+          .toList(growable: false);
+      final List<ClipboardHistoryEntry> page = <ClipboardHistoryEntry>[];
+      final int pinnedStart = offset.clamp(0, pinned.length);
+      page.addAll(pinned.skip(pinnedStart).take(limit + 1));
+      if (page.length < limit + 1) {
+        final int historyOffset = (offset - pinned.length).clamp(0, 1000000);
+        page.addAll(await ClipboardHistoryStore.loadPaged(
+          offset: historyOffset,
+          limit: limit + 1 - page.length,
+          query: query,
+        ));
+      }
+      final bool hasMore = page.length > limit;
+      if (hasMore) page.removeLast();
+      _send(<String, Object?>{
+        'type': 'clipboardHistory',
+        if (requestId != null) 'requestId': requestId,
+        'op': 'list',
+        'entries': page.map(_clipboardHistoryEntryMap).toList(growable: false),
+        'hasMore': hasMore,
+      });
+    }());
+  }
+
+  Map<String, Object?> _clipboardHistoryEntryMap(ClipboardHistoryEntry entry, {int? previewLimit}) {
+    String text = entry.text;
+    if (previewLimit != null && text.length > previewLimit)
+      text = '${text.substring(0, previewLimit)}\n\n… Preview truncated';
+    return <String, Object?>{
+      'id': entry.id,
+      'type': entry.type.name,
+      'text': text,
+      'textLength': entry.textLength ?? entry.text.length,
+      'htmlLength': entry.htmlLength ?? entry.html.length,
+      'createdAt': entry.createdAt.toIso8601String(),
+      'pinned': entry.pinned,
+      'imagePath': entry.imagePath,
+    };
   }
 
   /// `storage` command: `op` = get / set / delete / keys, with optional
