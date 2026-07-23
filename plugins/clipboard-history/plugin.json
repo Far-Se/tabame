@@ -1,0 +1,9 @@
+{
+  "id": "clipboard-history",
+  "name": "Clipboard History",
+  "keyword": "cb",
+  "description": "Browse and copy Tabame clipboard history",
+  "icon": "clipboard",
+  "runtime": "python",
+  "entry": "main.py"
+}
