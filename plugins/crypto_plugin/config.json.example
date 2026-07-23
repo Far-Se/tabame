@@ -1,0 +1,5 @@
+{
+  "defaultTicker": "btc",
+  "defaultPeriod": "1m",
+  "currency": "usd"
+}

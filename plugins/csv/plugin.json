@@ -1,0 +1,8 @@
+{
+  "name": "CSV Analyzer",
+  "keyword": "csv",
+  "description": "Paste CSV data to instantly view column stats and filter rows.",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "table"
+}

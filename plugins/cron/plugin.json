@@ -1,0 +1,10 @@
+{
+  "name": "Cron",
+  "keyword": "cron",
+  "runtime": "python",
+  "entry": "main.py",
+  "description": "Parse cron expressions, preview next run times, and generate cron from natural language",
+  "icon": "clock",
+  "dev": false,
+  "pip": ["croniter>=2.0"]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "todo-reminders",
+  "name": "To-Do & Reminders",
+  "description": "Quick-add and manage to-dos with due dates, priorities, and tags right from the launcher.",
+  "keyword": "todo",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "check",
+  "dev": false
+}

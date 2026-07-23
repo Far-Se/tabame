@@ -1,0 +1,10 @@
+{
+  "id": "ip-domain-lookup",
+  "name": "IP & Domain Lookup",
+  "description": "Geolocate IP addresses and look up domain WHOIS/DNS info",
+  "keyword": "ip",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "globe",
+  "pip": ["requests", "python-whois"]
+}

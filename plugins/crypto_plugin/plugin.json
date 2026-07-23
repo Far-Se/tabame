@@ -1,0 +1,11 @@
+{
+  "name": "Crypto",
+  "id": "crypto",
+  "keyword": "crypto",
+  "runtime": "python",
+  "entry": "main.py",
+  "description": "Crypto [ticker] [period] — e.g. 1d, 2m, 1y — price chart rendered as an image",
+  "icon": "chart",
+  "pip": ["pillow>=10"],
+  "dev": false
+}

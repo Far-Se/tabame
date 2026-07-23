@@ -1,0 +1,10 @@
+{
+  "name": "Image Palette",
+  "keyword": "imgpal",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "palette",
+  "description": "Extract dominant colors from an image",
+  "pip": ["pillow"],
+  "dev": false
+}

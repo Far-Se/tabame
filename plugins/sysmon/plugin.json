@@ -1,0 +1,10 @@
+{
+  "name": "System Monitor",
+  "keyword": "sys",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "chart",
+  "description": "Live CPU, RAM, disk, and uptime",
+  "pip": ["psutil"],
+  "dev": false
+}
