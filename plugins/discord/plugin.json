@@ -1,0 +1,11 @@
+{
+  "name": "Discord",
+  "id": "discord",
+  "keyword": "discord",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "chat",
+  "description": "Browse servers/channels and send messages using your Discord user token",
+  "pip": ["requests"],
+  "dev": false
+}

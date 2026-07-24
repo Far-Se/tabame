@@ -18,7 +18,7 @@ import 'plugin_protocol.dart';
 /// Renders the live plugin UI described by a [PluginRenderFrame], replacing the
 /// launcher's default results list while a plugin is active.
 ///
-/// Supports the three plugin layouts (list / grid / detail) plus an optional
+/// Supports list, grid, detail, chat, and form layouts plus an optional
 /// split preview pane bound to the selected item. Selection is owned by the
 /// launcher and passed down as [activeIndex]; taps and hovers are reported back
 /// through [onTapItem] / [onHoverItem]. The widget keeps the highlighted item
@@ -116,6 +116,7 @@ class _PluginViewState extends State<PluginView> {
     }
     if (oldWidget.frame.items.length != widget.frame.items.length) _loadMoreRequested = false;
     _followStreamingDetail(oldWidget);
+    _followChat(oldWidget);
   }
 
   /// Streaming `detail.append`: when the document grew and the user was
@@ -135,6 +136,31 @@ class _PluginViewState extends State<PluginView> {
       if (!mounted || !controller.hasClients) return;
       controller.jumpTo(controller.position.maxScrollExtent);
     });
+  }
+
+  /// A chat starts at its newest message and stays there as new messages arrive
+  /// unless the user has deliberately scrolled back through the conversation.
+  void _followChat(PluginView oldWidget) {
+    if (widget.frame.view != PluginViewType.chat) return;
+    final bool enteredChat = oldWidget.frame.view != PluginViewType.chat;
+    final bool gainedMessages = widget.frame.items.length > oldWidget.frame.items.length;
+    if (!enteredChat && !gainedMessages) return;
+    // Network images can grow the chat after its first layout. Pin a few times
+    // while entering an empty chat so its actual last message—not the initial
+    // pre-image layout—ends up on screen.
+    final bool openingConversation = enteredChat || oldWidget.frame.items.isEmpty;
+    void pinToEnd() {
+      if (!mounted || !_scrollController.hasClients) return;
+      final ScrollPosition position = _scrollController.position;
+      if (!openingConversation && position.pixels < position.maxScrollExtent - 60) return;
+      _scrollController.jumpTo(position.maxScrollExtent);
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => pinToEnd());
+    if (openingConversation) {
+      Timer(const Duration(milliseconds: 180), pinToEnd);
+      Timer(const Duration(milliseconds: 650), pinToEnd);
+    }
   }
 
   /// Fires `loadMore` when the user scrolls near the end of a `hasMore` frame.
@@ -176,6 +202,10 @@ class _PluginViewState extends State<PluginView> {
 
     if (frame.view == PluginViewType.detail) {
       return _buildDetail(frame.detailMarkdown ?? '', frame.detailMetadata);
+    }
+
+    if (frame.view == PluginViewType.chat) {
+      return frame.items.isEmpty ? _buildEmptyOrLoading(frame) : _buildChat(frame);
     }
 
     if (frame.view == PluginViewType.form) {
@@ -360,6 +390,29 @@ class _PluginViewState extends State<PluginView> {
     );
   }
 
+  /// Conversation surface. Each item is one message: `title` is the author,
+  /// `subtitle` the message body, `icon` an optional avatar, and accessories
+  /// (normally a timestamp) sit beside the author name.
+  Widget _buildChat(PluginRenderFrame frame) {
+    return WindowsScrollView(
+      controller: _scrollController,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            for (int i = 0; i < frame.items.length; i++) ...<Widget>[
+              if (frame.items[i].section != null && (i == 0 || frame.items[i].section != frame.items[i - 1].section))
+                _sectionHeader(frame.items[i].section!),
+              _PluginChatMessage(item: frame.items[i]),
+            ],
+            if (frame.hasMore) _loadMoreFooter(),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget? _accessoryBadge(PluginItem item) {
     if (item.accessories.isEmpty) return null;
     return Row(
@@ -499,7 +552,8 @@ class _PluginViewState extends State<PluginView> {
                               item.previewImageUrl!,
                               width: item.previewImageWidth ?? 160,
                               fit: BoxFit.contain,
-                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const SizedBox.shrink(),
+                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                                  const SizedBox.shrink(),
                             ),
                         ],
                       ),
@@ -581,7 +635,7 @@ class _PluginViewState extends State<PluginView> {
     };
 
     return MarkdownConfig(
-configs: <WidgetConfig>[
+      configs: <WidgetConfig>[
         PConfig(textStyle: TextStyle(color: text, fontSize: 13, height: 1.5)),
         heading(MarkdownTag.h1, 18,
             spacing: -0.2,
@@ -1003,6 +1057,131 @@ class _PluginIcon extends StatelessWidget {
       }
     }
     return Icon(PluginIcons.resolve(value), size: size, color: accent);
+  }
+}
+
+/// One message in a plugin `chat` view. The message schema deliberately reuses
+/// [PluginItem], keeping chat feeds compatible with existing plugin tooling.
+class _PluginChatMessage extends StatelessWidget {
+  const _PluginChatMessage({required this.item});
+
+  final PluginItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? avatar = item.icon?.trim();
+    final Widget avatarWidget = avatar != null && (avatar.startsWith('http://') || avatar.startsWith('https://'))
+        ? ClipOval(
+            child: Image.network(
+              avatar,
+              width: 30,
+              height: 30,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _chatAvatarFallback(),
+            ),
+          )
+        : _chatAvatarFallback();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          SizedBox(width: 30, height: 30, child: avatarWidget),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
+              decoration: BoxDecoration(
+                color: Design.text.withAlpha(7),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Design.text.withAlpha(12)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Flexible(
+                        child: Text(
+                          item.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Design.text.withAlpha(225)),
+                        ),
+                      ),
+                      for (final PluginAccessory accessory in item.accessories) ...<Widget>[
+                        const SizedBox(width: 7),
+                        Text(accessory.text, style: TextStyle(fontSize: 10, color: Design.text.withAlpha(105))),
+                      ],
+                    ],
+                  ),
+                  if (item.subtitle.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 3),
+                    _DiscordChatBody(text: item.subtitle),
+                  ],
+                  for (final String imageUrl in item.chatImageUrls) ...<Widget>[
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.network(
+                        imageUrl,
+                        width: 400,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.centerLeft,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chatAvatarFallback() => Container(
+        decoration: BoxDecoration(color: Design.accent.withAlpha(36), shape: BoxShape.circle),
+        alignment: Alignment.center,
+        child: Icon(Icons.person_rounded, size: 17, color: Design.accent.withAlpha(210)),
+      );
+}
+
+/// Discord represents custom emoji as `<:name:id>` / `<a:name:id>`. Render
+/// those tokens as CDN images while leaving normal Unicode emoji alone.
+class _DiscordChatBody extends StatelessWidget {
+  const _DiscordChatBody({required this.text});
+
+  static final RegExp _customEmoji = RegExp(r'<(a?):[A-Za-z0-9_]+:(\d+)>');
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle style = TextStyle(fontSize: 12, height: 1.35, color: Design.text.withAlpha(185));
+    final List<InlineSpan> spans = <InlineSpan>[];
+    int offset = 0;
+    for (final RegExpMatch match in _customEmoji.allMatches(text)) {
+      if (match.start > offset) spans.add(TextSpan(text: text.substring(offset, match.start)));
+      final bool animated = match.group(1) == 'a';
+      final String id = match.group(2)!;
+      spans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Image.network(
+            'https://cdn.discordapp.com/emojis/$id.${animated ? 'gif' : 'png'}?size=48&quality=lossless',
+            width: 20,
+            height: 20,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          ),
+        ),
+      );
+      offset = match.end;
+    }
+    if (offset < text.length) spans.add(TextSpan(text: text.substring(offset)));
+    return Text.rich(TextSpan(style: style, children: spans.isEmpty ? <InlineSpan>[TextSpan(text: text)] : spans));
   }
 }
 

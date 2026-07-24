@@ -835,6 +835,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       if (text.trim().isNotEmpty && text != _pluginLastSubmittedQuery) {
         _pluginLastSubmittedQuery = text;
         _pluginHost.sendSubmitQuery(text);
+        // A submit-mode frame is a chat-style composer. Reset it immediately
+        // so the next Enter sends a new message instead of an item action.
+        _controller.value = TextEditingValue(
+          text: '${plugin.keyword} ',
+          selection: TextSelection.collapsed(offset: plugin.keyword.length + 1),
+        );
+        _pluginLastSubmittedQuery = null;
         return;
       }
     }
@@ -882,11 +889,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   void _openPluginActions() {
     final PluginRenderFrame? frame = _pluginFrame;
     if (frame == null) return;
+    final PluginManifest? plugin = _activePlugin;
+    final File? readme = plugin == null ? null : File('${plugin.directory}${Platform.pathSeparator}README.md');
+    final bool hasReadme = readme?.existsSync() ?? false;
     PluginItem? item;
-    if (frame.items.isNotEmpty && frame.view != PluginViewType.detail && frame.view != PluginViewType.form) {
+    if (frame.items.isNotEmpty &&
+        frame.view != PluginViewType.detail &&
+        frame.view != PluginViewType.chat &&
+        frame.view != PluginViewType.form) {
       item = frame.items[_activeIndexNotifier.value.clamp(0, frame.items.length - 1)];
     }
-    if ((item?.actions.isEmpty ?? true) && frame.frameActions.isEmpty) return;
+    if ((item?.actions.isEmpty ?? true) && frame.frameActions.isEmpty && !hasReadme) return;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -897,12 +910,31 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         frameActions: frame.frameActions,
         onSelected: (PluginAction action, {required bool isFrameAction}) =>
             _firePluginAction(isFrameAction ? '' : (item?.id ?? ''), action),
+        readmeAction:
+            hasReadme ? const PluginAction(id: '__readme__', title: 'Read README.md', icon: 'description') : null,
+        onReadmeSelected: hasReadme ? () => _openPluginReadme(plugin!, readme!) : null,
       ),
     );
   }
 
   /// Matches a key press against the shortcuts declared by the highlighted
   /// item's actions and the frame's actions; fires the first hit.
+  Future<void> _openPluginReadme(PluginManifest plugin, File readme) async {
+    try {
+      final String markdown = await readme.readAsString();
+      if (!mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        barrierColor: Colors.transparent,
+        builder: (_) => PluginReadmePanel(pluginName: plugin.name, markdown: markdown),
+      );
+    } catch (_) {
+      _showPluginToast('Could not read README.md', style: 'error');
+    }
+  }
+
   bool _handlePluginShortcut(KeyEvent event) {
     final PluginRenderFrame? frame = _pluginFrame;
     if (frame == null) return false;
@@ -983,7 +1015,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     // Detail (markdown document) view: arrows and page keys scroll the
     // document. Home/End are left alone — they move the caret in the search
     // field.
-    if (frame.view == PluginViewType.detail) {
+    if (frame.view == PluginViewType.detail || frame.view == PluginViewType.chat) {
       return _scrollPluginDetail(event.logicalKey, isRepeat: event is KeyRepeatEvent);
     }
 

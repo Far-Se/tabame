@@ -373,7 +373,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 {
   "type": "render", // required, always "render"
   "rev": 0, // echo the query's rev, or 0 for unsolicited
-  "view": "list", // "list" | "grid" | "detail" | "form"   (default "list")
+  "view": "list", // "list" | "grid" | "detail" | "chat" | "form"   (default "list")
   "loading": false, // bool, or {"progress": 0.4} for a determinate spinner
   "loadingText": "Searching…", // caption shown under the spinner while loading
   "emptyText": "No results", // shown when items is empty and not loading
@@ -394,7 +394,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 
 | Field              | Type           | Notes                                                                                                                                                                                                                                                                            |
 | ------------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `view`             | string         | `"list"` (rows), `"grid"` (tiles), `"detail"` (full-width markdown), or `"form"` (inputs). Default `list`.                                                                                                                                                                       |
+| `view`             | string         | `"list"` (rows), `"grid"` (tiles), `"detail"` (full-width markdown), `"chat"` (message feed), or `"form"` (inputs). Default `list`.                                                                                                                                                 |
 | `loading`          | bool or object | When truthy and `items` empty, a spinner is shown. `{"progress": 0..1}` makes it determinate.                                                                                                                                                                                    |
 | `loadingText`      | string         | Optional caption shown **under the spinner** while `loading`. Use this (not `emptyText`) for "Searching…"-style progress text — `emptyText` is only shown when _not_ loading.                                                                                                    |
 | `emptyText`        | string         | Message when there are no items. Default `"No results"`.                                                                                                                                                                                                                         |
@@ -535,6 +535,14 @@ default browser.
   "markdown answer" plugin can simply re-render the document per query. For
   chat-style input use `inputMode: "submit"` instead, and stream long answers
   with `detail.append` (§13).
+
+### chat
+
+A scrollable conversation feed. Each item is a message: `title` is the author,
+`subtitle` is the body, `icon` may be an avatar URL, and `accessories` can show
+a timestamp. `images` may contain HTTP(S) image-attachment URLs. Use `inputMode: "submit"` for a chat composer; Enter sends the
+whole message as `submitQuery`. New messages follow the bottom while the user
+is already reading the latest message.
 
 ### form
 

@@ -10,10 +10,11 @@ import 'dart:ui' show Color;
 ///     commands, and toast styles.
 /// 4 = metadata image URLs.
 /// 5 = metadata action buttons, image widths, and preview-side images.
-const int pluginProtocolVersion = 5;
+/// 6 = chat view for message-oriented plugins.
+const int pluginProtocolVersion = 6;
 
 /// The layout a plugin render frame requests.
-enum PluginViewType { list, grid, detail, form }
+enum PluginViewType { list, grid, detail, chat, form }
 
 /// Parses a `#RGB` / `#RRGGBB` / `#AARRGGBB` string from plugin JSON into a
 /// [Color]. Returns null for anything else, so a bad value degrades to the
@@ -43,6 +44,8 @@ PluginViewType _viewFromString(String? value) {
       return PluginViewType.grid;
     case 'detail':
       return PluginViewType.detail;
+    case 'chat':
+      return PluginViewType.chat;
     case 'form':
       return PluginViewType.form;
     case 'list':
@@ -251,6 +254,7 @@ class PluginItem {
     required this.previewMetadata,
     this.previewImageUrl,
     this.previewImageWidth,
+    this.chatImageUrls = const <String>[],
     this.tileColor,
     this.section,
     this.progress,
@@ -276,6 +280,9 @@ class PluginItem {
   /// Display width of [previewImageUrl], in logical pixels.
   final double? previewImageWidth;
 
+  /// Inline image attachments rendered by the `chat` view.
+  final List<String> chatImageUrls;
+
   /// Grid view only: fills the tile with this color (color/theme pickers).
   final Color? tileColor;
 
@@ -297,6 +304,7 @@ class PluginItem {
     final Object? rawSection = json['section'];
     final Object? rawProgress = json['progress'];
     final Object? rawLines = json['lines'];
+    final Object? rawImages = json['images'];
 
     String? previewMarkdown;
     List<PluginMetadataEntry> previewMetadata = const <PluginMetadataEntry>[];
@@ -318,6 +326,13 @@ class PluginItem {
     } else if (rawPreview is String) {
       previewMarkdown = rawPreview;
     }
+    final List<String> chatImageUrls = rawImages is List
+        ? rawImages
+            .whereType<String>()
+            .where(PluginMetadataEntry._isHttpUrl)
+            .map((String url) => url.trim())
+            .toList(growable: false)
+        : const <String>[];
 
     return PluginItem(
       id: rawId is String ? rawId : (rawId?.toString() ?? 'item-$index'),
@@ -334,6 +349,7 @@ class PluginItem {
       previewMetadata: previewMetadata,
       previewImageUrl: previewImageUrl,
       previewImageWidth: previewImageWidth,
+      chatImageUrls: chatImageUrls,
       tileColor: parsePluginColor(json['tileColor']),
       section: rawSection is String && rawSection.trim().isNotEmpty ? rawSection.trim() : null,
       progress: rawProgress is num ? rawProgress.toDouble().clamp(0.0, 1.0) : null,
@@ -685,7 +701,8 @@ class PluginRenderFrame {
   /// plugin's root should leave this false so Escape exits as usual.
   final bool canGoBack;
 
-  bool get hasPreview => previewEnabled && view != PluginViewType.detail && view != PluginViewType.form;
+  bool get hasPreview =>
+      previewEnabled && view != PluginViewType.detail && view != PluginViewType.chat && view != PluginViewType.form;
 
   /// Resolves a streaming `detail.append` frame against the markdown that is
   /// currently on screen, producing a full frame the view can render.
@@ -720,8 +737,9 @@ class PluginRenderFrame {
   }
 
   /// Whether this frame asks for the widened launcher window: a split preview
-  /// pane that opted into widening, or a detail view marked `wide`.
-  bool get wantsWideWindow => (hasPreview && previewWide) || (view == PluginViewType.detail && detailWide);
+  /// pane that opted into widening, or a detail/chat view marked `wide`.
+  bool get wantsWideWindow =>
+      (hasPreview && previewWide) || ((view == PluginViewType.detail || view == PluginViewType.chat) && detailWide);
 
   static PluginRenderFrame errorFrame(String message) => PluginRenderFrame(
         view: PluginViewType.detail,

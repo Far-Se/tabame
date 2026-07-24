@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes.dart';
+import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../quickmenu_designs/design_backdrop_stable.dart';
 import 'launcher_design.dart';
@@ -1117,16 +1118,17 @@ class _CommandFooter extends StatelessWidget {
               _KbdHint(label: '→', action: 'actions', accent: accent, onSurface: onSurface),
               const SizedBox(width: 12),
               _KbdHint(label: 'esc', action: 'close', accent: accent, onSurface: onSurface),
-              const Spacer(),
-              Text(
-                resultCount == 1 ? '1 result' : '$resultCount results',
-                style: TextStyle(
-                  fontSize: Design.baseFontSize - 1,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.4,
-                  color: onSurface.withAlpha(120),
+              if (!Globals.isLauncherPluginActive) const Spacer(),
+              if (!Globals.isLauncherPluginActive)
+                Text(
+                  resultCount == 1 ? '1 result' : '$resultCount results',
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize - 1,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.4,
+                    color: onSurface.withAlpha(120),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -2156,8 +2158,8 @@ class _BlueprintTitleBlock extends StatelessWidget {
             _cell('ENTER', 'OPEN'),
             divider,
             _cell('ESC', 'CLOSE'),
-            divider,
-            _cell('QTY', resultCount.toString().padLeft(2, '0')),
+            if (!Globals.isLauncherPluginActive) divider,
+            if (!Globals.isLauncherPluginActive) _cell('QTY', resultCount.toString().padLeft(2, '0')),
           ],
         ),
       ),
@@ -2369,16 +2371,17 @@ class _TransitFooter extends StatelessWidget {
               border: Border.all(color: accent, width: 2),
             ),
           ),
-          const SizedBox(width: 6),
-          Text(
-            resultCount == 1 ? '1 STOP' : '$resultCount STOPS',
-            style: TransitTokens.sign(
-              fontSize: Design.baseFontSize - 1,
-              color: TransitTokens.dim(isDark),
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
+          if (!Globals.isLauncherPluginActive) const SizedBox(width: 6),
+          if (!Globals.isLauncherPluginActive)
+            Text(
+              resultCount == 1 ? '1 STOP' : '$resultCount STOPS',
+              style: TransitTokens.sign(
+                fontSize: Design.baseFontSize - 1,
+                color: TransitTokens.dim(isDark),
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -2568,15 +2571,16 @@ class _FluentFooter extends StatelessWidget {
           _kbd('→', 'Actions'),
           const SizedBox(width: 12),
           _kbd('Esc', 'Dismiss'),
-          const Spacer(),
-          Text(
-            resultCount == 1 ? '1 result' : '$resultCount results',
-            style: FluentTokens.segoe(
-              fontSize: Design.baseFontSize - 1,
-              color: FluentTokens.dim(isDark),
-              fontWeight: FontWeight.w400,
+          if (!Globals.isLauncherPluginActive) const Spacer(),
+          if (!Globals.isLauncherPluginActive)
+            Text(
+              resultCount == 1 ? '1 result' : '$resultCount results',
+              style: FluentTokens.segoe(
+                fontSize: Design.baseFontSize - 1,
+                color: FluentTokens.dim(isDark),
+                fontWeight: FontWeight.w400,
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -3087,7 +3091,8 @@ class _OrbitRangePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _OrbitRangePainter oldDelegate) => oldDelegate.ink != ink || oldDelegate.isDark != isDark;
+  bool shouldRepaint(covariant _OrbitRangePainter oldDelegate) =>
+      oldDelegate.ink != ink || oldDelegate.isDark != isDark;
 }
 
 /// The telemetry strip: a blinking status lamp, flight-control hints, and the

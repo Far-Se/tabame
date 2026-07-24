@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
@@ -29,10 +30,10 @@ class PluginManagerButton extends StatelessWidget {
 /// `resources/plugins.json` and show up in everyone's gallery.
 const String _submitPluginUrl = 'https://github.com/Far-Se/tabame/issues/new?template=plugin_submission.md';
 
-enum _PanelMode { installed, gallery }
+enum _PanelMode { installed, gallery, makeYourOwn }
 
-/// Two-mode panel: "Installed" lists every local plugin with on/off toggles;
-/// "Gallery" browses the community index and installs plugins with one click.
+/// Three-mode panel for installed plugins, the community gallery, and authoring
+/// guidance for local plugins.
 class PluginManagerPanel extends StatefulWidget {
   const PluginManagerPanel({super.key});
 
@@ -119,18 +120,23 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   @override
   Widget build(BuildContext context) {
     final bool gallery = _mode == _PanelMode.gallery;
+    final bool makeYourOwn = _mode == _PanelMode.makeYourOwn;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: C.start,
       children: <Widget>[
         PanelHeader(
-          title: gallery ? "Plugin Gallery" : "Launcher Plugins",
-          icon: gallery ? Icons.storefront_rounded : Icons.extension_rounded,
-          buttonIcon: (gallery ? _galleryLoading : _reloading) ? Icons.hourglass_bottom_rounded : Icons.refresh_rounded,
-          buttonTooltip: gallery ? "Refresh gallery" : "Reload plugins",
-          buttonPressed:
-              gallery ? (_galleryLoading ? null : () => _loadGallery(force: true)) : (_reloading ? null : _reload),
+          title: makeYourOwn ? "Make Your Own Plugin" : (gallery ? "Plugin Gallery" : "Launcher Plugins"),
+          icon:
+              makeYourOwn ? Icons.construction_rounded : (gallery ? Icons.storefront_rounded : Icons.extension_rounded),
+          buttonIcon: makeYourOwn
+              ? null
+              : ((gallery ? _galleryLoading : _reloading) ? Icons.hourglass_bottom_rounded : Icons.refresh_rounded),
+          buttonTooltip: makeYourOwn ? null : (gallery ? "Refresh gallery" : "Reload plugins"),
+          buttonPressed: makeYourOwn
+              ? null
+              : (gallery ? (_galleryLoading ? null : () => _loadGallery(force: true)) : (_reloading ? null : _reload)),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
@@ -139,7 +145,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
         Flexible(
           child: Material(
             type: MaterialType.transparency,
-            child: gallery ? _buildGallery() : _buildInstalled(),
+            child: makeYourOwn ? _buildMakeYourOwn() : (gallery ? _buildGallery() : _buildInstalled()),
           ),
         ),
       ],
@@ -161,6 +167,12 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
           icon: Icons.storefront_rounded,
           count: _galleryEntries?.length,
           mode: _PanelMode.gallery,
+        ),
+        const SizedBox(width: 6),
+        _modeChip(
+          label: 'Make Your Own',
+          icon: Icons.construction_rounded,
+          mode: _PanelMode.makeYourOwn,
         ),
       ],
     );
@@ -204,6 +216,45 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Make your own mode
+  // ---------------------------------------------------------------------------
+
+  Widget _buildMakeYourOwn() {
+    return WindowsScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+        child: MarkdownBody(
+          data: '''
+Build a plugin with your favorite AI coding assistant:
+
+1. Copy [TABAME_PLUGIN_SKILL.md](https://github.com/Far-Se/tabame/blob/main/plugins/TABAME_PLUGIN_SKILL.md).
+2. Open your favorite AI coding site or app and paste the file.
+3. Tell the AI what plugin you need, with detailed instructions for how it should work.
+4. Create a new folder in `%localappdata%/tabame/plugins/` for your plugin.
+5. Paste in your `plugin.json` and script files.
+6. Open the launcher and type the shortcut.
+7. If you want to share it with the community, make an issue [HERE](https://github.com/Far-Se/tabame/issues/new?template=plugin_submission.md) with the code, either paste it or zip/gist/rep.
+''',
+          selectable: true,
+          onTapLink: (String text, String? href, String title) {
+            if (href != null) WinUtils.open(href);
+          },
+          styleSheet: MarkdownStyleSheet(
+            p: TextStyle(fontSize: Design.baseFontSize + 0.5, height: 1.45, color: Design.text.withAlpha(190)),
+            a: TextStyle(
+              fontSize: Design.baseFontSize + 0.5,
+              fontWeight: FontWeight.w600,
+              color: Design.accent,
+            ),
+            listBullet: TextStyle(fontSize: Design.baseFontSize + 0.5, color: Design.accent),
+            code: TextStyle(fontSize: Design.baseFontSize - 0.5, color: Design.text.withAlpha(220)),
+          ),
         ),
       ),
     );

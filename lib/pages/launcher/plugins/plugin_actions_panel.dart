@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:markdown_widget/markdown_widget.dart';
 
 import '../../../models/settings.dart';
 import '../../../widgets/widgets/windows_scroll.dart';
@@ -22,6 +23,8 @@ class PluginActionsPanel extends StatefulWidget {
     required this.item,
     required this.frameActions,
     required this.onSelected,
+    this.readmeAction,
+    this.onReadmeSelected,
   });
 
   /// The highlighted item; null when the view has no items (detail/form).
@@ -31,6 +34,10 @@ class PluginActionsPanel extends StatefulWidget {
   final List<PluginAction> frameActions;
 
   final void Function(PluginAction action, {required bool isFrameAction}) onSelected;
+
+  /// A launcher-owned documentation action, always shown after plugin actions.
+  final PluginAction? readmeAction;
+  final VoidCallback? onReadmeSelected;
 
   @override
   State<PluginActionsPanel> createState() => _PluginActionsPanelState();
@@ -58,7 +65,11 @@ class _PluginActionsPanelState extends State<PluginActionsPanel> {
   List<PluginAction> get _itemActions => widget.item?.actions ?? const <PluginAction>[];
 
   /// Flat navigation order: item actions, then frame actions.
-  List<PluginAction> get _actions => <PluginAction>[..._itemActions, ...widget.frameActions];
+  List<PluginAction> get _actions => <PluginAction>[
+        ..._itemActions,
+        ...widget.frameActions,
+        if (widget.readmeAction != null) widget.readmeAction!,
+      ];
 
   GlobalKey _keyFor(int index) => _actionKeys.putIfAbsent(index, () => GlobalKey());
 
@@ -84,8 +95,13 @@ class _PluginActionsPanelState extends State<PluginActionsPanel> {
   void _execute(int index) {
     final List<PluginAction> actions = _actions;
     if (index < 0 || index >= actions.length) return;
+    final bool isReadme = widget.readmeAction != null && index == actions.length - 1;
     final bool isFrame = index >= _itemActions.length;
     Navigator.of(context).pop();
+    if (isReadme) {
+      widget.onReadmeSelected?.call();
+      return;
+    }
     widget.onSelected(actions[index], isFrameAction: isFrame);
   }
 
@@ -191,6 +207,101 @@ class _PluginActionsPanelState extends State<PluginActionsPanel> {
                     LauncherModalFooter(
                       tokens: tokens,
                       hints: const <(String, String)>[('↑↓', 'navigate'), ('↵', 'run'), ('Esc', 'close')],
+                      trailing: ('Ctrl+K', 'toggle'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Scrollable Markdown preview for a plugin's local README.md.
+class PluginReadmePanel extends StatefulWidget {
+  const PluginReadmePanel({super.key, required this.pluginName, required this.markdown});
+
+  final String pluginName;
+  final String markdown;
+
+  @override
+  State<PluginReadmePanel> createState() => _PluginReadmePanelState();
+}
+
+class _PluginReadmePanelState extends State<PluginReadmePanel> {
+  final FocusNode _focusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.requestFocus();
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.escape ||
+        (event.logicalKey == LogicalKeyboardKey.keyK && HardwareKeyboard.instance.isControlPressed)) {
+      Navigator.of(context).pop();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final LauncherModalTokens tokens = LauncherModalTokens.of(context);
+    return Material(
+      type: MaterialType.transparency,
+      child: GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: GestureDetector(
+            onTap: () {},
+            child: Focus(
+              focusNode: _focusNode,
+              onKeyEvent: _onKey,
+              child: LauncherModalFrame(
+                tokens: tokens,
+                width: 760,
+                maxHeight: 640,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    LauncherModalHeader(
+                      tokens: tokens,
+                      icon: Icon(Icons.description_rounded, size: 18, color: tokens.accent),
+                      title: widget.pluginName,
+                      badgeLabel: 'README.md',
+                    ),
+                    Divider(height: 1, thickness: 1, color: tokens.onSurface.withAlpha(20)),
+                    Flexible(
+                      child: WindowsScrollView(
+                        controller: _scrollController,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(22, 12, 22, 18),
+                          child: SelectionArea(
+                            child: widget.markdown.trim().isEmpty
+                                ? Text('README.md is empty.', style: tokens.text(color: tokens.dim))
+                                : MarkdownBlock(data: widget.markdown),
+                          ),
+                        ),
+                      ),
+                    ),
+                    LauncherModalFooter(
+                      tokens: tokens,
+                      hints: const <(String, String)>[('Esc', 'close')],
                       trailing: ('Ctrl+K', 'toggle'),
                     ),
                   ],
