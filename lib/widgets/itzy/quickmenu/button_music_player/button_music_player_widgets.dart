@@ -273,13 +273,16 @@ class _MusicRowState extends State<_MusicRow> {
                       Row(
                         children: <Widget>[
                           Expanded(
-                            child: Text(widget.item.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: Theme.of(context).colorScheme.onSurface)),
+                            child: CustomTooltip(
+                              message: widget.item.title,
+                              child: Text(widget.item.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Theme.of(context).colorScheme.onSurface)),
+                            ),
                           ),
                           if (widget.item.duration != null)
                             Padding(
@@ -615,13 +618,16 @@ class _QueueEditRow extends StatelessWidget {
                     _CoverArt(item: item, size: 24),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(_queueLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontSize: Design.baseFontSize + 1.5,
-                              fontWeight: active ? FontWeight.w800 : FontWeight.w500,
-                              color: active ? onSurface : onSurface.withAlpha(155))),
+                      child: CustomTooltip(
+                        message: _queueLabel,
+                        child: Text(_queueLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: Design.baseFontSize + 1.5,
+                                fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+                                color: active ? onSurface : onSurface.withAlpha(155))),
+                      ),
                     ),
                   ],
                 ),

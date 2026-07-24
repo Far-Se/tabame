@@ -136,9 +136,7 @@ class _HomeState extends State<Home> {
                   children: <Widget>[
                     Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     Text(subtitle,
-                        style: TextStyle(
-                            fontSize: Design.baseFontSize + 1,
-                            color: onSurface.withValues(alpha: 0.5))),
+                        style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.5))),
                   ],
                 ),
               ),

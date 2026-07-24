@@ -219,7 +219,7 @@ class Settings {
   VolumeOSDStyle volumeOSDStyle = VolumeOSDStyle.normal;
   TaskBarAppsStyle taskBarAppsStyle = TaskBarAppsStyle.activeMonitorFirst;
   List<String> weather = <String>['10 C', "52.52437, 13.41053", "m"];
-  String newVersion = "";
+  String newVersion = Globals.version;
   List<String> persistentReminders = <String>[];
   List<String> audio = <String>["false", "true", "false"];
   String activeBackdropPath = "";

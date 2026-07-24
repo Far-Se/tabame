@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
+import '../models/classes/save_settings.dart';
 import '../models/globals.dart';
 import '../models/settings.dart';
 import '../models/win32/mixed.dart';
@@ -334,6 +335,9 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                   isCloseButton: true,
                                   onTap: () async {
                                     if (kReleaseMode) {
+                                      if (SaveSettings.suppressWrites) {
+                                        exit(0);
+                                      }
                                       if (user.args.contains('-wizardly')) {
                                         exit(0);
                                       }

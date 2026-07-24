@@ -94,6 +94,14 @@ class SaveSettings {
     return _store.clear();
   }
 
+  /// Writes all in-memory preferences after a deferred first-run setup.
+  Future<bool> save() {
+    final Map<String, Object> persistedPreferences = <String, Object>{
+      for (final MapEntry<String, Object> entry in _preferenceCache.entries) '$_prefix${entry.key}': entry.value,
+    };
+    return _store._writePreferences(persistedPreferences);
+  }
+
   String get fileName => _store.fileName;
   Future<void> reload() async {
     _store.clearCache();
@@ -107,8 +115,10 @@ class SaveSettings {
 
     final Map<String, Object> preferencesMap = <String, Object>{};
     for (final String key in fromSystem.keys) {
-      assert(key.startsWith(_prefix));
-      preferencesMap[key.substring(_prefix.length)] = fromSystem[key]!;
+      // Older/deferred first-run builds could write unprefixed keys. Read them
+      // as normal preferences so that the next explicit save migrates them.
+      final String preferenceKey = key.startsWith(_prefix) ? key.substring(_prefix.length) : key;
+      preferencesMap[preferenceKey] = fromSystem[key]!;
     }
     return preferencesMap;
   }
@@ -198,6 +208,7 @@ class SavedStore {
   }
 
   Future<bool> _writePreferences(Map<String, Object> preferences) async {
+    if (SaveSettings.suppressWrites) return true;
     try {
       final File? localDataFile = await _getLocalDataFile();
       if (localDataFile == null) {

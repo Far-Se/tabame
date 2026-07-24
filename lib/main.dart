@@ -10,6 +10,7 @@ import 'package:win32/win32.dart';
 import 'logic/app_startup.dart';
 import 'logic/error_handler.dart';
 import 'models/globals.dart';
+import 'models/classes/save_settings.dart';
 import 'models/win32/win_utils.dart';
 import 'pages/color_picker/color_picker.dart';
 import 'pages/msgbox.dart';
@@ -51,6 +52,8 @@ Future<void> main(List<String> arguments) async {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+      final File settingsFile = File("${WinUtils.getTabameAppDataFolder(settings: true)}\\settings.json");
+      SaveSettings.suppressWrites = !settingsFile.existsSync();
       await AppStartup.registerServices();
       AppStartup.registerHooks();
       if (await AppStartup.checkAdminAndRestart()) return;

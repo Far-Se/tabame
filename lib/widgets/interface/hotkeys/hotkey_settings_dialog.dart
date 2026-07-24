@@ -510,7 +510,7 @@ class HotKeySettingsState extends State<HotKeySettings> {
                         fontFamily: "monospace",
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.5,
-                        color: colors.onSurfaceVariant.withAlpha(110),
+                        color: colors.onSurfaceVariant.withAlpha(180),
                       ),
                     ),
                   ],

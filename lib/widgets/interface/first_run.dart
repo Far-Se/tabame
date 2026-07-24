@@ -9,6 +9,7 @@ import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/hotkeys.dart';
+import '../../models/classes/save_settings.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/util/main_hotkey.dart';
@@ -53,9 +54,11 @@ class FirstRunState extends State<FirstRun> {
 
   int currentStep = 0;
 
-  // ── Install location (page 0) ──
+  // ── Legacy copy-installation implementation (page 0 no longer invokes it) ──
   String installLocation = WinUtils.getTabameAppDataFolder();
+  // ignore: unused_field
   bool _installing = false;
+  // ignore: unused_field
   int? _sourceSizeBytes;
 
   // ── Modal State Setter (QuickSnap toggle modal only) ──
@@ -70,7 +73,6 @@ class FirstRunState extends State<FirstRun> {
     _resolveFeatureIndices();
     _syncQuickClickEnabled();
     _calculateSourceSize();
-    WinUtils.setStartUpShortcut(true);
     WinUtils.fixDrawBug();
   }
 
@@ -361,7 +363,7 @@ class FirstRunState extends State<FirstRun> {
 
   Widget _buildHero(ThemeData theme, Color accent) {
     const List<_StepMeta> steps = <_StepMeta>[
-      _StepMeta(0, "Install"),
+      _StepMeta(0, "Location"),
       _StepMeta(1, "Hotkeys"),
       _StepMeta(2, "Preferences"),
       _StepMeta(3, "Settings"),
@@ -429,7 +431,7 @@ class FirstRunState extends State<FirstRun> {
   String get _heroSubtitle {
     switch (currentStep) {
       case 0:
-        return "Choose where Tabame should live on your computer.";
+        return "Make sure Tabame is running from a permanent folder on your computer.";
       case 1:
         return "Set up your hotkeys — tap any item to configure its shortcut.";
       case 2:
@@ -444,11 +446,13 @@ class FirstRunState extends State<FirstRun> {
   Widget _buildStepChip(ThemeData theme, Color accent, int step, String label) {
     final bool active = currentStep == step;
     final bool done = currentStep > step;
+    final bool locked =
+        (_isRunningFromTempFolder && step > 0) || (step > 1 && _hotkeyFor(_Feature.quickMenu).key.isEmpty);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => _goToStep(step),
+        onTap: locked ? null : () => _goToStep(step),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           width: double.infinity,
@@ -501,15 +505,16 @@ class FirstRunState extends State<FirstRun> {
   // ─────────────────────── PAGE 0: INSTALL LOCATION ─────────────────────────
 
   Widget _buildInstallLocationPage(ThemeData theme, Color accent) {
+    final bool runningFromTempFolder = _isRunningFromTempFolder;
     return WindowsScrollView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text("Choose install location", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+          Text("Choose a permanent location", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
           Text(
-            "Tabame will copy its files to this folder. You can browse to pick a different one.",
+            "Tabame runs from the folder it was started from. Move the entire Tabame folder wherever you want to keep it, then run it from there.",
             style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4),
           ),
           const SizedBox(height: 16),
@@ -521,52 +526,58 @@ class FirstRunState extends State<FirstRun> {
                 Icon(Icons.folder_rounded, color: accent, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(installLocation, style: theme.textTheme.bodyMedium?.copyWith(height: 1.4)),
-                ),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  onPressed: _installing
-                      ? null
-                      : () async {
-                          final String folder = await WinUtils.folderPicker();
-                          if (folder.isEmpty) return;
-                          setState(() => installLocation = folder);
-                        },
-                  icon: const Icon(Icons.drive_folder_upload_rounded, size: 16),
-                  label: const Text("Browse"),
+                  child: Text(_executableDirectory, style: theme.textTheme.bodyMedium?.copyWith(height: 1.4)),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: <Widget>[
-              Icon(Icons.sd_storage_rounded, color: theme.hintColor, size: 16),
-              const SizedBox(width: 8),
-              Text(
-                _sourceSizeBytes == null ? "Calculating size…" : "Needs about ${_formatBytes(_sourceSizeBytes!)}",
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+          if (runningFromTempFolder) ...<Widget>[
+            const SizedBox(height: 14),
+            _card(
+              theme,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Icon(Icons.warning_amber_rounded, color: Colors.amber),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Tabame appears to be running from a temporary folder, likely opened from an archive. Copy or extract the entire Tabame folder to a permanent location, then run Tabame from that folder.",
+                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          if (_installing) ...<Widget>[
-            const SizedBox(height: 16),
-            Row(
-              children: <Widget>[
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const SizedBox(width: 12),
-                Text("Copying files…", style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor)),
-              ],
             ),
           ],
         ],
       ),
     );
   }
+
+  String get _executableDirectory => File(Platform.resolvedExecutable).parent.path;
+
+  bool get _isRunningFromTempFolder {
+    // if (_executableDirectory.contains(r'\Temp\')) return true;
+    // if (_executableDirectory.contains(r'\Temp\')) return true;
+    final String tempx = (Platform.environment['TEMP'] ?? r"asdads\").split(r'\').last;
+    if (_executableDirectory.contains("\\$tempx\\")) return true;
+
+    final String executableDirectory = _normalizeWindowsPath(_executableDirectory);
+    final Set<String> tempDirectories = <String>{
+      Directory.systemTemp.path,
+      if (Platform.environment['TEMP'] != null) Platform.environment['TEMP']!,
+      if (Platform.environment['TMP'] != null) Platform.environment['TMP']!,
+    }.map(_normalizeWindowsPath).toSet();
+
+    return tempDirectories.any(
+      (String tempDirectory) =>
+          executableDirectory == tempDirectory || executableDirectory.startsWith("$tempDirectory\\"),
+    );
+  }
+
+  String _normalizeWindowsPath(String path) =>
+      path.replaceAll('/', '\\').replaceFirst(RegExp(r'\\+$'), '').toLowerCase();
 
   Future<void> _calculateSourceSize() async {
     final String exeDir = File(Platform.resolvedExecutable).parent.path;
@@ -590,6 +601,7 @@ class FirstRunState extends State<FirstRun> {
     return total;
   }
 
+  // ignore: unused_element
   String _formatBytes(int bytes) {
     if (bytes <= 0) return "0 B";
     const List<String> suffixes = <String>["B", "KB", "MB", "GB", "TB"];
@@ -598,7 +610,10 @@ class FirstRunState extends State<FirstRun> {
     return "${value.toStringAsFixed(index == 0 ? 0 : 1)} ${suffixes[index]}";
   }
 
+  // ignore: unused_element
   Future<void> _continueInstall() async {
+    // Intentionally retained while the copy-installation implementation is repaired.
+    // The first-run flow now advances directly to hotkey setup instead.
     setState(() => _installing = true);
     try {
       final String exeDir = File(Platform.resolvedExecutable).parent.path;
@@ -1081,11 +1096,12 @@ class FirstRunState extends State<FirstRun> {
     final bool isInstallStep = currentStep == 0;
     final bool isHotkeysStep = currentStep == 1;
     final bool isLastStep = currentStep == 3;
+    final bool runningFromTempFolder = _isRunningFromTempFolder;
     final Hotkeys quickMenu = _hotkeyFor(_Feature.quickMenu);
     final bool quickMenuSet = quickMenu.key.isNotEmpty;
 
     final VoidCallback? onContinue = isInstallStep
-        ? (_installing ? null : _continueInstall)
+        ? (runningFromTempFolder ? null : () => _goToStep(1))
         : isHotkeysStep
             ? (quickMenuSet ? _continueSetup : null)
             : isLastStep
@@ -1121,7 +1137,9 @@ class FirstRunState extends State<FirstRun> {
             Expanded(
               child: isInstallStep
                   ? Text(
-                      "Pick a folder, then continue to set your hotkeys.",
+                      runningFromTempFolder
+                          ? "Move or extract Tabame to a permanent folder to continue."
+                          : "Move Tabame manually if needed, then continue to set your hotkeys.",
                       style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, fontWeight: FontWeight.w500),
                       overflow: TextOverflow.ellipsis,
                     )
@@ -1262,6 +1280,8 @@ class FirstRunState extends State<FirstRun> {
   // ─────────────────────── NAVIGATION ─────────────────────────
 
   Future<void> _goToStep(int step) async {
+    if (_isRunningFromTempFolder && step > 0) return;
+    if (step > 1 && _hotkeyFor(_Feature.quickMenu).key.isEmpty) return;
     if (step == currentStep) return;
     await pageController.animateToPage(
       step,
@@ -1271,15 +1291,17 @@ class FirstRunState extends State<FirstRun> {
   }
 
   Future<void> _continueSetup() async {
-    // Hotkeys are already persisted live through HotKeySettings; just record the
-    // install state and move on.
-    Boxes.updateSettings("justInstalled", true);
-    Boxes.pref.setInt("installDate", DateTime.now().millisecondsSinceEpoch);
+    // First-run edits stay in memory until the user explicitly saves and launches.
     await _goToStep(2);
   }
 
   Future<void> _finishSetup() async {
     _syncQuickClickEnabled();
+    await Boxes.updateSettings("remap", jsonEncode(remap));
+    await Boxes.updateSettings("justInstalled", true);
+    await Boxes.pref.setInt("installDate", DateTime.now().millisecondsSinceEpoch);
+    SaveSettings.suppressWrites = false;
+    await Boxes.pref.save();
     if (kReleaseMode) {
       WinUtils.reloadTabameQuickMenu();
       Future<void>.delayed(const Duration(milliseconds: 200), () => exit(0));
