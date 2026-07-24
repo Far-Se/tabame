@@ -159,7 +159,14 @@ def render_connect_prompt(rev):
                     "subtitle": "Sign in with your Google account to search Drive",
                     "icon": "cloud",
                     "actions": [{"id": "default", "title": "Connect", "icon": "open"}],
-                }
+                },
+                {
+                    "id": "info",
+                    "title": "Press Ctrl+K and read README.md",
+                    "subtitle": "To get your client_secrets.json file.",
+                    "icon": "gear",
+                    # "actions": [{"id": "default", "title": "Connect", "icon": "open"}],
+                },
             ],
         }
     )

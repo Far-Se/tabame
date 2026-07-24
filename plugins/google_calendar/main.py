@@ -386,6 +386,7 @@ def render_setup_help(rev):
             "detail": {
                 "markdown": (
                     "# Set up Google Calendar\n\n"
+                    "Press Ctrl+K and read README.md for a full tutorial.\n"
                     "1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), "
                     "create a project and enable the **Google Calendar API**.\n"
                     "2. Create an **OAuth Client ID** of type **Desktop app**.\n"
