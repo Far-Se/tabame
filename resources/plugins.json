@@ -395,6 +395,52 @@
                                       "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/cron/plugin.json",
                                       "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/cron/main.py"
                                   }
+                    },
+                    {
+                        "id":  "gmail",
+                        "name":  "Gmail",
+                        "keyword":  "mail",
+                        "description":  "Search, read, compose, reply and triage Gmail",
+                        "icon":  "mail",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/gmail",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/gmail/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/gmail/main.py"
+                                  }
+                    },
+                    {
+                        "id":  "gcal",
+                        "name":  "Google Calendar",
+                        "keyword":  "cal",
+                        "description":  "Search, browse, quick-add and manage Google Calendar events",
+                        "icon":  "calendar",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/google_calendar",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/google_calendar/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/google_calendar/main.py"
+                                  }
+                    },
+                    {
+                        "id":  "google_drive",
+                        "name":  "Google Drive",
+                        "keyword":  "gdrive",
+                        "description":  "Search your Google Drive and open, copy links, or download files",
+                        "icon":  "cloud",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/google_drive",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/google_drive/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/google_drive/main.py",
+                                      "README.md":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/google_drive/README.md"
+                                  }
                     }
                 ]
 }

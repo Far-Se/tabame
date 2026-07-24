@@ -1,0 +1,13 @@
+{
+  "name": "Google Drive",
+  "keyword": "gdrive",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "cloud",
+  "description": "Search your Google Drive and open, copy links, or download files",
+  "pip": [
+    "google-auth>=2.29",
+    "google-auth-oauthlib>=1.2",
+    "google-api-python-client>=2.126"
+  ]
+}
