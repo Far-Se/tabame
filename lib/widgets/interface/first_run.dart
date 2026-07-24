@@ -1063,6 +1063,7 @@ class FirstRunState extends State<FirstRun> {
       "Hotkeys — Remap every action, add new ones, and fine-tune gesture behavior.",
       "QuickMenu — Choose which items appear and reorder them.",
       "Launcher — Add watched folders, change appearance, and set search preferences.",
+      "Plugins — Browse and install Plugins, or you can create your own. Unlimited Posibilities.",
       "Fancyshot — Set default capture mode, output folder, and image format.",
       "QuickSnap — Define snap zones and grid layout.",
       "Appearance — Switch themes, accent colors, and font size.",

@@ -83,6 +83,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
       final List<PluginGalleryEntry> entries = await PluginGallery.fetchIndex(force: force);
       if (!mounted) return;
       setState(() {
+        entries.sort((PluginGalleryEntry a, PluginGalleryEntry b) => a.name.compareTo(b.name));
         _galleryEntries = entries;
         _galleryLoading = false;
       });

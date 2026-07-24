@@ -412,18 +412,6 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.gesture,
     widget: () => const MouseControlButton(),
   ),
-  "QuickMenuDesignButton": QuickAction(
-    icon: Icons.palette_rounded,
-    widget: () => const QuickMenuDesignButton(),
-  ),
-  "QuickActionsMenuButton": QuickAction(
-    icon: Icons.grid_view,
-    widget: () => const QuickActionsMenuButton(),
-  ),
-  "QuickMenuSettingsButton": QuickAction(
-    icon: Icons.tune_rounded,
-    widget: () => const QuickMenuSettingsButton(),
-  ),
   "AdbButton": QuickAction(
     icon: Icons.android,
     widget: () => const AdbButton(),
@@ -439,6 +427,18 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "YtDlpButton": QuickAction(
     icon: Icons.download_for_offline_outlined,
     widget: () => const YtDlpButton(),
+  ),
+  "QuickMenuDesignButton": QuickAction(
+    icon: Icons.palette_rounded,
+    widget: () => const QuickMenuDesignButton(),
+  ),
+  "QuickActionsMenuButton": QuickAction(
+    icon: Icons.grid_view,
+    widget: () => const QuickActionsMenuButton(),
+  ),
+  "QuickMenuSettingsButton": QuickAction(
+    icon: Icons.tune_rounded,
+    widget: () => const QuickMenuSettingsButton(),
   ),
   "PluginManagerButton": QuickAction(
     icon: Icons.extension_outlined,
