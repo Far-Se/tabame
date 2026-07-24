@@ -2,22 +2,6 @@
     "version":  1,
     "plugins":  [
                     {
-                        "id":  "echo",
-                        "name":  "Plugin Features Demo",
-                        "keyword":  "echo",
-                        "description":  "Demonstrates the launcher plugin protocol (list / grid / detail / preview + actions).",
-                        "icon":  "extension",
-                        "runtime":  "node",
-                        "author":  "Far-Se",
-                        "version":  "1.0.0",
-                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/echo",
-                        "files":  {
-                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/echo/plugin.json",
-                                      "main.js":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/echo/main.js",
-                                      "README.md":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/echo/README.md"
-                                  }
-                    },
-                    {
                         "id":  "caniuse",
                         "name":  "Can I Use",
                         "keyword":  "ciu",
@@ -222,26 +206,6 @@
                                   }
                     },
                     {
-                        "id":  "weatherImage",
-                        "name":  "Weather Image",
-                        "keyword":  "wt",
-                        "description":  "wt [city] [weekly|w] - today\u0027s forecast or a 7-day strip, rendered as an image",
-                        "icon":  "weather",
-                        "runtime":  "python",
-                        "author":  "Far-Se",
-                        "version":  "1.0.0",
-                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/weather_plugin",
-                        "files":  {
-                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/plugin.json",
-                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/main.py",
-                                      "weather_icon.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/weather_icon.py",
-                                      "weather_render.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/weather_render.py",
-                                      "README.md":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/README.md",
-                                      "fonts/Lato-Bold.ttf":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/stock_plugin/fonts/Lato-Bold.ttf",
-                                      "fonts/Lato-Regular.ttf":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/stock_plugin/fonts/Lato-Regular.ttf"
-                                  }
-                    },
-                    {
                         "id":  "palette",
                         "name":  "Color Palette",
                         "keyword":  "palette",
@@ -440,6 +404,41 @@
                                       "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/google_drive/plugin.json",
                                       "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/google_drive/main.py",
                                       "README.md":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/google_drive/README.md"
+                                  }
+                    },
+                    {
+                        "id":  "echo",
+                        "name":  "Echo Demo",
+                        "keyword":  "echo",
+                        "description":  "Demonstrates the launcher plugin protocol (list / grid / detail / preview + actions)",
+                        "icon":  "extension",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/echo",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/echo/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/echo/main.py"
+                                  }
+                    },
+                    {
+                        "id":  "weatherImage",
+                        "name":  "Weather Image",
+                        "keyword":  "wt",
+                        "description":  "wt [city] [weekly|w] [f] â€” forecast image; add f for Fahrenheit",
+                        "icon":  "weather",
+                        "runtime":  "python",
+                        "author":  "Far-Se",
+                        "version":  "1.0.0",
+                        "homepage":  "https://github.com/Far-Se/tabame/tree/main/plugins/weather_plugin",
+                        "files":  {
+                                      "plugin.json":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/plugin.json",
+                                      "main.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/main.py",
+                                      "weather_icons.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/weather_icons.py",
+                                      "weather_render.py":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/weather_render.py",
+                                      "fonts/Lato-Bold.ttf":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/fonts/Lato-Bold.ttf",
+                                      "fonts/Lato-Regular.ttf":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/fonts/Lato-Regular.ttf",
+                                      "README.md":  "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/README.md"
                                   }
                     }
                 ]
