@@ -84,3 +84,7 @@ plugins/ai-usage/
 AGENTS.md
 .pluginslibs
 .pluginslibs/
+.tabame-store.json
+client_secret.json
+*/.tabame-store.json
+*/client_secret.json
