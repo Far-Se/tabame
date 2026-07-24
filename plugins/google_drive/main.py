@@ -165,6 +165,11 @@ def render_connect_prompt(rev):
     )
 
 
+def logout_action():
+    """Frame-level Ctrl+K action shown while a Drive account is connected."""
+    return [{"id": "signout", "title": "Log out", "icon": "power"}]
+
+
 def pick_icon(mime):
     if "folder" in mime:
         return "folder"
@@ -262,6 +267,7 @@ def do_search(rev, query):
                     "rev": rev,
                     "view": "list",
                     "emptyText": "No files found",
+                    "actions": logout_action(),
                     "items": [],
                 }
             )
@@ -347,6 +353,7 @@ def do_search(rev, query):
                     "view": "list",
                     "emptyText": "Empty folder",
                     "canGoBack": browsing,
+                    "actions": logout_action(),
                     "items": [],
                 }
             )
@@ -359,6 +366,7 @@ def do_search(rev, query):
                 "view": "list",
                 "preview": {"enabled": True},
                 "canGoBack": browsing,
+                "actions": logout_action(),
                 "items": items,
             }
         )
@@ -371,6 +379,7 @@ def do_search(rev, query):
                 "rev": rev,
                 "view": "list",
                 "emptyText": f"Drive error: {e}",
+                "actions": logout_action(),
                 "items": [],
             }
         )
@@ -421,7 +430,7 @@ def handle_action(item_id, action):
         start_oauth_flow()
         return
 
-    if item_id == "signout":
+    if action == "signout" and item_id in ("", "signout"):
         state["creds"] = None
         clear_token_storage()
         toast("Disconnected from Google Drive")
