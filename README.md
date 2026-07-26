@@ -42,10 +42,6 @@ A easy to reach keyboard shortcut, like `Right Alt` or `ALT+,`
 
 You will need to use the mouse, so either setup the QuickMenu hotkey with a "move left/right" or hold duration to trigger Fancyshot.
 
-<!--
-| <video src="https://user-images.githubusercontent.com/20853986/185470373-dce706ae-5132-4ecb-97e8-77fbe5377edb.mp4" width="300px"></video> | <video src="https://user-images.githubusercontent.com/20853986/185466421-7347e01a-de1e-4dcd-adfe-81f206107325.mp4" width="300"></video> |
-| ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |-->
-
 # 📥 How to install
 
 I did not want to create a installer because it's another app that needs signing.
@@ -115,6 +111,23 @@ Sometimes (2–3 times a week), the app draws incorrectly. To fix this, right-cl
 ---
 
 # 🎛️ QuickMenu
+
+<table>
+<tr>
+<td width="33%" align="center">
+<img src="https://raw.githubusercontent.com/far-se/tabame/main/resources/quickmenu1.webp" width="100%"><br/>
+<sub><b>Multiple designs</b> &middot; 18 Different Designs that are fully customizable.</sub>
+</td>
+<td width="33%" align="center">
+<img src="https://raw.githubusercontent.com/far-se/tabame/main/resources/quickmenu2.webp" width="100%"><br/>
+<sub><b>Different Layour</b> &middot; You can rearrange the layout to your liking.</sub>
+</td>
+<td width="33%" align="center">
+<img src="https://raw.githubusercontent.com/far-se/tabame/main/resources/quickmenu3.webp" width="100%"><br/>
+<sub><b>Quick Access</b> &middot; Access most important actions directly from the quick menu.</sub>
+</td>
+</tr>
+</table>
 
 This is the popup that appears when you press your hotkey. It has three parts.
 
@@ -385,7 +398,11 @@ Move the mouse without touching the mouse. QuickClick drops a grid over your scr
 
 All the keys (the grid letters, click/drag/scroll, monitor switching, etc.) are yours to configure.
 
+![quickclick](https://raw.githubusercontent.com/far-se/tabame/main/resources/quickclick.gif)
+
 ---
+
+<img src="https://raw.githubusercontent.com/far-se/tabame/main/resources/music_player.webp" align="right" width="250" height="auto" alt="MusicPlayer">
 
 # 🎶 Audio & Music
 
@@ -428,7 +445,9 @@ Take a screenshot and edit it right there, no jumping to another app.
 - Save to disk or copy straight to the clipboard.
 - Markup tools (rulers, arrows, text) for documentation.
 
-![1666548921040895](https://user-images.githubusercontent.com/20853986/197408844-5a706e3f-685d-49ff-b41f-d45f03ef5da4.png)
+![fancyshot](https://raw.githubusercontent.com/far-se/tabame/main/resources/fancyshot.gif)
+
+<!--![1666548921040895](https://user-images.githubusercontent.com/20853986/197408844-5a706e3f-685d-49ff-b41f-d45f03ef5da4.png)-->
 
 ## Photo Editor
 

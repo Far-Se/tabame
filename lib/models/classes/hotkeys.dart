@@ -1017,6 +1017,7 @@ class HotKeyInfo {
           visible: true, type: QuickMenuPage.emojiPicker, forcePop: true, forceReposition: false);
     },
     "OpenQuickClick": () async {
+      await Future<void>.delayed(const Duration(milliseconds: 160));
       if (Globals.quickMenuPage == QuickMenuPage.quickClick) {
         // Win32.setWindowInvisible(true);
         Win32.setPosition(const Offset(-99999, -99999));
