@@ -47,6 +47,8 @@ enum QuickMenuDesigns {
   console,
   foundry,
   anime,
+  manga,
+  impact,
   ;
 
   String get name {
@@ -69,6 +71,8 @@ enum QuickMenuDesigns {
       QuickMenuDesigns.console => "Console",
       QuickMenuDesigns.foundry => "Foundry",
       QuickMenuDesigns.anime => "Anime",
+      QuickMenuDesigns.manga => "Manga",
+      QuickMenuDesigns.impact => "Impact",
     };
   }
 }
@@ -778,6 +782,58 @@ class Settings {
           entryFontFamily: 'Segoe UI',
           entryFontWeight: 700,
           borderRadius: 14,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.manga.name: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffF7F3EA), // aged manga page
+          textColor: const Color(0xff1B1B1B), // ink black
+          accentColor: const Color(0xffD62839), // classic "impact" red
+          gradientAlpha: 45,
+          uiFontFamily: 'Bahnschrift',
+          uiFontWeight: 700,
+          entryFontFamily: 'Bahnschrift',
+          entryFontWeight: 800,
+          borderRadius: 0,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff121212), // noir black page
+          textColor: const Color(0xffECECEC), // paper white ink
+          accentColor: const Color(0xffFF3B4E), // pop red glowing on black
+          gradientAlpha: 85,
+          uiFontFamily: 'Bahnschrift',
+          uiFontWeight: 700,
+          entryFontFamily: 'Bahnschrift',
+          entryFontWeight: 800,
+          borderRadius: 0,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.impact.name: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffFFFCF6), // manga paper white
+          textColor: const Color(0xff17171B), // ink black
+          accentColor: const Color(0xffE8354C), // shonen red
+          gradientAlpha: 60,
+          uiFontFamily: 'Segoe UI',
+          uiFontWeight: 600,
+          entryFontFamily: 'Segoe UI',
+          entryFontWeight: 800,
+          borderRadius: 2,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff0C0C11), // night-arc black
+          textColor: const Color(0xffF3F3F6),
+          accentColor: const Color(0xff35E6E0), // electric cyan
+          gradientAlpha: 75,
+          uiFontFamily: 'Segoe UI',
+          uiFontWeight: 600,
+          entryFontFamily: 'Segoe UI',
+          entryFontWeight: 800,
+          borderRadius: 2,
           baseFontSize: 10,
         ),
       ),

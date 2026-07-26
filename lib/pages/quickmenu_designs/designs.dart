@@ -12,8 +12,10 @@ import 'design_console.dart';
 import 'design_fluent.dart';
 import 'design_foundry.dart';
 import 'design_gazette.dart';
+import 'design_impact.dart';
 import 'design_interface.dart';
 import 'design_ledger.dart';
+import 'design_manga.dart';
 import 'design_matrix.dart';
 import 'design_manifesto.dart';
 import 'design_modern.dart';
@@ -101,6 +103,8 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.console => MainMenuConsoleWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.foundry => MainMenuFoundryWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.anime => MainMenuAnimeWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.manga => MainMenuMangaWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.impact => MainMenuImpactWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }
 }

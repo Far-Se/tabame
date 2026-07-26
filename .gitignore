@@ -74,7 +74,7 @@ MICROSOFT*
 .fdemon/settings.local.toml
 docs/design-system/
 docs/
-website/
+# website/
 .agent/
 ISSUES.md
 skills-lock.json

@@ -375,6 +375,33 @@ class QuickMenuModalFrame extends StatelessWidget {
             CustomPaint(painter: _RibbonCornerPainter(accent)),
           ],
         ),
+      QuickMenuDesigns.manga => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg,
+            border: Border.all(color: text, width: 2.2),
+          ),
+          underlays: <Widget>[
+            CustomPaint(painter: _HalftonePainter(text.withValues(alpha: isDark ? 0.06 : 0.05))),
+          ],
+          overlays: <Widget>[
+            CustomPaint(painter: _MangaBurstLinesPainter(accent.withValues(alpha: isDark ? 0.22 : 0.16))),
+            CustomPaint(painter: _MangaCornerTicksPainter(text)),
+          ],
+        ),
+      QuickMenuDesigns.impact => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.97),
+            border: Border.all(color: text.withValues(alpha: isDark ? 0.85 : 1), width: 2.5),
+          ),
+          underlays: <Widget>[
+            CustomPaint(painter: _ImpactHalftonePainter(accent.withValues(alpha: isDark ? 0.09 : 0.07))),
+          ],
+          overlays: <Widget>[
+            CustomPaint(painter: _ImpactSpeedlinePainter(accent: accent, ink: text)),
+          ],
+        ),
     };
 
     final bool hasBevel = spec.bevel != null;
@@ -703,6 +730,162 @@ class _VectorBracketPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _VectorBracketPainter oldDelegate) => oldDelegate.color != color;
+}
+
+class _HalftonePainter extends CustomPainter {
+  const _HalftonePainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (color.a == 0) return;
+    final Paint paint = Paint()..color = color;
+    const double spacing = 5.5;
+    const double dotRadius = 0.8;
+    int row = 0;
+    for (double y = spacing / 2; y < size.height; y += spacing) {
+      final double offset = row.isEven ? 0.0 : spacing / 2;
+      for (double x = spacing / 2 + offset; x < size.width; x += spacing) {
+        canvas.drawCircle(Offset(x, y), dotRadius, paint);
+      }
+      row++;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _HalftonePainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Focus lines radiating from the popup's center — a manga "impact frame".
+class _MangaBurstLinesPainter extends CustomPainter {
+  const _MangaBurstLinesPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+    final Offset c = Offset(size.width / 2, size.height / 2);
+    final double len = math.max(size.width, size.height) * 0.7;
+    const int lines = 24;
+    for (int i = 0; i < lines; i++) {
+      final double angle = (i * 2 * math.pi) / lines;
+      final Offset end = Offset(c.dx + len * math.cos(angle), c.dy + len * math.sin(angle));
+      canvas.drawLine(c, end, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MangaBurstLinesPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Bold ink corner brackets, like panel-corner marks on a comic page.
+class _MangaCornerTicksPainter extends CustomPainter {
+  const _MangaCornerTicksPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color.withValues(alpha: 0.9)
+      ..strokeWidth = 2.4
+      ..style = PaintingStyle.stroke;
+    const double len = 10;
+    const double pad = 4;
+    // top-left
+    canvas.drawLine(const Offset(pad, pad + len), const Offset(pad, pad), paint);
+    canvas.drawLine(const Offset(pad, pad), const Offset(pad + len, pad), paint);
+    // bottom-right
+    canvas.drawLine(
+        Offset(size.width - pad, size.height - pad - len), Offset(size.width - pad, size.height - pad), paint);
+    canvas.drawLine(
+        Offset(size.width - pad - len, size.height - pad), Offset(size.width - pad, size.height - pad), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MangaCornerTicksPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Ben-Day dot screen — the halftone shading manga uses instead of gradients.
+/// Dot size grows slightly toward the bottom-right to fake a light source.
+class _ImpactHalftonePainter extends CustomPainter {
+  const _ImpactHalftonePainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint dot = Paint()..color = color;
+    const double spacing = 9;
+    for (double y = 4; y < size.height; y += spacing) {
+      for (double x = 4; x < size.width; x += spacing) {
+        final double t = (x / size.width + y / size.height) / 2;
+        final double r = 0.6 + t * 1.2;
+        canvas.drawCircle(Offset(x, y), r, dot);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ImpactHalftonePainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Speed-line burst from the top-left corner (manga "impact" panel convention),
+/// plus a diagonal cut-corner tab top-right and a double inkline along the bottom.
+class _ImpactSpeedlinePainter extends CustomPainter {
+  const _ImpactSpeedlinePainter({required this.accent, required this.ink});
+
+  final Color accent;
+  final Color ink;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Radiating speed lines, corner burst.
+    final Paint line = Paint()
+      ..color = accent.withValues(alpha: 0.5)
+      ..strokeWidth = 1.1;
+    const Offset origin = Offset(-6, -6);
+    const int rays = 9;
+    const double spread = 1.3; // radians covered
+    for (int i = 0; i < rays; i++) {
+      final double angle = (i / (rays - 1)) * spread;
+      final double len = 26 + (i.isEven ? 10 : 0);
+      final Offset end = origin + Offset(len * _cos(angle), len * _sin(angle));
+      canvas.drawLine(origin, end, line);
+    }
+
+    // Diagonal cut-corner tab, top-right — filled ink triangle with accent edge.
+    final Path cut = Path()
+      ..moveTo(size.width - 26, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width, 26)
+      ..close();
+    canvas.drawPath(cut, Paint()..color = ink);
+    canvas.drawLine(
+      Offset(size.width - 26, 0),
+      Offset(size.width, 26),
+      Paint()
+        ..color = accent
+        ..strokeWidth = 2,
+    );
+
+    // Double inkline along the bottom edge — manga panel gutter convention.
+    final Paint gutter = Paint()
+      ..color = ink.withValues(alpha: 0.85)
+      ..strokeWidth = 1;
+    canvas.drawLine(Offset(0, size.height - 4), Offset(size.width, size.height - 4), gutter);
+    canvas.drawLine(Offset(0, size.height - 1.5), Offset(size.width, size.height - 1.5), gutter);
+  }
+
+  double _cos(double a) => a == 0 ? 1 : (a > 1.5 ? -0.2 : 1 - a * a / 2);
+  double _sin(double a) => a - a * a * a / 6;
+
+  @override
+  bool shouldRepaint(covariant _ImpactSpeedlinePainter oldDelegate) =>
+      oldDelegate.accent != accent || oldDelegate.ink != ink;
 }
 
 /// A scatter of tiny fixed sparkles across the modal — same low-key dust
