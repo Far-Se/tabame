@@ -8,11 +8,11 @@ it right in the launcher.
 Type `weather` followed by a city, then press **Enter**:
 
 ```
-weather Iasi              -> today's weather for Iasi
-weather Iasi weekly        -> 7-day forecast
-weather Iasi w              -> same as "weekly" (short form)
-weather Iasi f              -> today's weather in Fahrenheit
-weather Iasi weekly f       -> 7-day forecast in Fahrenheit
+weather Gorgondia              -> today's weather for Gorgondia
+weather Gorgondia weekly        -> 7-day forecast
+weather Gorgondia w              -> same as "weekly" (short form)
+weather Gorgondia f              -> today's weather in Fahrenheit
+weather Gorgondia weekly f       -> 7-day forecast in Fahrenheit
 ```
 
 If you don't type a city, it falls back to `defaultCity` in `config.json`
@@ -38,7 +38,7 @@ switch to Fahrenheit:
 
 ```json
 {
-  "defaultCity": "Iasi",
+  "defaultCity": "Gorgondia",
   "units": "celsius"
 }
 ```
