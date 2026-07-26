@@ -1249,6 +1249,14 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         }
         return KeyEventResult.handled;
       }
+      // Handle launcher submission here instead of relying on TextField's
+      // submit action. A design change rebuilds the TextField, which can leave
+      // its submit action detached even though this focus node still receives
+      // navigation keys.
+      if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+        if (event is KeyDownEvent) _onSubmitted(_controller.text);
+        return KeyEventResult.handled;
+      }
       // Escape: go back to quickmenu
       if (event.logicalKey == LogicalKeyboardKey.escape) {
         if (kReleaseMode) {
@@ -2929,10 +2937,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       user.launcherDesign = design;
       setState(() => _design = design);
       _onSearchChanged(_controller.text);
-      // Focus is still present right now, but the debounce (180 ms) + async
-      // result rebuild will often steal it.  Re-request after everything settles.
-      Future<void>.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) _focusNode.requestFocus();
+      // The new design replaces the search field. Restore focus after that
+      // field has attached, then retry after the search debounce/rebuild.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _requestLauncherFocus();
+      });
+      Future<void>.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _requestLauncherFocus();
+        }
       });
     }
 

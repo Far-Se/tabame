@@ -42,36 +42,23 @@ A easy to reach keyboard shortcut, like `Right Alt` or `ALT+,`
 
 You will need to use the mouse, so either setup the QuickMenu hotkey with a "move left/right" or hold duration to trigger Fancyshot.
 
-### A small demo
-
 <!--
 | <video src="https://user-images.githubusercontent.com/20853986/185470373-dce706ae-5132-4ecb-97e8-77fbe5377edb.mp4" width="300px"></video> | <video src="https://user-images.githubusercontent.com/20853986/185466421-7347e01a-de1e-4dcd-adfe-81f206107325.mp4" width="300"></video> |
 | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |-->
 
 # 📥 How to install
 
-Go to the [Releases page](https://github.com/Far-Se/tabame/releases/latest) (it's in the right sidebar). Grab either `installer.ps1` or `tabame.zip`.
+I did not want to create a installer because it's another app that needs signing.
 
-## Easiest way:
+So the easy way to install:
 
-1. Download **installer.ps1**
-2. Open your **Downloads folder**
-3. Right click it and pick **"Run with PowerShell"**
-4. Walk through the setup and you're done 😄
-
-| ![image](https://user-images.githubusercontent.com/20853986/184855270-4bf0f8d9-ec81-4b22-aee6-1b1df97fc459.png) | ![image](https://user-images.githubusercontent.com/20853986/184855277-f484dc64-b0e9-4468-afb0-44c0ed8f0c0a.png) |
-| --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-
-## Manual install:
-
-1. Download the zip.
-2. Extract it wherever you like.
+1. Download the zip from [Releases](https://github.com/Far-Se/tabame/releases/).
+2. Extract it wherever you like, in `%localappdata%` Or Program Files or any folder you want.
 3. Open `tabame.exe`.
 
 ### 📤 How to uninstall:
 
-If you used `installer.ps1`: open File Explorer, type `%localappdata%` in the address bar, and delete the `Tabame` folder.
-If you installed manually: just delete the folder where you put it.
+Either manually delete the folder, or from `Program and Features` or Open Tabame -> Settings Button -> Settings Tab -> Scroll down and Uninstall.
 
 ## 🐛 Found a bug?
 

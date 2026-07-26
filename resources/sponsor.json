@@ -1,8 +1,8 @@
 {
-    "enabled": false,
-    "name": "Test",
-    "size": "140x100",
-    "imageDark": "",
-    "imageLight": "",
-    "url": ""
+  "enabled": true,
+  "name": "Test",
+  "size": "140x100",
+  "imageDark": "https://i.imgur.com/kjZ6Euq.png",
+  "imageLight": "https://i.imgur.com/KbHPE8E.png",
+  "url": "https://github.com/Far-Se/tabame"
 }
