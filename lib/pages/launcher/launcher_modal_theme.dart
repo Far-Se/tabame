@@ -96,6 +96,7 @@ class LauncherModalTokens {
       case LauncherDesign.serene:
       case LauncherDesign.command:
       case LauncherDesign.glass:
+      case LauncherDesign.anime:
         final Color onSurface = theme.colorScheme.onSurface;
         return LauncherModalTokens._(
           design: design,
@@ -135,6 +136,7 @@ class LauncherModalTokens {
         LauncherDesign.fluent => 4.0,
         LauncherDesign.manifesto => 0.0,
         LauncherDesign.orbit => 4.0,
+        LauncherDesign.anime => 12.0,
       };
 
   /// Designs whose controls carry a visible accent outline (console/drafting
@@ -780,5 +782,6 @@ class _ModalOrbitPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ModalOrbitPainter oldDelegate) => oldDelegate.ink != ink || oldDelegate.isDark != isDark;
+  bool shouldRepaint(covariant _ModalOrbitPainter oldDelegate) =>
+      oldDelegate.ink != ink || oldDelegate.isDark != isDark;
 }

@@ -88,6 +88,11 @@ enum LauncherDesign {
   /// Spacecraft guidance-computer HUD. Persisted by index — always append new
   /// designs at the end so stored preferences keep pointing at the right design.
   orbit,
+
+  /// Kawaii character-card panel with ribbons, tape and sparkles.
+  ///
+  /// Persisted by index — append-only to preserve stored preferences.
+  anime,
 }
 
 enum LightSwitchMode { off, fixed, sunrise }

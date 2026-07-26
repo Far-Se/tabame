@@ -16,6 +16,13 @@ import 'design_backdrop_stable.dart';
 /// zone is indexed like an avionics page (`01 ▏QUICK ACTIONS`, `02 ▏WINDOWS`…)
 /// with a hairline rule, the window switcher sits inside a faint "radar
 /// screen" inset, and a soft CRT scanline texture runs under everything.
+///
+/// Layering note: the static HUD chrome (glass background, shader wash,
+/// scanlines, reticle brackets) and the interactive window list each sit in
+/// their own [RepaintBoundary]. The window list is the one part of this
+/// panel that rebuilds on hover (to drive tooltips) — isolating it stops
+/// that rebuild from forcing a repaint of the shader-masked background and
+/// reticle overlay, which is what caused the visible jitter.
 class MainMenuVectorWidget extends StatelessWidget {
   const MainMenuVectorWidget({super.key});
 
@@ -30,62 +37,66 @@ class MainMenuVectorWidget extends StatelessWidget {
         minHeight: 203,
         maxHeight: MediaQuery.of(context).size.height - 50,
       ),
-      child: RepaintBoundary(
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          child: Stack(
-            children: <Widget>[
-              Positioned.fill(child: _VectorGround(p: p, hasBackdrop: hasBackdrop)),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(7, 6, 7, 7),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    if (!user.quickActionsAtBottom) ...<Widget>[
-                      const SizedBox(height: 2),
-                      // _SectionIndex(index: '01', label: 'QUICK ACTIONS', p: p),
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(6, 1, 8, 3),
-                        child: TopBar(),
-                      ),
-                    ] else if (user.bottomBarOnTop) ...<Widget>[
-                      // _SectionIndex(index: '01', label: 'PINNED / TRAY', p: p),
-                      const PinnedAndTrayList(),
-                    ] else
-                      const SizedBox(height: 2),
-                    _SectionIndex(index: '¤', label: 'WINDOWS', p: p),
-                    // The switcher reads as a radar screen: a faint signal
-                    // wash with a thin signal border around the plain list.
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(4, 2, 4, 2),
-                      decoration: BoxDecoration(
-                        color: p.screen,
-                        border: Border.all(color: p.screenEdge, width: 0.5),
-                      ),
-                      child: const TaskBar(),
-                    ),
-                    if (!user.bottomBarOnTop) ...<Widget>[
-                      _SectionIndex(index: '¤', label: 'PINNED / TRAY', p: p),
-                      const PinnedAndTrayList(),
-                    ],
-                    if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
-                    if (user.libreStats) const LibreStats(withTopDivider: false),
-                    _SectionIndex(index: '¤', label: 'CONTROL', p: p),
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(2, 1, 4, 0),
-                      child: BottomBar(),
-                    ),
-                  ],
-                ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Design.borderRadius),
+        child: Stack(
+          children: <Widget>[
+            Positioned.fill(
+              child: RepaintBoundary(
+                child: _VectorGround(p: p, hasBackdrop: hasBackdrop),
               ),
-              Positioned.fill(
-                child: IgnorePointer(
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(7, 6, 7, 7),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  if (!user.quickActionsAtBottom) ...<Widget>[
+                    const SizedBox(height: 2),
+                    // _SectionIndex(index: '01', label: 'QUICK ACTIONS', p: p),
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(6, 1, 8, 3),
+                      child: TopBar(),
+                    ),
+                  ] else if (user.bottomBarOnTop) ...<Widget>[
+                    // _SectionIndex(index: '01', label: 'PINNED / TRAY', p: p),
+                    const PinnedAndTrayList(),
+                  ] else
+                    const SizedBox(height: 2),
+                  _SectionIndex(index: '¤', label: 'WINDOWS', p: p),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(4, 2, 4, 2),
+                    decoration: BoxDecoration(
+                      color: p.screen,
+                      border: Border.all(color: p.screenEdge, width: 0.5),
+                    ),
+                    child: const RepaintBoundary(
+                      child: TaskBar(),
+                    ),
+                  ),
+                  if (!user.bottomBarOnTop) ...<Widget>[
+                    _SectionIndex(index: '¤', label: 'PINNED / TRAY', p: p),
+                    const PinnedAndTrayList(),
+                  ],
+                  if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
+                  if (user.libreStats) const LibreStats(withTopDivider: false),
+                  _SectionIndex(index: '¤', label: 'CONTROL', p: p),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(2, 1, 4, 0),
+                    child: BottomBar(),
+                  ),
+                ],
+              ),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: RepaintBoundary(
                   child: CustomPaint(painter: _VectorReticlePainter(accent: p.signal, tick: p.tick)),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -419,6 +419,7 @@ class LauncherThemeData {
   bool get isFluent => design == LauncherDesign.fluent;
   bool get isManifesto => design == LauncherDesign.manifesto;
   bool get isOrbit => design == LauncherDesign.orbit;
+  bool get isAnime => design == LauncherDesign.anime;
 
   /// Leading glyph in the search bar — a chevron prompt for the Command/Terminal
   /// consoles, a leaf for Zen, a drafting compass for Blueprint, a radar scope
@@ -435,6 +436,7 @@ class LauncherThemeData {
         LauncherDesign.fluent => Icons.search_rounded,
         LauncherDesign.manifesto => Icons.arrow_forward,
         LauncherDesign.orbit => Icons.radar,
+        LauncherDesign.anime => Icons.auto_awesome_rounded,
       };
 
   double get searchIconSize => switch (design) {
@@ -449,6 +451,7 @@ class LauncherThemeData {
         LauncherDesign.fluent => 18.0,
         LauncherDesign.manifesto => 18.0,
         LauncherDesign.orbit => 19.0,
+        LauncherDesign.anime => 19.0,
       };
 
   bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent;
@@ -465,6 +468,7 @@ class LauncherThemeData {
         LauncherDesign.fluent => 15.0,
         LauncherDesign.manifesto => 17.0,
         LauncherDesign.orbit => 15.0,
+        LauncherDesign.anime => 16.0,
       };
   FontWeight? get searchFontWeight => switch (design) {
         LauncherDesign.serene => FontWeight.w400,
@@ -478,6 +482,7 @@ class LauncherThemeData {
         LauncherDesign.fluent => FontWeight.w400,
         LauncherDesign.manifesto => FontWeight.w600,
         LauncherDesign.orbit => FontWeight.w500,
+        LauncherDesign.anime => FontWeight.w500,
       };
 
   double get frameRadius => switch (design) {
@@ -492,6 +497,7 @@ class LauncherThemeData {
         LauncherDesign.fluent => 8.0,
         LauncherDesign.manifesto => 0.0,
         LauncherDesign.orbit => 10.0,
+        LauncherDesign.anime => 16.0,
       };
 
   EdgeInsets get resultsListPadding => const EdgeInsets.all(8.0);

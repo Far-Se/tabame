@@ -3923,6 +3923,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final bool isFluent = _design == LauncherDesign.fluent;
     final bool isManifesto = _design == LauncherDesign.manifesto;
     final bool isOrbit = _design == LauncherDesign.orbit;
+    final bool isAnime = _design == LauncherDesign.anime;
     // Terminal, Zen, Blueprint, Transit and Fluent force their own palette +
     // text theme. Every result builder reads its colors from this theme, so
     // they all inherit the look without per-builder branching. Terminal,
@@ -4259,14 +4260,22 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
           resultCount: _results.length,
           child: innerContent,
         ),
+      LauncherDesign.anime => AnimeLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent,
+        ),
     };
 
     return Theme(
-      data: (isTerminal || isZen || isGlass || isBlueprint || isTransit || isFluent || isManifesto || isOrbit)
-          ? theme
-          : theme.copyWith(
-              textTheme: GoogleFonts.getTextTheme(Design.entryFontFamily),
-            ),
+      data:
+          (isTerminal || isZen || isGlass || isBlueprint || isTransit || isFluent || isManifesto || isOrbit || isAnime)
+              ? theme
+              : theme.copyWith(
+                  textTheme: GoogleFonts.getTextTheme(Design.entryFontFamily),
+                ),
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: _resetSelection,
