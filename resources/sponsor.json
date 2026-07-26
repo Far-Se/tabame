@@ -1,8 +1,8 @@
 {
-  "enabled": true,
-  "name": "Stream New",
+  "enabled": false,
+  "name": "",
   "size": "140x100",
-  "imageDark": "https://getstream.io/images/stream-dark.png",
-  "imageLight": "https://getstream.io/images/stream-light.png",
-  "url": "https://getstream.io/"
+  "imageDark": "",
+  "imageLight": "",
+  "url": ""
 }

@@ -570,7 +570,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                                               user.themeType == ThemeType.light
                                                                                   ? sponsorImageLight!
                                                                                   : sponsorImageDark!,
-                                                                              height: 100,
+                                                                              height: 40,
                                                                               fit: BoxFit.contain,
                                                                             ),
                                                                         ],
