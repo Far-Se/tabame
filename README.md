@@ -120,7 +120,7 @@ Sometimes (2–3 times a week), the app draws incorrectly. To fix this, right-cl
 </td>
 <td width="33%" align="center">
 <img src="https://raw.githubusercontent.com/far-se/tabame/main/resources/quickmenu2.webp" width="100%"><br/>
-<sub><b>Different Layour</b> &middot; You can rearrange the layout to your liking.</sub>
+<sub><b>Different Layout</b> &middot; You can rearrange the layout to your liking.</sub>
 </td>
 <td width="33%" align="center">
 <img src="https://raw.githubusercontent.com/far-se/tabame/main/resources/quickmenu3.webp" width="100%"><br/>
@@ -176,6 +176,23 @@ If things get crowded you can move pinned apps and tray icons onto the same row.
 ---
 
 # 🚀 Launcher
+
+<table>
+<tr>
+<td width="33%" align="center">
+<img src="https://raw.githubusercontent.com/far-se/tabame/main/resources/launcher1.webp" width="100%"><br/>
+<sub><b>Multiple designs</b> &middot; 12 Different Designs each with a unique look and feel.</sub>
+</td>
+<td width="33%" align="center">
+<img src="https://raw.githubusercontent.com/far-se/tabame/main/resources/launcher2.webp" width="100%"><br/>
+<sub><b>Plugin Access</b> &middot; Unlimited possibilities using plugins</sub>
+</td>
+<td width="33%" align="center">
+<img src="https://raw.githubusercontent.com/far-se/tabame/main/resources/launcher3.webp" width="100%"><br/>
+<sub><b>Quick Access</b> &middot; Use the Ctrl+K Menu to access quick actions.</sub>
+</td>
+</tr>
+</table>
 
 The Launcher is one text box that searches everything. Open it straight from the QuickMenu (just start typing) or bind it to its own hotkey.
 
