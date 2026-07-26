@@ -349,6 +349,32 @@ class QuickMenuModalFrame extends StatelessWidget {
             CustomPaint(painter: _ConsoleRivetPainter(text.withValues(alpha: isDark ? 0.50 : 0.40))),
           ],
         ),
+      QuickMenuDesigns.foundry => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.98),
+            border: Border.all(color: text.withValues(alpha: isDark ? 0.24 : 0.30), width: 0.8),
+          ),
+          underlays: <Widget>[
+            CustomPaint(painter: _FoundryGrainPainter(text.withValues(alpha: isDark ? 0.035 : 0.025))),
+          ],
+          overlays: <Widget>[
+            CustomPaint(painter: _FoundryCornerMarkPainter(accent.withValues(alpha: 0.75))),
+          ],
+        ),
+      QuickMenuDesigns.anime => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.97),
+            border: Border.all(color: accent.withValues(alpha: isDark ? 0.30 : 0.22), width: 0.8),
+          ),
+          underlays: <Widget>[
+            CustomPaint(painter: _SparkleDustPainter(accent.withValues(alpha: isDark ? 0.16 : 0.14))),
+          ],
+          overlays: <Widget>[
+            CustomPaint(painter: _RibbonCornerPainter(accent)),
+          ],
+        ),
     };
 
     final bool hasBevel = spec.bevel != null;
@@ -677,4 +703,126 @@ class _VectorBracketPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _VectorBracketPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// A scatter of tiny fixed sparkles across the modal — same low-key dust
+/// texture language as the QuickMenu panel's sparkle field, but static
+/// (no timer) since the modal frame paints once per build.
+class _SparkleDustPainter extends CustomPainter {
+  const _SparkleDustPainter(this.color);
+  final Color color;
+
+  // Fixed, seeded-looking positions — deterministic so repaints don't jitter.
+  static const List<Offset> _spots = <Offset>[
+    Offset(0.08, 0.12),
+    Offset(0.22, 0.30),
+    Offset(0.40, 0.08),
+    Offset(0.62, 0.22),
+    Offset(0.80, 0.14),
+    Offset(0.90, 0.34),
+    Offset(0.15, 0.55),
+    Offset(0.35, 0.68),
+    Offset(0.58, 0.60),
+    Offset(0.75, 0.72),
+    Offset(0.90, 0.85),
+    Offset(0.10, 0.88),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint p = Paint()..color = color;
+    for (int i = 0; i < _spots.length; i++) {
+      final double cx = _spots[i].dx * size.width;
+      final double cy = _spots[i].dy * size.height;
+      final double r = i.isEven ? 2.2 : 1.4;
+      final Path diamond = Path()
+        ..moveTo(cx, cy - r)
+        ..lineTo(cx + r * 0.45, cy)
+        ..lineTo(cx, cy + r)
+        ..lineTo(cx - r * 0.45, cy)
+        ..close();
+      canvas.drawPath(diamond, p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SparkleDustPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// A little bow tucked into the top-right corner, top right — two curved
+/// ribbon tails and a knot. Same "corner accent" role the ledger design
+/// gives its folded page-corner.
+class _RibbonCornerPainter extends CustomPainter {
+  const _RibbonCornerPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint fill = Paint()..color = color.withValues(alpha: 0.85);
+    final double cx = size.width - 14;
+    const double cy = 12;
+
+    // Two ribbon-tail triangles fanning out from the knot.
+    final Path leftTail = Path()
+      ..moveTo(cx, cy)
+      ..lineTo(cx - 9, cy - 5)
+      ..lineTo(cx - 6, cy + 2)
+      ..close();
+    final Path rightTail = Path()
+      ..moveTo(cx, cy)
+      ..lineTo(cx + 9, cy - 5)
+      ..lineTo(cx + 6, cy + 2)
+      ..close();
+    canvas.drawPath(leftTail, fill);
+    canvas.drawPath(rightTail, fill);
+
+    // Knot.
+    canvas.drawCircle(Offset(cx, cy), 2.6, fill);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RibbonCornerPainter oldDelegate) => oldDelegate.color != color;
+}
+
+//---
+class _FoundryGrainPainter extends CustomPainter {
+  const _FoundryGrainPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 0.5;
+    for (double y = 13; y < size.height; y += 13) {
+      canvas.drawLine(Offset.zero.translate(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _FoundryGrainPainter oldDelegate) => oldDelegate.color != color;
+}
+
+class _FoundryCornerMarkPainter extends CustomPainter {
+  const _FoundryCornerMarkPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    const double inset = 5;
+    const double length = 8;
+    canvas.drawLine(const Offset(inset, inset), const Offset(inset + length, inset), paint);
+    canvas.drawLine(const Offset(inset, inset), const Offset(inset, inset + length), paint);
+    canvas.drawLine(Offset(size.width - inset - length, inset), Offset(size.width - inset, inset), paint);
+    canvas.drawLine(Offset(size.width - inset, inset), Offset(size.width - inset, inset + length), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _FoundryCornerMarkPainter oldDelegate) => oldDelegate.color != color;
 }

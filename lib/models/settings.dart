@@ -45,6 +45,8 @@ enum QuickMenuDesigns {
   vector,
   ledger,
   console,
+  foundry,
+  anime,
   ;
 
   String get name {
@@ -65,6 +67,8 @@ enum QuickMenuDesigns {
       QuickMenuDesigns.vector => "Vector",
       QuickMenuDesigns.ledger => "Ledger",
       QuickMenuDesigns.console => "Console",
+      QuickMenuDesigns.foundry => "Foundry",
+      QuickMenuDesigns.anime => "Anime",
     };
   }
 }
@@ -717,6 +721,58 @@ class Settings {
           entryFontFamily: 'Bahnschrift',
           entryFontWeight: 700,
           borderRadius: 6,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.foundry.name: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffE7E2D8),
+          textColor: const Color(0xff2B2A26),
+          accentColor: const Color(0xffA5472A),
+          gradientAlpha: 48,
+          uiFontFamily: 'Aldrich',
+          uiFontWeight: 500,
+          entryFontFamily: 'Aldrich',
+          entryFontWeight: 700,
+          borderRadius: 4,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff171816),
+          textColor: const Color(0xffDDD9CF),
+          accentColor: const Color(0xffD96D3B),
+          gradientAlpha: 65,
+          uiFontFamily: 'Aldrich',
+          uiFontWeight: 500,
+          entryFontFamily: 'Aldrich',
+          entryFontWeight: 700,
+          borderRadius: 4,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.anime.name: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffFFF3F8),
+          textColor: const Color(0xff4A2E3B),
+          accentColor: const Color(0xffFF6FA3),
+          gradientAlpha: 90,
+          uiFontFamily: 'Segoe UI',
+          uiFontWeight: 600,
+          entryFontFamily: 'Segoe UI',
+          entryFontWeight: 700,
+          borderRadius: 14,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff211622),
+          textColor: const Color(0xffF7D9E6),
+          accentColor: const Color(0xffFF8FC0),
+          gradientAlpha: 110,
+          uiFontFamily: 'Segoe UI',
+          uiFontWeight: 600,
+          entryFontFamily: 'Segoe UI',
+          entryFontWeight: 700,
+          borderRadius: 14,
           baseFontSize: 10,
         ),
       ),

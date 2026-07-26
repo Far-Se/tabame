@@ -4,11 +4,13 @@ import 'package:window_manager/window_manager.dart';
 import '../../models/classes/boxes/quick_menu_box.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
+import 'design_anime.dart';
 import 'design_aurora.dart';
 import 'design_cassette.dart';
 import 'design_classic.dart';
 import 'design_console.dart';
 import 'design_fluent.dart';
+import 'design_foundry.dart';
 import 'design_gazette.dart';
 import 'design_interface.dart';
 import 'design_ledger.dart';
@@ -97,6 +99,8 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.vector => MainMenuVectorWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.ledger => MainMenuLedgerWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.console => MainMenuConsoleWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.foundry => MainMenuFoundryWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.anime => MainMenuAnimeWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }
 }
