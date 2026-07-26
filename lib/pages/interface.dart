@@ -541,7 +541,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                           ),
                                                           // Bottom Actions
                                                           Padding(
-                                                            padding: const EdgeInsets.all(10),
+                                                            padding: const EdgeInsets.all(5),
                                                             child: Column(
                                                               crossAxisAlignment: CrossAxisAlignment.stretch,
                                                               children: <Widget>[
@@ -550,7 +550,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                                     onTap: () => WinUtils.open(sponsor.url),
                                                                     borderRadius: BorderRadius.circular(8),
                                                                     child: Container(
-                                                                      padding: const EdgeInsets.all(8),
+                                                                      padding: const EdgeInsets.all(2),
                                                                       child: Column(
                                                                         children: <Widget>[
                                                                           Text(
@@ -564,13 +564,13 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
                                                                                   .withAlpha(100),
                                                                             ),
                                                                           ),
-                                                                          const SizedBox(height: 4),
+                                                                          const SizedBox(height: 2),
                                                                           if (sponsorImageLight != null)
                                                                             Image.file(
                                                                               user.themeType == ThemeType.light
                                                                                   ? sponsorImageLight!
                                                                                   : sponsorImageDark!,
-                                                                              height: 40,
+                                                                              height: 100,
                                                                               fit: BoxFit.contain,
                                                                             ),
                                                                         ],
