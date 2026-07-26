@@ -2,7 +2,7 @@
   "enabled": true,
   "name": "Stream",
   "size": "140x100",
-  "imageDark": "https://external-images.pub.dev/Ep3Tk25WlBYDlSpM9L2sQgRZ3%2F3sTT6OQ2wODBgMR0A%3D/1785024000000/https%3A%2F%2Fuser-images.githubusercontent.com%2F28951144%2F204903022-bbaa49ca-74c2-4a8f-a05d-af8314bfd2cc.svg",
-  "imageLight": "https://external-images.pub.dev/Ep3Tk25WlBYDlSpM9L2sQgRZ3%2F3sTT6OQ2wODBgMR0A%3D/1785024000000/https%3A%2F%2Fuser-images.githubusercontent.com%2F28951144%2F204903022-bbaa49ca-74c2-4a8f-a05d-af8314bfd2cc.svg",
+  "imageDark": "https://getstream.io/images/stream-dark.png",
+  "imageLight": "https://getstream.io/images/stream-light.png",
   "url": "https://getstream.io/"
 }
