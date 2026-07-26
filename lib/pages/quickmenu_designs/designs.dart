@@ -7,9 +7,11 @@ import '../../models/settings.dart';
 import 'design_aurora.dart';
 import 'design_cassette.dart';
 import 'design_classic.dart';
+import 'design_console.dart';
 import 'design_fluent.dart';
 import 'design_gazette.dart';
 import 'design_interface.dart';
+import 'design_ledger.dart';
 import 'design_matrix.dart';
 import 'design_manifesto.dart';
 import 'design_modern.dart';
@@ -93,6 +95,8 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.steam => MainMenuSteamWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.manifesto => MainMenuManifestoWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.vector => MainMenuVectorWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.ledger => MainMenuLedgerWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.console => MainMenuConsoleWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }
 }

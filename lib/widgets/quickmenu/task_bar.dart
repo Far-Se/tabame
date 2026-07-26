@@ -298,7 +298,14 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
         final BuildContext? context = Globals.quickMenuKey.currentContext;
         if (context != null) {
           final RenderBox box = context.findRenderObject() as RenderBox;
-          Globals.quickMenuCurrentHeight = box.size.height;
+          final double newHeight = box.size.height;
+          // Ignore sub-pixel jitter from layout rounding (ShaderMask /
+          // shrinkWrap ListView / shadow bounds) — only propagate real
+          // height changes, otherwise this can drive a visible reposition
+          // of the window for a value that never actually changed.
+          if ((newHeight - Globals.quickMenuCurrentHeight).abs() > 0.5) {
+            Globals.quickMenuCurrentHeight = newHeight;
+          }
         }
       });
     }

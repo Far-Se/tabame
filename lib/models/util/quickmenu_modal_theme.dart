@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
 import '../../pages/launcher/launcher_modal_theme.dart';
 import '../globals.dart';
@@ -317,6 +318,37 @@ class QuickMenuModalFrame extends StatelessWidget {
             CustomPaint(painter: _VectorBracketPainter(accent)),
           ],
         ),
+      QuickMenuDesigns.ledger => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.98),
+            border: Border.all(color: text.withValues(alpha: isDark ? 0.16 : 0.2), width: 0.6),
+          ),
+          underlays: <Widget>[
+            CustomPaint(
+              painter: _LedgerMarginPainter(
+                rule: text.withValues(alpha: isDark ? 0.16 : 0.2),
+                holeRing: text.withValues(alpha: isDark ? 0.3 : 0.36),
+              ),
+            ),
+          ],
+          overlays: <Widget>[
+            CustomPaint(painter: _LedgerFoldPainter(text.withValues(alpha: isDark ? 0.22 : 0.26))),
+          ],
+        ),
+      QuickMenuDesigns.console => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.97),
+            border: Border.all(color: text.withValues(alpha: isDark ? 0.20 : 0.24), width: 0.8),
+          ),
+          underlays: <Widget>[
+            CustomPaint(painter: _ConsoleBrushedPainter(isDark: isDark)),
+          ],
+          overlays: <Widget>[
+            CustomPaint(painter: _ConsoleRivetPainter(text.withValues(alpha: isDark ? 0.50 : 0.40))),
+          ],
+        ),
     };
 
     final bool hasBevel = spec.bevel != null;
@@ -484,6 +516,130 @@ class _VectorScanPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _VectorScanPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Faint diagonal brushed-metal strokes, fixed-seed so they don't jitter
+/// on rebuild. Cheap stand-in for the full widget's texture layer.
+class _ConsoleBrushedPainter extends CustomPainter {
+  _ConsoleBrushedPainter({required this.isDark});
+
+  final bool isDark;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rnd = math.Random(7);
+    final Color strokeColor = isDark ? Colors.white : Colors.black;
+    final Paint paint = Paint()..strokeWidth = 1;
+    final double diag = size.width + size.height;
+    final int lineCount = (diag / 5).floor();
+
+    for (int i = 0; i < lineCount; i++) {
+      final double offset = i * 5.0 + rnd.nextDouble() * 2;
+      paint.color = strokeColor.withValues(alpha: 0.012 + rnd.nextDouble() * 0.02);
+      canvas.drawLine(Offset(offset - size.height, 0), Offset(offset, size.height), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ConsoleBrushedPainter oldDelegate) => oldDelegate.isDark != isDark;
+}
+
+/// Four Phillips-head rivets pinning the corners of the frame, inset just
+/// inside the border — the modal-preview version of the full widget's
+/// `_Rivet` widgets, collapsed into one painter since there's no need for
+/// separate widget/gesture handling here.
+class _ConsoleRivetPainter extends CustomPainter {
+  _ConsoleRivetPainter(this.color);
+
+  final Color color;
+  static const double _inset = 8;
+  static const double _radius = 2.6;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint fill = Paint()..color = color;
+    final Paint slot = Paint()
+      ..color = Colors.black.withValues(alpha: 0.5)
+      ..strokeWidth = 0.8;
+
+    final List<Offset> corners = <Offset>[
+      const Offset(_inset, _inset),
+      Offset(size.width - _inset, _inset),
+      Offset(_inset, size.height - _inset),
+      Offset(size.width - _inset, size.height - _inset),
+    ];
+
+    for (final Offset c in corners) {
+      canvas.drawCircle(c, _radius, fill);
+      canvas.drawLine(Offset(c.dx - _radius + 0.6, c.dy), Offset(c.dx + _radius - 0.6, c.dy), slot);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ConsoleRivetPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Binder margin for the modal frame: a hairline rule down the left edge
+/// with a short run of hollow punch-holes near the top. Same motif as the
+/// QuickMenu panel, scaled to whatever size the modal ends up being.
+class _LedgerMarginPainter extends CustomPainter {
+  const _LedgerMarginPainter({required this.rule, required this.holeRing});
+
+  final Color rule;
+  final Color holeRing;
+
+  static const double _marginX = 18;
+  static const double _holeR = 2.3;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint rulePaint = Paint()
+      ..color = rule
+      ..strokeWidth = 0.6;
+    canvas.drawLine(const Offset(_marginX, 8), Offset(_marginX, size.height - 8), rulePaint);
+
+    final Paint ring = Paint()
+      ..color = holeRing
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8;
+
+    const double holeX = _marginX / 2;
+    double y = 16;
+    while (y < size.height - 12) {
+      canvas.drawCircle(Offset(holeX, y), _holeR, ring);
+      y += 26;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LedgerMarginPainter oldDelegate) =>
+      oldDelegate.rule != rule || oldDelegate.holeRing != holeRing;
+}
+
+/// Folded page-corner, top right — two thin strokes standing in for a
+/// dog-eared corner, kept as an overlay so it always sits above content.
+class _LedgerFoldPainter extends CustomPainter {
+  const _LedgerFoldPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint stroke = Paint()
+      ..color = color
+      ..strokeWidth = 0.6
+      ..style = PaintingStyle.stroke;
+    final Path fold = Path()
+      ..moveTo(size.width - 14, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width, 14)
+      ..moveTo(size.width - 9, 0)
+      ..lineTo(size.width, 9);
+    canvas.drawPath(fold, stroke);
+  }
+
+  @override
+  bool shouldRepaint(covariant _LedgerFoldPainter oldDelegate) => oldDelegate.color != color;
 }
 
 /// Corner reticle brackets used by the Vector design's panel and popups.

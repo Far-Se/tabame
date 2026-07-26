@@ -322,6 +322,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
   static const String _toKey = "currencyConverterTo";
   static const int _historyWindowDays = 30;
   static const String _historyFileName = "currency_history.json";
+  static const String _historyApiBaseUrl = "https://api.frankfurter.dev/v1";
   static const String _primaryBaseTemplate =
       "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date}/v1/currencies";
   static const String _fallbackBaseTemplate = "https://{date}.currency-api.pages.dev/v1/currencies";
@@ -467,6 +468,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
                         _buildInfoChip("Base: ${_fromCurrency.toUpperCase()}"),
                         if (_ratesDate != null) _buildInfoChip("Updated $_ratesDate"),
                         _buildInfoChip("@fawazahmed0/currency-api"),
+                        _buildInfoChip("frankfurter.dev"),
                       ],
                     ),
                   ],
@@ -1098,7 +1100,8 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
     final String pairKey = _pairKey(fromCurrency, toCurrency);
     final int requestToken = ++_historyRequestToken;
     final List<String> last30Dates = _last30DateKeys();
-    final Set<String> last30DateSet = last30Dates.toSet();
+    final String startDate = last30Dates.first;
+    final String endDate = last30Dates.last;
 
     setState(() {
       _loadingHistory = true;
@@ -1108,29 +1111,21 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
     });
 
     try {
-      Map<String, double> values = forceRefresh ? <String, double>{} : _historyValuesFromCache(pairKey)
-        ..removeWhere(
-          (String date, double value) => !last30DateSet.contains(date),
-        );
+      Map<String, double> values = !forceRefresh && _hasHistoryCacheForRange(pairKey, startDate, endDate)
+          ? _historyValuesFromCache(pairKey)
+          : <String, double>{};
 
       if (fromCurrency == toCurrency) {
         values = <String, double>{
           for (final String date in last30Dates) date: 1,
         };
-      } else {
-        final List<String> missingDates = last30Dates.where((String date) => !values.containsKey(date)).toList();
-
-        for (final String date in missingDates) {
-          if (!mounted || requestToken != _historyRequestToken) return;
-          final double? rate = await _fetchHistoricalRate(
-            fromCurrency,
-            toCurrency,
-            date,
-          );
-          if (rate != null) {
-            values[date] = rate;
-          }
-        }
+      } else if (values.isEmpty) {
+        values = await _fetchHistoricalRates(
+          fromCurrency,
+          toCurrency,
+          startDate: startDate,
+          endDate: endDate,
+        );
       }
 
       if (!mounted || requestToken != _historyRequestToken) return;
@@ -1143,6 +1138,9 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
       _historyCache[pairKey] = <String, dynamic>{
         "base": fromCurrency,
         "target": toCurrency,
+        "source": "frankfurter",
+        "startDate": startDate,
+        "endDate": endDate,
         "values": trimmedValues.map(
           (String key, double value) => MapEntry<String, dynamic>(key, value),
         ),
@@ -1195,25 +1193,52 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
     );
   }
 
-  Future<double?> _fetchHistoricalRate(
+  bool _hasHistoryCacheForRange(String pairKey, String startDate, String endDate) {
+    final Map<String, dynamic> pairEntry = Map<String, dynamic>.from(
+      (_historyCache[pairKey] as Map<dynamic, dynamic>?) ?? <String, dynamic>{},
+    );
+    return pairEntry["source"] == "frankfurter" &&
+        pairEntry["startDate"] == startDate &&
+        pairEntry["endDate"] == endDate;
+  }
+
+  Future<Map<String, double>> _fetchHistoricalRates(
     String fromCurrency,
-    String toCurrency,
-    String date,
-  ) async {
-    try {
-      final Map<String, dynamic> jsonMap = await _fetchJsonWithFallback(
-        _baseRatesUrl(fromCurrency, date: date),
-        _baseRatesUrl(fromCurrency, date: date, fallback: true),
+    String toCurrency, {
+    required String startDate,
+    required String endDate,
+  }) async {
+    final Uri uri = Uri.parse(
+      "$_historyApiBaseUrl/$startDate..$endDate",
+    ).replace(
+      queryParameters: <String, String>{
+        "from": fromCurrency.toUpperCase(),
+        "to": toCurrency.toUpperCase(),
+      },
+    );
+    final http.Response response = await http.get(uri);
+    if (response.statusCode != 200) {
+      throw Exception("History request failed");
+    }
+
+    final Map<String, dynamic> jsonMap = Map<String, dynamic>.from(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+    final Map<String, dynamic> datedRates = Map<String, dynamic>.from(
+      (jsonMap["rates"] as Map<dynamic, dynamic>?) ?? <String, dynamic>{},
+    );
+    final String target = toCurrency.toUpperCase();
+    final Map<String, double> values = <String, double>{};
+    datedRates.forEach((String date, dynamic rawRates) {
+      final Map<String, dynamic> rates = Map<String, dynamic>.from(
+        rawRates as Map<dynamic, dynamic>,
       );
-      final Map<String, dynamic> baseMap = Map<String, dynamic>.from(
-        (jsonMap[fromCurrency] as Map<String, dynamic>?) ?? <String, dynamic>{},
-      );
-      final dynamic value = baseMap[toCurrency];
-      if (value is num) {
-        return value.toDouble();
+      final dynamic rate = rates[target];
+      if (rate is num) {
+        values[date] = rate.toDouble();
       }
-    } catch (_) {}
-    return null;
+    });
+    return values;
   }
 
   Future<Map<String, dynamic>> _fetchJsonWithFallback(String primaryUrl, String fallbackUrl) async {

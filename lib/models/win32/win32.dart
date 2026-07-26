@@ -846,46 +846,14 @@ class Win32 {
     if (user.quickMenuAtTaskbarLevel == true) {
       switch (QuickMenuDesigns.values[user.quickMenuDesign]) {
         case QuickMenuDesigns.classic:
-          verticalPosition -= 30;
-          break;
         case QuickMenuDesigns.interface:
           verticalPosition -= 30;
-          break;
-        case QuickMenuDesigns.modern:
-          verticalPosition -= 40;
           break;
         case QuickMenuDesigns.matrix:
           verticalPosition -= 70;
           horizontalPosition -= 10;
           break;
-        case QuickMenuDesigns.serene:
-          verticalPosition -= 40;
-          break;
-        case QuickMenuDesigns.aurora:
-          verticalPosition -= 40;
-          break;
-        case QuickMenuDesigns.terminal:
-          verticalPosition -= 40;
-          break;
-        case QuickMenuDesigns.cassette:
-          verticalPosition -= 40;
-          break;
-        case QuickMenuDesigns.fluent:
-          verticalPosition -= 40;
-          break;
-        case QuickMenuDesigns.gazette:
-          verticalPosition -= 40;
-          break;
-        case QuickMenuDesigns.player:
-          verticalPosition -= 40;
-          break;
-        case QuickMenuDesigns.steam:
-          verticalPosition -= 40;
-          break;
-        case QuickMenuDesigns.manifesto:
-          verticalPosition -= 40;
-          break;
-        case QuickMenuDesigns.vector:
+        default:
           verticalPosition -= 40;
           break;
       }

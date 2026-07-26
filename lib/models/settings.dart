@@ -43,6 +43,8 @@ enum QuickMenuDesigns {
   steam,
   manifesto,
   vector,
+  ledger,
+  console,
   ;
 
   String get name {
@@ -61,6 +63,8 @@ enum QuickMenuDesigns {
       QuickMenuDesigns.steam => "Steam",
       QuickMenuDesigns.manifesto => "Manifesto",
       QuickMenuDesigns.vector => "Vector",
+      QuickMenuDesigns.ledger => "Ledger",
+      QuickMenuDesigns.console => "Console",
     };
   }
 }
@@ -661,6 +665,58 @@ class Settings {
           entryFontFamily: 'Consolas',
           entryFontWeight: 700,
           borderRadius: 0,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.ledger.name: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffF3EDDC),
+          textColor: const Color(0xff2B2419),
+          accentColor: const Color(0xff8C2F1E),
+          gradientAlpha: 45,
+          uiFontFamily: 'Courier New',
+          uiFontWeight: 400,
+          entryFontFamily: 'Courier New',
+          entryFontWeight: 700,
+          borderRadius: 0,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff17130F),
+          textColor: const Color(0xffE7DCC0),
+          accentColor: const Color(0xffD9812E),
+          gradientAlpha: 62,
+          uiFontFamily: 'Courier New',
+          uiFontWeight: 400,
+          entryFontFamily: 'Courier New',
+          entryFontWeight: 700,
+          borderRadius: 0,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.console.name: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffDCDFE2),
+          textColor: const Color(0xff23272B),
+          accentColor: const Color(0xffD98A2B),
+          gradientAlpha: 40,
+          uiFontFamily: 'Bahnschrift',
+          uiFontWeight: 500,
+          entryFontFamily: 'Bahnschrift',
+          entryFontWeight: 700,
+          borderRadius: 6,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff1B1D1F),
+          textColor: const Color(0xffC9CDD1),
+          accentColor: const Color(0xff36D6C4),
+          gradientAlpha: 55,
+          uiFontFamily: 'Bahnschrift',
+          uiFontWeight: 500,
+          entryFontFamily: 'Bahnschrift',
+          entryFontWeight: 700,
+          borderRadius: 6,
           baseFontSize: 10,
         ),
       ),

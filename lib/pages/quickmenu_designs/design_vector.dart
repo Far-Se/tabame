@@ -43,6 +43,7 @@ class MainMenuVectorWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     if (!user.quickActionsAtBottom) ...<Widget>[
+                      const SizedBox(height: 2),
                       // _SectionIndex(index: '01', label: 'QUICK ACTIONS', p: p),
                       const Padding(
                         padding: EdgeInsets.fromLTRB(6, 1, 8, 3),
