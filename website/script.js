@@ -163,7 +163,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const name = document.createElement("h3");
       name.textContent = plugin.name;
       const description = document.createElement("p");
-      description.textContent = plugin.description || "Official Tabame Launcher plugin.";
+      description.textContent =
+        plugin.description || "Official Tabame Launcher plugin.";
       text.append(name, description);
       identity.append(icon, text);
 
@@ -204,11 +205,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!officialPluginList) return;
 
     try {
-      const response = await fetch(officialPluginCatalogUrl, { cache: "no-cache" });
-      if (!response.ok) throw new Error(`Registry request failed: ${response.status}`);
+      const response = await fetch(officialPluginCatalogUrl, {
+        cache: "no-cache",
+      });
+      if (!response.ok)
+        throw new Error(`Registry request failed: ${response.status}`);
 
       const catalog = await response.json();
-      if (!Array.isArray(catalog.plugins)) throw new Error("Invalid plugin registry");
+      if (!Array.isArray(catalog.plugins))
+        throw new Error("Invalid plugin registry");
+      catalog.sort((a, b) => a.name.localeCompare(b.name));
       renderOfficialPlugins(catalog.plugins);
     } catch (error) {
       officialPluginList.innerHTML =
