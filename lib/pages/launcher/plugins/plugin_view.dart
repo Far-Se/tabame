@@ -495,6 +495,7 @@ class _PluginViewState extends State<PluginView> {
 
   Widget _buildDetail(String markdown, List<PluginMetadataEntry> metadata) {
     final bool hasMarkdown = markdown.trim().isNotEmpty;
+    final String renderedMarkdown = _normalizeLocalMarkdownImageUris(markdown);
     return WindowsScrollView(
       controller: widget.detailScrollController,
       child: Padding(
@@ -512,7 +513,7 @@ class _PluginViewState extends State<PluginView> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        if (hasMarkdown) MarkdownBlock(data: markdown, config: _markdownConfig()),
+                        if (hasMarkdown) MarkdownBlock(data: renderedMarkdown, config: _markdownConfig()),
                         if (metadata.isNotEmpty)
                           _PluginMetadataPane(
                             entries: metadata,
@@ -531,6 +532,7 @@ class _PluginViewState extends State<PluginView> {
   Widget _buildPreviewPane(PluginItem item) {
     final String markdown = item.previewMarkdown ?? '';
     final bool hasMarkdown = markdown.trim().isNotEmpty;
+    final String renderedMarkdown = _normalizeLocalMarkdownImageUris(markdown);
     return WindowsScrollView(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
@@ -545,7 +547,9 @@ class _PluginViewState extends State<PluginView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           if (hasMarkdown)
-                            Expanded(child: MarkdownBlock(data: markdown, config: _markdownConfig(maxImageWidth: 220))),
+                            Expanded(
+                                child:
+                                    MarkdownBlock(data: renderedMarkdown, config: _markdownConfig(maxImageWidth: 220))),
                           if (hasMarkdown && item.previewImageUrl != null) const SizedBox(width: 10),
                           if (item.previewImageUrl != null)
                             Image.network(
@@ -577,6 +581,21 @@ class _PluginViewState extends State<PluginView> {
       onKeyEvent: (_, KeyEvent event) => widget.onMarkdownKeyEvent?.call(event) ?? KeyEventResult.ignored,
       child: SelectionArea(child: child),
     );
+  }
+
+  /// Markdown requires spaces in link destinations to be percent-encoded.
+  /// Plugin authors commonly provide Windows `file://` URLs directly, where
+  /// the user's profile or a plugin folder can contain spaces. Normalize only
+  /// image destinations so the markdown parser preserves the full local URI.
+  String _normalizeLocalMarkdownImageUris(String markdown) {
+    final RegExp localImage = RegExp(
+      r'(!\[[^\]\r\n]*\]\()(file://[^)\r\n]*)(\))',
+      caseSensitive: false,
+    );
+    return markdown.replaceAllMapped(localImage, (Match match) {
+      final String url = match.group(2)!;
+      return '${match.group(1)}${url.replaceAll(' ', '%20')}${match.group(3)}';
+    });
   }
 
   /// Markdown styling tied to the active theme. Every block type is retinted

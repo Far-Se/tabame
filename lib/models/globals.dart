@@ -77,6 +77,7 @@ class Globals {
   static PageController mainPageViewController = PageController();
   static String _pendingQuickMenuSearchInput = "";
   static String _pendingLauncherQuickAction = "";
+  static bool _replacePendingQuickMenuSearchInput = false;
   static Pages lastPage = Pages.quickmenu;
   static Pages _currentPage = Pages.quickmenu;
   static Pages get currentPage => _currentPage;
@@ -97,25 +98,33 @@ class Globals {
     quickMenuSearchInputVersion.value++;
   }
 
-  static void setLauncherQuickAction(String actionName) {
+  static void setLauncherQuickAction(String actionName, {bool replaceExisting = false}) {
     final String normalized = actionName.trim();
     if (normalized.isEmpty) return;
     _pendingLauncherQuickAction = normalized;
     _pendingQuickMenuSearchInput = "/$normalized";
+    _replacePendingQuickMenuSearchInput = replaceExisting;
     quickMenuSearchInputVersion.value++;
   }
 
-  static void setLauncherPretext(String actionName) {
+  static void setLauncherPretext(String actionName, {bool replaceExisting = false}) {
     final String normalized = actionName.trim();
     if (normalized.isEmpty) return;
     _pendingLauncherQuickAction = normalized;
     _pendingQuickMenuSearchInput = "$normalized";
+    _replacePendingQuickMenuSearchInput = replaceExisting;
     quickMenuSearchInputVersion.value++;
   }
 
   static String takeQuickMenuSearchInput() {
     final String value = _pendingQuickMenuSearchInput;
     _pendingQuickMenuSearchInput = "";
+    return value;
+  }
+
+  static bool takeQuickMenuSearchInputReplacement() {
+    final bool value = _replacePendingQuickMenuSearchInput;
+    _replacePendingQuickMenuSearchInput = false;
     return value;
   }
 
@@ -128,6 +137,7 @@ class Globals {
   static void clearQuickMenuSearchInput() {
     _pendingQuickMenuSearchInput = "";
     _pendingLauncherQuickAction = "";
+    _replacePendingQuickMenuSearchInput = false;
     quickMenuSearchInputVersion.value++;
   }
 }

@@ -39,9 +39,9 @@ class QuickMenuFunctions {
   static Future<void> openQuickMenuWithAction(String actionName, {bool center = false, bool useSlash = true}) async {
     await toggleQuickMenu(visible: true, center: center, type: QuickMenuPage.launcher, forcePop: true);
     if (useSlash) {
-      Globals.setLauncherQuickAction(actionName);
+      Globals.setLauncherQuickAction(actionName, replaceExisting: true);
     } else {
-      Globals.setLauncherPretext(actionName);
+      Globals.setLauncherPretext(actionName, replaceExisting: true);
     }
     await Future<void>.delayed(const Duration(milliseconds: 100));
     Globals.clearQuickMenuSearchInput();

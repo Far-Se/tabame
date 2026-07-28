@@ -622,9 +622,31 @@ class Boxes {
     final List<dynamic> decodedMemos = jsonDecode(savedMemosJson);
     _runMemos.clear();
     for (final List<dynamic> memoEntry in decodedMemos) {
-      _runMemos.add(<String>[memoEntry[0], memoEntry[1]]);
+      _runMemos.add(<String>[
+        memoEntry.isNotEmpty ? memoEntry[0].toString() : "",
+        memoEntry.length > 1 ? memoEntry[1].toString() : "",
+        memoEntry.length > 2 && memoEntry[2].toString().trim().isNotEmpty ? memoEntry[2].toString() : "General",
+      ]);
     }
     return _runMemos;
+  }
+
+  List<String> _runMemoCategories = <String>[];
+
+  set runMemoCategories(List<String> items) {
+    _runMemoCategories = items;
+    updateSettings("runMemoCategories", jsonEncode(items));
+  }
+
+  List<String> get runMemoCategories {
+    if (_runMemoCategories.isNotEmpty) return _runMemoCategories;
+
+    final String savedCategoriesJson = pref.getString("runMemoCategories") ?? "";
+    if (savedCategoriesJson.isEmpty) return _runMemoCategories;
+
+    final List<dynamic> decodedCategories = jsonDecode(savedCategoriesJson);
+    _runMemoCategories = decodedCategories.map((dynamic category) => category.toString()).toList();
+    return _runMemoCategories;
   }
 
   List<CliBookCategory> _cliBook = <CliBookCategory>[];

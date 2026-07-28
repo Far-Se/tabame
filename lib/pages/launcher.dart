@@ -1666,6 +1666,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     }
 
     final String pending = Globals.takeQuickMenuSearchInput();
+    final bool replaceExisting = Globals.takeQuickMenuSearchInputReplacement();
     if (pending.isEmpty) {
       // A quick action may have been queued without (or after losing) its
       // accompanying search text. Re-run the current search anyway so the
@@ -1675,6 +1676,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     }
 
     final TextEditingValue currentValue = _controller.value;
+    if (replaceExisting) {
+      _controller.value = currentValue.copyWith(
+        text: pending,
+        selection: TextSelection.collapsed(offset: pending.length),
+        composing: TextRange.empty,
+      );
+      _onSearchChanged(pending);
+      return;
+    }
     final TextSelection selection = currentValue.selection.isValid
         ? currentValue.selection
         : TextSelection.collapsed(offset: currentValue.text.length);
