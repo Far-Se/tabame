@@ -1101,6 +1101,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                 onMetadataAction: _firePluginAction,
                 onOpenActions: _openPluginActions,
                 onMarkdownKeyEvent: _handlePluginKey,
+                onItemNavigation: _requestPluginNavigationFocus,
                 detailScrollController: _pluginDetailScroll,
               );
             },
@@ -1461,6 +1462,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     WidgetsBinding.instance.addPostFrameCallback((_) => requestFocusIfNeeded(focusWindow));
     _launcherFocusRetryTimer?.cancel();
     _launcherFocusRetryTimer = Timer(const Duration(milliseconds: 5), () => requestFocusIfNeeded(focusWindow));
+  }
+
+  /// Opening a plugin item is distinct from selecting markdown in its detail
+  /// view: item navigation must restore the launcher's keyboard shortcuts.
+  void _requestPluginNavigationFocus() {
+    if (!mounted || _activePlugin == null || _pluginFrame?.view == PluginViewType.form) return;
+    void restore() {
+      if (mounted && _activePlugin != null && _pluginFrame?.view != PluginViewType.form) _focusNode.requestFocus();
+    }
+
+    restore();
+    WidgetsBinding.instance.addPostFrameCallback((_) => restore());
+    _launcherFocusRetryTimer?.cancel();
+    _launcherFocusRetryTimer = Timer(const Duration(milliseconds: 5), restore);
   }
 
   void _onFocusManagerChanged() {

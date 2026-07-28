@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../models/classes/boxes.dart';
+import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
@@ -34,17 +36,32 @@ class MainMenuConsoleWidget extends StatefulWidget {
   State<MainMenuConsoleWidget> createState() => _MainMenuConsoleWidgetState();
 }
 
-class _MainMenuConsoleWidgetState extends State<MainMenuConsoleWidget> with SingleTickerProviderStateMixin {
+class _MainMenuConsoleWidgetState extends State<MainMenuConsoleWidget>
+    with SingleTickerProviderStateMixin, QuickMenuTriggers {
   late final AnimationController _breathe;
 
   @override
   void initState() {
     super.initState();
-    _breathe = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
+    _breathe = AnimationController(vsync: this, duration: const Duration(seconds: 2));
+    QuickMenuFunctions.addListener(this);
+    if (QuickMenuFunctions.isQuickMenuVisible) {
+      _breathe.repeat(reverse: true);
+    }
+  }
+
+  @override
+  Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
+    if (visible) {
+      _breathe.repeat(reverse: true);
+    } else {
+      _breathe.stop();
+    }
   }
 
   @override
   void dispose() {
+    QuickMenuFunctions.removeListener(this);
     _breathe.dispose();
     super.dispose();
   }
@@ -184,22 +201,24 @@ class _ConsoleHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 6, 10, 4),
       child: Row(
         children: <Widget>[
-          AnimatedBuilder(
-            animation: breathe,
-            builder: (BuildContext context, Widget? child) {
-              final double t = 0.35 + breathe.value * 0.5;
-              return Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: accent.withValues(alpha: t),
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(color: accent.withValues(alpha: t * 0.6), blurRadius: 6, spreadRadius: 1),
-                  ],
-                ),
-              );
-            },
+          RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: breathe,
+              builder: (BuildContext context, Widget? child) {
+                final double t = 0.35 + breathe.value * 0.5;
+                return Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: accent.withValues(alpha: t),
+                    boxShadow: <BoxShadow>[
+                      BoxShadow(color: accent.withValues(alpha: t * 0.6), blurRadius: 6, spreadRadius: 1),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
           const SizedBox(width: 8),
           Text(

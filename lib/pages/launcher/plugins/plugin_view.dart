@@ -41,6 +41,7 @@ class PluginView extends StatefulWidget {
     required this.onMetadataAction,
     this.onOpenActions,
     this.onMarkdownKeyEvent,
+    this.onItemNavigation,
     this.detailScrollController,
   });
 
@@ -80,6 +81,10 @@ class PluginView extends StatefulWidget {
   /// Forwards shortcuts pressed while a selectable markdown region owns focus
   /// back to the launcher's plugin keyboard handler.
   final KeyEventResult Function(KeyEvent event)? onMarkdownKeyEvent;
+
+  /// Lets the launcher restore its shortcut focus after an item opens a new
+  /// plugin page with the mouse.
+  final VoidCallback? onItemNavigation;
 
   @override
   State<PluginView> createState() => _PluginViewState();
@@ -182,6 +187,11 @@ class _PluginViewState extends State<PluginView> {
   void _hoverSelect(int index) {
     if (index != widget.activeIndex) _selectionFromHover = true;
     widget.onHoverItem(index);
+  }
+
+  void _tapItem(int index) {
+    widget.onTapItem(index);
+    widget.onItemNavigation?.call();
   }
 
   void _scrollActiveIntoView() {
@@ -367,7 +377,7 @@ class _PluginViewState extends State<PluginView> {
                       isRepeating: widget.isRepeating,
                       accent: Design.accent,
                       onSurface: Design.text,
-                      onTap: () => widget.onTapItem(i),
+                      onTap: () => _tapItem(i),
                       onHover: () => _hoverSelect(i),
                       icon: _PluginIcon(name: frame.items[i].icon, accent: Design.accent),
                       title: frame.items[i].title,
@@ -465,7 +475,7 @@ class _PluginViewState extends State<PluginView> {
             child: _PluginGridTile(
               item: frame.items[i],
               isSelected: i == widget.activeIndex,
-              onTap: () => widget.onTapItem(i),
+              onTap: () => _tapItem(i),
               onHover: () => _hoverSelect(i),
             ),
           );
