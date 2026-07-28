@@ -479,7 +479,8 @@ class MusicServerManager {
       );
     }
     if (response.statusCode == 401 || response.statusCode == 403) {
-      return _PingResult.fail('Server refused the login (HTTP ${response.statusCode}). Check the username and password.');
+      return _PingResult.fail(
+          'Server refused the login (HTTP ${response.statusCode}). Check the username and password.');
     }
     if (response.statusCode != 200) {
       return _PingResult.fail('Server returned HTTP ${response.statusCode}.');
@@ -1052,9 +1053,8 @@ class MusicServerManager {
     await saveCurrentQueue();
   }
 
-  static List<AudioSource> _toAudioSources(List<MusicItem> items) => items
-      .map((MusicItem item) => AudioSource.uri(Uri.parse(item.streamUrl!), tag: item))
-      .toList(growable: false);
+  static List<AudioSource> _toAudioSources(List<MusicItem> items) =>
+      items.map((MusicItem item) => AudioSource.uri(Uri.parse(item.streamUrl!), tag: item)).toList(growable: false);
 
   /// Appends [items] to the end of the current queue. Starts a fresh queue when
   /// nothing is playing.
@@ -1132,6 +1132,9 @@ class MusicServerManager {
             .toList(growable: false),
         initialIndex: initialIndex.clamp(0, playable.length - 1),
       );
+      if (playable.length > 1) {
+        await player.setLoopMode(LoopMode.all);
+      }
       await _reapplyShuffleMode();
       if (play) {
         final ProcessingState current = player.processingState;

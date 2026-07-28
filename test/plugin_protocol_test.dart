@@ -62,17 +62,25 @@ void main() {
             <String, Object?>{'label': 'Status', 'text': 'Open', 'color': '#00FF00'},
             <String, Object?>{'separator': true},
             <String, Object?>{'label': 'Docs', 'text': 'site', 'url': 'https://x.dev'},
-            <String, Object?>{'label': 'Trend', 'sparkline': <num>[1, 2, 3]},
+            <String, Object?>{
+              'label': 'Trend',
+              'sparkline': <num>[1, 2, 3]
+            },
             <String, Object?>{
               'label': 'Poster',
               'text': 'Poster Name',
               'image': 'https://example.com/poster.webp',
               'width': 180,
-              'actions': <Object?>[<String, Object?>{'id': 'open', 'title': 'Open', 'icon': 'open'}],
+              'actions': <Object?>[
+                <String, Object?>{'id': 'open', 'title': 'Open', 'icon': 'open'}
+              ],
             },
             <String, Object?>{'label': 'invalid image', 'text': 'Text remains', 'image': 'file:///poster.png'},
             <String, Object?>{'label': 'bad entry'},
-            <String, Object?>{'label': 'too short', 'sparkline': <num>[1]},
+            <String, Object?>{
+              'label': 'too short',
+              'sparkline': <num>[1]
+            },
           ],
         },
       }, 0);
@@ -100,7 +108,14 @@ void main() {
           'title': 'New Issue',
           'fields': <Object?>[
             <String, Object?>{'id': 'title', 'type': 'text', 'placeholder': 'Summary'},
-            <String, Object?>{'id': 'team', 'type': 'dropdown', 'options': <Object?>['eng', <String, Object?>{'value': 'ops', 'label': 'Operations'}]},
+            <String, Object?>{
+              'id': 'team',
+              'type': 'dropdown',
+              'options': <Object?>[
+                'eng',
+                <String, Object?>{'value': 'ops', 'label': 'Operations'}
+              ]
+            },
             <String, Object?>{'id': 'urgent', 'type': 'checkbox', 'label': 'Urgent', 'value': true},
             <String, Object?>{'id': 'weird', 'type': 'teleport'},
             <String, Object?>{'type': 'text'}, // no id → dropped
@@ -163,7 +178,7 @@ void main() {
       expect(frame.placeholder, isNull);
     });
 
-    test('detail.wide drives wantsWideWindow, like preview does', () {
+    test('nested and root wide values drive wantsWideWindow', () {
       final PluginRenderFrame wide = PluginRenderFrame.fromJson(<String, dynamic>{
         'type': 'render',
         'view': 'detail',
@@ -180,7 +195,16 @@ void main() {
       expect(narrow.detailWide, isFalse);
       expect(narrow.wantsWideWindow, isFalse);
 
-      // wide only counts for detail view; a list frame ignores it.
+      // Root-level wide works even without a detail or preview payload.
+      final PluginRenderFrame rootWide = PluginRenderFrame.fromJson(<String, dynamic>{
+        'type': 'render',
+        'view': 'detail',
+        'wide': true,
+      });
+      expect(rootWide.wide, isTrue);
+      expect(rootWide.wantsWideWindow, isTrue);
+
+      // `detail.wide` only counts for detail view; a list frame ignores it.
       final PluginRenderFrame list = PluginRenderFrame.fromJson(<String, dynamic>{
         'type': 'render',
         'view': 'list',

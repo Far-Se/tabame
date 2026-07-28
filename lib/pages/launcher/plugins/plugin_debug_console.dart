@@ -87,7 +87,8 @@ class _PluginDebugConsoleState extends State<PluginDebugConsole> {
                         ),
                         child: Text(
                           'DEV',
-                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Design.accent, letterSpacing: 0.6),
+                          style: TextStyle(
+                              fontSize: 9, fontWeight: FontWeight.w700, color: Design.accent, letterSpacing: 0.6),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -96,7 +97,8 @@ class _PluginDebugConsoleState extends State<PluginDebugConsole> {
                             ? Text('${widget.pluginId} — waiting for output',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 10.5, fontFamily: 'Consolas', color: Design.text.withAlpha(120)))
+                                style: TextStyle(
+                                    fontSize: 10.5, fontFamily: 'Consolas', color: Design.text.withAlpha(120)))
                             : Text.rich(
                                 TextSpan(children: <InlineSpan>[
                                   TextSpan(
@@ -112,7 +114,8 @@ class _PluginDebugConsoleState extends State<PluginDebugConsole> {
                       ),
                       const SizedBox(width: 6),
                       Text('${entries.length}',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Design.text.withAlpha(110))),
+                          style:
+                              TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Design.text.withAlpha(110))),
                       const SizedBox(width: 4),
                       if (_expanded)
                         GestureDetector(
@@ -130,32 +133,34 @@ class _PluginDebugConsoleState extends State<PluginDebugConsole> {
                 ),
               ),
               if (_expanded)
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 130),
-                  child: ListView.builder(
-                    // Newest at the visual bottom; reverse pins the scroll there
-                    // so the log follows live output until the user scrolls up.
-                    reverse: true,
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
-                    itemCount: entries.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final PluginDebugEntry entry = entries[entries.length - 1 - index];
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text.rich(
-                          TextSpan(children: <InlineSpan>[
-                            TextSpan(text: '${entry.timestamp} ', style: TextStyle(color: Design.text.withAlpha(90))),
-                            TextSpan(
-                              text: '${_kindLabel(entry.kind).padRight(6)} ',
-                              style: TextStyle(fontWeight: FontWeight.w700, color: _kindColor(entry.kind)),
-                            ),
-                            TextSpan(text: entry.message, style: TextStyle(color: Design.text.withAlpha(190))),
-                          ]),
-                          style: const TextStyle(fontSize: 10.5, fontFamily: 'Consolas', height: 1.35),
-                        ),
-                      );
-                    },
+                SelectionArea(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 130),
+                    child: ListView.builder(
+                      // Newest at the visual bottom; reverse pins the scroll there
+                      // so the log follows live output until the user scrolls up.
+                      reverse: true,
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                      itemCount: entries.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final PluginDebugEntry entry = entries[entries.length - 1 - index];
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text.rich(
+                            TextSpan(children: <InlineSpan>[
+                              TextSpan(text: '${entry.timestamp} ', style: TextStyle(color: Design.text.withAlpha(90))),
+                              TextSpan(
+                                text: '${_kindLabel(entry.kind).padRight(6)} ',
+                                style: TextStyle(fontWeight: FontWeight.w700, color: _kindColor(entry.kind)),
+                              ),
+                              TextSpan(text: entry.message, style: TextStyle(color: Design.text.withAlpha(190))),
+                            ]),
+                            style: const TextStyle(fontSize: 10.5, fontFamily: 'Consolas', height: 1.35),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
             ],

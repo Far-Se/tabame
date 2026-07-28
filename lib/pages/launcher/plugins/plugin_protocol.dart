@@ -607,6 +607,7 @@ class PluginRenderFrame {
     required this.detailMarkdown,
     this.detailMetadata = const <PluginMetadataEntry>[],
     this.detailWide = false,
+    this.wide = false,
     required this.previewEnabled,
     this.previewWide = true,
     required this.loading,
@@ -662,6 +663,10 @@ class PluginRenderFrame {
   /// long-form markdown gets room to breathe. From `detail.wide`.
   final bool detailWide;
 
+  /// Widen the launcher window for this frame. From the root-level `wide`
+  /// property, independent of the selected view.
+  final bool wide;
+
   /// Whether the split preview pane is shown (list/grid views only).
   final bool previewEnabled;
 
@@ -716,6 +721,7 @@ class PluginRenderFrame {
       detailMarkdown: '${previousMarkdown ?? detailMarkdown ?? ''}$detailAppend',
       detailMetadata: detailMetadata,
       detailWide: detailWide,
+      wide: wide,
       previewEnabled: previewEnabled,
       previewWide: previewWide,
       loading: loading,
@@ -737,9 +743,12 @@ class PluginRenderFrame {
   }
 
   /// Whether this frame asks for the widened launcher window: a split preview
-  /// pane that opted into widening, or a detail/chat view marked `wide`.
+  /// pane that opted into widening, a detail/chat view marked `wide`, or a
+  /// root-level `wide: true`.
   bool get wantsWideWindow =>
-      (hasPreview && previewWide) || ((view == PluginViewType.detail || view == PluginViewType.chat) && detailWide);
+      wide ||
+      (hasPreview && previewWide) ||
+      ((view == PluginViewType.detail || view == PluginViewType.chat) && detailWide);
 
   static PluginRenderFrame errorFrame(String message) => PluginRenderFrame(
         view: PluginViewType.detail,
@@ -863,6 +872,7 @@ class PluginRenderFrame {
       detailMarkdown: detailMarkdown,
       detailMetadata: detailMetadata,
       detailWide: detailWide,
+      wide: json['wide'] == true,
       previewEnabled: previewEnabled,
       previewWide: previewWide,
       loading: loading,

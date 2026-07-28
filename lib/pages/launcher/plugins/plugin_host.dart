@@ -57,6 +57,11 @@ class LauncherPluginHost {
   /// `rev` are dropped, mirroring the launcher's own staleness guard.
   int _rev = 0;
   bool _closing = false;
+  bool _installingDependencies = false;
+
+  /// Reserved host action used by the missing-dependencies empty state. It is
+  /// never forwarded to a plugin process.
+  static const String _installDependenciesAction = 'tabame.installDependencies';
 
   /// Activation generation. Bumped on every activate/deactivate so stdout
   /// lines from a superseded (background-finishing) process can be told apart
@@ -97,13 +102,14 @@ class LauncherPluginHost {
     _backgroundGrace = null;
     final int generation = ++_generation;
 
-    // Install the plugin's dependencies before the first launch (pip for Python,
-    // npm/bun for Node). This can block on the network, so it runs before the
-    // process starts and shows a spinner meanwhile. If the user leaves the plugin
-    // while it runs, bail out.
-    final bool depsReady = await _ensureDependencies(manifest);
-    if (!depsReady) return;
-    if (_active?.id != manifest.id || _closing) return;
+    // Do not begin a potentially slow network install merely because the user
+    // typed this plugin's keyword. Instead, make the missing packages explicit
+    // and let them opt into the install action below.
+    final List<String>? missingDependencies = _missingDependencies(manifest);
+    if (missingDependencies != null) {
+      _showMissingDependencies(manifest, missingDependencies);
+      return;
+    }
 
     try {
       final Process process = await Process.start(
@@ -187,7 +193,7 @@ class LauncherPluginHost {
     return env;
   }
 
-  /// Ensures the plugin's dependencies are installed before launch, dispatching
+  /// Installs the plugin's dependencies after an explicit user request, dispatching
   /// by runtime: pip for Python, npm/bun for Node. Returns false only when an
   /// install was attempted and failed (an error frame is already shown).
   Future<bool> _ensureDependencies(PluginManifest manifest) async {
@@ -195,6 +201,104 @@ class LauncherPluginHost {
     if (runtime.contains('py')) return _ensurePythonDeps(manifest);
     if (runtime.contains('node') || runtime.contains('bun')) return _ensureNodeDeps(manifest);
     return true;
+  }
+
+  /// Returns the declared dependencies when installation is needed, or null
+  /// when the plugin is ready to launch. An empty list means a Node package
+  /// manifest needs installing but did not expose dependency names.
+  List<String>? _missingDependencies(PluginManifest manifest) {
+    final String runtime = manifest.runtime.toLowerCase();
+    if (runtime.contains('py')) return _missingPythonDependencies(manifest);
+    if (runtime.contains('node') || runtime.contains('bun')) return _missingNodeDependencies(manifest);
+    return null;
+  }
+
+  List<String>? _missingNodeDependencies(PluginManifest manifest) {
+    final String sep = Platform.pathSeparator;
+    final File packageJson = File('${manifest.directory}${sep}package.json');
+    if (!packageJson.existsSync()) return null;
+
+    final String signature = packageJson.readAsStringSync();
+    final Directory modules = Directory('${manifest.directory}${sep}node_modules');
+    final File marker = File('${modules.path}$sep.tabame-install');
+    if (modules.existsSync() && marker.existsSync() && marker.readAsStringSync() == signature) return null;
+
+    try {
+      final Object? decoded = jsonDecode(signature);
+      if (decoded is Map) {
+        final List<String> packages = <String>[];
+        for (final String key in <String>['dependencies', 'devDependencies']) {
+          final Object? entries = decoded[key];
+          if (entries is Map) {
+            entries.forEach((Object? name, Object? version) {
+              if (name is String) packages.add(version is String ? '$name ($version)' : name);
+            });
+          }
+        }
+        return packages;
+      }
+    } catch (_) {
+      // Let the package manager surface malformed package.json details if the
+      // user chooses to install.
+    }
+    return const <String>[];
+  }
+
+  List<String>? _missingPythonDependencies(PluginManifest manifest) {
+    final File reqFile = File('${manifest.directory}${Platform.pathSeparator}requirements.txt');
+    final bool hasReqFile = reqFile.existsSync();
+    if (!hasReqFile && manifest.pip.isEmpty) return null;
+
+    final String signature = <String>[
+      manifest.pip.join('\u0001'),
+      if (hasReqFile) reqFile.readAsStringSync(),
+    ].join('\u0002');
+    final Directory libs = Directory(_libsDir(manifest));
+    final File marker = File('${libs.path}${Platform.pathSeparator}.tabame-install');
+    if (libs.existsSync() && marker.existsSync() && marker.readAsStringSync() == signature) return null;
+
+    final List<String> packages = <String>[...manifest.pip];
+    if (hasReqFile) {
+      packages.addAll(reqFile
+          .readAsLinesSync()
+          .map((String line) => line.trim())
+          .where((String line) => line.isNotEmpty && !line.startsWith('#')));
+    }
+    return packages;
+  }
+
+  void _showMissingDependencies(PluginManifest manifest, List<String> dependencies) {
+    final String dependencyList = dependencies.isEmpty ? 'Declared in package.json.' : dependencies.join('\n');
+    onFrame(PluginRenderFrame(
+      view: PluginViewType.list,
+      items: const <PluginItem>[],
+      gridColumns: 4,
+      gridAspectRatio: 1.0,
+      detailMarkdown: null,
+      previewEnabled: false,
+      loading: false,
+      emptyText: '',
+      rev: 0,
+      empty: PluginEmptyState(
+        icon: 'extension',
+        title: 'Dependencies required for "${manifest.name}"',
+        hint: 'This plugin needs:\n$dependencyList',
+        action: const PluginAction(id: _installDependenciesAction, title: 'Install dependencies', icon: 'download'),
+      ),
+    ));
+  }
+
+  Future<void> _installDependenciesAndActivate(PluginManifest manifest) async {
+    if (_installingDependencies || _active?.id != manifest.id || _closing) return;
+    _installingDependencies = true;
+    try {
+      final bool installed = await _ensureDependencies(manifest);
+      if (installed && _active?.id == manifest.id && !_closing) {
+        await activate(manifest, initialQuery: _lastQuery);
+      }
+    } finally {
+      _installingDependencies = false;
+    }
   }
 
   /// Runs `npm install` (or `bun install`) in a Node/Bun plugin's folder when it
@@ -322,6 +426,7 @@ class LauncherPluginHost {
         if (path.contains('/__pycache__/') ||
             path.contains('/node_modules/') ||
             path.contains('/.pluginlibs/') ||
+            path.contains('/.cache/') ||
             path.contains('/.git/')) {
           return;
         }
@@ -371,6 +476,11 @@ class LauncherPluginHost {
 
   /// Triggers an action for an item — `default` on Enter, or a Ctrl+K action id.
   void sendAction(String id, String action) {
+    if (action == _installDependenciesAction && _process == null) {
+      final PluginManifest? manifest = _active;
+      if (manifest != null) unawaited(_installDependenciesAndActivate(manifest));
+      return;
+    }
     _send(<String, Object?>{'type': 'action', 'id': id, 'action': action});
   }
 

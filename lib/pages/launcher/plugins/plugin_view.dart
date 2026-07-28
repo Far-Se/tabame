@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:image/image.dart' as image;
 import 'package:markdown_widget/markdown_widget.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
@@ -739,7 +741,7 @@ class _PluginViewState extends State<PluginView> {
   /// Renders a markdown image from a `file://` path or http(s) URL, with SVG
   /// support via flutter_svg. Rasters render at intrinsic size, capped at the
   /// pane width and [maxImageWidth]; SVGs scale to fill that width. Clicking
-  /// opens the image full-size in a lightbox overlay.
+  /// or right-clicking opens an image action menu.
   Widget _markdownImage(String url, double maxImageWidth) {
     final String value = url.trim();
     final Widget broken = Icon(Icons.broken_image_rounded, size: 16, color: Design.text.withAlpha(90));
@@ -773,11 +775,70 @@ class _PluginViewState extends State<PluginView> {
       return MouseRegion(
         cursor: SystemMouseCursors.zoomIn,
         child: GestureDetector(
-          onTap: () => _openImageLightbox(context, value, isSvg: isSvg),
+          onTapDown: (TapDownDetails details) => _showImageMenu(
+            context,
+            details.globalPosition,
+            value,
+            isSvg: isSvg,
+          ),
+          onSecondaryTapDown: (TapDownDetails details) => _showImageMenu(
+            context,
+            details.globalPosition,
+            value,
+            isSvg: isSvg,
+          ),
           child: image,
         ),
       );
     });
+  }
+
+  /// Shows the image's primary actions at the pointer, for both normal and
+  /// secondary clicks. Copying produces a Windows-native bitmap for raster
+  /// images; SVGs retain their useful source URL on the clipboard.
+  Future<void> _showImageMenu(BuildContext context, Offset globalPosition, String url, {required bool isSvg}) async {
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
+    final String? action = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(globalPosition.dx, globalPosition.dy, 0, 0),
+        Offset.zero & overlay.size,
+      ),
+      items: const <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(value: 'open', child: Text('Open image')),
+        PopupMenuItem<String>(value: 'copy', child: Text('Copy image')),
+      ],
+    );
+    if (!mounted || action == null) return;
+    if (action == 'open') {
+      _openImageLightbox(context, url, isSvg: isSvg);
+    } else if (action == 'copy') {
+      await _copyMarkdownImage(url, isSvg: isSvg);
+    }
+  }
+
+  Future<void> _copyMarkdownImage(String url, {required bool isSvg}) async {
+    if (isSvg) {
+      await Clipboard.setData(ClipboardData(text: url));
+      return;
+    }
+    try {
+      final List<int> bytes;
+      if (url.startsWith('file://')) {
+        bytes = await File(Uri.parse(url).toFilePath(windows: true)).readAsBytes();
+      } else {
+        final HttpClientRequest request = await HttpClient().getUrl(Uri.parse(url));
+        final HttpClientResponse response = await request.close();
+        if (response.statusCode != HttpStatus.ok) throw HttpException('Unable to load image', uri: Uri.parse(url));
+        bytes = await response.fold<List<int>>(<int>[], (List<int> data, List<int> chunk) => data..addAll(chunk));
+      }
+      final image.Image? decoded = image.decodeImage(Uint8List.fromList(bytes));
+      if (decoded == null) throw const FormatException('Unsupported image format');
+      await ClipboardExtended.copyImage(Uint8List.fromList(image.encodeBmp(decoded)));
+    } catch (_) {
+      // Preserve a useful result when an image cannot be decoded or fetched.
+      await Clipboard.setData(ClipboardData(text: url));
+    }
   }
 
   /// Shows [url] full-size over a dimmed backdrop: pinch/scroll to zoom, and

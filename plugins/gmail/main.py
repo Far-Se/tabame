@@ -196,7 +196,47 @@ def get_service():
     creds = load_credentials()
     if not creds:
         return None
-    return build("gmail", "v1", credentials=creds, cache_discovery=False)
+
+    # google-api-python-client normally builds the Gmail client from a
+    # discovery JSON file bundled *inside* the package (no network needed).
+    # If that file is missing from this install (incomplete/stripped
+    # install, portable-Python bundle missing package data, AV quarantine,
+    # etc.) build() fails with an unhelpful
+    # "UnknownApiNameOrVersion: name: gmail version: v1" that hides the
+    # real cause. Try the normal (offline) path first, log exactly what
+    # went wrong if it fails, then fall back to fetching the discovery doc
+    # live over the network, which works even when the bundled file is gone.
+    try:
+        return build("gmail", "v1", credentials=creds, cache_discovery=False)
+    except Exception as e:
+        log(f"get_service: static discovery build failed ({type(e).__name__}): {e}")
+        try:
+            from googleapiclient.discovery_cache import DISCOVERY_DOC_DIR
+
+            doc_path = os.path.join(DISCOVERY_DOC_DIR, "gmail.v1.json")
+            log(
+                "get_service: expected bundled discovery doc at",
+                doc_path,
+                "- exists:",
+                os.path.exists(doc_path),
+            )
+        except Exception as e2:
+            log("get_service: could not inspect discovery_cache dir:", e2)
+
+        log("get_service: retrying with a live (network) discovery fetch")
+        try:
+            return build(
+                "gmail",
+                "v1",
+                credentials=creds,
+                cache_discovery=False,
+                static_discovery=False,
+            )
+        except Exception as e3:
+            log(
+                f"get_service: network discovery fetch also failed ({type(e3).__name__}): {e3}"
+            )
+            raise
 
 
 def run_oauth_flow():
@@ -616,7 +656,6 @@ def render_setup_help(rev):
             "detail": {
                 "markdown": (
                     "# Set up Gmail\n\n"
-                    "Press Ctrl+K and read README.md for a full tutorial.\n"
                     "1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), "
                     "create a project and enable the **Gmail API**.\n"
                     "2. Create an **OAuth Client ID** of type **Desktop app**.\n"
@@ -1091,6 +1130,18 @@ def main():
             with _state_lock:
                 _state["rev"] = rev
                 _state["text"] = text
+            if t == "init":
+                # `init` never carries a `rev`, so it defaults to 0 — which
+                # both Tabame and our own is_stale() always accept, no
+                # matter how long it takes to answer. `init` is always
+                # immediately followed by a `query` with the same text and
+                # a real rev (see protocol docs), so triggering a second,
+                # un-cancelable fetch here would just be a slow background
+                # job that can silently clobber a screen the user has since
+                # navigated to (e.g. an open email) once it finally
+                # finishes. Let the guaranteed follow-up `query` do the
+                # actual fetch instead.
+                continue
             threading.Thread(
                 target=render_messages, args=(rev, text), daemon=True
             ).start()
