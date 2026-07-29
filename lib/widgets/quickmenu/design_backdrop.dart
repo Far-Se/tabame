@@ -14,7 +14,7 @@ class DesignBackdrop extends StatelessWidget {
     return ValueListenableBuilder<bool>(
         valueListenable: Globals.themeChangeNotifier,
         builder: (_, bool refreshed, __) {
-          final String activePath = user.activeBackdropPath;
+          final String activePath = Design.backdropPath;
           if (activePath.isEmpty) return const SizedBox.shrink();
 
           final bool isAsset = activePath.startsWith('resources/');

@@ -1,7 +1,7 @@
 part of '../launcher_design_builder.dart';
 
 BoxDecoration techLauncherOuterDecoration(Color surface, Color accent) => BoxDecoration(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(Design.borderRadius),
       color: surface.withAlpha(246),
       border: Border.all(color: accent.withAlpha(48)),
       boxShadow: <BoxShadow>[
@@ -34,11 +34,11 @@ class TechLauncherFrame extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 360),
         decoration: techLauncherOuterDecoration(surface, accent),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           child: Stack(
             children: <Widget>[
               Positioned.fill(child: ColoredBox(color: surface.withAlpha(246))),
-              if (Design.backdropLauncher) const Positioned.fill(child: StableBackdrop()),
+              if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(painter: _TechLauncherDotPainter(accent.withAlpha(isDark ? 22 : 14))),

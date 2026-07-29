@@ -5,7 +5,7 @@ BoxDecoration mangaLauncherOuterDecoration(Color surface, Color accent) {
       ? const Color(0xFFF2EFE8)
       : const Color(0xFF181719);
   return BoxDecoration(
-    borderRadius: BorderRadius.circular(14),
+    borderRadius: BorderRadius.circular(Design.borderRadius),
     color: surface,
     border: Border.all(color: ink.withAlpha(230), width: 2.2),
     boxShadow: <BoxShadow>[BoxShadow(color: Colors.black.withAlpha(105), blurRadius: 0, offset: const Offset(6, 6))],
@@ -34,10 +34,10 @@ class MangaLauncherFrame extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 360),
         decoration: mangaLauncherOuterDecoration(surface, accent),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           child: Stack(children: <Widget>[
             Positioned.fill(child: ColoredBox(color: surface.withAlpha(250))),
-            if (Design.backdropLauncher) const Positioned.fill(child: StableBackdrop()),
+            if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
             Positioned.fill(
                 child: IgnorePointer(
                     child: CustomPaint(

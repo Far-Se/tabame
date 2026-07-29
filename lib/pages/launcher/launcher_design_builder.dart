@@ -7,7 +7,6 @@ import 'package:window_manager/window_manager.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
-import '../../models/util/theme_colors.dart';
 import '../quickmenu_designs/design_backdrop_stable.dart';
 import 'launcher_design.dart';
 
@@ -44,7 +43,7 @@ extension LauncherDesignBuilder on LauncherDesign {
     switch (this) {
       case LauncherDesign.classic:
         return BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -66,7 +65,7 @@ extension LauncherDesignBuilder on LauncherDesign {
 
       case LauncherDesign.serene:
         return BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           color: surface.withAlpha(230),
           border: Border.all(color: Colors.white.withAlpha(18)),
           boxShadow: <BoxShadow>[
@@ -86,7 +85,7 @@ extension LauncherDesignBuilder on LauncherDesign {
 
       case LauncherDesign.command:
         return BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           color: surface.withAlpha(244),
           border: Border.all(color: accent.withAlpha(56)),
           boxShadow: <BoxShadow>[
@@ -103,7 +102,7 @@ extension LauncherDesignBuilder on LauncherDesign {
         // Console screen — [surface] is the forced terminal palette background
         // (light or dark) supplied by the launcher theme.
         return BoxDecoration(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           color: surface,
           border: Border.all(color: accent.withAlpha(60)),
           boxShadow: <BoxShadow>[
@@ -119,7 +118,7 @@ extension LauncherDesignBuilder on LauncherDesign {
       case LauncherDesign.zen:
         // Soft "dawn" wash over the forced sage surface; big, diffuse shadow.
         return BoxDecoration(
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -143,7 +142,7 @@ extension LauncherDesignBuilder on LauncherDesign {
         // Just the floating-glass shadow + accent refraction glow; the glassy
         // fill, border and specular highlights live inside [GlassLauncherFrame].
         return BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           boxShadow: <BoxShadow>[
             BoxShadow(
               color: accent.withAlpha(100),
@@ -164,7 +163,7 @@ extension LauncherDesignBuilder on LauncherDesign {
         // Drafting sheet — [surface] is the forced blueprint palette. Sharp
         // corners, a crisp ink edge, and a flat paper shadow (no glow).
         return BoxDecoration(
-          borderRadius: BorderRadius.circular(3),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           color: surface,
           border: Border.all(color: accent.withAlpha(110)),
           boxShadow: <BoxShadow>[
@@ -181,7 +180,7 @@ extension LauncherDesignBuilder on LauncherDesign {
         // Station sign — [surface] is the forced signage palette. Soft signage
         // rounding, an enamel-plate edge, and a flat drop shadow.
         return BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           color: surface,
           border: Border.all(color: accent.withAlpha(120), width: 1.4),
           boxShadow: <BoxShadow>[
@@ -200,7 +199,7 @@ extension LauncherDesignBuilder on LauncherDesign {
         // every flyout.
         final bool fluentDark = surface.computeLuminance() < 0.5;
         return BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           color: surface,
           border: Border.all(color: fluentDark ? Colors.white.withAlpha(24) : Colors.black.withAlpha(20)),
           boxShadow: <BoxShadow>[
@@ -215,6 +214,7 @@ extension LauncherDesignBuilder on LauncherDesign {
 
       case LauncherDesign.manifesto:
         return BoxDecoration(
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           color: surface,
           border: Border.all(color: ManifestoTokens.fg(surface.computeLuminance() < 0.5), width: 2),
           boxShadow: <BoxShadow>[
@@ -230,7 +230,7 @@ extension LauncherDesignBuilder on LauncherDesign {
         // Guidance scope — [surface] is the forced HUD palette. A thin
         // phosphor edge, a deep instrument shadow, no glow.
         return BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           color: surface,
           border: Border.all(color: accent.withAlpha(70)),
           boxShadow: <BoxShadow>[
@@ -244,7 +244,7 @@ extension LauncherDesignBuilder on LauncherDesign {
         );
       case LauncherDesign.anime:
         return BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           color: surface.withAlpha(245),
           border: Border.all(color: accent.withAlpha(65)),
           boxShadow: <BoxShadow>[

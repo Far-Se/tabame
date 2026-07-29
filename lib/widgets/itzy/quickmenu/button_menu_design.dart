@@ -18,7 +18,6 @@ import '../../widgets/color_picker.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/font_picker/models/picker_font.dart';
 import '../../widgets/font_picker/ui/font_picker.dart';
-import '../../widgets/mini_switch.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 import '../../widgets/panel_opacity_gradient_editor.dart';
@@ -45,6 +44,11 @@ enum _QuickMenuPaletteMode {
   dark,
 }
 
+enum _DesignTarget {
+  quickMenu,
+  launcher,
+}
+
 class _QuickMenuDesignPanel extends StatefulWidget {
   const _QuickMenuDesignPanel();
 
@@ -54,6 +58,7 @@ class _QuickMenuDesignPanel extends StatefulWidget {
 
 class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   late _QuickMenuPaletteMode _paletteMode;
+  late _DesignTarget _designTarget;
   late final List<Map<ColorSwatch<Object>, String>> _lightPresets;
   late final List<Map<ColorSwatch<Object>, String>> _darkPresets;
   final ScrollController _quickMenuDesignScrollController = ScrollController();
@@ -75,6 +80,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   void initState() {
     super.initState();
 
+    _designTarget = Globals.quickMenuPage == QuickMenuPage.launcher ? _DesignTarget.launcher : _DesignTarget.quickMenu;
     _paletteMode = user.themeTypeMode == ThemeType.dark ? _QuickMenuPaletteMode.dark : _QuickMenuPaletteMode.light;
     _lightPresets = <Map<ColorSwatch<Object>, String>>[
       getPredefinedColorSet(lightThemeOptions, 0, maximum: 24),
@@ -87,8 +93,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
       getPredefinedColorSet(darkThemeOptions, 2, maximum: 24),
     ];
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _centerSelectedDesign(isQuickMenu: true);
-      _centerSelectedDesign(isQuickMenu: false);
+      _centerSelectedDesign(isQuickMenu: _designTarget == _DesignTarget.quickMenu);
     });
   }
 
@@ -127,6 +132,9 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   }
 
   ThemeColors get _selectedTheme {
+    if (_designTarget == _DesignTarget.launcher) {
+      return _paletteMode == _QuickMenuPaletteMode.dark ? user.launcherDarkTheme : user.launcherLightTheme;
+    }
     return _paletteMode == _QuickMenuPaletteMode.dark ? user.darkTheme : user.lightTheme;
   }
 
@@ -138,21 +146,63 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     return _paletteMode == _QuickMenuPaletteMode.dark ? darkThemeOptions : lightThemeOptions;
   }
 
-  Future<void> _persistThemeChanges() async {
-    await Boxes.saveActiveQuickMenuThemes(notify: true);
+  Future<void> _persistThemeChanges({bool customizeLauncherAppearance = true}) async {
+    if (_designTarget == _DesignTarget.launcher) {
+      if (customizeLauncherAppearance) {
+        if (_paletteMode == _QuickMenuPaletteMode.dark) {
+          user.launcherDarkThemeCustomized = true;
+        } else {
+          user.launcherLightThemeCustomized = true;
+        }
+      }
+      await Boxes.saveLauncherDesignSettings(notify: true);
+    } else {
+      await Boxes.saveActiveQuickMenuThemes(notify: true);
+    }
+    await QuickMenuFunctions.refreshQuickMenu();
     if (!mounted) return;
     setState(() {});
   }
 
-  Future<void> _updateTheme(VoidCallback updater) async {
+  Future<void> _updateTheme(
+    VoidCallback updater, {
+    bool customizeLauncherAppearance = true,
+  }) async {
     setState(updater);
-    await _persistThemeChanges();
+    await _persistThemeChanges(customizeLauncherAppearance: customizeLauncherAppearance);
   }
 
   Future<void> _switchDesign(QuickMenuDesigns design) async {
     await Boxes.switchQuickMenuDesign(design);
     if (!mounted) return;
     setState(() {});
+  }
+
+  void _syncSelectedBackdrop({String? selectedPath}) {
+    if (_designTarget == _DesignTarget.quickMenu) {
+      QuickMenuFunctions.syncSelectedBackdrop(selectedPath: selectedPath);
+      return;
+    }
+
+    final ThemeColors theme = _selectedTheme;
+    if (theme.backdropType.isEmpty) {
+      theme.backdropPath = '';
+      return;
+    }
+
+    String nextPath = selectedPath ?? theme.backdropPath;
+    if (theme.backdropType == 'builtIn') {
+      if (!nextPath.startsWith('resources/gradient/')) {
+        nextPath = QuickMenuFunctions.defaultBackdropPath;
+      }
+    } else if (theme.backdropType == 'custom') {
+      if (!theme.backdropImages.contains(nextPath)) {
+        nextPath = theme.backdropImages.isEmpty ? '' : theme.backdropImages.first;
+      }
+    } else {
+      nextPath = '';
+    }
+    theme.backdropPath = nextPath;
   }
 
   Future<void> _addBackdropImages() async {
@@ -212,7 +262,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     } finally {
       if (mounted) {
         if (changed) {
-          QuickMenuFunctions.syncSelectedBackdrop();
+          _syncSelectedBackdrop();
           await _persistThemeChanges();
         }
         setState(() {
@@ -224,12 +274,12 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   }
 
   Future<void> _selectBuiltInGradient(int index) async {
-    QuickMenuFunctions.syncSelectedBackdrop(selectedPath: 'resources/gradient/gradient$index.jpg');
+    _syncSelectedBackdrop(selectedPath: 'resources/gradient/gradient$index.jpg');
     await _persistThemeChanges();
   }
 
   int get _selectedGradientIndex {
-    final String path = user.activeBackdropPath;
+    final String path = _selectedTheme.backdropPath;
     final RegExp re = RegExp(r'gradient(\d+)\.jpg$');
     final Match? m = re.firstMatch(path);
     if (m == null) return -1;
@@ -237,6 +287,25 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   }
 
   Future<void> _resetCurrentPalette() async {
+    if (_designTarget == _DesignTarget.launcher) {
+      await _updateTheme(() {
+        final ThemeColors source = _paletteMode == _QuickMenuPaletteMode.dark ? user.darkTheme : user.lightTheme;
+        final ThemeColors copy = ThemeColors.fromMap(source.toMap());
+        if (_paletteMode == _QuickMenuPaletteMode.dark) {
+          user.launcherDarkTheme = copy;
+          user.launcherDarkThemeCustomized = false;
+          user.launcherDarkFontCustomized = false;
+        } else {
+          user.launcherLightTheme = copy;
+          user.launcherLightThemeCustomized = false;
+          user.launcherLightFontCustomized = false;
+        }
+        user.launcherUseCustomFont = false;
+        _syncSelectedBackdrop();
+      }, customizeLauncherAppearance: false);
+      return;
+    }
+
     final QMDesignThemeSet defaults =
         Settings.createDefaultQuickMenuDesignThemes()[user.currentQuickMenuDesign.displayName]!;
     await _updateTheme(() {
@@ -304,6 +373,14 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     }
   }
 
+  void _selectDesignTarget(_DesignTarget target) {
+    if (_designTarget == target) return;
+    setState(() => _designTarget = target);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _centerSelectedDesign(isQuickMenu: target == _DesignTarget.quickMenu);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
@@ -315,10 +392,11 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         PanelHeader(
-          title: "QuickMenu Design",
+          title: _designTarget == _DesignTarget.quickMenu ? "QuickMenu Design" : "Launcher Design",
           icon: Icons.dashboard_customize_outlined,
           buttonPressed: _resetCurrentPalette,
-          buttonTooltip: "Reset To Default Colors",
+          buttonTooltip:
+              _designTarget == _DesignTarget.quickMenu ? "Reset To Design Defaults" : "Use QuickMenu Defaults",
           buttonIcon: Icons.history,
           extraActions: <Widget>[
             CustomTooltip(
@@ -347,6 +425,8 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
             ),
           ],
         ),
+        _buildTargetTabs(accent, onSurface),
+        const SizedBox(height: 10),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             trackHeight: 2,
@@ -357,51 +437,123 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
             thumbColor: accent,
           ),
           child: Flexible(
-            child: SingleChildScrollView(
+            child: ListView(
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  _buildDesignsCard("QuickMenu", accent, onSurface),
+              children: <Widget>[
+                _buildDesignsCard(
+                  _designTarget == _DesignTarget.quickMenu ? "QuickMenu" : "Launcher",
+                  accent,
+                  onSurface,
+                ),
+                const SizedBox(height: 8),
+                ...List<Widget>.generate(_colorTitles.length, (int index) {
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: index == _colorTitles.length - 1 ? 0 : 8),
+                    child: _buildColorCard(accent, onSurface, index),
+                  );
+                }),
+                const SizedBox(height: 8),
+                _buildBorderRadiusCard(accent, onSurface),
+                const SizedBox(height: 8),
+                _buildFontPickerCard(accent, onSurface),
+                const SizedBox(height: 8),
+                _buildTransparencyGradientCard(accent, onSurface),
+                const SizedBox(height: 8),
+                _buildBackdropSourceCard(accent, onSurface),
+                const SizedBox(height: 8),
+                if (_selectedTheme.backdropType == 'builtIn') ...<Widget>[
+                  _buildBuiltInGradientPickerCard(accent, onSurface),
                   const SizedBox(height: 8),
-                  _buildDesignsCard("Launcher", accent, onSurface),
+                ],
+                if (_selectedTheme.backdropType == 'custom') ...<Widget>[
+                  _buildBackdropImagesCard(accent, onSurface),
                   const SizedBox(height: 8),
-                  ...List<Widget>.generate(_colorTitles.length, (int index) {
-                    return Padding(
-                      padding: EdgeInsets.only(bottom: index == _colorTitles.length - 1 ? 0 : 8),
-                      child: _buildColorCard(accent, onSurface, index),
-                    );
-                  }),
+                ],
+                if (_selectedTheme.backdropType.isNotEmpty) ...<Widget>[
+                  _buildBackdropOpacityCard(accent, onSurface),
                   const SizedBox(height: 8),
-                  _buildBorderRadiusCard(accent, onSurface),
-                  const SizedBox(height: 8),
-                  _buildFontPickerCard(accent, onSurface),
-                  const SizedBox(height: 8),
-                  _buildTransparencyGradientCard(accent, onSurface),
-                  const SizedBox(height: 8),
-                  _buildBackdropSourceCard(accent, onSurface),
-                  const SizedBox(height: 8),
-                  if (_selectedTheme.backdropType == 'builtIn') ...<Widget>[
-                    _buildBuiltInGradientPickerCard(accent, onSurface),
-                    const SizedBox(height: 8),
-                  ],
-                  if (_selectedTheme.backdropType == 'custom') ...<Widget>[
-                    _buildBackdropImagesCard(accent, onSurface),
-                    const SizedBox(height: 8),
-                  ],
-                  if (_selectedTheme.backdropType.isNotEmpty) ...<Widget>[
-                    _buildBackdropOpacityCard(accent, onSurface),
-                    const SizedBox(height: 8),
-                  ],
+                ],
+                if (_designTarget == _DesignTarget.quickMenu) ...<Widget>[
                   const SizedBox(height: 8),
                   _buildPanelTintCard(accent, onSurface),
                   const SizedBox(height: 8),
                 ],
-              ),
+              ],
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildTargetTabs(Color accent, Color onSurface) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: onSurface.withAlpha(18))),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: _buildTargetTab(
+              target: _DesignTarget.quickMenu,
+              label: "QuickMenu",
+              icon: Icons.dashboard_customize_outlined,
+              accent: accent,
+              onSurface: onSurface,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: _buildTargetTab(
+              target: _DesignTarget.launcher,
+              label: "Launcher",
+              icon: Icons.search_rounded,
+              accent: accent,
+              onSurface: onSurface,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTargetTab({
+    required _DesignTarget target,
+    required String label,
+    required IconData icon,
+    required Color accent,
+    required Color onSurface,
+  }) {
+    final bool selected = _designTarget == target;
+    return InkWell(
+      onTap: () => _selectDesignTarget(target),
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? accent.withAlpha(18) : onSurface.withAlpha(7),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: selected ? accent.withAlpha(80) : onSurface.withAlpha(18)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(icon, size: 14, color: selected ? accent : onSurface.withAlpha(130)),
+            const SizedBox(width: 6),
+            Text(
+              label.toUpperCase(),
+              style: TextStyle(
+                fontSize: Design.baseFontSize + 1,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+                color: selected ? accent : onSurface.withAlpha(180),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -484,6 +636,8 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                           } else {
                             await Boxes.pref.setInt("launcherDesign", index);
                             user.launcherDesign = LauncherDesign.values[index];
+                            Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                            await QuickMenuFunctions.refreshQuickMenu();
                             setState(() {});
                           }
                         },
@@ -533,7 +687,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      "Set the border radius for the QuickMenu.",
+                      "Set the border radius for the ${_designTarget == _DesignTarget.quickMenu ? "QuickMenu" : "Launcher"}.",
                       style: TextStyle(
                         fontSize: Design.baseFontSize + 0.5,
                         color: onSurface.withAlpha(150),
@@ -660,7 +814,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                   onPressed: (int index) async {
                     await _updateTheme(() {
                       _selectedTheme.backdropType = options.keys.elementAt(index);
-                      QuickMenuFunctions.syncSelectedBackdrop();
+                      _syncSelectedBackdrop();
                     });
                   },
                   borderRadius: BorderRadius.circular(8),
@@ -676,31 +830,6 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                       .toList(),
                 ),
               ),
-              const SizedBox(height: 6),
-              Material(
-                type: MaterialType.transparency,
-                child: ListTile(
-                  visualDensity: const VisualDensity(vertical: -4),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                  minTileHeight: 36, // optional
-                  title: Text("Use the backdrop on Launcher", style: TextStyle(fontSize: Design.baseFontSize)),
-                  onTap: () async {
-                    await _updateTheme(() {
-                      _selectedTheme.backdropLauncher = !_selectedTheme.backdropLauncher;
-                      QuickMenuFunctions.syncSelectedBackdrop();
-                    });
-                  },
-                  trailing: MiniToggleSwitch(
-                    value: _selectedTheme.backdropLauncher,
-                    onChanged: (bool value) async {
-                      await _updateTheme(() {
-                        _selectedTheme.backdropLauncher = !_selectedTheme.backdropLauncher;
-                        QuickMenuFunctions.syncSelectedBackdrop();
-                      });
-                    },
-                  ),
-                ),
-              )
             ],
           ),
         ],
@@ -838,7 +967,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           ),
           const SizedBox(height: 2),
           Text(
-            "Choose one custom image for the QuickMenu backdrop.",
+            "Choose one custom image for the ${_designTarget == _DesignTarget.quickMenu ? "QuickMenu" : "Launcher"} backdrop.",
             style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: onSurface.withAlpha(150)),
           ),
           const SizedBox(height: 10),
@@ -876,7 +1005,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
               itemCount: _selectedTheme.backdropImages.length,
               itemBuilder: (BuildContext context, int index) {
                 final String path = _selectedTheme.backdropImages[index];
-                final bool isActive = user.activeBackdropPath == path;
+                final bool isActive = _selectedTheme.backdropPath == path;
                 return Stack(
                   children: <Widget>[
                     Positioned.fill(
@@ -884,7 +1013,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                         onTap: isActive
                             ? null
                             : () async {
-                                QuickMenuFunctions.syncSelectedBackdrop(selectedPath: path);
+                                _syncSelectedBackdrop(selectedPath: path);
                                 await _persistThemeChanges();
                               },
                         child: ClipRRect(
@@ -930,7 +1059,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                         onTap: () async {
                           final String removedPath = _selectedTheme.backdropImages[index];
                           _selectedTheme.backdropImages.remove(removedPath);
-                          QuickMenuFunctions.syncSelectedBackdrop();
+                          _syncSelectedBackdrop();
                           await _updateTheme(() {});
                           if (File(removedPath).existsSync()) {
                             try {
@@ -1071,17 +1200,31 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            "Typography",
-            style: TextStyle(
-              fontSize: Design.baseFontSize + 2.5,
-              fontWeight: FontWeight.w700,
-              color: onSurface,
-            ),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  "Typography",
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize + 2.5,
+                    fontWeight: FontWeight.w700,
+                    color: onSurface,
+                  ),
+                ),
+              ),
+              if (_designTarget == _DesignTarget.launcher)
+                _buildMetaChip(
+                  label: user.launcherUseCustomFont ? "CUSTOM" : "DESIGN FONT",
+                  background: (user.launcherUseCustomFont ? accent : onSurface).withAlpha(18),
+                  foreground: user.launcherUseCustomFont ? accent : onSurface.withAlpha(170),
+                ),
+            ],
           ),
           const SizedBox(height: 2),
           Text(
-            "Custom fonts for general UI and data entries.",
+            _designTarget == _DesignTarget.launcher
+                ? "Choose launcher fonts, then decide whether they replace each design's built-in type."
+                : "Custom fonts for general UI and data entries.",
             style: TextStyle(
               fontSize: Design.baseFontSize + 0.5,
               color: onSurface.withAlpha(150),
@@ -1103,7 +1246,15 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                         _selectedTheme.uiFontFamily = font.fontFamily;
                         _selectedTheme.uiFontWeight = font.fontWeight.value;
                         _selectedTheme.uiFontItalic = font.fontStyle == FontStyle.italic;
-                      });
+                        if (_designTarget == _DesignTarget.launcher) {
+                          if (_paletteMode == _QuickMenuPaletteMode.dark) {
+                            user.launcherDarkFontCustomized = true;
+                          } else {
+                            user.launcherLightFontCustomized = true;
+                          }
+                          user.launcherUseCustomFont = true;
+                        }
+                      }, customizeLauncherAppearance: false);
                       Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                       QuickMenuFunctions.refreshQuickMenu();
                     },
@@ -1121,14 +1272,24 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                         _selectedTheme.entryFontFamily = font.fontFamily;
                         _selectedTheme.entryFontWeight = font.fontWeight.value;
                         _selectedTheme.entryFontItalic = font.fontStyle == FontStyle.italic;
-                      });
-                      baseEntryStyle = GoogleFonts.getFont(
-                        Design.entryFontFamily,
-                        fontSize: Design.baseFontSize + 2,
-                        color: Design.text,
-                        fontWeight: FontWeight(Design.entryFontWeight),
-                        fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
-                      );
+                        if (_designTarget == _DesignTarget.launcher) {
+                          if (_paletteMode == _QuickMenuPaletteMode.dark) {
+                            user.launcherDarkFontCustomized = true;
+                          } else {
+                            user.launcherLightFontCustomized = true;
+                          }
+                          user.launcherUseCustomFont = true;
+                        }
+                      }, customizeLauncherAppearance: false);
+                      if (_designTarget == _DesignTarget.quickMenu) {
+                        baseEntryStyle = GoogleFonts.getFont(
+                          Design.entryFontFamily,
+                          fontSize: Design.baseFontSize + 2,
+                          color: Design.text,
+                          fontWeight: FontWeight(Design.entryFontWeight),
+                          fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+                        );
+                      }
                       Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                       QuickMenuFunctions.refreshQuickMenu();
                     },
@@ -1137,46 +1298,10 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
-          InkWell(
-            onTap: () async {
-              await _updateTheme(() {
-                _selectedTheme.useUiFontForLauncher = !_selectedTheme.useUiFontForLauncher;
-              });
-              Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-            },
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              decoration: BoxDecoration(
-                color: _selectedTheme.useUiFontForLauncher ? accent.withAlpha(10) : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: <Widget>[
-                  Checkbox(
-                    value: _selectedTheme.useUiFontForLauncher,
-                    onChanged: (bool? value) async {
-                      await _updateTheme(() {
-                        _selectedTheme.useUiFontForLauncher = value ?? false;
-                      });
-                      Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-                    },
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Use this font for launcher too',
-                    style: TextStyle(
-                      fontSize: Design.baseFontSize + 0.5,
-                      fontWeight: FontWeight.w600,
-                      color: onSurface,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          if (_designTarget == _DesignTarget.launcher) ...<Widget>[
+            const SizedBox(height: 8),
+            _buildLauncherFontOverrideOption(accent, onSurface),
+          ],
           const SizedBox(height: 10),
           Row(
             children: <Widget>[
@@ -1224,6 +1349,71 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLauncherFontOverrideOption(Color accent, Color onSurface) {
+    final bool enabled = user.launcherUseCustomFont;
+
+    Future<void> updateOverride(bool value) async {
+      await _updateTheme(
+        () => user.launcherUseCustomFont = value,
+        customizeLauncherAppearance: false,
+      );
+    }
+
+    return InkWell(
+      onTap: () => updateOverride(!enabled),
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.fromLTRB(9, 7, 5, 7),
+        decoration: BoxDecoration(
+          color: enabled ? accent.withAlpha(10) : onSurface.withAlpha(5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: enabled ? accent.withAlpha(45) : onSurface.withAlpha(16)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(
+              enabled ? Icons.font_download_rounded : Icons.auto_fix_off_rounded,
+              size: 16,
+              color: enabled ? accent : onSurface.withAlpha(110),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    "Override Design Font",
+                    style: TextStyle(
+                      fontSize: Design.baseFontSize + 1,
+                      fontWeight: FontWeight.w700,
+                      color: onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    enabled
+                        ? "Use the launcher fonts selected above."
+                        : "Keep the font supplied by each launcher design.",
+                    style: TextStyle(
+                      fontSize: Design.baseFontSize,
+                      color: onSurface.withAlpha(145),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Checkbox(
+              value: enabled,
+              onChanged: (bool? value) => updateOverride(value ?? false),
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1390,7 +1580,9 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _colorDescriptions[index],
+                      index == 0
+                          ? "Primary surface behind the ${_designTarget == _DesignTarget.quickMenu ? "QuickMenu" : "Launcher"} content."
+                          : _colorDescriptions[index],
                       style: TextStyle(
                         fontSize: Design.baseFontSize + 0.5,
                         height: 1.25,
@@ -1503,7 +1695,7 @@ const List<String> _colorTitles = <String>[
 ];
 
 const List<String> _colorDescriptions = <String>[
-  "Primary surface behind the QuickMenu content.",
+  "",
   "Labels, titles, and general text color.",
   "Highlights, active states, and focus color.",
 ];

@@ -113,10 +113,10 @@ class CommandLauncherFrame extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 360),
         decoration: LauncherDesign.command.outerDecoration(surface: surface, accent: accent),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           child: Stack(
             children: <Widget>[
-              if (Design.backdropLauncher) const StableBackdrop(),
+              if (Design.hasBackdrop) const StableBackdrop(),
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[

@@ -1,7 +1,7 @@
 part of '../launcher_design_builder.dart';
 
 BoxDecoration vectorLauncherOuterDecoration(Color surface, Color accent) => BoxDecoration(
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(Design.borderRadius),
       color: surface.withAlpha(247),
       border: Border.all(
           color: ThemeData.estimateBrightnessForColor(surface) == Brightness.dark
@@ -35,10 +35,10 @@ class VectorLauncherFrame extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 360),
         decoration: vectorLauncherOuterDecoration(surface, accent),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           child: Stack(children: <Widget>[
             Positioned.fill(child: ColoredBox(color: surface.withAlpha(247))),
-            if (Design.backdropLauncher) const Positioned.fill(child: StableBackdrop()),
+            if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
             Positioned.fill(
                 child: IgnorePointer(
                     child: CustomPaint(painter: _VectorLauncherScanPainter(onSurface.withAlpha(isDark ? 12 : 9))))),

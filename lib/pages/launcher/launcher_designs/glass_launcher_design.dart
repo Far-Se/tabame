@@ -96,7 +96,7 @@ class GlassLauncherFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final bool hasBackdrop = Design.backdropType.isNotEmpty && user.activeBackdropPath.isNotEmpty;
+    final bool hasBackdrop = Design.hasBackdrop;
     final Color baseFill = surface.withAlpha(hasBackdrop ? (isDark ? 150 : 170) : (isDark ? 188 : 212));
 
     return LauncherTheme(
@@ -106,12 +106,12 @@ class GlassLauncherFrame extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 360),
         decoration: LauncherDesign.glass.outerDecoration(surface: surface, accent: accent),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           child: BackdropFilter(
             filter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(Design.borderRadius),
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -125,7 +125,7 @@ class GlassLauncherFrame extends StatelessWidget {
               ),
               child: Stack(
                 children: <Widget>[
-                  if (Design.backdropLauncher) const StableBackdrop(),
+                  if (Design.hasBackdrop) const StableBackdrop(),
                   // Accent refraction glow drifting from the bottom-right.
                   Positioned.fill(
                     child: IgnorePointer(

@@ -139,10 +139,10 @@ class BlueprintLauncherFrame extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 360),
         decoration: LauncherDesign.blueprint.outerDecoration(surface: surface, accent: accent),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(3),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           child: Stack(
             children: <Widget>[
-              if (Design.backdropLauncher) const StableBackdrop(),
+              if (Design.hasBackdrop) const StableBackdrop(),
               // Grid paper + inner sheet border + corner registration marks.
               Positioned.fill(
                 child: IgnorePointer(

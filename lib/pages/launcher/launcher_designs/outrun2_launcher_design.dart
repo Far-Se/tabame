@@ -1,6 +1,7 @@
 part of '../launcher_design_builder.dart';
 
 BoxDecoration outrun2LauncherOuterDecoration(Color surface, Color accent) => BoxDecoration(
+      borderRadius: BorderRadius.circular(Design.borderRadius),
       color: surface,
       border: Border.all(color: accent, width: 1.2),
       boxShadow: <BoxShadow>[
@@ -31,83 +32,91 @@ class Outrun2LauncherFrame extends StatelessWidget {
       child: Container(
         constraints: const BoxConstraints(minHeight: 360),
         decoration: outrun2LauncherOuterDecoration(surface, accent),
-        child: Stack(children: <Widget>[
-          Positioned.fill(child: ColoredBox(color: surface.withAlpha(250))),
-          if (Design.backdropLauncher) const Positioned.fill(child: StableBackdrop()),
-          Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: 110,
-              child: DecoratedBox(
-                  decoration: BoxDecoration(
-                      gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[
-                const Color(0xFFFF00AA).withAlpha(isDark ? 76 : 52),
-                const Color(0xFFFF7700).withAlpha(isDark ? 46 : 30),
-                const Color(0xFFFFD700).withAlpha(12),
-                Colors.transparent,
-              ], stops: const <double>[
-                0,
-                .35,
-                .65,
-                1
-              ])))),
-          Positioned(
-              top: 19,
-              left: 0,
-              right: 0,
-              child: Center(
-                  child: Container(
-                      width: 62,
-                      height: 62,
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(colors: <Color>[
-                            const Color(0xFFFFD700).withAlpha(isDark ? 90 : 62),
-                            const Color(0xFFFF00AA).withAlpha(isDark ? 38 : 24),
-                            Colors.transparent,
-                          ]))))),
-          Positioned.fill(
-              child: IgnorePointer(
-                  child: CustomPaint(painter: _Outrun2LauncherGridPainter(color: accent.withAlpha(isDark ? 60 : 44))))),
-          Positioned(
-              top: 8,
-              left: 7,
-              width: 48,
-              height: 75,
-              child: CustomPaint(painter: _Outrun2LauncherPalmPainter(color: palm))),
-          Positioned(
-              top: 14,
-              right: 10,
-              width: 42,
-              height: 66,
-              child: CustomPaint(painter: _Outrun2LauncherPalmPainter(color: palm))),
-          Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(13, 7, 13, 0),
-              child: Row(children: <Widget>[
-                Text('OUTRUN',
-                    style: TextStyle(
-                        color: accent,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        fontStyle: FontStyle.italic,
-                        letterSpacing: 2.4,
-                        shadows: <Shadow>[Shadow(color: accent.withAlpha(150), blurRadius: 8)])),
-                const SizedBox(width: 8),
-                Expanded(child: Container(height: 1, color: accent.withAlpha(110))),
-                const SizedBox(width: 8),
-                Text('$resultCount // 86',
-                    style: TextStyle(
-                        color: onSurface.withAlpha(145), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.4)),
-              ]),
-            ),
-            child,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(Design.borderRadius),
+          child: Stack(children: <Widget>[
+            Positioned.fill(child: ColoredBox(color: surface.withAlpha(250))),
+            if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
+            Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 110,
+                child: DecoratedBox(
+                    decoration: BoxDecoration(
+                        gradient:
+                            LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[
+                  const Color(0xFFFF00AA).withAlpha(isDark ? 76 : 52),
+                  const Color(0xFFFF7700).withAlpha(isDark ? 46 : 30),
+                  const Color(0xFFFFD700).withAlpha(12),
+                  Colors.transparent,
+                ], stops: const <double>[
+                  0,
+                  .35,
+                  .65,
+                  1
+                ])))),
+            Positioned(
+                top: 19,
+                left: 0,
+                right: 0,
+                child: Center(
+                    child: Container(
+                        width: 62,
+                        height: 62,
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(colors: <Color>[
+                              const Color(0xFFFFD700).withAlpha(isDark ? 90 : 62),
+                              const Color(0xFFFF00AA).withAlpha(isDark ? 38 : 24),
+                              Colors.transparent,
+                            ]))))),
+            Positioned.fill(
+                child: IgnorePointer(
+                    child:
+                        CustomPaint(painter: _Outrun2LauncherGridPainter(color: accent.withAlpha(isDark ? 60 : 44))))),
+            Positioned(
+                top: 8,
+                left: 7,
+                width: 48,
+                height: 75,
+                child: CustomPaint(painter: _Outrun2LauncherPalmPainter(color: palm))),
+            Positioned(
+                top: 14,
+                right: 10,
+                width: 42,
+                height: 66,
+                child: CustomPaint(painter: _Outrun2LauncherPalmPainter(color: palm))),
+            Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(13, 7, 13, 0),
+                child: Row(children: <Widget>[
+                  Text('OUTRUN',
+                      style: TextStyle(
+                          color: accent,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          fontStyle: FontStyle.italic,
+                          letterSpacing: 2.4,
+                          shadows: <Shadow>[Shadow(color: accent.withAlpha(150), blurRadius: 8)])),
+                  const SizedBox(width: 8),
+                  Expanded(child: Container(height: 1, color: accent.withAlpha(110))),
+                  const SizedBox(width: 8),
+                  Text('$resultCount // 86',
+                      style: TextStyle(
+                          color: onSurface.withAlpha(145),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.4)),
+                ]),
+              ),
+              child,
+            ]),
+            Positioned.fill(
+                child: IgnorePointer(
+                    child: CustomPaint(painter: _Outrun2LauncherScanPainter(onSurface.withAlpha(isDark ? 11 : 7))))),
           ]),
-          Positioned.fill(
-              child: IgnorePointer(
-                  child: CustomPaint(painter: _Outrun2LauncherScanPainter(onSurface.withAlpha(isDark ? 11 : 7))))),
-        ]),
+        ),
       ),
     );
   }

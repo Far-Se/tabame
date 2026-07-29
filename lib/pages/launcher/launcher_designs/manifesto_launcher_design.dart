@@ -124,10 +124,11 @@ class ManifestoLauncherFrame extends StatelessWidget {
       child: Container(
         constraints: const BoxConstraints(minHeight: 360),
         decoration: LauncherDesign.manifesto.outerDecoration(surface: surface, accent: accent),
-        child: ClipRect(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           child: Stack(
             children: <Widget>[
-              if (Design.backdropLauncher) const StableBackdrop(),
+              if (Design.hasBackdrop) const StableBackdrop(),
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(painter: _ManifestoGridPainter(color: onSurface.withAlpha(18))),

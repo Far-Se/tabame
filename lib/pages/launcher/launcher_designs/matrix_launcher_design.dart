@@ -227,42 +227,25 @@ class _MatrixLauncherGround extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<double> points = Design.panelOpacityPoints;
-    final List<double> stops = <double>[];
-    final List<Color> colors = <Color>[];
-    for (int i = 0; i < points.length; i += 2) {
-      stops.add(points[i]);
-      colors.add(Colors.white.withValues(alpha: points[i + 1]));
-    }
-
-    return ShaderMask(
-      blendMode: BlendMode.dstIn,
-      shaderCallback: (Rect bounds) => LinearGradient(
-        begin: panelAlignmentMap[Design.panelOpacityBegin] ?? Alignment.topCenter,
-        end: panelAlignmentMap[Design.panelOpacityEnd] ?? Alignment.bottomCenter,
-        colors: colors,
-        stops: stops,
-      ).createShader(bounds),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Color.alphaBlend(
-            accent.withValues(alpha: Design.gradientAlpha / 255),
-            surface.withValues(alpha: Design.backdropLauncher ? .72 : 1),
-          ),
-          borderRadius: BorderRadius.circular(radius),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          accent.withValues(alpha: Design.gradientAlpha / 255),
+          surface.withValues(alpha: Design.hasBackdrop ? .72 : 1),
         ),
-        child: Stack(
-          children: <Widget>[
-            if (Design.backdropLauncher) const Positioned.fill(child: StableBackdrop()),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(
-                  painter: _MatrixLauncherGridPainter(accent.withValues(alpha: .07)),
-                ),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: _MatrixLauncherGridPainter(accent.withValues(alpha: .07)),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

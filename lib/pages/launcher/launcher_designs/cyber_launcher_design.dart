@@ -1,6 +1,7 @@
 part of '../launcher_design_builder.dart';
 
 BoxDecoration cyberLauncherOuterDecoration(Color surface, Color accent) => BoxDecoration(
+      borderRadius: BorderRadius.circular(Design.borderRadius),
       color: surface.withAlpha(248),
       border: Border.all(color: accent.withAlpha(70), width: .8),
       boxShadow: <BoxShadow>[
@@ -29,37 +30,40 @@ class CyberLauncherFrame extends StatelessWidget {
       child: Container(
         constraints: const BoxConstraints(minHeight: 360),
         decoration: cyberLauncherOuterDecoration(surface, accent),
-        child: ClipPath(
-          clipper: _CyberLauncherClipper(),
-          child: Stack(children: <Widget>[
-            Positioned.fill(child: ColoredBox(color: surface.withAlpha(248))),
-            if (Design.backdropLauncher) const Positioned.fill(child: StableBackdrop()),
-            Positioned.fill(
-                child: IgnorePointer(
-                    child: CustomPaint(painter: _CyberLauncherGridPainter(accent.withAlpha(isDark ? 16 : 10))))),
-            Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(13, 7, 13, 0),
-                child: Row(children: <Widget>[
-                  Text('「 TABAME // LAUNCHER 』',
-                      style: TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
-                  const Spacer(),
-                  Container(width: 5, height: 5, color: accent),
-                  const SizedBox(width: 5),
-                  Text('SYNC $resultCount',
-                      style: TextStyle(
-                          color: onSurface.withAlpha(125),
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.1)),
-                ]),
-              ),
-              child,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(Design.borderRadius),
+          child: ClipPath(
+            clipper: _CyberLauncherClipper(),
+            child: Stack(children: <Widget>[
+              Positioned.fill(child: ColoredBox(color: surface.withAlpha(248))),
+              if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
+              Positioned.fill(
+                  child: IgnorePointer(
+                      child: CustomPaint(painter: _CyberLauncherGridPainter(accent.withAlpha(isDark ? 16 : 10))))),
+              Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(13, 7, 13, 0),
+                  child: Row(children: <Widget>[
+                    Text('「 TABAME // LAUNCHER 』',
+                        style: TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
+                    const Spacer(),
+                    Container(width: 5, height: 5, color: accent),
+                    const SizedBox(width: 5),
+                    Text('SYNC $resultCount',
+                        style: TextStyle(
+                            color: onSurface.withAlpha(125),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.1)),
+                  ]),
+                ),
+                child,
+              ]),
+              Positioned.fill(
+                  child: IgnorePointer(
+                      child: CustomPaint(painter: _CyberLauncherFramePainter(neon: accent, isDark: isDark)))),
             ]),
-            Positioned.fill(
-                child: IgnorePointer(
-                    child: CustomPaint(painter: _CyberLauncherFramePainter(neon: accent, isDark: isDark)))),
-          ]),
+          ),
         ),
       ),
     );

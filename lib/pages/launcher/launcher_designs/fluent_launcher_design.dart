@@ -101,10 +101,10 @@ class FluentLauncherFrame extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 360),
         decoration: LauncherDesign.fluent.outerDecoration(surface: surface, accent: accent),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           child: Stack(
             children: <Widget>[
-              if (Design.backdropLauncher) const StableBackdrop(),
+              if (Design.hasBackdrop) const StableBackdrop(),
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[

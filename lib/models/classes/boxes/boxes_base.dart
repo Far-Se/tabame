@@ -252,6 +252,20 @@ class Boxes {
 
     await pref.setString("lightTheme", user.lightTheme.toJson());
     await pref.setString("darkTheme", user.darkTheme.toJson());
+
+    final String? savedLauncherDesignSettings = pref.getString("launcherDesignSettings");
+    if (savedLauncherDesignSettings == null || savedLauncherDesignSettings.trim().isEmpty) {
+      user.inheritLauncherThemesFromQuickMenu();
+      await pref.setString("launcherDesignSettings", user.launcherDesignSettingsToJson());
+    } else {
+      try {
+        user.loadLauncherDesignSettingsFromJson(savedLauncherDesignSettings);
+      } catch (_) {
+        user.inheritLauncherThemesFromQuickMenu();
+        await pref.setString("launcherDesignSettings", user.launcherDesignSettingsToJson());
+      }
+    }
+
     Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
     Debug.add("Registered: Theme");
 
@@ -455,9 +469,17 @@ class Boxes {
 
   static Future<void> saveActiveQuickMenuThemes({bool notify = false}) async {
     user.saveActiveThemesToCurrentDesign();
+    user.syncInheritedLauncherThemes();
     await pref.setString("quickMenuDesignThemes", user.quickMenuDesignThemesToJson());
     await pref.setString("lightTheme", user.lightTheme.toJson());
     await pref.setString("darkTheme", user.darkTheme.toJson());
+    await pref.setString("launcherDesignSettings", user.launcherDesignSettingsToJson());
+    if (notify) Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+  }
+
+  static Future<void> saveLauncherDesignSettings({bool notify = false}) async {
+    user.syncInheritedLauncherThemes();
+    await pref.setString("launcherDesignSettings", user.launcherDesignSettingsToJson());
     if (notify) Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
   }
 

@@ -21,6 +21,7 @@ import '../models/db/file_index_db.dart';
 import '../models/globals.dart';
 import '../models/google_translator.dart';
 import '../models/settings.dart';
+import '../models/util/theme_colors.dart';
 import '../models/util/spotify_controller.dart';
 import '../models/util/system_power.dart';
 import '../models/win32/keys.dart';
@@ -1482,6 +1483,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       Globals.quickMenuPage = QuickMenuPage.quickMenu;
       if (mounted) setState(() {});
     }
+  }
+
+  @override
+  Future<void> refreshQuickMenu() async {
+    if (!mounted) return;
+    setState(() => _design = user.launcherDesign);
   }
 
   @override
@@ -4016,7 +4023,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData baseTheme = Theme.of(context);
+    final ThemeData appTheme = Theme.of(context);
+    final ThemeData baseTheme = appTheme.copyWith(
+      colorScheme: appTheme.colorScheme.copyWith(
+        surface: Design.background,
+        onSurface: Design.text,
+        primary: Design.accent,
+      ),
+      highlightColor: Design.accent.withAlpha(30),
+    );
     final bool isDark = baseTheme.brightness == Brightness.dark;
     final bool isTerminal = _design == LauncherDesign.terminal;
     final bool isZen = _design == LauncherDesign.zen;
@@ -4122,9 +4137,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                                 : isGlass
                                     ? baseTheme.copyWith(textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme))
                                     : baseTheme;
-    final ThemeData theme = Design.useUiFontForLauncher
-        ? designTheme.copyWith(textTheme: launcherTextTheme(designTheme.textTheme))
-        : designTheme;
+    final ThemeData theme =
+        Design.useCustomFont ? designTheme.copyWith(textTheme: launcherTextTheme(designTheme.textTheme)) : designTheme;
     final Color onSurface = theme.colorScheme.onSurface;
     final bool hasInput = _controller.text.trim().isNotEmpty;
     final LauncherThemeData launcherTheme = LauncherThemeData(design: _design);
@@ -4425,19 +4439,57 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
           child: innerContent),
     };
 
+    final bool usesDesignFont =
+        isTerminal || isZen || isGlass || isBlueprint || isTransit || isFluent || isManifesto || isOrbit || isAnime;
+    final ThemeData launcherThemeData = !Design.useCustomFont || usesDesignFont
+        ? theme
+        : theme.copyWith(
+            textTheme: GoogleFonts.getTextTheme(Design.entryFontFamily, theme.textTheme),
+          );
+
+    final Widget appearanceFrame = _buildLauncherAppearanceFrame(frame);
+
     return Theme(
-      data:
-          (isTerminal || isZen || isGlass || isBlueprint || isTransit || isFluent || isManifesto || isOrbit || isAnime)
-              ? theme
-              : theme.copyWith(
-                  textTheme: GoogleFonts.getTextTheme(Design.entryFontFamily),
-                ),
+      data: launcherThemeData,
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: _resetSelection,
         onSecondaryTap: _openActionsForActiveResult,
-        child: frame,
+        child: appearanceFrame,
       ),
+    );
+  }
+
+  Widget _buildLauncherAppearanceFrame(Widget frame) {
+    final List<double> points = Design.panelOpacityPoints;
+    final List<(double, double)> opacityStops = <(double, double)>[];
+    for (int index = 0; index + 1 < points.length; index += 2) {
+      opacityStops.add((
+        points[index].clamp(0.0, 1.0).toDouble(),
+        points[index + 1].clamp(0.0, 1.0).toDouble(),
+      ));
+    }
+    if (opacityStops.length < 2) {
+      opacityStops
+        ..clear()
+        ..addAll(<(double, double)>[(0.0, 1.0), (1.0, 1.0)]);
+    }
+    opacityStops.sort(((double, double) left, (double, double) right) => left.$1.compareTo(right.$1));
+    if (opacityStops.every(((double, double) point) => point.$2 >= 0.999)) {
+      return frame;
+    }
+
+    return ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (Rect bounds) => LinearGradient(
+        begin: panelAlignmentMap[Design.panelOpacityBegin] ?? Alignment.topCenter,
+        end: panelAlignmentMap[Design.panelOpacityEnd] ?? Alignment.bottomCenter,
+        colors: opacityStops
+            .map(((double, double) point) => Colors.white.withValues(alpha: point.$2))
+            .toList(growable: false),
+        stops: opacityStops.map(((double, double) point) => point.$1).toList(growable: false),
+      ).createShader(bounds),
+      child: frame,
     );
   }
 

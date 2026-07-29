@@ -468,7 +468,6 @@ class ThemeColors {
   String uiFontFamily;
   int uiFontWeight;
   bool uiFontItalic;
-  bool useUiFontForLauncher;
   String entryFontFamily;
   int entryFontWeight;
   bool entryFontItalic;
@@ -476,7 +475,6 @@ class ThemeColors {
   String backdropType;
   String backdropPath;
   double backdropOpacity;
-  bool backdropLauncher;
   List<double> panelOpacityPoints;
   String panelOpacityBegin;
   String panelOpacityEnd;
@@ -490,7 +488,6 @@ class ThemeColors {
     this.uiFontFamily = 'Jura',
     this.uiFontWeight = 400,
     this.uiFontItalic = false,
-    this.useUiFontForLauncher = false,
     this.entryFontFamily = 'Jura',
     this.entryFontWeight = 700,
     this.entryFontItalic = false,
@@ -498,7 +495,6 @@ class ThemeColors {
     this.backdropType = '',
     this.backdropPath = '',
     this.backdropOpacity = 0.7,
-    this.backdropLauncher = true,
     this.panelOpacityPoints = const <double>[0.0, 1.0, 1.0, 1.0],
     this.panelOpacityBegin = 'Top Left',
     this.panelOpacityEnd = 'Bottom Right',
@@ -517,7 +513,6 @@ class ThemeColors {
     String? uiFontFamily,
     int? uiFontWeight,
     bool? uiFontItalic,
-    bool? useUiFontForLauncher,
     String? entryFontFamily,
     int? entryFontWeight,
     bool? entryFontItalic,
@@ -525,7 +520,6 @@ class ThemeColors {
     String? backdropType,
     String? backdropPath,
     double? backdropOpacity,
-    bool? backdropLauncher,
     List<double>? panelOpacityPoints,
     String? panelOpacityBegin,
     String? panelOpacityEnd,
@@ -540,7 +534,6 @@ class ThemeColors {
       uiFontFamily: uiFontFamily ?? this.uiFontFamily,
       uiFontWeight: uiFontWeight ?? this.uiFontWeight,
       uiFontItalic: uiFontItalic ?? this.uiFontItalic,
-      useUiFontForLauncher: useUiFontForLauncher ?? this.useUiFontForLauncher,
       entryFontFamily: entryFontFamily ?? this.entryFontFamily,
       entryFontWeight: entryFontWeight ?? this.entryFontWeight,
       entryFontItalic: entryFontItalic ?? this.entryFontItalic,
@@ -548,7 +541,6 @@ class ThemeColors {
       backdropType: backdropType ?? this.backdropType,
       backdropPath: backdropPath ?? this.backdropPath,
       backdropOpacity: backdropOpacity ?? this.backdropOpacity,
-      backdropLauncher: backdropLauncher ?? this.backdropLauncher,
       panelOpacityPoints: panelOpacityPoints ?? this.panelOpacityPoints,
       panelOpacityBegin: panelOpacityBegin ?? this.panelOpacityBegin,
       panelOpacityEnd: panelOpacityEnd ?? this.panelOpacityEnd,
@@ -566,7 +558,6 @@ class ThemeColors {
       'uiFontFamily': uiFontFamily,
       'uiFontWeight': uiFontWeight,
       'uiFontItalic': uiFontItalic,
-      'useUiFontForLauncher': useUiFontForLauncher,
       'entryFontFamily': entryFontFamily,
       'entryFontWeight': entryFontWeight,
       'entryFontItalic': entryFontItalic,
@@ -574,7 +565,6 @@ class ThemeColors {
       'backdropType': backdropType,
       'backdropPath': backdropPath,
       'backdropOpacity': backdropOpacity,
-      'backdropLauncher': backdropLauncher,
       'panelOpacityPoints': panelOpacityPoints,
       'panelOpacityBegin': panelOpacityBegin,
       'panelOpacityEnd': panelOpacityEnd,
@@ -592,7 +582,6 @@ class ThemeColors {
       uiFontFamily: (map['uiFontFamily'] ?? 'Jura') as String,
       uiFontWeight: (map['uiFontWeight'] ?? 400) as int,
       uiFontItalic: (map['uiFontItalic'] ?? false) as bool,
-      useUiFontForLauncher: (map['useUiFontForLauncher'] ?? false) as bool,
       entryFontFamily: (map['entryFontFamily'] ?? 'Jura') as String,
       entryFontWeight: (map['entryFontWeight'] ?? 700) as int,
       entryFontItalic: (map['entryFontItalic'] ?? false) as bool,
@@ -600,7 +589,6 @@ class ThemeColors {
       backdropType: (map['backdropType'] ?? '') as String,
       backdropPath: (map['backdropPath'] ?? '') as String,
       backdropOpacity: (map['backdropOpacity'] ?? 0.7) as double,
-      backdropLauncher: (map['backdropLauncher'] ?? true) as bool,
       panelOpacityPoints: List<double>.from(
           (map['panelOpacityPoints'] as List<dynamic>?)?.map((dynamic e) => (e as num).toDouble()) ??
               const <double>[0.0, 1.0, 1.0, 1.0]),
@@ -617,7 +605,7 @@ class ThemeColors {
 
   @override
   String toString() {
-    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $text, accentColor: $accent, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, useUiFontForLauncher: $useUiFontForLauncher, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropPath: $backdropPath, backdropOpacity: $backdropOpacity, backdropLauncher: $backdropLauncher, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd, borderRadius: $borderRadius, baseFontSize: $baseFontSize)';
+    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $text, accentColor: $accent, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropPath: $backdropPath, backdropOpacity: $backdropOpacity, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd, borderRadius: $borderRadius, baseFontSize: $baseFontSize)';
   }
 
   @override
@@ -631,7 +619,6 @@ class ThemeColors {
         other.uiFontFamily == uiFontFamily &&
         other.uiFontWeight == uiFontWeight &&
         other.uiFontItalic == uiFontItalic &&
-        other.useUiFontForLauncher == useUiFontForLauncher &&
         other.entryFontFamily == entryFontFamily &&
         other.entryFontWeight == entryFontWeight &&
         other.entryFontItalic == entryFontItalic &&
@@ -639,7 +626,6 @@ class ThemeColors {
         other.backdropPath == backdropPath &&
         other.backdropImages == backdropImages &&
         other.backdropOpacity == backdropOpacity &&
-        other.backdropLauncher == backdropLauncher &&
         listEquals(other.panelOpacityPoints, panelOpacityPoints) &&
         other.panelOpacityBegin == panelOpacityBegin &&
         other.borderRadius == borderRadius &&
@@ -656,7 +642,6 @@ class ThemeColors {
         uiFontFamily.hashCode ^
         uiFontWeight.hashCode ^
         uiFontItalic.hashCode ^
-        useUiFontForLauncher.hashCode ^
         entryFontFamily.hashCode ^
         entryFontWeight.hashCode ^
         entryFontItalic.hashCode ^

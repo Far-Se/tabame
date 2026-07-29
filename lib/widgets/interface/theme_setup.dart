@@ -122,7 +122,6 @@ class ThemeSetupState extends State<ThemeSetup> {
             theme['backdropImages'] = <String>[];
             theme['backdropType'] = "";
             theme['backdropOpacity'] = 0.7;
-            theme['backdropLauncher'] = true;
             designEntry[themeKey] = theme;
           }
         }
@@ -163,7 +162,6 @@ class ThemeSetupState extends State<ThemeSetup> {
                 theme['backdropImages'] = <String>[];
                 theme['backdropType'] = "";
                 theme['backdropOpacity'] = 0.7;
-                theme['backdropLauncher'] = true;
                 designEntry[themeKey] = theme;
               }
             }

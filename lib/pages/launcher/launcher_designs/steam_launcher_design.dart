@@ -6,7 +6,7 @@ Color _steamLauncherSink(Color base, double amount) => Color.alphaBlend(Colors.b
 BoxDecoration steamLauncherOuterDecoration(Color surface, Color accent) {
   final bool isDark = surface.computeLuminance() < .5;
   return BoxDecoration(
-    borderRadius: BorderRadius.circular(6),
+    borderRadius: BorderRadius.circular(Design.borderRadius),
     color: surface,
     border: Border.all(color: isDark ? Colors.black.withAlpha(130) : Colors.black.withAlpha(30)),
     boxShadow: <BoxShadow>[
@@ -41,10 +41,10 @@ class SteamLauncherFrame extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 360),
         decoration: steamLauncherOuterDecoration(surface, accent),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           child: Stack(children: <Widget>[
             Positioned.fill(child: ColoredBox(color: surface)),
-            if (Design.backdropLauncher) const Positioned.fill(child: StableBackdrop()),
+            if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
             Positioned.fill(
                 child: IgnorePointer(
                     child: DecoratedBox(

@@ -10,7 +10,7 @@ class StableBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool hasBackdrop = Design.backdropType.isNotEmpty && user.activeBackdropPath.isNotEmpty;
+    final bool hasBackdrop = Design.hasBackdrop;
 
     return Positioned.fill(
       child: Offstage(

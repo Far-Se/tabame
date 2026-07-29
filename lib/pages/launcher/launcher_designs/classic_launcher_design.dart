@@ -87,10 +87,10 @@ class ClassicLauncherFrame extends StatelessWidget {
           accent: accent,
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           child: Stack(
             children: <Widget>[
-              if (Design.backdropLauncher) const StableBackdrop(),
+              if (Design.hasBackdrop) const StableBackdrop(),
               child,
             ],
           ),

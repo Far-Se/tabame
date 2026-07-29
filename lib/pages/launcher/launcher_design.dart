@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../models/settings.dart';
 
 TextStyle launcherTextStyle(TextStyle designStyle) {
-  if (!Design.useUiFontForLauncher) return designStyle;
+  if (!Design.useCustomFont) return designStyle;
 
   try {
     return GoogleFonts.getFont(
@@ -20,7 +20,7 @@ TextStyle launcherTextStyle(TextStyle designStyle) {
 }
 
 TextTheme launcherTextTheme(TextTheme designTextTheme) {
-  if (!Design.useUiFontForLauncher) return designTextTheme;
+  if (!Design.useCustomFont) return designTextTheme;
 
   try {
     return GoogleFonts.getTextTheme(Design.uiFontFamily, designTextTheme);

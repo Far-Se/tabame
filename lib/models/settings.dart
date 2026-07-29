@@ -102,27 +102,30 @@ class User {
 }
 
 class Design {
-  static Color get background => user.themeColors.background;
-  static Color get text => user.themeColors.text;
-  static Color get accent => user.themeColors.accent;
-  static int get gradientAlpha => user.themeColors.gradientAlpha;
-  static String get uiFontFamily => user.themeColors.uiFontFamily;
-  static int get uiFontWeight => user.themeColors.uiFontWeight;
-  static bool get uiFontItalic => user.themeColors.uiFontItalic;
-  static bool get useUiFontForLauncher => user.themeColors.useUiFontForLauncher;
-  static String get entryFontFamily => user.themeColors.entryFontFamily;
-  static int get entryFontWeight => user.themeColors.entryFontWeight;
-  static bool get entryFontItalic => user.themeColors.entryFontItalic;
-  static List<String> get backdropImages => user.themeColors.backdropImages;
-  static String get backdropType => user.themeColors.backdropType;
-  static double get backdropOpacity => user.themeColors.backdropOpacity;
-  static bool get backdropLauncher => user.themeColors.backdropLauncher;
-  static List<double> get panelOpacityPoints => user.themeColors.panelOpacityPoints;
-  static String get panelOpacityBegin => user.themeColors.panelOpacityBegin;
-  static String get panelOpacityEnd => user.themeColors.panelOpacityEnd;
-  static double get borderRadius => user.themeColors.borderRadius;
-  static double get baseFontSize => user.themeColors.baseFontSize;
-  static bool get hasBackdrop => Design.backdropType.isNotEmpty && user.activeBackdropPath.isNotEmpty;
+  static bool get _isLauncher => Globals.quickMenuPage == QuickMenuPage.launcher;
+  static ThemeColors get _colors => _isLauncher ? user.launcherThemeColors : user.themeColors;
+
+  static Color get background => _colors.background;
+  static Color get text => _colors.text;
+  static Color get accent => _colors.accent;
+  static int get gradientAlpha => _colors.gradientAlpha;
+  static String get uiFontFamily => _colors.uiFontFamily;
+  static int get uiFontWeight => _colors.uiFontWeight;
+  static bool get uiFontItalic => _colors.uiFontItalic;
+  static bool get useCustomFont => _isLauncher && user.launcherUseCustomFont;
+  static String get entryFontFamily => _colors.entryFontFamily;
+  static int get entryFontWeight => _colors.entryFontWeight;
+  static bool get entryFontItalic => _colors.entryFontItalic;
+  static List<String> get backdropImages => _colors.backdropImages;
+  static String get backdropType => _colors.backdropType;
+  static String get backdropPath => _colors.backdropPath;
+  static double get backdropOpacity => _colors.backdropOpacity;
+  static List<double> get panelOpacityPoints => _colors.panelOpacityPoints;
+  static String get panelOpacityBegin => _colors.panelOpacityBegin;
+  static String get panelOpacityEnd => _colors.panelOpacityEnd;
+  static double get borderRadius => _colors.borderRadius;
+  static double get baseFontSize => _colors.baseFontSize;
+  static bool get hasBackdrop => backdropType.isNotEmpty && backdropPath.isNotEmpty;
   static final TextStyle fontSize2Alpha80 =
       TextStyle(fontSize: baseFontSize + 2, color: user.themeColors.text.withAlpha(80));
   static Color accentHue(int hue, {double saturation = 1.0}) {
@@ -280,8 +283,26 @@ class Settings {
     accentColor: const Color(0xFFA7CF3F),
     gradientAlpha: 20,
   );
+  ThemeColors launcherLightTheme = Settings._defaultThemeColors(
+    background: const Color(0xffD5E0FB),
+    textColor: const Color(0xff3A404A),
+    accentColor: const Color(0xff446EE9),
+    gradientAlpha: 200,
+  );
+  ThemeColors launcherDarkTheme = Settings._defaultThemeColors(
+    background: const Color(0xFF0A0A0A),
+    textColor: const Color(0xFFFAF9F8),
+    accentColor: const Color(0xFFA7CF3F),
+    gradientAlpha: 20,
+  );
+  bool launcherLightThemeCustomized = false;
+  bool launcherDarkThemeCustomized = false;
+  bool launcherLightFontCustomized = false;
+  bool launcherDarkFontCustomized = false;
+  bool launcherUseCustomFont = false;
   Map<String, QMDesignThemeSet> quickMenuDesignThemes = Settings.createDefaultQuickMenuDesignThemes();
   ThemeColors get themeColors => themeTypeMode == ThemeType.dark ? darkTheme : lightTheme;
+  ThemeColors get launcherThemeColors => themeTypeMode == ThemeType.dark ? launcherDarkTheme : launcherLightTheme;
 
   static ThemeColors _defaultThemeColors({
     required Color background,
@@ -296,7 +317,6 @@ class Settings {
     bool entryFontItalic = false,
     double borderRadius = 10,
     double baseFontSize = 10,
-    bool backdropLauncher = true,
   }) {
     return ThemeColors(
       background: background,
@@ -311,7 +331,6 @@ class Settings {
       entryFontItalic: entryFontItalic,
       borderRadius: borderRadius,
       baseFontSize: baseFontSize,
-      backdropLauncher: backdropLauncher,
     );
   }
 
@@ -360,7 +379,6 @@ class Settings {
           entryFontFamily: 'Jura',
           entryFontWeight: 700,
           borderRadius: 0,
-          backdropLauncher: true,
           baseFontSize: 10,
         ),
       ),
@@ -1056,6 +1074,103 @@ class Settings {
         (String key, QMDesignThemeSet value) => MapEntry<String, dynamic>(key, value.toMap()),
       ),
     );
+  }
+
+  void inheritLauncherThemesFromQuickMenu() {
+    launcherLightTheme = ThemeColors.fromMap(lightTheme.toMap());
+    launcherDarkTheme = ThemeColors.fromMap(darkTheme.toMap());
+    launcherLightThemeCustomized = false;
+    launcherDarkThemeCustomized = false;
+    launcherLightFontCustomized = false;
+    launcherDarkFontCustomized = false;
+    launcherUseCustomFont = false;
+  }
+
+  ThemeColors _inheritedLauncherTheme(
+    ThemeColors quickMenuTheme,
+    ThemeColors launcherTheme, {
+    required bool fontCustomized,
+  }) {
+    final ThemeColors inheritedTheme = ThemeColors.fromMap(quickMenuTheme.toMap());
+    if (!fontCustomized) return inheritedTheme;
+
+    return inheritedTheme.copyWith(
+      uiFontFamily: launcherTheme.uiFontFamily,
+      uiFontWeight: launcherTheme.uiFontWeight,
+      uiFontItalic: launcherTheme.uiFontItalic,
+      entryFontFamily: launcherTheme.entryFontFamily,
+      entryFontWeight: launcherTheme.entryFontWeight,
+      entryFontItalic: launcherTheme.entryFontItalic,
+    );
+  }
+
+  ThemeColors _launcherThemeWithInheritedFonts(
+    ThemeColors launcherTheme,
+    ThemeColors quickMenuTheme, {
+    required bool fontCustomized,
+  }) {
+    if (fontCustomized) return launcherTheme;
+    return launcherTheme.copyWith(
+      uiFontFamily: quickMenuTheme.uiFontFamily,
+      uiFontWeight: quickMenuTheme.uiFontWeight,
+      uiFontItalic: quickMenuTheme.uiFontItalic,
+      entryFontFamily: quickMenuTheme.entryFontFamily,
+      entryFontWeight: quickMenuTheme.entryFontWeight,
+      entryFontItalic: quickMenuTheme.entryFontItalic,
+    );
+  }
+
+  void syncInheritedLauncherThemes() {
+    if (!launcherLightThemeCustomized) {
+      launcherLightTheme = _inheritedLauncherTheme(
+        lightTheme,
+        launcherLightTheme,
+        fontCustomized: launcherLightFontCustomized,
+      );
+    } else {
+      launcherLightTheme = _launcherThemeWithInheritedFonts(
+        launcherLightTheme,
+        lightTheme,
+        fontCustomized: launcherLightFontCustomized,
+      );
+    }
+    if (!launcherDarkThemeCustomized) {
+      launcherDarkTheme = _inheritedLauncherTheme(
+        darkTheme,
+        launcherDarkTheme,
+        fontCustomized: launcherDarkFontCustomized,
+      );
+    } else {
+      launcherDarkTheme = _launcherThemeWithInheritedFonts(
+        launcherDarkTheme,
+        darkTheme,
+        fontCustomized: launcherDarkFontCustomized,
+      );
+    }
+  }
+
+  void loadLauncherDesignSettingsFromJson(String source) {
+    final Map<String, dynamic> decoded = Map<String, dynamic>.from(jsonDecode(source) as Map<dynamic, dynamic>);
+    launcherLightTheme = ThemeColors.fromMap(Map<String, dynamic>.from(decoded['lightTheme'] as Map<dynamic, dynamic>));
+    launcherDarkTheme = ThemeColors.fromMap(Map<String, dynamic>.from(decoded['darkTheme'] as Map<dynamic, dynamic>));
+    launcherLightThemeCustomized = (decoded['lightThemeCustomized'] ?? false) as bool;
+    launcherDarkThemeCustomized = (decoded['darkThemeCustomized'] ?? false) as bool;
+    launcherUseCustomFont = (decoded['useCustomFont'] ?? false) as bool;
+    launcherLightFontCustomized = (decoded['lightFontCustomized'] ?? launcherUseCustomFont) as bool;
+    launcherDarkFontCustomized = (decoded['darkFontCustomized'] ?? launcherUseCustomFont) as bool;
+    syncInheritedLauncherThemes();
+  }
+
+  String launcherDesignSettingsToJson() {
+    return jsonEncode(<String, dynamic>{
+      'lightTheme': launcherLightTheme.toMap(),
+      'darkTheme': launcherDarkTheme.toMap(),
+      'lightThemeCustomized': launcherLightThemeCustomized,
+      'darkThemeCustomized': launcherDarkThemeCustomized,
+      'lightFontCustomized': launcherLightFontCustomized,
+      'darkFontCustomized': launcherDarkFontCustomized,
+      'useCustomFont': launcherUseCustomFont,
+    });
   }
 
   void saveActiveThemesToCurrentDesign([QuickMenuDesigns? design]) {

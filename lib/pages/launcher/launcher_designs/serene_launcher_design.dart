@@ -100,20 +100,20 @@ class SereneLauncherFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
-    final bool hasBackdrop = Design.backdropType.isNotEmpty && user.activeBackdropPath.isNotEmpty;
+    final bool hasBackdrop = Design.hasBackdrop;
 
     // Wrap in LauncherTheme so descendants can read the design without a
     // parameter chain.
     return LauncherTheme(
       data: const LauncherThemeData(design: LauncherDesign.serene),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(Design.borderRadius),
         child: BackdropFilter(
           filter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
           child: Container(
             constraints: const BoxConstraints(minHeight: 360),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(Design.borderRadius),
               color: surface.withAlpha(hasBackdrop ? 180 : 240),
               border: Border.all(color: Colors.white.withAlpha(18)),
               boxShadow: <BoxShadow>[
@@ -125,7 +125,7 @@ class SereneLauncherFrame extends StatelessWidget {
                 ),
               ],
             ),
-            child: Design.backdropLauncher
+            child: Design.hasBackdrop
                 ? Stack(
                     children: <Widget>[
                       const StableBackdrop(),

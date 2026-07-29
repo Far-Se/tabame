@@ -249,10 +249,10 @@ class OrbitLauncherFrame extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 360),
         decoration: LauncherDesign.orbit.outerDecoration(surface: surface, accent: accent),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           child: Stack(
             children: <Widget>[
-              if (Design.backdropLauncher) const StableBackdrop(),
+              if (Design.hasBackdrop) const StableBackdrop(),
               // Range rings + bearing ticks.
               Positioned.fill(
                 child: IgnorePointer(

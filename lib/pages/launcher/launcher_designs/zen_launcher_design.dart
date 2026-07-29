@@ -88,10 +88,10 @@ class ZenLauncherFrame extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 340),
         decoration: LauncherDesign.zen.outerDecoration(surface: surface, accent: accent),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(Design.borderRadius),
           child: Stack(
             children: <Widget>[
-              if (Design.backdropLauncher) const StableBackdrop(),
+              if (Design.hasBackdrop) const StableBackdrop(),
               // Soft dawn glow drifting in from the top-left.
               Positioned.fill(
                 child: IgnorePointer(

@@ -361,10 +361,10 @@ List<QuickActionMenuEntry> _buildStandardQuickActionEntries({
             onSurface: onSurface,
             onTap: () {
               triggerFirstTappableDescendant(buttonKey.currentContext);
-              if (displayName == "Quick Menu Design") {
-                Globals.quickMenuPage = QuickMenuPage.quickMenu;
-                QuickMenuFunctions.refreshQuickMenu();
-              }
+              // if (displayName == "Quick Menu Design") {
+              //   Globals.quickMenuPage = QuickMenuPage.quickMenu;
+              //   QuickMenuFunctions.refreshQuickMenu();
+              // }
             },
             leading: SizedBox(
               width: 20,
