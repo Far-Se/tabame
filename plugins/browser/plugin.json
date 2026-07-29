@@ -1,0 +1,11 @@
+{
+  "id": "tabame-browser",
+  "name": "Browser",
+  "keyword": "browser",
+  "description": "Control Chromium tabs and inspect Codex usage through the Tabame Connector",
+  "icon": "globe",
+  "runtime": "node",
+  "entry": "main.js",
+  "args": [],
+  "dev": false
+}

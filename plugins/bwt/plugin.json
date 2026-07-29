@@ -1,0 +1,11 @@
+{
+  "id": "browser-window-tabs",
+  "name": "Browser Tabs",
+  "keyword": "bwt",
+  "description": "List and control Chromium tabs through the globally paired Tabame Connector",
+  "icon": "window",
+  "runtime": "node",
+  "entry": "main.js",
+  "args": [],
+  "dev": false
+}

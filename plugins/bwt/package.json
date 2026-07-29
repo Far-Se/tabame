@@ -1,0 +1,9 @@
+{
+  "name": "tabame-browser-window-tabs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tabs-only Tabame launcher plugin for the Tabame Connector",
+  "dependencies": {
+    "ws": "^8.21.1"
+  }
+}

@@ -1,0 +1,933 @@
+#!/usr/bin/env node
+"use strict";
+
+const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+const { WebSocketServer } = require("ws");
+
+const DEFAULT_PORT = 17373;
+const LEGACY_CONFIG_PATH = path.join(process.cwd(), "bridge-config.json");
+const CONFIG_PATH =
+  process.env.TABAME_BROWSER_BRIDGE_CONFIG ||
+  (process.env.LOCALAPPDATA
+    ? path.join(process.env.LOCALAPPDATA, "Tabame", "browser-bridge.json")
+    : LEGACY_CONFIG_PATH);
+const ANALYTICS_URL =
+  "https://chatgpt.com/codex/cloud/settings/analytics#usage";
+const REQUEST_TIMEOUT_MS = 30_000;
+const EXTENSION_ORIGIN = /^chrome-extension:\/\/[a-p]{32}$/;
+
+function send(message) {
+  process.stdout.write(`${JSON.stringify(message)}\n`);
+}
+
+function command(name, fields = {}) {
+  send({ type: "command", command: name, ...fields });
+}
+
+function render(rev, view, fields = {}) {
+  send({ type: "render", rev, view, ...fields });
+}
+
+function log(...parts) {
+  console.error(...parts);
+}
+
+function loadOrCreateConfig() {
+  function readConfig(filePath) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
+      const port = Number(parsed.port);
+      if (
+        typeof parsed.token === "string" &&
+        parsed.token.length >= 32 &&
+        Number.isInteger(port) &&
+        port >= 1024 &&
+        port <= 65535
+      ) {
+        return { token: parsed.token, port };
+      }
+    } catch {
+      // Missing and invalid candidates are handled by migration/generation.
+    }
+    return null;
+  }
+
+  const shared = readConfig(CONFIG_PATH);
+  if (shared) return shared;
+
+  const migrated =
+    CONFIG_PATH !== LEGACY_CONFIG_PATH ? readConfig(LEGACY_CONFIG_PATH) : null;
+  const config =
+    migrated || {
+      port: DEFAULT_PORT,
+      token: crypto.randomBytes(32).toString("base64url"),
+    };
+
+  try {
+    fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
+    fs.writeFileSync(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+  } catch (error) {
+    throw new Error(`Cannot write shared browser pairing config: ${error.message}`);
+  }
+  return config;
+}
+
+function safeEqual(left, right) {
+  const a = Buffer.from(String(left || "").replace(/\s+/g, ""));
+  const b = Buffer.from(String(right || "").replace(/\s+/g, ""));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+class BrowserBridge {
+  constructor(config, onStateChange, onEvent) {
+    this.config = config;
+    this.onStateChange = onStateChange;
+    this.onEvent = onEvent;
+    this.client = null;
+    this.clientInfo = null;
+    this.server = null;
+    this.pending = new Map();
+    this.startError = null;
+  }
+
+  start() {
+    this.server = new WebSocketServer({
+      host: "127.0.0.1",
+      port: this.config.port,
+      path: "/tabame",
+      maxPayload: 256 * 1024,
+    });
+    this.server.on("connection", (socket, request) =>
+      this.handleConnection(socket, request),
+    );
+    this.server.on("listening", () => {
+      log(`Browser bridge listening on 127.0.0.1:${this.config.port}`);
+      this.onStateChange();
+    });
+    this.server.on("error", (error) => {
+      this.startError = error.message;
+      log("Browser bridge error:", error.message);
+      this.onStateChange();
+    });
+  }
+
+  handleConnection(socket, request) {
+    const origin = request.headers.origin || "";
+    if (!EXTENSION_ORIGIN.test(origin)) {
+      socket.close(1008, "Extension origin required");
+      return;
+    }
+
+    let authenticated = false;
+    const authTimer = setTimeout(() => {
+      if (!authenticated) socket.close(1008, "Authentication timeout");
+    }, 5_000);
+
+    socket.on("message", (data) => {
+      let message;
+      try {
+        message = JSON.parse(data.toString());
+      } catch {
+        socket.close(1003, "JSON required");
+        return;
+      }
+
+      if (!authenticated) {
+        if (
+          message.type !== "hello" ||
+          message.protocol !== 1 ||
+          !safeEqual(message.token, this.config.token)
+        ) {
+          socket.close(1008, "Authentication failed");
+          return;
+        }
+        authenticated = true;
+        clearTimeout(authTimer);
+        if (this.client && this.client !== socket) {
+          this.client.close(1012, "Replaced by a new connector session");
+        }
+        this.client = socket;
+        this.clientInfo = {
+          extensionVersion: String(message.extensionVersion || "unknown"),
+          browser: String(message.userAgent || "unknown"),
+          origin,
+          connectedAt: new Date().toISOString(),
+        };
+        socket.send(
+          JSON.stringify({
+            type: "welcome",
+            protocol: 1,
+            serverVersion: "0.1.0",
+          }),
+        );
+        this.onStateChange();
+        return;
+      }
+
+      this.handleMessage(socket, message);
+    });
+
+    socket.on("close", () => {
+      clearTimeout(authTimer);
+      if (this.client !== socket) return;
+      this.client = null;
+      this.clientInfo = null;
+      for (const pending of this.pending.values()) {
+        clearTimeout(pending.timer);
+        pending.reject(new Error("Browser connector disconnected"));
+      }
+      this.pending.clear();
+      this.onStateChange();
+    });
+
+    socket.on("error", (error) => log("Connector socket error:", error.message));
+  }
+
+  handleMessage(socket, message) {
+    if (message.type === "ping") {
+      socket.send(JSON.stringify({ type: "pong", at: Date.now() }));
+      return;
+    }
+
+    if (message.type === "response" && typeof message.id === "string") {
+      const pending = this.pending.get(message.id);
+      if (!pending) return;
+      clearTimeout(pending.timer);
+      this.pending.delete(message.id);
+      if (message.ok) pending.resolve(message.result);
+      else pending.reject(new Error(message.error || "Browser request failed"));
+      return;
+    }
+
+    if (message.type === "event" && typeof message.event === "string") {
+      this.onEvent(message.event, message.data || {});
+    }
+  }
+
+  get connected() {
+    return Boolean(this.client && this.client.readyState === this.client.OPEN);
+  }
+
+  request(method, params = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+    if (!this.connected) {
+      return Promise.reject(
+        new Error(
+          "Tabame Connector is offline. Open Connection & pairing for setup.",
+        ),
+      );
+    }
+    const id = crypto.randomUUID();
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`Browser request timed out: ${method}`));
+      }, timeoutMs);
+      this.pending.set(id, { resolve, reject, timer });
+      this.client.send(JSON.stringify({ type: "request", id, method, params }));
+    });
+  }
+
+  close() {
+    if (this.client) this.client.close(1001, "Launcher plugin closed");
+    if (this.server) this.server.close();
+  }
+}
+
+const config = loadOrCreateConfig();
+const state = {
+  screen: "root",
+  query: "",
+  rev: 0,
+  itemData: new Map(),
+  usageRemaining: null,
+  initialized: false,
+  pairingGraceRequested: false,
+  pairingGraceUntil: 0,
+  detached: false,
+  pairingShutdownTimer: null,
+  extensionEventTimer: null,
+};
+
+const bridge = new BrowserBridge(
+  config,
+  () => {
+    if (state.detached) {
+      if (bridge.connected) {
+        command("notify", {
+          title: "Tabame Browser",
+          text: "Chromium extension paired successfully.",
+        });
+        clearTimeout(state.pairingShutdownTimer);
+        state.pairingShutdownTimer = setTimeout(shutdown, 250);
+      }
+      return;
+    }
+    if (state.initialized) {
+      renderCurrent(0, state.query, { refresh: true });
+    }
+  },
+  (event) => {
+    if (event !== "tabs.changed") return;
+    if (!["tabs", "audio"].includes(state.screen)) return;
+    clearTimeout(state.extensionEventTimer);
+    state.extensionEventTimer = setTimeout(
+      () => renderCurrent(0, state.query, { refresh: true, quiet: true }),
+      220,
+    );
+  },
+);
+bridge.start();
+
+function connectionAccessory() {
+  return {
+    text: bridge.connected ? "Connected" : "Offline",
+    color: bridge.connected ? "#3D9B72" : "#8A7F88",
+    icon: bridge.connected ? "check" : "warning",
+  };
+}
+
+function rootItems(text) {
+  const items = [
+    {
+      id: "command:usage",
+      title: "Codex usage",
+      subtitle: "Read the remaining allowance from ChatGPT analytics",
+      icon: "chart",
+      accessories: [connectionAccessory()],
+      preview: {
+        markdown:
+          "## Codex usage\n\nOpens the ChatGPT analytics page in an **inactive temporary tab**, waits for the dynamic page to render, reads the remaining percentage, then closes the temporary tab.",
+      },
+    },
+    {
+      id: "command:tabs",
+      title: "All browser tabs",
+      subtitle: "Search, focus, close, reload, pin, duplicate, or mute",
+      icon: "window",
+      accessories: [connectionAccessory()],
+      preview: {
+        markdown:
+          "## Tab control\n\nShows every open tab in this Chromium profile, including its favicon, window, active state, pinned state, and audio state.",
+      },
+    },
+    {
+      id: "command:audio",
+      title: "Playing audio",
+      subtitle: "Find and control tabs currently producing sound",
+      icon: "music",
+      accessories: [connectionAccessory()],
+      preview: {
+        markdown:
+          "## Audio tabs\n\nChromium marks a tab audible while its speaker indicator is active. The current candidate is ranked first, followed by other audible tabs.",
+      },
+    },
+    {
+      id: "command:connection",
+      title: "Connection & pairing",
+      subtitle: bridge.connected
+        ? `Connector ${bridge.clientInfo.extensionVersion} is ready`
+        : `Pair the Chromium extension on port ${config.port}`,
+      icon: bridge.connected ? "link" : "key",
+      accessories: [connectionAccessory()],
+      preview: {
+        markdown:
+          "## Secure local bridge\n\nThe bridge binds only to `127.0.0.1`, checks the Chromium extension origin, and requires the generated 256-bit token before accepting requests.",
+      },
+    },
+  ];
+  const needle = String(text || "").trim().toLowerCase();
+  return needle
+    ? items.filter(
+        (item) =>
+          item.title.toLowerCase().includes(needle) ||
+          item.subtitle.toLowerCase().includes(needle),
+      )
+    : items;
+}
+
+function renderRoot(rev, text) {
+  render(rev, "list", {
+    items: rootItems(text),
+    preview: { enabled: true },
+    placeholder: "Choose a browser command…",
+    emptyText: "No browser command matches this search",
+  });
+}
+
+function favicon(tab) {
+  const value = String(tab.favIconUrl || "");
+  return /^https?:\/\//i.test(value) ? value : "globe";
+}
+
+function shortHost(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "Browser page";
+  }
+}
+
+const GROUP_COLORS = {
+  grey: "#777B82",
+  blue: "#4F86D9",
+  red: "#D05C5C",
+  yellow: "#D6A746",
+  green: "#4A9B68",
+  pink: "#C767A2",
+  purple: "#8C6BC7",
+  cyan: "#3A9CAE",
+  orange: "#D27A45",
+};
+
+function groupAccessory(tab) {
+  if (!tab.group) return null;
+  return {
+    text: tab.group.title || "Group",
+    color: GROUP_COLORS[tab.group.color] || GROUP_COLORS.grey,
+    icon: "folder",
+  };
+}
+
+function tabActions(tab) {
+  return [
+    { id: "default", title: "Focus tab", icon: "open" },
+    {
+      id: "mute",
+      title: tab.muted ? "Unmute tab" : "Mute tab",
+      icon: tab.muted ? "music" : "close",
+    },
+    {
+      id: "pin",
+      title: tab.pinned ? "Unpin tab" : "Pin tab",
+      icon: "bookmark",
+    },
+    { id: "reload", title: "Reload tab", icon: "refresh" },
+    { id: "duplicate", title: "Duplicate tab", icon: "copy" },
+    { id: "copy_url", title: "Copy URL", icon: "link" },
+    {
+      id: "close",
+      title: "Close tab",
+      icon: "trash",
+      shortcut: "ctrl+shift+delete",
+      destructive: true,
+      confirm: {
+        title: "Close this browser tab?",
+        message: tab.title || tab.url,
+        confirmLabel: "Close tab",
+      },
+    },
+  ];
+}
+
+function tabItem(tab, section) {
+  const groupTag = groupAccessory(tab);
+  const item = {
+    id: `tab:${tab.id}`,
+    title: tab.title || "Untitled tab",
+    subtitle: tab.url || "No URL",
+    icon: favicon(tab),
+    section,
+    lines: 1,
+    accessories: [
+      ...(groupTag ? [groupTag] : []),
+      ...(tab.audible ? [{ text: "Playing", color: "#3D9B72", icon: "music" }] : []),
+      ...(tab.muted ? [{ text: "Muted", icon: "close" }] : []),
+      ...(tab.pinned ? [{ text: "Pinned", icon: "bookmark" }] : []),
+      ...(tab.active ? [{ text: "Active", color: "#A46293" }] : []),
+      { text: `W${tab.windowId}` },
+    ],
+    actions: tabActions(tab),
+    preview: {
+      markdown: `## ${escapeMarkdown(tab.title || "Untitled tab")}\n\n${escapeMarkdown(tab.url || "No URL")}`,
+      metadata: [
+        { label: "Site", text: shortHost(tab.url), icon: "globe" },
+        { label: "Window", text: String(tab.windowId), icon: "window" },
+        ...(tab.group
+          ? [
+              {
+                label: "Group",
+                text: tab.group.title || "Unnamed group",
+                color: GROUP_COLORS[tab.group.color] || GROUP_COLORS.grey,
+                icon: "folder",
+              },
+            ]
+          : []),
+        {
+          label: "State",
+          text: [
+            tab.active ? "active" : "background",
+            tab.pinned ? "pinned" : null,
+            tab.audible ? "audible" : null,
+            tab.muted ? "muted" : null,
+            tab.discarded ? "discarded" : null,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        },
+      ],
+    },
+  };
+  state.itemData.set(item.id, tab);
+  return item;
+}
+
+function filterTabs(tabs, text) {
+  const needle = String(text || "").trim().toLowerCase();
+  if (!needle) return tabs;
+  return tabs.filter(
+    (tab) =>
+      String(tab.title || "").toLowerCase().includes(needle) ||
+      String(tab.url || "").toLowerCase().includes(needle) ||
+      String(tab.group?.title || "").toLowerCase().includes(needle),
+  );
+}
+
+async function renderTabs(rev, text, quiet = false) {
+  if (!quiet) {
+    render(rev, "list", {
+      loading: true,
+      loadingText: "Reading browser tabs…",
+      items: [],
+      canGoBack: true,
+    });
+  }
+  try {
+    const result = await bridge.request("tabs.list");
+    state.itemData.clear();
+    const tabs = filterTabs(result.tabs || [], text).sort((a, b) => {
+      if (a.windowId !== b.windowId) return a.windowId - b.windowId;
+      return a.index - b.index;
+    });
+    render(rev, "list", {
+      items: tabs.map((tab) =>
+        tabItem(tab, tab.active ? `Window ${tab.windowId} · active` : `Window ${tab.windowId}`),
+      ),
+      preview: { enabled: true },
+      canGoBack: true,
+      placeholder: "Filter tabs by title or URL…",
+      empty: {
+        icon: "search",
+        title: "No matching tabs",
+        hint: text ? "Try a broader title or domain" : "Chromium returned no tabs",
+      },
+      actions: [
+        {
+          id: "refresh",
+          title: "Refresh tabs",
+          icon: "refresh",
+          shortcut: "ctrl+r",
+        },
+      ],
+    });
+  } catch (error) {
+    renderBridgeError(rev, error, "tabs");
+  }
+}
+
+async function renderAudio(rev, text, quiet = false) {
+  if (!quiet) {
+    render(rev, "list", {
+      loading: true,
+      loadingText: "Finding audible tabs…",
+      items: [],
+      canGoBack: true,
+    });
+  }
+  try {
+    const result = await bridge.request("tabs.audible");
+    state.itemData.clear();
+    const tabs = filterTabs(result.tabs || [], text);
+    render(rev, "list", {
+      items: tabs.map((tab, index) =>
+        tabItem(tab, index === 0 ? "Current audio candidate" : "Also playing"),
+      ),
+      preview: { enabled: true },
+      canGoBack: true,
+      placeholder: "Filter audible tabs…",
+      empty: {
+        icon: "music",
+        title: "No tab is producing sound",
+        hint: "Start playback in Chromium and this view will update",
+      },
+      actions: [
+        {
+          id: "refresh",
+          title: "Refresh audio tabs",
+          icon: "refresh",
+          shortcut: "ctrl+r",
+        },
+      ],
+    });
+  } catch (error) {
+    renderBridgeError(rev, error, "audio");
+  }
+}
+
+async function renderUsage(rev, refresh = false) {
+  render(rev, "list", {
+    loading: true,
+    loadingText: "Opening ChatGPT analytics in the background…",
+    items: [],
+    canGoBack: true,
+  });
+  try {
+    const result = await bridge.request("codex.usage", { refresh }, 35_000);
+    const remaining = Number(result.remainingPercent);
+    state.usageRemaining = remaining;
+    render(rev, "list", {
+      canGoBack: true,
+      preview: { enabled: true },
+      items: [
+        {
+          id: "usage:codex",
+          title: `${remaining}% Codex usage remaining`,
+          subtitle: `${result.usedPercent}% used · checked ${formatTime(result.fetchedAt)}`,
+          icon: remaining >= 25 ? "chart" : "warning",
+          progress: remaining / 100,
+          accessories: [
+            {
+              text: remaining >= 25 ? "Available" : "Running low",
+              color: remaining >= 25 ? "#3D9B72" : "#D18B47",
+            },
+          ],
+          actions: [
+            { id: "refresh", title: "Refresh usage", icon: "refresh" },
+            { id: "open_analytics", title: "Open analytics", icon: "open" },
+            { id: "copy", title: "Copy remaining percentage", icon: "copy" },
+          ],
+          preview: {
+            markdown:
+              `## Codex allowance\n\n**${remaining}% remains** for the current ChatGPT usage window.`,
+            metadata: [
+              {
+                label: "Remaining",
+                text: `${remaining}%`,
+                color: remaining >= 25 ? "#3D9B72" : "#D18B47",
+              },
+              { label: "Used", text: `${result.usedPercent}%` },
+              { label: "Checked", text: formatTime(result.fetchedAt), icon: "clock" },
+              { label: "Source", text: "ChatGPT Codex analytics", url: ANALYTICS_URL },
+            ],
+          },
+        },
+      ],
+      actions: [
+        {
+          id: "refresh",
+          title: "Refresh usage",
+          icon: "refresh",
+          shortcut: "ctrl+r",
+        },
+      ],
+    });
+  } catch (error) {
+    renderBridgeError(rev, error, "usage");
+  }
+}
+
+function renderConnection(rev) {
+  const token = config.token;
+  const tokenDisplay = token.replace(/(.{6})/g, "$1 ").trim();
+  const connected = bridge.connected;
+  if (!connected && !state.pairingGraceRequested) {
+    state.pairingGraceRequested = true;
+    state.pairingGraceUntil = Date.now() + 300_000;
+    command("background", { timeout: 300 });
+  }
+  const markdown = connected
+    ? [
+        "# Browser connector is online",
+        "",
+        "Tabame can now exchange allowlisted requests with this Chromium profile.",
+        "",
+        "Use **Escape** to return to browser commands.",
+      ].join("\n")
+    : [
+        "# Pair the Chromium extension",
+        "",
+        "1. Load `extension/tabame-connector` from `chrome://extensions`.",
+        "2. Click the **Tabame Connector** toolbar icon.",
+        "3. Paste the token below and keep the default port.",
+        "4. Click **Save & connect**.",
+        "",
+        "### Pairing token",
+        "",
+        `\`${tokenDisplay}\``,
+        "",
+        "> The token is shared by Tabame browser plugins on this Windows account. Do not publish `browser-bridge.json`.",
+      ].join("\n");
+
+  render(rev, "detail", {
+    canGoBack: true,
+    detail: {
+      markdown,
+      metadata: [
+        {
+          label: "Status",
+          text: connected ? "Connected" : "Waiting for extension",
+          color: connected ? "#3D9B72" : "#D18B47",
+        },
+        { label: "Address", text: `127.0.0.1:${config.port}`, icon: "server" },
+        ...(connected
+          ? [
+              {
+                label: "Extension",
+                text: bridge.clientInfo.extensionVersion,
+                icon: "extension",
+              },
+              {
+                label: "Connected",
+                text: formatTime(bridge.clientInfo.connectedAt),
+                icon: "clock",
+              },
+            ]
+          : []),
+        ...(bridge.startError
+          ? [{ label: "Bridge error", text: bridge.startError, color: "#C86464" }]
+          : []),
+      ],
+    },
+    actions: [
+      { id: "copy_token", title: "Copy pairing token", icon: "key" },
+      {
+        id: "copy_address",
+        title: "Copy bridge address",
+        icon: "copy",
+      },
+      { id: "refresh", title: "Refresh status", icon: "refresh" },
+    ],
+  });
+}
+
+function renderBridgeError(rev, error, destination) {
+  const message = error instanceof Error ? error.message : String(error);
+  render(rev, "detail", {
+    canGoBack: true,
+    detail: {
+      markdown: `# Browser request failed\n\n${escapeMarkdown(message)}\n\nOpen **Connection & pairing** if the extension is not configured. If it is already paired, click the extension icon and choose **Retry** to reconnect immediately.`,
+      metadata: [
+        {
+          label: "Connector",
+          text: bridge.connected ? "Connected" : "Offline",
+          color: bridge.connected ? "#3D9B72" : "#C86464",
+        },
+      ],
+    },
+    actions: [
+      { id: `retry:${destination}`, title: "Try again", icon: "refresh" },
+      { id: "connection", title: "Connection & pairing", icon: "key" },
+    ],
+  });
+}
+
+function escapeMarkdown(value) {
+  return String(value || "").replace(/([\\`*_{}[\]()#+\-.!])/g, "\\$1");
+}
+
+function formatTime(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "just now"
+    : new Intl.DateTimeFormat(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }).format(date);
+}
+
+function renderCurrent(rev, text, options = {}) {
+  state.query = String(text || "");
+  state.rev = rev;
+  switch (state.screen) {
+    case "tabs":
+      return renderTabs(rev, state.query, Boolean(options.quiet));
+    case "audio":
+      return renderAudio(rev, state.query, Boolean(options.quiet));
+    case "usage":
+      if (options.refresh) return;
+      return renderUsage(rev, Boolean(options.refresh));
+    case "connection":
+      return renderConnection(rev);
+    default:
+      return renderRoot(rev, state.query);
+  }
+}
+
+function enterScreen(screen) {
+  const needsQueryReset = state.query.length > 0;
+  state.screen = screen;
+  state.query = "";
+  if (needsQueryReset) {
+    command("setQuery", { text: "" });
+  } else {
+    renderCurrent(0, "");
+  }
+}
+
+async function handleTabAction(id, action) {
+  const tab = state.itemData.get(id);
+  if (!tab) return;
+  switch (action) {
+    case "copy_url":
+      command("copy", { text: tab.url || "" });
+      return;
+    case "close":
+      await bridge.request("tabs.close", { tabId: tab.id });
+      command("toast", { text: "Tab closed", style: "success" });
+      return renderCurrent(0, state.query, { refresh: true, quiet: true });
+    case "mute":
+      await bridge.request("tabs.mute", { tabId: tab.id, muted: !tab.muted });
+      return renderCurrent(0, state.query, { refresh: true, quiet: true });
+    case "pin":
+      await bridge.request("tabs.pin", { tabId: tab.id, pinned: !tab.pinned });
+      return renderCurrent(0, state.query, { refresh: true, quiet: true });
+    case "reload":
+      await bridge.request("tabs.reload", { tabId: tab.id });
+      command("toast", { text: "Tab reloading", style: "info" });
+      return;
+    case "duplicate":
+      await bridge.request("tabs.duplicate", { tabId: tab.id });
+      command("toast", { text: "Tab duplicated", style: "success" });
+      return;
+    default:
+      await bridge.request("tabs.activate", { tabId: tab.id });
+      command("hide");
+  }
+}
+
+async function handleAction(id, action) {
+  try {
+    if (id.startsWith("command:")) {
+      enterScreen(id.slice("command:".length));
+      return;
+    }
+    if (id.startsWith("tab:")) {
+      await handleTabAction(id, action);
+      return;
+    }
+    if (id === "usage:codex") {
+      if (action === "copy") {
+        command("copy", {
+          text: `${state.usageRemaining}%`,
+        });
+      } else if (action === "open_analytics") {
+        await bridge.request("tabs.open", { url: ANALYTICS_URL, active: true });
+        command("hide");
+      } else {
+        await renderUsage(0, true);
+      }
+      return;
+    }
+
+    if (action === "refresh") {
+      if (state.screen === "usage") await renderUsage(0, true);
+      else renderCurrent(0, state.query, { refresh: true });
+      return;
+    }
+    if (action.startsWith("retry:")) {
+      state.screen = action.slice("retry:".length);
+      renderCurrent(0, state.query);
+      return;
+    }
+    if (action === "connection") {
+      enterScreen("connection");
+      return;
+    }
+    if (action === "copy_token") {
+      command("copy", { text: config.token });
+      command("toast", { text: "Pairing token copied", style: "success" });
+      return;
+    }
+    if (action === "copy_address") {
+      command("copy", { text: `127.0.0.1:${config.port}` });
+    }
+  } catch (error) {
+    renderBridgeError(0, error, state.screen);
+  }
+}
+
+function handleBack() {
+  const needsQueryReset = state.query.length > 0;
+  state.screen = "root";
+  state.query = "";
+  if (needsQueryReset) command("setQuery", { text: "" });
+  renderRoot(0, "");
+}
+
+let inputBuffer = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => {
+  inputBuffer += chunk;
+  let newline;
+  while ((newline = inputBuffer.indexOf("\n")) >= 0) {
+    const line = inputBuffer.slice(0, newline).trim();
+    inputBuffer = inputBuffer.slice(newline + 1);
+    if (line) void handleLine(line);
+  }
+});
+
+process.stdin.on("end", () => {
+  if (!keepPairingBridgeAlive()) shutdown();
+});
+
+async function handleLine(line) {
+  let message;
+  try {
+    message = JSON.parse(line);
+  } catch (error) {
+    log("Ignoring malformed launcher message:", error.message);
+    return;
+  }
+
+  switch (message.type) {
+    case "close":
+      if (!keepPairingBridgeAlive()) shutdown();
+      break;
+    case "init":
+    case "query":
+      state.initialized = true;
+      renderCurrent(
+        Number(message.rev) || 0,
+        message.text != null ? message.text : message.query || "",
+      );
+      break;
+    case "action":
+      await handleAction(String(message.id || ""), message.action || "default");
+      break;
+    case "back":
+      handleBack();
+      break;
+  }
+}
+
+let shuttingDown = false;
+function keepPairingBridgeAlive() {
+  if (
+    !bridge.connected &&
+    state.pairingGraceUntil > Date.now() &&
+    !shuttingDown
+  ) {
+    state.detached = true;
+    clearTimeout(state.pairingShutdownTimer);
+    state.pairingShutdownTimer = setTimeout(
+      shutdown,
+      Math.max(0, state.pairingGraceUntil - Date.now()),
+    );
+    return true;
+  }
+  return false;
+}
+
+function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  clearTimeout(state.extensionEventTimer);
+  clearTimeout(state.pairingShutdownTimer);
+  bridge.close();
+  setTimeout(() => process.exit(0), 20);
+}
