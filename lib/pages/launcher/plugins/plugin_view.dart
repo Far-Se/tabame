@@ -102,6 +102,7 @@ class PluginView extends StatefulWidget {
 
 class _PluginViewState extends State<PluginView> {
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _dashboardScrollController = ScrollController();
   final Map<int, GlobalKey> _itemKeys = <int, GlobalKey>{};
 
   // When the selection moves because the pointer hovered a new row, we must NOT
@@ -118,6 +119,7 @@ class _PluginViewState extends State<PluginView> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _dashboardScrollController.dispose();
     super.dispose();
   }
 
@@ -229,7 +231,18 @@ class _PluginViewState extends State<PluginView> {
   Widget build(BuildContext context) {
     final PluginRenderFrame frame = widget.frame;
 
+    if (frame.view == PluginViewType.dashboard) return _withOperation(_buildDashboard(frame), frame.operation);
+
     if (frame.view == PluginViewType.chart) return _withOperation(_buildChart(frame), frame.operation);
+
+    if (frame.view == PluginViewType.operation) {
+      return frame.operation == null
+          ? _buildEmptyOrLoading(frame)
+          : Column(children: <Widget>[
+              _PluginOperationBar(
+                  operation: frame.operation!, onCancel: () => widget.onCancelOperation(frame.operation!.id))
+            ]);
+    }
 
     if (frame.view == PluginViewType.detail) {
       return _withOperation(_buildDetail(frame.detailMarkdown ?? '', frame.detailMetadata), frame.operation);
@@ -287,6 +300,93 @@ class _PluginViewState extends State<PluginView> {
       _PluginOperationBar(operation: operation, onCancel: () => widget.onCancelOperation(operation.id)),
       Expanded(child: child),
     ]);
+  }
+
+  /// A dashboard is deliberately composition-only: each panel carries the same
+  /// view payload it would use as a top-level frame. `stack` gives a report-like
+  /// scrollable result; `tabs` lets a plugin expose the same panels compactly.
+  Widget _buildDashboard(PluginRenderFrame frame) {
+    final List<PluginDashboardPanel> panels = frame.dashboardPanels;
+    if (panels.isEmpty) return _buildEmptyOrLoading(frame);
+    if (frame.dashboardLayout == 'tabs') {
+      return DefaultTabController(
+        length: panels.length,
+        child: Column(children: <Widget>[
+          Material(
+            color: Colors.transparent,
+            child: TabBar(
+              isScrollable: true,
+              dividerColor: Design.text.withAlpha(20),
+              labelColor: Design.accent,
+              unselectedLabelColor: Design.text.withAlpha(135),
+              tabs: <Widget>[for (final PluginDashboardPanel panel in panels) Tab(text: panel.title)],
+            ),
+          ),
+          Expanded(
+              child: TabBarView(children: <Widget>[
+            for (final PluginDashboardPanel panel in panels) _dashboardPanel(panel, fill: true)
+          ])),
+        ]),
+      );
+    }
+    return WindowsScrollView(
+      controller: _dashboardScrollController,
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[for (final PluginDashboardPanel panel in panels) _dashboardPanel(panel)],
+        ),
+      ),
+    );
+  }
+
+  Widget _dashboardPanel(PluginDashboardPanel panel, {bool fill = false}) {
+    final PluginRenderFrame frame = panel.frame;
+    if (frame.view == PluginViewType.operation && frame.operation != null) {
+      final Widget operation = Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: _PluginOperationBar(
+          operation: frame.operation!,
+          onCancel: () => widget.onCancelOperation(frame.operation!.id),
+        ),
+      );
+      final double height = panel.height ?? 58;
+      return fill
+          ? Align(alignment: Alignment.topCenter, child: SizedBox(height: height, child: operation))
+          : SizedBox(height: height, child: operation);
+    }
+    final Widget body = switch (frame.view) {
+      PluginViewType.detail => _buildDetail(frame.detailMarkdown ?? '', frame.detailMetadata),
+      PluginViewType.table => _buildTable(frame),
+      PluginViewType.tree => _buildTree(frame),
+      PluginViewType.timeline => _buildTimeline(frame),
+      PluginViewType.chart => _buildChart(frame),
+      PluginViewType.operation => _buildEmptyOrLoading(frame),
+      PluginViewType.grid => _buildGrid(frame),
+      _ => _buildList(frame),
+    };
+    final double height = panel.height ?? (frame.view == PluginViewType.operation ? 64 : 240);
+    final Widget card = Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Design.text.withAlpha(7),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Design.text.withAlpha(18)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+            child: Text(panel.title,
+                style: TextStyle(
+                    fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.7, color: Design.text.withAlpha(140))),
+          ),
+          Expanded(child: body),
+        ]),
+      ),
+    );
+    return fill ? SizedBox.expand(child: card) : SizedBox(height: height, child: card);
   }
 
   Widget _buildEmptyOrLoading(PluginRenderFrame frame) {

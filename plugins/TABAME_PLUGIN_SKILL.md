@@ -251,7 +251,7 @@ Notes:
 
 | Message       | When                                                                                                             | Fields                                                                                                                                                                                       |
 | ------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `init`        | Once, right after your process starts                                                                            | `query`: initial text after the keyword; `protocol`: int protocol version (currently 7); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"` |
+| `init`        | Once, right after your process starts                                                                            | `query`: initial text after the keyword; `protocol`: int protocol version (currently 8); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"` |
 | `query`       | On every keystroke while the keyword is active (not sent in `inputMode: "submit"`)                               | `text`: current text after the keyword; `rev`: integer generation counter                                                                                                                    |
 | `submitQuery` | **Enter** while the frame declared `inputMode: "submit"` — the whole query line at once (chat-style input)       | `text`, `rev`                                                                                                                                                                                |
 | `select`      | When the highlighted item changes                                                                                | `id`: the selected item's id; `rev`                                                                                                                                                          |
@@ -393,17 +393,19 @@ slow response to "rom" from overwriting the fresh results for "rome".
   "columns": [{ "id": "status", "label": "Status", "align": "end" }], // table view
   "chart": { "title": "Latency", "series": [{ "id": "p95", "label": "p95", "values": [24, 31], "color": "#63A0EA" }] },
   "operation": { "id": "deploy-42", "title": "Deploying", "progress": 0.4, "cancellable": true },
+  "dashboard": { "layout": "stack", "panels": [/* normal view payloads, see below */] },
   "items": [/* see §7 */],
 }
 ```
 
 | Field              | Type           | Notes                                                                                                                                                                                                                                                                            |
 | ------------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `view`             | string         | `"list"` (rows), `"grid"` (tiles), `"detail"` (full-width markdown), `"chat"` (message feed), `"form"` (inputs), `"table"`, `"tree"`, `"timeline"`, or `"chart"`. Default `list`. |
+| `view`             | string         | `"list"` (rows), `"grid"` (tiles), `"detail"` (full-width markdown), `"chat"` (message feed), `"form"` (inputs), `"table"`, `"tree"`, `"timeline"`, `"chart"`, `"operation"`, or `"dashboard"`. Default `list`. |
 | `selection`        | bool/object    | Enable bulk selection. `Enter` and `Ctrl+Space` toggle the highlighted item; list/table/tree/timeline also expose a pointer checkbox. `{max}` caps the selection count. Selected IDs arrive in `action.ids`. |
 | `columns`          | array          | `table` columns: `{id,label,width?,align?}`. Items provide matching string values in `cells`. |
 | `chart`            | object         | `chart` view data: `{title?,series:[{id,label?,values:[number,number,...],color?}]}`. Clicking a point sends `chartSelect`. |
 | `operation`        | object         | A visible long-running operation `{id,title,detail?,progress?:0..1,cancellable?:bool}`. A cancellable operation sends `cancel`. |
+| `dashboard`        | object         | Only for `view: "dashboard"`. `{layout:"stack"|"tabs",panels:[...]}` composes independently scrollable normal view payloads. Each panel has `id`, `title`, optional `height` (96–640), plus `view` and the fields for that view. |
 | `loading`          | bool or object | When truthy and `items` empty, a spinner is shown. `{"progress": 0..1}` makes it determinate.                                                                                                                                                                                    |
 | `loadingText`      | string         | Optional caption shown **under the spinner** while `loading`. Use this (not `emptyText`) for "Searching…"-style progress text — `emptyText` is only shown when _not_ loading.                                                                                                    |
 | `emptyText`        | string         | Message when there are no items. Default `"No results"`.                                                                                                                                                                                                                         |

@@ -15,10 +15,11 @@ import 'dart:ui' show Color;
 /// 6 = chat view for message-oriented plugins.
 /// 7 = bulk selection, table/tree/timeline/chart views, cancellable operations,
 ///     action parameters, and host-mediated loopback OAuth.
-const int pluginProtocolVersion = 7;
+/// 8 = composite dashboard frames with stacked or tabbed sub-views.
+const int pluginProtocolVersion = 8;
 
 /// The layout a plugin render frame requests.
-enum PluginViewType { list, grid, detail, chat, form, table, tree, timeline, chart }
+enum PluginViewType { list, grid, detail, chat, form, table, tree, timeline, chart, operation, dashboard }
 
 /// Parses a `#RGB` / `#RRGGBB` / `#AARRGGBB` string from plugin JSON into a
 /// [Color]. Returns null for anything else, so a bad value degrades to the
@@ -60,6 +61,10 @@ PluginViewType _viewFromString(String? value) {
       return PluginViewType.timeline;
     case 'chart':
       return PluginViewType.chart;
+    case 'operation':
+      return PluginViewType.operation;
+    case 'dashboard':
+      return PluginViewType.dashboard;
     case 'list':
     default:
       return PluginViewType.list;
@@ -719,6 +724,44 @@ class PluginCommand {
   }
 }
 
+/// One independent surface in a `dashboard` frame. Its visual fields use the
+/// same grammar as a normal render frame; `id`, `title`, and `height` belong to
+/// the panel wrapper rather than its child view.
+class PluginDashboardPanel {
+  const PluginDashboardPanel({required this.id, required this.title, required this.frame, this.height});
+
+  final String id;
+  final String title;
+  final PluginRenderFrame frame;
+  final double? height;
+
+  static PluginDashboardPanel? fromJson(Object? json, int index) {
+    if (json is! Map) return null;
+    final Map<String, dynamic> raw = json.cast<String, dynamic>();
+    final String id =
+        raw['id'] is String && (raw['id'] as String).trim().isNotEmpty ? raw['id'] as String : 'panel-$index';
+    final String title =
+        raw['title'] is String && (raw['title'] as String).trim().isNotEmpty ? raw['title'] as String : id;
+    final Object? rawHeight = raw['height'];
+    return PluginDashboardPanel(
+      id: id,
+      title: title,
+      frame: PluginRenderFrame.fromJson(raw),
+      height: rawHeight is num ? rawHeight.toDouble().clamp(96, 640) : null,
+    );
+  }
+
+  static List<PluginDashboardPanel> listFromJson(Object? json) {
+    if (json is! List) return const <PluginDashboardPanel>[];
+    final List<PluginDashboardPanel> panels = <PluginDashboardPanel>[];
+    for (int index = 0; index < json.length; index++) {
+      final PluginDashboardPanel? panel = fromJson(json[index], index);
+      if (panel != null) panels.add(panel);
+    }
+    return panels;
+  }
+}
+
 /// A full description of the launcher UI at one point in time. The plugin sends
 /// a new frame whenever it wants to change what is shown.
 class PluginRenderFrame {
@@ -754,6 +797,8 @@ class PluginRenderFrame {
     this.chartSeries = const <PluginChartSeries>[],
     this.chartTitle,
     this.operation,
+    this.dashboardLayout = 'stack',
+    this.dashboardPanels = const <PluginDashboardPanel>[],
   });
 
   final PluginViewType view;
@@ -789,6 +834,10 @@ class PluginRenderFrame {
   final List<PluginChartSeries> chartSeries;
   final String? chartTitle;
   final PluginOperation? operation;
+
+  /// `dashboard` composition: either vertically stacked panels or tabs.
+  final String dashboardLayout;
+  final List<PluginDashboardPanel> dashboardPanels;
 
   /// Full-width markdown, used when [view] is [PluginView.detail].
   final String? detailMarkdown;
@@ -882,6 +931,8 @@ class PluginRenderFrame {
       chartSeries: chartSeries,
       chartTitle: chartTitle,
       operation: operation,
+      dashboardLayout: dashboardLayout,
+      dashboardPanels: dashboardPanels,
     );
   }
 
@@ -945,6 +996,7 @@ class PluginRenderFrame {
     final Object? preview = json['preview'];
     final Object? selection = json['selection'];
     final Object? chart = json['chart'];
+    final Object? dashboard = json['dashboard'];
 
     int gridColumns = 4;
     double gridAspectRatio = 1.0;
@@ -1048,6 +1100,8 @@ class PluginRenderFrame {
       chartSeries: chartSeries,
       chartTitle: chart is Map && chart['title'] is String ? chart['title'] as String : null,
       operation: PluginOperation.fromJson(json['operation']),
+      dashboardLayout: dashboard is Map && dashboard['layout'] == 'tabs' ? 'tabs' : 'stack',
+      dashboardPanels: PluginDashboardPanel.listFromJson(dashboard is Map ? dashboard['panels'] : json['panels']),
     );
   }
 }

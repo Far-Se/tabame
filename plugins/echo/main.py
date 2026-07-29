@@ -35,6 +35,8 @@ Try these queries after typing the `echo ` keyword in the launcher:
     echo operation          -> cancellable long-running operation
     echo params             -> action parameter form + confirmation gate
     echo oauth              -> host-owned OAuth callback + secret-storage pattern
+    echo dashboard          -> stacked markdown + table + chart + operation panels
+    echo tabs               -> the same composite result as tabs
     Tab on a list item       -> autocompletes the query via a setQuery command
     Ctrl+K                   -> item actions + frame actions (shortcuts, confirm)
 """
@@ -56,7 +58,7 @@ LAST_ITEMS = {}
 
 # Small demo state: which sub-screen owns the query line, pagination depth,
 # the storage-backed counter, and a background worker handle.
-STATE = {"screen": "root", "pages": 1, "counter": None, "tree_expanded": False, "operation": None}
+STATE = {"screen": "root", "pages": 1, "counter": None, "tree_expanded": False, "operation": None, "dashboard_sync_cancelled": False}
 BG_THREAD = None
 
 # Frame-level actions (v3): available from Ctrl+K on any view, with direct
@@ -543,6 +545,27 @@ def render_chart(rev):
           ]}})
 
 
+def render_dashboard(rev, tabs=False):
+    """Protocol v8 composite result. Each panel is a normal view payload, so
+    plugins can choose one long report (`stack`) or a compact `tabs` layout."""
+    panels = [
+        {"id": "summary", "title": "Summary", "height": 180, "view": "detail",
+         "detail": {"markdown": "# Release health\n\n**All checks are green.** This markdown panel lives beside structured data.",
+                    "metadata": [{"label": "Version", "text": "v8 demo", "color": "#10B981"}, {"label": "Owner", "text": "Echo"}]}},
+        {"id": "jobs", "title": "Jobs", "height": 190, "view": "table",
+         "columns": [{"id": "title", "label": "Job"}, {"id": "status", "label": "Status"}, {"id": "duration", "label": "Duration", "align": "end"}],
+         "items": [{"id": "dash:build", "title": "Build", "cells": {"status": "Passed", "duration": "42s"}, "icon": "check"},
+                   {"id": "dash:test", "title": "Tests", "cells": {"status": "Passed", "duration": "1m 18s"}, "icon": "check"}]},
+        {"id": "latency", "title": "Latency", "height": 230, "view": "chart",
+         "chart": {"title": "p95 latency", "series": [{"id": "p95", "label": "p95", "color": "#F59E0B", "values": [102, 94, 88, 107, 91, 85]}]}},
+    ]
+    if not STATE["dashboard_sync_cancelled"]:
+        panels.append({"id": "sync", "title": "Background sync", "height": 86, "view": "operation",
+                       "operation": {"id": "dashboard:sync", "title": "Syncing release notes", "detail": "3 of 5 repositories complete", "progress": 0.6, "cancellable": True}})
+    send({"type": "render", "rev": rev, "view": "dashboard", "canGoBack": True,
+          "dashboard": {"layout": "tabs" if tabs else "stack", "panels": panels}})
+
+
 def render_operation(rev):
     operation = STATE["operation"]
     send({"type": "render", "rev": rev, "view": "list", "canGoBack": True,
@@ -639,6 +662,14 @@ def handle_query(text, rev):
     elif stripped.startswith("oauth"):
         STATE["screen"] = "oauth"
         render_oauth(rev)
+    elif stripped.startswith("dashboard"):
+        STATE["screen"] = "dashboard"
+        STATE["dashboard_sync_cancelled"] = False
+        render_dashboard(rev)
+    elif stripped.startswith("tabs"):
+        STATE["screen"] = "tabs"
+        STATE["dashboard_sync_cancelled"] = False
+        render_dashboard(rev, tabs=True)
     elif stripped.startswith("preview"):
         render_list(text[len("preview") :].strip(), rev, with_preview=True)
     else:
@@ -827,6 +858,10 @@ def main():
                 STATE["operation"] = None
                 send({"type": "command", "command": "toast", "text": "Demo deployment cancelled", "style": "error"})
                 render_operation(0)
+            elif msg.get("id") == "dashboard:sync":
+                STATE["dashboard_sync_cancelled"] = True
+                send({"type": "command", "command": "toast", "text": "Dashboard sync cancelled", "style": "error"})
+                render_dashboard(0, tabs=STATE["screen"] == "tabs")
         elif kind == "oauth":
             if msg.get("requestId") == "echo-oauth":
                 if msg.get("code"):

@@ -244,7 +244,7 @@ class LauncherResultRow extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               _titleText(OrbitTokens.disp(
-                                fontSize: Design.baseFontSize + 1.5,
+                                fontSize: Design.baseFontSize + 2,
                                 fontWeight: FontWeight.w600,
                                 color: isSelected ? onSurface : onSurface.withAlpha(220),
                                 letterSpacing: 0.1,
@@ -344,7 +344,7 @@ class LauncherResultRow extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           _titleText(ManifestoTokens.body(
-                            fontSize: Design.baseFontSize + 1.5,
+                            fontSize: Design.baseFontSize + 2,
                             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                             color: onSurface,
                             height: 1.2,
@@ -535,7 +535,7 @@ class LauncherResultRow extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               _titleText(TransitTokens.sign(
-                                fontSize: Design.baseFontSize + 1.5,
+                                fontSize: Design.baseFontSize + 2,
                                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                                 color: isSelected ? onSurface : onSurface.withAlpha(225),
                                 letterSpacing: 0.2,
@@ -630,7 +630,7 @@ class LauncherResultRow extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               _titleText(BlueprintTokens.tech(
-                                fontSize: Design.baseFontSize + 1.5,
+                                fontSize: Design.baseFontSize + 2,
                                 fontWeight: FontWeight.w600,
                                 color: isSelected ? onSurface : onSurface.withAlpha(220),
                                 letterSpacing: 0.4,
@@ -901,13 +901,13 @@ class LauncherResultRow extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           _titleText(TerminalTokens.mono(
-                            fontSize: Design.baseFontSize + 1,
+                            fontSize: Design.baseFontSize + 2,
                             fontWeight: FontWeight.w600,
                             color: isSelected ? accent : TerminalTokens.fg(isDark),
                             height: 1.25,
                           )),
                           _subtitleText(TerminalTokens.mono(
-                            fontSize: Design.baseFontSize - 1,
+                            fontSize: Design.baseFontSize,
                             color: isSelected ? TerminalTokens.fg(isDark).withAlpha(190) : TerminalTokens.dim(isDark),
                             height: 1.2,
                           )),
@@ -992,7 +992,7 @@ class LauncherResultRow extends StatelessWidget {
                           children: <Widget>[
                             _titleText(entryStyle(
                               isSelected,
-                              fontSize: Design.baseFontSize + 1.5,
+                              fontSize: Design.baseFontSize + 2,
                               letterSpacing: 0.2,
                             )),
                             const SizedBox(height: 1),
