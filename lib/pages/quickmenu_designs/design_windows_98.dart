@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes/quick_menu_box.dart';
 import '../../models/settings.dart';
@@ -41,7 +42,7 @@ class MainMenuWindows98Widget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  const _Win98TitleBar(),
+                  const DragToMoveArea(child: _Win98TitleBar()),
                   const SizedBox(height: 2),
                   if (!user.quickActionsAtBottom)
                     const _Win98RaisedBand(
@@ -209,18 +210,18 @@ class _Win98Footer extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   _Win98Flag(size: 17),
-                  SizedBox(width: 4),
-                  Text(
-                    'Start',
-                    style: TextStyle(
-                      fontFamily: 'MS Sans Serif',
-                      fontFamilyFallback: <String>['Tahoma'],
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: _Win98Colors.dark,
-                      height: 1,
-                    ),
-                  ),
+                  // SizedBox(width: 4),
+                  // Text(
+                  //   'Start',
+                  //   style: TextStyle(
+                  //     fontFamily: 'MS Sans Serif',
+                  //     fontFamilyFallback: <String>['Tahoma'],
+                  //     fontSize: 11,
+                  //     fontWeight: FontWeight.w700,
+                  //     color: _Win98Colors.dark,
+                  //     height: 1,
+                  //   ),
+                  // ),
                 ],
               ),
             ),

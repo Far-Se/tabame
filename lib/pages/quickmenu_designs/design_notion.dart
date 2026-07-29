@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
+import '../../models/win32/win_utils.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
 import '../../widgets/quickmenu/info_bar.dart';
 import '../../widgets/quickmenu/libre_stats.dart';
@@ -75,8 +77,8 @@ class MainMenuNotionWidget extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                _NotionBreadcrumbBar(tokens: tokens),
-                _NotionPageIdentity(tokens: tokens),
+                DragToMoveArea(child: _NotionBreadcrumbBar(tokens: tokens)),
+                // _NotionPageIdentity(tokens: tokens),
                 if (!user.quickActionsAtBottom)
                   DecoratedBox(
                     decoration: BoxDecoration(
@@ -166,7 +168,7 @@ class _NotionBreadcrumbBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              '•••',
+              WinUtils.shellUser(),
               style: TextStyle(
                 fontSize: Design.baseFontSize,
                 fontWeight: FontWeight.w600,
@@ -182,6 +184,7 @@ class _NotionBreadcrumbBar extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _NotionPageIdentity extends StatelessWidget {
   const _NotionPageIdentity({required this.tokens});
 
@@ -282,17 +285,17 @@ class _NotionFooter extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Icon(Icons.keyboard_command_key_rounded, size: 13, color: tokens.dim),
-                const SizedBox(width: 5),
-                Text(
-                  'Workspace',
-                  style: TextStyle(
-                    fontFamily: 'Segoe UI Variable Text',
-                    fontFamilyFallback: const <String>['Segoe UI'],
-                    fontSize: Design.baseFontSize - 0.5,
-                    fontWeight: FontWeight.w500,
-                    color: tokens.dim,
-                  ),
-                ),
+                // const SizedBox(width: 5),
+                // Text(
+                //   'Workspace',
+                //   style: TextStyle(
+                //     fontFamily: 'Segoe UI Variable Text',
+                //     fontFamilyFallback: const <String>['Segoe UI'],
+                //     fontSize: Design.baseFontSize - 0.5,
+                //     fontWeight: FontWeight.w500,
+                //     color: tokens.dim,
+                //   ),
+                // ),
               ],
             ),
           ),
@@ -326,7 +329,7 @@ class _NotionMark extends StatelessWidget {
         border: Border.all(color: tokens.text.withAlpha(190)),
       ),
       child: Text(
-        'N',
+        'T',
         style: TextStyle(
           fontFamily: 'Georgia',
           fontSize: size * 0.64,

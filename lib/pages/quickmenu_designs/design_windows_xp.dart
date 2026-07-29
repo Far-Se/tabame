@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
@@ -21,9 +22,9 @@ abstract final class _XpColors {
   static const Color cream = Color(0xFFECE9D8);
   static const Color creamLight = Color(0xFFFFFEF5);
   static const Color orange = Color(0xFFFF8C00);
-  static const Color greenDark = Color(0xFF2C811A);
-  static const Color green = Color(0xFF4BAE31);
-  static const Color greenLight = Color(0xFF75C85C);
+  // static const Color greenDark = Color(0xFF2C811A);
+  // static const Color green = Color(0xFF4BAE31);
+  // static const Color greenLight = Color(0xFF75C85C);
 }
 
 class MainMenuWindowsXpWidget extends StatelessWidget {
@@ -53,7 +54,7 @@ class MainMenuWindowsXpWidget extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                const _XpMenuHeader(),
+                const DragToMoveArea(child: _XpMenuHeader()),
                 if (!user.quickActionsAtBottom)
                   const _XpInsetBand(
                     padding: EdgeInsets.fromLTRB(4, 3, 5, 3),
@@ -90,7 +91,7 @@ class _XpMenuHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 45,
+      height: 35,
       padding: const EdgeInsets.fromLTRB(8, 5, 9, 5),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -111,9 +112,9 @@ class _XpMenuHeader extends StatelessWidget {
       child: Row(
         children: <Widget>[
           Container(
-            width: 34,
-            height: 34,
-            padding: const EdgeInsets.all(5),
+            width: 24,
+            height: 24,
+            padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               color: _XpColors.creamLight,
               borderRadius: BorderRadius.circular(4),
@@ -242,47 +243,71 @@ class _XpFooter extends StatelessWidget {
         ),
         border: Border(top: BorderSide(color: _XpColors.blueHighlight)),
       ),
-      child: Row(
+      child: const Row(
         children: <Widget>[
-          Container(
-            height: 31,
-            padding: const EdgeInsets.fromLTRB(9, 0, 12, 0),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: <Color>[
-                  _XpColors.greenLight,
-                  _XpColors.green,
-                  _XpColors.greenDark,
-                ],
-              ),
-              borderRadius: BorderRadius.only(topRight: Radius.circular(15), bottomRight: Radius.circular(15)),
-              border: Border(
-                top: BorderSide(color: Color(0xFFA3E38E)),
-                right: BorderSide(color: Color(0xFF1D6410)),
-              ),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                _WindowsFlag(size: 16),
-                SizedBox(width: 5),
-                Text(
-                  'start',
-                  style: TextStyle(
-                    fontFamily: 'Tahoma',
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFF7FFF3),
-                    shadows: <Shadow>[Shadow(color: Color(0x990F5A09), offset: Offset(1, 1))],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Expanded(
+          // Container(
+          //   height: 31,
+          //   decoration: const BoxDecoration(
+          //     gradient: LinearGradient(
+          //       begin: Alignment.topCenter,
+          //       end: Alignment.bottomCenter,
+          //       colors: <Color>[
+          //         _XpColors.greenLight,
+          //         _XpColors.green,
+          //         _XpColors.greenDark,
+          //       ],
+          //     ),
+          //     borderRadius: BorderRadius.only(topRight: Radius.circular(15), bottomRight: Radius.circular(15)),
+          //   ),
+          //   child: const ClipRRect(
+          //     borderRadius: BorderRadius.only(
+          //       topRight: Radius.circular(15),
+          //       bottomRight: Radius.circular(15),
+          //     ),
+          //     child: Stack(
+          //       children: <Widget>[
+          //         Positioned(
+          //           top: 0,
+          //           left: 0,
+          //           right: 0,
+          //           height: 1,
+          //           child: ColoredBox(color: Color(0xFFA3E38E)),
+          //         ),
+          //         Positioned(
+          //           top: 0,
+          //           right: 0,
+          //           bottom: 0,
+          //           width: 1,
+          //           child: ColoredBox(color: Color(0xFF1D6410)),
+          //         ),
+          //         Padding(
+          //           padding: EdgeInsets.fromLTRB(9, 0, 12, 0),
+          //           child: Row(
+          //             mainAxisSize: MainAxisSize.min,
+          //             crossAxisAlignment: CrossAxisAlignment.center,
+          //             mainAxisAlignment: MainAxisAlignment.center,
+          //             children: <Widget>[
+          //               _WindowsFlag(size: 16),
+          //               // SizedBox(width: 5),
+          //               // Text(
+          //               //   'start',
+          //               //   style: TextStyle(
+          //               //     fontFamily: 'Tahoma',
+          //               //     fontSize: 12,
+          //               //     fontStyle: FontStyle.italic,
+          //               //     fontWeight: FontWeight.w700,
+          //               //     color: Color(0xFFF7FFF3),
+          //               //     shadows: <Shadow>[Shadow(color: Color(0x990F5A09), offset: Offset(1, 1))],
+          //               //   ),
+          //               // ),
+          //             ],
+          //           ),
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
+          Expanded(
             child: Padding(
               padding: EdgeInsets.fromLTRB(4, 2, 4, 3),
               child: BottomBar(),
@@ -295,7 +320,7 @@ class _XpFooter extends StatelessWidget {
 }
 
 class _WindowsFlag extends StatelessWidget {
-  const _WindowsFlag({this.size = 22});
+  const _WindowsFlag() : size = 22;
 
   final double size;
 

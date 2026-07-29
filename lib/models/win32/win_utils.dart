@@ -2018,6 +2018,12 @@ class WinUtils {
       }
     }
   }
+
+  static String shellUser() {
+    final String name = Platform.environment['USERNAME'] ?? 'user';
+    final String clean = name.replaceAll(RegExp(r'\s+'), '').toLowerCase();
+    return clean.isEmpty ? 'user' : clean;
+  }
 }
 
 class ClipboardExtension {

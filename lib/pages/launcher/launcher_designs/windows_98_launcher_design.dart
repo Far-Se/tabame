@@ -38,38 +38,40 @@ class Windows98LauncherSearchBar extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Container(
-              height: 23,
-              padding: const EdgeInsets.fromLTRB(3, 2, 2, 2),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: <Color>[Windows98Tokens.title, Windows98Tokens.titleLight],
+            DragToMoveArea(
+              child: Container(
+                height: 23,
+                padding: const EdgeInsets.fromLTRB(3, 2, 2, 2),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[Windows98Tokens.title, Windows98Tokens.titleLight],
+                  ),
                 ),
-              ),
-              child: Row(
-                children: <Widget>[
-                  const _Windows98Flag(size: 16),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      'Tabame Search',
-                      style: Windows98Tokens.system(
-                        fontSize: Design.baseFontSize + 1,
-                        fontWeight: FontWeight.w700,
-                        color: Windows98Tokens.light,
-                        height: 1,
+                child: Row(
+                  children: <Widget>[
+                    const _Windows98Flag(size: 16),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'Tabame Search',
+                        style: Windows98Tokens.system(
+                          fontSize: Design.baseFontSize + 1,
+                          fontWeight: FontWeight.w700,
+                          color: Windows98Tokens.light,
+                          height: 1,
+                        ),
                       ),
                     ),
-                  ),
-                  const _Windows98CaptionButton(label: '_'),
-                  const SizedBox(width: 2),
-                  const _Windows98CaptionButton(label: '□'),
-                  const SizedBox(width: 2),
-                  const _Windows98CaptionButton(
-                    label: '×',
-                    onTap: QuickMenuFunctions.hideQuickMenu,
-                  ),
-                ],
+                    const _Windows98CaptionButton(label: '_'),
+                    const SizedBox(width: 2),
+                    const _Windows98CaptionButton(label: '□'),
+                    const SizedBox(width: 2),
+                    const _Windows98CaptionButton(
+                      label: '×',
+                      onTap: QuickMenuFunctions.hideQuickMenu,
+                    ),
+                  ],
+                ),
               ),
             ),
             Padding(

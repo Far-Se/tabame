@@ -23,6 +23,105 @@ import '../settings.dart';
 Color _lift(Color base, double amount) => Color.alphaBlend(Colors.white.withValues(alpha: amount), base);
 Color _sink(Color base, double amount) => Color.alphaBlend(Colors.black.withValues(alpha: amount), base);
 
+/// Mounts a decorative layer directly under the modal's [Stack].
+///
+/// Most layers paint edge-to-edge and receive a [Positioned.fill] wrapper.
+/// A few designs intentionally provide their own [Positioned] geometry (for
+/// example Outrun2's sunset band). Those must remain direct Stack children:
+/// putting [IgnorePointer] between a Positioned widget and the Stack produces
+/// an incompatible ParentData assertion.
+Widget _mountModalLayer(Widget layer) {
+  if (layer is Positioned) {
+    return Positioned(
+      left: layer.left,
+      top: layer.top,
+      right: layer.right,
+      bottom: layer.bottom,
+      width: layer.width,
+      height: layer.height,
+      child: IgnorePointer(child: layer.child),
+    );
+  }
+  return Positioned.fill(child: IgnorePointer(child: layer));
+}
+
+ThemeData _legacyPopupTheme(ThemeData inherited, {required bool windowsXp}) {
+  final Color face = windowsXp ? const Color(0xFFECE9D8) : const Color(0xFFC0C0C0);
+  final Color primary = windowsXp ? const Color(0xFF245EDC) : const Color(0xFF000080);
+  final Color shadow = windowsXp ? const Color(0xFFACA899) : const Color(0xFF808080);
+  final String fontFamily = windowsXp ? 'Tahoma' : 'MS Sans Serif';
+  final List<String> fallbacks =
+      windowsXp ? const <String>['Verdana', 'Segoe UI'] : const <String>['Tahoma', 'Segoe UI'];
+  final BorderRadius inputRadius = BorderRadius.circular(windowsXp ? 2 : 0);
+  final ColorScheme scheme = ColorScheme.light(
+    primary: primary,
+    onPrimary: const Color(0xFFFFFFFF),
+    secondary: primary,
+    onSecondary: const Color(0xFFFFFFFF),
+    surface: face,
+    onSurface: const Color(0xFF000000),
+    outline: shadow,
+    outlineVariant: shadow.withAlpha(130),
+  );
+  final ThemeData light = ThemeData.light(useMaterial3: inherited.useMaterial3);
+  final TextTheme textTheme = light.textTheme.apply(
+    fontFamily: fontFamily,
+    fontFamilyFallback: fallbacks,
+    bodyColor: const Color(0xFF000000),
+    displayColor: const Color(0xFF000000),
+  );
+  final OutlineInputBorder fieldBorder = OutlineInputBorder(
+    borderRadius: inputRadius,
+    borderSide: BorderSide(color: shadow),
+  );
+  return light.copyWith(
+    colorScheme: scheme,
+    scaffoldBackgroundColor: face,
+    canvasColor: face,
+    cardColor: face,
+    dividerColor: shadow,
+    hoverColor: primary.withAlpha(18),
+    highlightColor: primary.withAlpha(26),
+    splashColor: primary.withAlpha(30),
+    textTheme: textTheme,
+    primaryTextTheme: textTheme,
+    iconTheme: const IconThemeData(color: Color(0xFF000000)),
+    primaryIconTheme: const IconThemeData(color: Color(0xFF000000)),
+    dividerTheme: DividerThemeData(color: shadow, thickness: 1, space: 1),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: const Color(0xFFFFFFFF),
+      labelStyle: const TextStyle(color: Color(0xFF000000)),
+      floatingLabelStyle: TextStyle(color: primary),
+      hintStyle: const TextStyle(color: Color(0xFF666666)),
+      border: fieldBorder,
+      enabledBorder: fieldBorder,
+      focusedBorder: fieldBorder.copyWith(
+        borderSide: BorderSide(color: primary, width: windowsXp ? 1.5 : 1),
+      ),
+    ),
+    listTileTheme: ListTileThemeData(
+      textColor: const Color(0xFF000000),
+      iconColor: const Color(0xFF000000),
+      selectedColor: const Color(0xFFFFFFFF),
+      selectedTileColor: primary,
+    ),
+    tooltipTheme: TooltipThemeData(
+      decoration: BoxDecoration(
+        color: windowsXp ? const Color(0xFFFFFFE1) : face,
+        border: Border.all(color: const Color(0xFF000000)),
+        borderRadius: BorderRadius.circular(windowsXp ? 2 : 0),
+      ),
+      textStyle: const TextStyle(color: Color(0xFF000000), fontSize: 11),
+    ),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: primary,
+      selectionColor: primary.withAlpha(70),
+      selectionHandleColor: primary,
+    ),
+  );
+}
+
 class QuickMenuModalFrame extends StatelessWidget {
   const QuickMenuModalFrame({
     super.key,
@@ -37,20 +136,32 @@ class QuickMenuModalFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ThemeData inheritedTheme = Theme.of(context);
+
     // Popups opened over the launcher page speak the launcher design instead —
     // the same frame the Ctrl+K actions modal uses.
     if (Globals.quickMenuPage == QuickMenuPage.launcher) {
+      final LauncherDesign launcherDesign = user.launcherDesign;
+      final Widget popupChild = launcherDesign == LauncherDesign.windowsXp || launcherDesign == LauncherDesign.windows98
+          ? Theme(
+              data: _legacyPopupTheme(
+                inheritedTheme,
+                windowsXp: launcherDesign == LauncherDesign.windowsXp,
+              ),
+              child: child,
+            )
+          : child;
       return LauncherModalFrame(
         tokens: LauncherModalTokens.of(context),
         width: width,
         margin: EdgeInsets.zero,
         constraints: constraints,
-        child: child,
+        child: popupChild,
       );
     }
 
     final QuickMenuDesigns design = QuickMenuDesigns.values[user.quickMenuDesign];
-    final ThemeData theme = Theme.of(context);
+    final ThemeData theme = inheritedTheme;
     final Color surface = theme.colorScheme.surface;
     final Color onSurface = theme.colorScheme.onSurface;
     final Color bg = Design.background;
@@ -59,6 +170,15 @@ class QuickMenuModalFrame extends StatelessWidget {
     final bool isDark = bg.computeLuminance() < 0.5;
     final double intensity = (Design.gradientAlpha.clamp(0, 255)) / 255.0;
     final double r = Design.borderRadius;
+    final Widget popupChild = design == QuickMenuDesigns.windowsXp || design == QuickMenuDesigns.windows98
+        ? Theme(
+            data: _legacyPopupTheme(
+              inheritedTheme,
+              windowsXp: design == QuickMenuDesigns.windowsXp,
+            ),
+            child: child,
+          )
+        : child;
 
     // Aurora's signature asymmetric corners; every other design keeps its
     // regular panel radius.
@@ -788,9 +908,9 @@ class QuickMenuModalFrame extends StatelessWidget {
         child: Stack(
           fit: StackFit.passthrough,
           children: <Widget>[
-            for (final Widget underlay in spec.underlays) Positioned.fill(child: IgnorePointer(child: underlay)),
-            child,
-            for (final Widget overlay in spec.overlays) Positioned.fill(child: IgnorePointer(child: overlay)),
+            for (final Widget underlay in spec.underlays) _mountModalLayer(underlay),
+            popupChild,
+            for (final Widget overlay in spec.overlays) _mountModalLayer(overlay),
           ],
         ),
       ),

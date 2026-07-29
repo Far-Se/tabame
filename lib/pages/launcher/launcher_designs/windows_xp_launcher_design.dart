@@ -31,66 +31,68 @@ class WindowsXpLauncherSearchBar extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Container(
-          height: 37,
-          padding: const EdgeInsets.fromLTRB(9, 4, 8, 4),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: <Color>[
-                WindowsXpTokens.blueLight,
-                WindowsXpTokens.blue,
-                Color(0xFF0B48C9),
-              ],
-              stops: <double>[0, 0.5, 1],
-            ),
-            border: Border(
-              top: BorderSide(color: WindowsXpTokens.blueHighlight),
-              bottom: BorderSide(color: WindowsXpTokens.blueDark),
-            ),
-          ),
-          child: Row(
-            children: <Widget>[
-              const _WindowsXpFlag(size: 20),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  'Tabame Search',
-                  style: WindowsXpTokens.tahoma(
-                    fontSize: Design.baseFontSize + 3,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFFF8FBFF),
-                    height: 1.1,
-                  ).copyWith(
-                    shadows: const <Shadow>[
-                      Shadow(color: Color(0x99002A8E), offset: Offset(1, 1)),
-                    ],
-                  ),
-                ),
+        DragToMoveArea(
+          child: Container(
+            height: 37,
+            padding: const EdgeInsets.fromLTRB(9, 4, 8, 4),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: <Color>[
+                  WindowsXpTokens.blueLight,
+                  WindowsXpTokens.blue,
+                  Color(0xFF0B48C9),
+                ],
+                stops: <double>[0, 0.5, 1],
               ),
-              GestureDetector(
-                onTap: QuickMenuFunctions.hideQuickMenu,
-                child: Container(
-                  width: 21,
-                  height: 21,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: <Color>[Color(0xFFF39C7C), Color(0xFFC9331D)],
+              border: Border(
+                top: BorderSide(color: WindowsXpTokens.blueHighlight),
+                bottom: BorderSide(color: WindowsXpTokens.blueDark),
+              ),
+            ),
+            child: Row(
+              children: <Widget>[
+                const _WindowsXpFlag(size: 20),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    'Tabame Search',
+                    style: WindowsXpTokens.tahoma(
+                      fontSize: Design.baseFontSize + 3,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFF8FBFF),
+                      height: 1.1,
+                    ).copyWith(
+                      shadows: const <Shadow>[
+                        Shadow(color: Color(0x99002A8E), offset: Offset(1, 1)),
+                      ],
                     ),
-                    borderRadius: BorderRadius.circular(3),
-                    border: Border.all(color: const Color(0xFFFFC4B5)),
-                    boxShadow: const <BoxShadow>[
-                      BoxShadow(color: Color(0xFF7E1D10), offset: Offset(1, 1)),
-                    ],
                   ),
-                  child: const Icon(Icons.close, size: 15, color: Color(0xFFFFF8F5)),
                 ),
-              ),
-            ],
+                GestureDetector(
+                  onTap: QuickMenuFunctions.hideQuickMenu,
+                  child: Container(
+                    width: 21,
+                    height: 21,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: <Color>[Color(0xFFF39C7C), Color(0xFFC9331D)],
+                      ),
+                      borderRadius: BorderRadius.circular(3),
+                      border: Border.all(color: const Color(0xFFFFC4B5)),
+                      boxShadow: const <BoxShadow>[
+                        BoxShadow(color: Color(0xFF7E1D10), offset: Offset(1, 1)),
+                      ],
+                    ),
+                    child: const Icon(Icons.close, size: 15, color: Color(0xFFFFF8F5)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         Container(
