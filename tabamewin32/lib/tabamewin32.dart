@@ -1507,6 +1507,7 @@ abstract class TabameListener {
   void onViewsEvent(ViewsAction action, int hWnd) {}
   void onQuickClickEvent(String eventName, Map<String, String> params) {}
   void onKeyVizEvent(KeyVizEvent event) {}
+  void onMouseGesture(String button, String pattern) {}
 }
 
 abstract class ClipboardEventListener {
@@ -1576,7 +1577,8 @@ class NativeHooks {
       "WinEvent",
       "ClipboardUpdate",
       "onQuickClickEvent",
-      "onDisplayChange"
+      "onDisplayChange",
+      "onMouseGesture",
     ].contains(call.method)) {
       return;
     }
@@ -1638,6 +1640,15 @@ class NativeHooks {
       for (final TabameListener listener in listeners) {
         if (!listenersObv.contains(listener)) continue;
         listener.onKeyVizEvent(event);
+      }
+    }
+    if (call.method == 'onMouseGesture') {
+      final Map<dynamic, dynamic> args = call.arguments as Map<dynamic, dynamic>;
+      final String button = args['button'] as String;
+      final String pattern = args['pattern'] as String;
+      for (final TabameListener listener in listeners) {
+        if (!listenersObv.contains(listener)) continue;
+        listener.onMouseGesture(button, pattern);
       }
     }
     if (call.method == "ViewsEvent") {

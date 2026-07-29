@@ -184,6 +184,7 @@ class Win32Helper {
   static Future<void> playPopSound() async {
     final AudioPlayer player = AudioPlayer();
     await player.setAsset('resources/pop.mp3');
+    await player.setVolume(30);
     await player.seek(Duration.zero);
     await player.play();
     await Future<void>.delayed(const Duration(milliseconds: 500));

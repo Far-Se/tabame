@@ -729,6 +729,14 @@ void ManageMouseHookH(Tabamewin32Plugin *, const MethodCall &call,
   OK(result, true);
 }
 
+void ConfigureMouseGesturesH(Tabamewin32Plugin *, const MethodCall &call,
+                             MethodResult result) {
+  auto &a = Args::Map(call);
+  ConfigureMouseGestureHook(Args::Bool(a, "rightEnabled"),
+                            Args::Bool(a, "middleEnabled"));
+  OK(result, true);
+}
+
 // ===== Acrylic / Transparency =====
 void SetTransparentH(Tabamewin32Plugin *self, const MethodCall &,
                      MethodResult result) {
@@ -1833,6 +1841,7 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"cleanHooks", Handlers::CleanHooksH},
       {"uninstallSpecificHookID", Handlers::UninstallSpecificHookIDH},
       {"manageMouseHook", Handlers::ManageMouseHookH},
+      {"configureMouseGestures", Handlers::ConfigureMouseGesturesH},
       // Acrylic
       {"setTransparent", Handlers::SetTransparentH},
       {"getMainHandle", Handlers::GetMainHandleH},
@@ -2001,6 +2010,7 @@ Tabamewin32Plugin::~Tabamewin32Plugin() {
     UnhookWinEvent(gEventHook);
   if (gMouseHook)
     UnhookWindowsHookEx(gMouseHook);
+  ShutdownMouseGestureHook();
   UninstallEventHooks();
   if (g_MouseHook)
     UnhookWindowsHookEx(g_MouseHook);

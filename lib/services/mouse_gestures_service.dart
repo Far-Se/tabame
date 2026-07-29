@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
+import 'package:tabamewin32/tabamewin32.dart';
 import 'package:win32/win32.dart';
 
 import '../logic/error_handler.dart';
@@ -26,76 +27,68 @@ import '../pages/color_picker/win32_helper.dart';
 /// then down). On release the matching binding fires. The button is only
 /// observed — never swallowed — so ordinary right-clicks are untouched; if a
 /// context menu popped on release, it is dismissed with an Escape keypress.
-class MouseGesturesService {
+class MouseGesturesService extends TabameListener {
   MouseGesturesService._();
   static final MouseGesturesService instance = MouseGesturesService._();
 
   static const int _idleIntervalMs = 120;
-  static const int _captureIntervalMs = 20;
-  static const int _strokeThresholdPx = 50;
-
   MouseControlConfig _config = MouseControlConfig();
-  Timer? _idleTimer;
-  Timer? _captureTimer;
+  Timer? _cornerTimer;
+  bool _listening = false;
 
   // Hot-corner state.
   String _cornerCandidate = '';
   int _cornerEnterMs = 0;
   bool _cornerFired = false;
 
-  // Gesture state.
-  final List<PointXY> _points = <PointXY>[];
-  String _capturedButton = '';
-
-  void init() => applyConfig();
+  void init() {
+    if (!_listening) {
+      NativeHooks.addListener(this);
+      _listening = true;
+    }
+    applyConfig();
+  }
 
   /// (Re)reads the config and starts/stops the poller accordingly. Call after
   /// every settings change.
   void applyConfig() {
     _config = Boxes.mouseControl;
-    _idleTimer?.cancel();
-    _idleTimer = null;
-    _captureTimer?.cancel();
-    _captureTimer = null;
-    _points.clear();
+    _cornerTimer?.cancel();
+    _cornerTimer = null;
     _cornerCandidate = '';
     _cornerFired = false;
 
-    if (!_config.hotCornersEnabled && !_config.gesturesEnabled) return;
-    _idleTimer = Timer.periodic(const Duration(milliseconds: _idleIntervalMs), (Timer _) => _idleTick());
+    unawaited(_configureNativeGestures());
+    if (_config.hotCornersEnabled) {
+      _cornerTimer = Timer.periodic(const Duration(milliseconds: _idleIntervalMs), (Timer _) => _cornerTickSafely());
+    }
   }
 
   void dispose() {
-    _idleTimer?.cancel();
-    _captureTimer?.cancel();
+    _cornerTimer?.cancel();
+    unawaited(tabameWin32MethodChannel.invokeMethod<void>('configureMouseGestures', <String, bool>{
+      'rightEnabled': false,
+      'middleEnabled': false,
+    }));
+    if (_listening) NativeHooks.removeListener(this);
+    _listening = false;
   }
 
-  void _idleTick() {
+  Future<void> _configureNativeGestures() async {
     try {
-      if (_captureTimer != null) return;
-      if (_config.gesturesEnabled) {
-        final String button = _heldGestureButton();
-        if (button.isNotEmpty) {
-          _beginCapture(button);
-          return;
-        }
-      }
-      if (_config.hotCornersEnabled) _cornerTick();
+      final bool enabled = _config.gesturesEnabled;
+      await tabameWin32MethodChannel.invokeMethod<void>('configureMouseGestures', <String, bool>{
+        'rightEnabled': enabled && _hasGestureForButton('right'),
+        'middleEnabled': enabled && _hasGestureForButton('middle'),
+      });
     } catch (e, s) {
       unawaited(ErrorLogger.log('MouseGesturesService', e.toString(), s));
     }
   }
 
-  String _heldGestureButton() {
-    if ((GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0) return 'right';
-    if ((GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0) return 'middle';
-    return '';
-  }
-
-  bool _capturedButtonHeld() {
-    final int button = _capturedButton == 'middle' ? VK_MBUTTON : VK_RBUTTON;
-    return (GetAsyncKeyState(button) & 0x8000) != 0;
-  }
+  bool _hasGestureForButton(String button) => _config.gestures.any(
+        (MouseGestureBinding binding) => binding.enabled && binding.action.isSet && binding.button == button,
+      );
 
   /// Raw physical cursor position — corner checks compare against the physical
   /// GetSystemMetrics sizes, so the DPI-scaled WinUtils.getMousePos won't do.
@@ -110,6 +103,14 @@ class MouseGesturesService {
   // ---------------------------------------------------------------------------
   // Hot corners
   // ---------------------------------------------------------------------------
+
+  void _cornerTickSafely() {
+    try {
+      _cornerTick();
+    } catch (e, s) {
+      unawaited(ErrorLogger.log('MouseGesturesService', e.toString(), s));
+    }
+  }
 
   void _cornerTick() {
     final PointXY pos = _cursorPos();
@@ -151,55 +152,18 @@ class MouseGesturesService {
   // Mouse gestures
   // ---------------------------------------------------------------------------
 
-  void _beginCapture(String button) {
-    _points
-      ..clear()
-      ..add(_cursorPos());
-    _capturedButton = button;
-    _captureTimer = Timer.periodic(const Duration(milliseconds: _captureIntervalMs), (Timer _) => _captureTick());
-  }
-
-  void _captureTick() {
-    try {
-      _points.add(_cursorPos());
-      if (_capturedButtonHeld()) {
-        // Safety valve: a 15s hold is not a gesture (games, drag operations).
-        if (_points.length > 750) _endCapture(run: false);
-        return;
-      }
-      _endCapture(run: true);
-    } catch (e, s) {
-      _endCapture(run: false);
-      unawaited(ErrorLogger.log('MouseGesturesService', e.toString(), s));
-    }
-  }
-
-  void _endCapture({required bool run}) {
-    _captureTimer?.cancel();
-    _captureTimer = null;
-    if (!run) {
-      _capturedButton = '';
-      return;
-    }
-
-    final String pattern = _classify(_points);
-    _points.clear();
-    if (pattern.isEmpty) return;
-
+  @override
+  void onMouseGesture(String button, String pattern) {
     MouseGestureBinding? match;
     for (final MouseGestureBinding binding in _config.gestures) {
-      if (binding.enabled && binding.action.isSet && binding.button == _capturedButton && binding.pattern == pattern) {
+      if (binding.enabled && binding.action.isSet && binding.button == button && binding.pattern == pattern) {
         match = binding;
         break;
       }
     }
-    if (match == null) {
-      _capturedButton = '';
-      return;
-    }
+    if (match == null) return;
 
     final GestureAction action = match.action;
-    _capturedButton = '';
     // The release may have opened a context menu under the cursor — dismiss it
     // (menu windows use the #32768 class) before running the action.
     Timer(const Duration(milliseconds: 120), () {
@@ -210,35 +174,6 @@ class MouseGesturesService {
       } catch (_) {}
       Timer(const Duration(milliseconds: 80), () => executeAction(action));
     });
-  }
-
-  /// Tokenizes the sampled path into cardinal strokes: displacement accumulates
-  /// until it exceeds [_strokeThresholdPx], emitting L/R/U/D and resetting.
-  /// Consecutive identical tokens collapse. More than 4 tokens is noise.
-  String _classify(List<PointXY> points) {
-    if (points.length < 2) return '';
-    String tokens = '';
-    String currentDirection = '';
-    int accumulatedX = 0;
-    int accumulatedY = 0;
-
-    for (int i = 1; i < points.length; i++) {
-      accumulatedX += points[i].X - points[i - 1].X;
-      accumulatedY += points[i].Y - points[i - 1].Y;
-      if (accumulatedX.abs() < _strokeThresholdPx && accumulatedY.abs() < _strokeThresholdPx) continue;
-
-      final String direction =
-          accumulatedX.abs() >= accumulatedY.abs() ? (accumulatedX > 0 ? 'R' : 'L') : (accumulatedY > 0 ? 'D' : 'U');
-      if (direction != currentDirection) {
-        tokens += direction;
-        currentDirection = direction;
-      }
-      accumulatedX = 0;
-      accumulatedY = 0;
-    }
-
-    if (tokens.length > 4) return '';
-    return tokens;
   }
 
   // ---------------------------------------------------------------------------

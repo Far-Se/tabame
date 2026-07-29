@@ -2,7 +2,10 @@
 #define TABAMEWIN32_WIN_HOOKS
 
 #include <windows.h>
+#include <cstdlib>
+#include <string>
 #include <type_traits>
+#include <vector>
 
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
@@ -20,14 +23,124 @@ extern std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel;
 // ---------------------------------------------------------------------------
 HWINEVENTHOOK gEventHook = nullptr;
 HHOOK gMouseHook = nullptr;
+HHOOK gMouseGestureHook = nullptr;
 int mouseWatchButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 int mouseControlButtons[7] = {0, 0, 0, 0, 0, 0, 0};
+
+bool mouseGestureRightEnabled = false;
+bool mouseGestureMiddleEnabled = false;
+std::string mouseGestureButton;
+DWORD mouseGestureStartTime = 0;
+std::vector<POINT> mouseGesturePoints;
 
 // ---------------------------------------------------------------------------
 // Forward declarations
 // ---------------------------------------------------------------------------
 void CALLBACK mHandleWinEvent(HWINEVENTHOOK, DWORD, HWND, LONG, LONG, DWORD, DWORD);
 LRESULT CALLBACK mHandleMouseHook(int, WPARAM, LPARAM);
+LRESULT CALLBACK mHandleMouseGestureHook(int, WPARAM, LPARAM);
+
+void ConfigureMouseGestureHook(bool rightEnabled, bool middleEnabled)
+{
+    mouseGestureRightEnabled = rightEnabled;
+    mouseGestureMiddleEnabled = middleEnabled;
+
+    if (!rightEnabled && !middleEnabled)
+    {
+        if (gMouseGestureHook)
+            UnhookWindowsHookEx(gMouseGestureHook);
+        gMouseGestureHook = nullptr;
+        mouseGestureButton.clear();
+        mouseGesturePoints.clear();
+        return;
+    }
+
+    if (!gMouseGestureHook)
+        gMouseGestureHook = SetWindowsHookEx(WH_MOUSE_LL, mHandleMouseGestureHook,
+                                             GetModuleHandle(nullptr), 0);
+}
+
+void ShutdownMouseGestureHook()
+{
+    ConfigureMouseGestureHook(false, false);
+}
+
+std::string ClassifyMouseGesture()
+{
+    constexpr int kStrokeThresholdPx = 50;
+    if (mouseGesturePoints.size() < 2)
+        return "";
+
+    std::string tokens;
+    char currentDirection = '\0';
+    int accumulatedX = 0;
+    int accumulatedY = 0;
+    for (size_t i = 1; i < mouseGesturePoints.size(); ++i)
+    {
+        accumulatedX += mouseGesturePoints[i].x - mouseGesturePoints[i - 1].x;
+        accumulatedY += mouseGesturePoints[i].y - mouseGesturePoints[i - 1].y;
+        if (std::abs(accumulatedX) < kStrokeThresholdPx && std::abs(accumulatedY) < kStrokeThresholdPx)
+            continue;
+
+        const char direction = std::abs(accumulatedX) >= std::abs(accumulatedY)
+                                   ? (accumulatedX > 0 ? 'R' : 'L')
+                                   : (accumulatedY > 0 ? 'D' : 'U');
+        if (direction != currentDirection)
+        {
+            tokens += direction;
+            currentDirection = direction;
+        }
+        accumulatedX = 0;
+        accumulatedY = 0;
+    }
+    return tokens.length() <= 4 ? tokens : "";
+}
+
+LRESULT CALLBACK mHandleMouseGestureHook(int nCode, WPARAM wParam, LPARAM lParam)
+{
+    if (nCode != HC_ACTION)
+        return CallNextHookEx(gMouseGestureHook, nCode, wParam, lParam);
+
+    const auto *info = reinterpret_cast<MSLLHOOKSTRUCT *>(lParam);
+    const bool rightDown = wParam == WM_RBUTTONDOWN;
+    const bool middleDown = wParam == WM_MBUTTONDOWN;
+    const bool rightUp = wParam == WM_RBUTTONUP;
+    const bool middleUp = wParam == WM_MBUTTONUP;
+
+    if (mouseGestureButton.empty() &&
+        ((rightDown && mouseGestureRightEnabled) || (middleDown && mouseGestureMiddleEnabled)))
+    {
+        mouseGestureButton = rightDown ? "right" : "middle";
+        mouseGestureStartTime = GetTickCount();
+        mouseGesturePoints.assign(1, info->pt);
+    }
+    else if (!mouseGestureButton.empty() && wParam == WM_MOUSEMOVE)
+    {
+        mouseGesturePoints.push_back(info->pt);
+    }
+    else if (!mouseGestureButton.empty() &&
+             ((mouseGestureButton == "right" && rightUp) ||
+              (mouseGestureButton == "middle" && middleUp)))
+    {
+        mouseGesturePoints.push_back(info->pt);
+        const std::string button = mouseGestureButton;
+        const std::string pattern = GetTickCount() - mouseGestureStartTime <= 15000
+                                        ? ClassifyMouseGesture()
+                                        : "";
+        mouseGestureButton.clear();
+        mouseGesturePoints.clear();
+
+        if (!pattern.empty())
+        {
+            flutter::EncodableMap args;
+            args[flutter::EncodableValue("button")] = flutter::EncodableValue(button);
+            args[flutter::EncodableValue("pattern")] = flutter::EncodableValue(pattern);
+            channel->InvokeMethod("onMouseGesture", std::make_unique<flutter::EncodableValue>(args));
+        }
+    }
+
+    return CallNextHookEx(gMouseGestureHook, nCode, wParam, lParam);
+}
 
 // ---------------------------------------------------------------------------
 // Generic mouse hook (button watch/control system)
