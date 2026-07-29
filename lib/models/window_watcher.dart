@@ -333,7 +333,52 @@ class WindowWatcher {
   /// z-order) and activates the first one that is neither the currently active
   /// window nor Tabame's own window. This lets you "peel back" to the window
   /// sitting just beneath whatever is currently focused under the pointer.
+
   static void showLastWindowUnderCursor() async {
+    await fetchWindows();
+    final Pointer<POINT> lpPoint = calloc<POINT>();
+    GetCursorPos(lpPoint);
+    final PointXY mousePos = PointXY(X: lpPoint.ref.x, Y: lpPoint.ref.y);
+    free(lpPoint);
+    final int activeHandle = Win32.getActiveWindowHandle();
+    final int ownHandle = Win32.getMainHandle();
+
+    bool foundTopMost = false;
+    for (final Window window in list) {
+      final int h = window.hWnd;
+      if (h == ownHandle) continue;
+
+      final Square rect = Win32.getWindowRect(hwnd: h);
+      final bool underCursor =
+          mousePos.X.isBetween(rect.x, rect.x + rect.width) && mousePos.Y.isBetween(rect.y, rect.y + rect.height);
+      if (!underCursor) continue;
+
+      if (!foundTopMost) {
+        // This is the first (top-most) window under the cursor.
+        foundTopMost = true;
+        if (h != activeHandle) {
+          // Not focused yet -> just activate it, no peeling.
+          _activateWithRetry(h);
+          return;
+        }
+        // Already active -> keep scanning for the one behind it.
+        continue;
+      }
+
+      // Second window found under the cursor: peel back to it.
+      if (h == activeHandle) continue;
+      _activateWithRetry(h);
+      return;
+    }
+  }
+
+  static void _activateWithRetry(int h) {
+    Win32.activateWindow(h);
+    Future<void>.delayed(
+        const Duration(milliseconds: 200), () => GetForegroundWindow() != h ? Win32.activateWindow(h) : null);
+  }
+
+  static void showLastWindowUnderCursor2() async {
     await fetchWindows();
     final Pointer<POINT> lpPoint = calloc<POINT>();
     GetCursorPos(lpPoint);

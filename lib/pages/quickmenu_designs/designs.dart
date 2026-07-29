@@ -22,6 +22,7 @@ import 'design_manga.dart';
 import 'design_matrix.dart';
 import 'design_manifesto.dart';
 import 'design_modern.dart';
+import 'design_notion.dart';
 import 'design_outrun.dart';
 import 'design_outrun2.dart';
 import 'design_player.dart';
@@ -31,6 +32,8 @@ import 'design_tech.dart';
 import 'design_terminal.dart';
 import 'design_vector.dart';
 import 'design_winamp.dart';
+import 'design_windows_98.dart';
+import 'design_windows_xp.dart';
 
 class LoadQuickMenuDesign extends StatefulWidget {
   const LoadQuickMenuDesign({super.key});
@@ -118,6 +121,9 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.outrun => MainMenuOutrunWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.outrun2 => MainMenuOutrun2Widget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.winamp => MainMenuWinampWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.windowsXp => MainMenuWindowsXpWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.windows98 => MainMenuWindows98Widget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.notion => MainMenuNotionWidget(key: ValueKey<int>(_refreshCounter)),
       // QuickMenuDesigns.familyGuy => MainMenuFamilyGuyWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }

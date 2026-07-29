@@ -92,6 +92,33 @@ class LauncherModalTokens {
           onSurface: OrbitTokens.fg(isDark),
           dim: OrbitTokens.dim(isDark),
         );
+      case LauncherDesign.windowsXp:
+        return const LauncherModalTokens._(
+          design: LauncherDesign.windowsXp,
+          isDark: false,
+          surface: WindowsXpTokens.surface,
+          accent: WindowsXpTokens.selection,
+          onSurface: WindowsXpTokens.foreground,
+          dim: WindowsXpTokens.dim,
+        );
+      case LauncherDesign.windows98:
+        return const LauncherModalTokens._(
+          design: LauncherDesign.windows98,
+          isDark: false,
+          surface: Windows98Tokens.face,
+          accent: Windows98Tokens.selection,
+          onSurface: Windows98Tokens.foreground,
+          dim: Windows98Tokens.dim,
+        );
+      case LauncherDesign.notion:
+        return LauncherModalTokens._(
+          design: design,
+          isDark: isDark,
+          surface: NotionTokens.canvas(isDark),
+          accent: NotionTokens.blue(isDark),
+          onSurface: NotionTokens.foreground(isDark),
+          dim: NotionTokens.dim(isDark),
+        );
       case LauncherDesign.classic:
       case LauncherDesign.serene:
       case LauncherDesign.command:
@@ -151,6 +178,9 @@ class LauncherModalTokens {
         LauncherDesign.steam => 6.0,
         LauncherDesign.cyber => 4.0,
         LauncherDesign.manga => 10.0,
+        LauncherDesign.windowsXp => 0.0,
+        LauncherDesign.windows98 => 0.0,
+        LauncherDesign.notion => 4.0,
       };
 
   /// Designs whose controls carry a visible accent outline (console/drafting
@@ -160,7 +190,9 @@ class LauncherModalTokens {
       design == LauncherDesign.terminal ||
       design == LauncherDesign.blueprint ||
       design == LauncherDesign.orbit ||
-      design == LauncherDesign.manifesto;
+      design == LauncherDesign.manifesto ||
+      design == LauncherDesign.windowsXp ||
+      design == LauncherDesign.windows98;
 
   /// The design voice — same font family the launcher rows use.
   TextStyle text({
@@ -186,6 +218,12 @@ class LauncherModalTokens {
       LauncherDesign.manifesto => ManifestoTokens.body(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       LauncherDesign.orbit => OrbitTokens.disp(
+          fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
+      LauncherDesign.windowsXp => WindowsXpTokens.tahoma(
+          fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
+      LauncherDesign.windows98 => Windows98Tokens.system(
+          fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
+      LauncherDesign.notion => NotionTokens.ui(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       _ => TextStyle(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
@@ -298,9 +336,15 @@ class LauncherModalFrame extends StatelessWidget {
         ],
         Container(
           decoration: BoxDecoration(
-            color: design == LauncherDesign.manifesto
-                ? tokens.surface.withValues(alpha: 0.96)
-                : Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
+            color: design == LauncherDesign.notion
+                ? tokens.surface.withValues(alpha: 0.98)
+                : design == LauncherDesign.windows98
+                    ? Windows98Tokens.face
+                    : design == LauncherDesign.windowsXp
+                        ? WindowsXpTokens.surface
+                        : design == LauncherDesign.manifesto
+                            ? tokens.surface.withValues(alpha: 0.96)
+                            : Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
           ),
           child: child,
         ),
@@ -446,6 +490,29 @@ class LauncherModalHeader extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           border: Border.all(color: tokens.accent.withAlpha(70)),
         ),
+      LauncherDesign.windowsXp => const BoxDecoration(
+          color: WindowsXpTokens.paper,
+          border: Border(
+            left: BorderSide(color: WindowsXpTokens.controlLight),
+            top: BorderSide(color: WindowsXpTokens.controlLight),
+            right: BorderSide(color: WindowsXpTokens.controlShadow),
+            bottom: BorderSide(color: WindowsXpTokens.controlShadow),
+          ),
+        ),
+      LauncherDesign.windows98 => const BoxDecoration(
+          color: Windows98Tokens.face,
+          border: Border(
+            left: BorderSide(color: Windows98Tokens.light, width: 2),
+            top: BorderSide(color: Windows98Tokens.light, width: 2),
+            right: BorderSide(color: Windows98Tokens.dark, width: 2),
+            bottom: BorderSide(color: Windows98Tokens.dark, width: 2),
+          ),
+        ),
+      LauncherDesign.notion => BoxDecoration(
+          color: NotionTokens.selection(tokens.isDark),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: NotionTokens.border(tokens.isDark)),
+        ),
       _ => BoxDecoration(
           color: accent.withAlpha(28),
           borderRadius: BorderRadius.circular(8),
@@ -558,6 +625,9 @@ class LauncherModalFooter extends StatelessWidget {
       LauncherDesign.transit => tokens.accent.withAlpha(90),
       LauncherDesign.orbit => tokens.accent.withAlpha(50),
       LauncherDesign.manifesto => tokens.onSurface,
+      LauncherDesign.windowsXp => WindowsXpTokens.orange,
+      LauncherDesign.windows98 => Windows98Tokens.shadow,
+      LauncherDesign.notion => NotionTokens.border(tokens.isDark),
       _ => tokens.onSurface.withAlpha(16),
     };
     return Container(
@@ -571,7 +641,9 @@ class LauncherModalFooter extends StatelessWidget {
                     ? FluentTokens.chrome(tokens.isDark)
                     : tokens.design == LauncherDesign.orbit
                         ? OrbitTokens.chrome(tokens.isDark)
-                        : null,
+                        : tokens.design == LauncherDesign.notion
+                            ? NotionTokens.sidebar(tokens.isDark)
+                            : null,
         border: Border(top: BorderSide(color: lineColor)),
       ),
       child: Row(

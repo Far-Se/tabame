@@ -55,10 +55,17 @@ enum QuickMenuDesigns {
   outrun,
   outrun2,
   winamp,
+  windowsXp,
+  windows98,
+  notion,
   // familyGuy,
   ;
 
-  String get displayName => name.toUpperCaseFirst();
+  String get displayName => switch (this) {
+        QuickMenuDesigns.windowsXp => 'Windows XP',
+        QuickMenuDesigns.windows98 => 'Windows 98',
+        _ => name.toUpperCaseFirst(),
+      };
 }
 
 enum LauncherDesign {
@@ -91,6 +98,22 @@ enum LauncherDesign {
   steam,
   cyber,
   manga,
+
+  /// Windows XP "Luna" launcher. Append-only: launcher preferences are stored
+  /// by enum index.
+  windowsXp,
+
+  /// Windows 98 shell launcher. Append-only to preserve stored preferences.
+  windows98,
+
+  /// Notion-inspired workspace launcher. Append-only to preserve preferences.
+  notion;
+
+  String get displayName => switch (this) {
+        LauncherDesign.windowsXp => 'Windows XP',
+        LauncherDesign.windows98 => 'Windows 98',
+        _ => name.toUpperCaseFirst(),
+      };
 }
 
 enum LightSwitchMode { off, fixed, sunrise }
@@ -1003,6 +1026,86 @@ class Settings {
           entryFontFamily: 'Consolas',
           entryFontWeight: 700,
           borderRadius: 1,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.windowsXp.displayName: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFECE9D8),
+          textColor: const Color(0xFF000000),
+          accentColor: const Color(0xFF245EDC),
+          gradientAlpha: 255,
+          uiFontFamily: 'Tahoma',
+          uiFontWeight: 400,
+          entryFontFamily: 'Tahoma',
+          entryFontWeight: 700,
+          borderRadius: 7,
+          baseFontSize: 10,
+        ),
+        // XP never shipped with a dark Luna shell. Keep the authentic palette
+        // when the host application follows the system dark-mode setting.
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFFECE9D8),
+          textColor: const Color(0xFF000000),
+          accentColor: const Color(0xFF245EDC),
+          gradientAlpha: 255,
+          uiFontFamily: 'Tahoma',
+          uiFontWeight: 400,
+          entryFontFamily: 'Tahoma',
+          entryFontWeight: 700,
+          borderRadius: 7,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.windows98.displayName: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFC0C0C0),
+          textColor: const Color(0xFF000000),
+          accentColor: const Color(0xFF000080),
+          gradientAlpha: 0,
+          uiFontFamily: 'MS Sans Serif',
+          uiFontWeight: 400,
+          entryFontFamily: 'MS Sans Serif',
+          entryFontWeight: 700,
+          borderRadius: 0,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFFC0C0C0),
+          textColor: const Color(0xFF000000),
+          accentColor: const Color(0xFF000080),
+          gradientAlpha: 0,
+          uiFontFamily: 'MS Sans Serif',
+          uiFontWeight: 400,
+          entryFontFamily: 'MS Sans Serif',
+          entryFontWeight: 700,
+          borderRadius: 0,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.notion.displayName: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFF7F6F3),
+          textColor: const Color(0xFF37352F),
+          accentColor: const Color(0xFF2383E2),
+          gradientAlpha: 0,
+          uiFontFamily: 'Segoe UI Variable Text',
+          uiFontWeight: 400,
+          entryFontFamily: 'Segoe UI Variable Text',
+          entryFontWeight: 600,
+          borderRadius: 8,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF191919),
+          textColor: const Color(0xFFE6E6E6),
+          accentColor: const Color(0xFF529CCA),
+          gradientAlpha: 0,
+          uiFontFamily: 'Segoe UI Variable Text',
+          uiFontWeight: 400,
+          entryFontFamily: 'Segoe UI Variable Text',
+          entryFontWeight: 600,
+          borderRadius: 8,
           baseFontSize: 10,
         ),
       ),

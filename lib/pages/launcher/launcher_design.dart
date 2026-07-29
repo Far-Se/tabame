@@ -306,6 +306,106 @@ abstract final class FluentTokens {
   }
 }
 
+/// Windows XP Luna palette and Tahoma typography.
+///
+/// Unlike theme-adaptive designs, this remains the canonical blue/olive-ivory
+/// Luna shell in both host brightness modes. XP had no dark system appearance.
+abstract final class WindowsXpTokens {
+  static const Color surface = Color(0xFFECE9D8);
+  static const Color paper = Color(0xFFFFFEF5);
+  static const Color blueDark = Color(0xFF003399);
+  static const Color blue = Color(0xFF245EDC);
+  static const Color blueLight = Color(0xFF5A8CF0);
+  static const Color blueHighlight = Color(0xFF7AA5F7);
+  static const Color selection = Color(0xFF316AC5);
+  static const Color foreground = Color(0xFF000000);
+  static const Color dim = Color(0xFF5D5D5D);
+  static const Color controlShadow = Color(0xFF716F64);
+  static const Color controlLight = Color(0xFFFFFFFF);
+  static const Color orange = Color(0xFFFF8C00);
+  static const Color green = Color(0xFF4BAE31);
+
+  static TextStyle tahoma({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return launcherTextStyle(TextStyle(
+      fontFamily: 'Tahoma',
+      fontFamilyFallback: const <String>['Verdana', 'Segoe UI'],
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    ));
+  }
+}
+
+/// Windows 98 shell palette, beveled control colors and bitmap-era type.
+abstract final class Windows98Tokens {
+  static const Color face = Color(0xFFC0C0C0);
+  static const Color field = Color(0xFFFFFFFF);
+  static const Color light = Color(0xFFFFFFFF);
+  static const Color highlight = Color(0xFFDFDFDF);
+  static const Color shadow = Color(0xFF808080);
+  static const Color dark = Color(0xFF000000);
+  static const Color title = Color(0xFF000080);
+  static const Color titleLight = Color(0xFF1084D0);
+  static const Color selection = Color(0xFF000080);
+  static const Color foreground = Color(0xFF000000);
+  static const Color dim = Color(0xFF5A5A5A);
+
+  static TextStyle system({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return launcherTextStyle(TextStyle(
+      fontFamily: 'MS Sans Serif',
+      fontFamilyFallback: const <String>['Tahoma', 'Segoe UI'],
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    ));
+  }
+}
+
+/// Notion-inspired workspace surfaces and typography.
+abstract final class NotionTokens {
+  static Color canvas(bool isDark) => isDark ? const Color(0xFF202020) : const Color(0xFFFFFFFF);
+  static Color sidebar(bool isDark) => isDark ? const Color(0xFF191919) : const Color(0xFFF7F6F3);
+  static Color foreground(bool isDark) => isDark ? const Color(0xFFE6E6E6) : const Color(0xFF37352F);
+  static Color dim(bool isDark) => isDark ? const Color(0xFF9B9B9B) : const Color(0xFF787774);
+  static Color blue(bool isDark) => isDark ? const Color(0xFF529CCA) : const Color(0xFF2383E2);
+  static Color selection(bool isDark) => foreground(isDark).withAlpha(isDark ? 18 : 14);
+  static Color border(bool isDark) => foreground(isDark).withAlpha(isDark ? 24 : 18);
+
+  static TextStyle ui({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return launcherTextStyle(TextStyle(
+      fontFamily: 'Segoe UI Variable Text',
+      fontFamilyFallback: const <String>['Segoe UI'],
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    ));
+  }
+}
+
 /// Shared palette and typography for the Manifesto editorial launcher.
 abstract final class ManifestoTokens {
   static const Color _bgLight = Color(0xFFF2EEDB);
@@ -446,6 +546,9 @@ class LauncherThemeData {
   bool get isManifesto => design == LauncherDesign.manifesto;
   bool get isOrbit => design == LauncherDesign.orbit;
   bool get isAnime => design == LauncherDesign.anime;
+  bool get isWindowsXp => design == LauncherDesign.windowsXp;
+  bool get isWindows98 => design == LauncherDesign.windows98;
+  bool get isNotion => design == LauncherDesign.notion;
   bool get isQuickMenuInspired => switch (design) {
         LauncherDesign.tech ||
         LauncherDesign.vector ||
@@ -481,6 +584,9 @@ class LauncherThemeData {
         LauncherDesign.steam => Icons.settings_rounded,
         LauncherDesign.cyber => Icons.hub_rounded,
         LauncherDesign.manga => Icons.auto_stories_rounded,
+        LauncherDesign.windowsXp => Icons.search,
+        LauncherDesign.windows98 => Icons.search,
+        LauncherDesign.notion => Icons.search_rounded,
       };
 
   double get searchIconSize => switch (design) {
@@ -503,9 +609,12 @@ class LauncherThemeData {
         LauncherDesign.steam => 18.0,
         LauncherDesign.cyber => 19.0,
         LauncherDesign.manga => 19.0,
+        LauncherDesign.windowsXp => 18.0,
+        LauncherDesign.windows98 => 16.0,
+        LauncherDesign.notion => 17.0,
       };
 
-  bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent;
+  bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent || isNotion;
 
   double get searchFontSize => switch (design) {
         LauncherDesign.serene => 16.0,
@@ -527,6 +636,9 @@ class LauncherThemeData {
         LauncherDesign.steam => 15.0,
         LauncherDesign.cyber => 15.0,
         LauncherDesign.manga => 16.0,
+        LauncherDesign.windowsXp => 14.0,
+        LauncherDesign.windows98 => 13.0,
+        LauncherDesign.notion => 15.0,
       };
   FontWeight? get searchFontWeight => switch (design) {
         LauncherDesign.serene => FontWeight.w400,
@@ -548,6 +660,9 @@ class LauncherThemeData {
         LauncherDesign.steam => FontWeight.w600,
         LauncherDesign.cyber => FontWeight.w600,
         LauncherDesign.manga => FontWeight.w700,
+        LauncherDesign.windowsXp => FontWeight.w400,
+        LauncherDesign.windows98 => FontWeight.w400,
+        LauncherDesign.notion => FontWeight.w400,
       };
 
   double get frameRadius => switch (design) {
@@ -570,6 +685,9 @@ class LauncherThemeData {
         LauncherDesign.steam => 6.0,
         LauncherDesign.cyber => 4.0,
         LauncherDesign.manga => 14.0,
+        LauncherDesign.windowsXp => 7.0,
+        LauncherDesign.windows98 => 0.0,
+        LauncherDesign.notion => 8.0,
       };
 
   EdgeInsets get resultsListPadding => const EdgeInsets.all(8.0);

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -181,7 +182,226 @@ class LauncherResultRow extends StatelessWidget {
       LauncherDesign.steam => _buildFluent(context),
       LauncherDesign.cyber => _buildCommand(context),
       LauncherDesign.manga => _buildManifesto(context),
+      LauncherDesign.windowsXp => _buildWindowsXp(context),
+      LauncherDesign.windows98 => _buildWindows98(context),
+      LauncherDesign.notion => _buildNotion(context),
     };
+  }
+
+  Widget _buildNotion(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final int animMs = isRepeating ? 35 : 90;
+    return RepaintBoundary(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: animMs),
+            curve: Curves.easeOut,
+            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+            decoration: BoxDecoration(
+              color: isSelected ? NotionTokens.selection(isDark) : Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              children: <Widget>[
+                SizedBox(
+                  width: 27,
+                  height: 27,
+                  child: Center(child: icon),
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: content ??
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          _titleText(NotionTokens.ui(
+                            fontSize: Design.baseFontSize + 2,
+                            fontWeight: FontWeight.w500,
+                            color: NotionTokens.foreground(isDark),
+                            height: 1.2,
+                          )),
+                          const SizedBox(height: 1),
+                          _subtitleText(NotionTokens.ui(
+                            fontSize: Design.baseFontSize,
+                            fontWeight: FontWeight.w400,
+                            color: NotionTokens.dim(isDark),
+                            height: 1.2,
+                          )),
+                        ],
+                      ),
+                ),
+                if (badge != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: badge,
+                  ),
+                AnimatedOpacity(
+                  duration: Duration(milliseconds: animMs),
+                  opacity: isSelected ? 1 : 0,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 7),
+                    child: Icon(
+                      Icons.keyboard_return_rounded,
+                      size: 14,
+                      color: NotionTokens.dim(isDark),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWindows98(BuildContext context) {
+    final Color rowText = isSelected ? Windows98Tokens.light : Windows98Tokens.foreground;
+    final Color rowDim = isSelected ? const Color(0xFFE0E0FF) : Windows98Tokens.dim;
+
+    return RepaintBoundary(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            color: isSelected ? Windows98Tokens.selection : Colors.transparent,
+            child: CustomPaint(
+              foregroundPainter: isSelected ? const _Windows98FocusPainter() : null,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(6, 4, 6, 4),
+                child: Row(
+                  children: <Widget>[
+                    SizedBox(width: 30, height: 30, child: Center(child: icon)),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: content ??
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              _titleText(Windows98Tokens.system(
+                                fontSize: Design.baseFontSize + 1,
+                                fontWeight: FontWeight.w400,
+                                color: rowText,
+                                height: 1.15,
+                              )),
+                              const SizedBox(height: 1),
+                              _subtitleText(Windows98Tokens.system(
+                                fontSize: Design.baseFontSize - 0.5,
+                                color: rowDim,
+                                height: 1.15,
+                              )),
+                            ],
+                          ),
+                    ),
+                    if (badge != null)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 5),
+                        child: badge,
+                      ),
+                    if (isSelected)
+                      const Padding(
+                        padding: EdgeInsets.only(left: 6),
+                        child: Icon(Icons.arrow_right, size: 16, color: Windows98Tokens.light),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWindowsXp(BuildContext context) {
+    final int animMs = isRepeating ? 35 : 90;
+    final Color rowText = isSelected ? const Color(0xFFFFFFFF) : WindowsXpTokens.foreground;
+    final Color rowDim = isSelected ? const Color(0xFFE4EDFF) : WindowsXpTokens.dim;
+
+    return RepaintBoundary(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: animMs),
+            curve: Curves.easeOut,
+            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            padding: const EdgeInsets.fromLTRB(7, 5, 7, 5),
+            decoration: BoxDecoration(
+              color: isSelected ? WindowsXpTokens.selection : Colors.transparent,
+              border: isSelected ? Border.all(color: WindowsXpTokens.blueDark) : Border.all(color: Colors.transparent),
+            ),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0x24FFFFFF) : WindowsXpTokens.paper,
+                    border: Border.all(
+                      color: isSelected ? const Color(0x66FFFFFF) : const Color(0xFFD6D2C2),
+                    ),
+                  ),
+                  child: icon,
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: content ??
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          _titleText(WindowsXpTokens.tahoma(
+                            fontSize: Design.baseFontSize + 2,
+                            fontWeight: FontWeight.w400,
+                            color: rowText,
+                            height: 1.2,
+                          )),
+                          const SizedBox(height: 1),
+                          _subtitleText(WindowsXpTokens.tahoma(
+                            fontSize: Design.baseFontSize,
+                            fontWeight: FontWeight.w400,
+                            color: rowDim,
+                            height: 1.2,
+                          )),
+                        ],
+                      ),
+                ),
+                if (badge != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: badge,
+                  ),
+                if (isSelected)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 7),
+                    child: Icon(Icons.arrow_forward_ios, size: 10, color: Color(0xFFFFFFFF)),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   // ── Orbit ────────────────────────────────────────────────────────────────
@@ -1178,6 +1398,48 @@ class LauncherResultRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _Windows98FocusPainter extends CustomPainter {
+  const _Windows98FocusPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = Windows98Tokens.light
+      ..strokeWidth = 1;
+    const double inset = 2.5;
+    const double dash = 2;
+    const double gap = 2;
+
+    for (double x = inset; x < size.width - inset; x += dash + gap) {
+      canvas.drawLine(
+        Offset(x, inset),
+        Offset(math.min(x + dash, size.width - inset), inset),
+        paint,
+      );
+      canvas.drawLine(
+        Offset(x, size.height - inset),
+        Offset(math.min(x + dash, size.width - inset), size.height - inset),
+        paint,
+      );
+    }
+    for (double y = inset; y < size.height - inset; y += dash + gap) {
+      canvas.drawLine(
+        Offset(inset, y),
+        Offset(inset, math.min(y + dash, size.height - inset)),
+        paint,
+      );
+      canvas.drawLine(
+        Offset(size.width - inset, y),
+        Offset(size.width - inset, math.min(y + dash, size.height - inset)),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _Windows98FocusPainter oldDelegate) => false;
 }
 
 // ---------------------------------------------------------------------------

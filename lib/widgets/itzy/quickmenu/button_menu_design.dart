@@ -624,9 +624,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                 }
                 return ChoiceChip(
                   key: (isQuickMenu ? _quickMenuDesignKeys : _launcherDesignKeys)[index],
-                  label: isQuickMenu
-                      ? Text(_designTitle(design))
-                      : Text(LauncherDesign.values[index].name.toUpperCaseFirst()),
+                  label: isQuickMenu ? Text(_designTitle(design)) : Text(LauncherDesign.values[index].displayName),
                   selected: selected,
                   onSelected: selected
                       ? null

@@ -641,6 +641,93 @@ class QuickMenuModalFrame extends StatelessWidget {
             ),
           ],
         ),
+      QuickMenuDesigns.windowsXp => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(7),
+            color: const Color(0xFFECE9D8),
+            border: Border.all(color: const Color(0xFF003399), width: 2),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(color: Color(0x66000000), blurRadius: 12, offset: Offset(4, 7)),
+              BoxShadow(color: Color(0xFF7AA5F7), offset: Offset(-1, -1)),
+            ],
+          ),
+          underlays: const <Widget>[
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 5,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      Color(0xFF5A8CF0),
+                      Color(0xFF245EDC),
+                      Color(0xFF003399),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      QuickMenuDesigns.windows98 => const _FrameSpec(
+          decoration: BoxDecoration(
+            color: Color(0xFFC0C0C0),
+            border: Border(
+              left: BorderSide(color: Color(0xFFFFFFFF), width: 2),
+              top: BorderSide(color: Color(0xFFFFFFFF), width: 2),
+              right: BorderSide(color: Color(0xFF000000), width: 2),
+              bottom: BorderSide(color: Color(0xFF000000), width: 2),
+            ),
+            boxShadow: <BoxShadow>[
+              BoxShadow(color: Color(0x66000000), offset: Offset(4, 5), blurRadius: 0),
+            ],
+          ),
+          underlays: <Widget>[
+            Positioned(
+              top: 2,
+              left: 2,
+              right: 2,
+              height: 4,
+              child: ColoredBox(color: Color(0xFF000080)),
+            ),
+          ],
+          overlays: <Widget>[
+            CustomPaint(
+              painter: _Windows98ModalBevelPainter(),
+              size: Size.infinite,
+            ),
+          ],
+        ),
+      QuickMenuDesigns.notion => _FrameSpec(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF202020) : const Color(0xFFFFFFFF),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: (isDark ? const Color(0xFFE6E6E6) : const Color(0xFF37352F)).withAlpha(isDark ? 24 : 18),
+            ),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withAlpha(isDark ? 95 : 30),
+                blurRadius: 24,
+                spreadRadius: -7,
+                offset: const Offset(0, 11),
+              ),
+            ],
+          ),
+          underlays: <Widget>[
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 34,
+              child: ColoredBox(
+                color: isDark ? const Color(0xFF191919) : const Color(0xFFF7F6F3),
+              ),
+            ),
+          ],
+        ),
       // QuickMenuDesigns.familyGuy => _FrameSpec(
       //     decoration: BoxDecoration(
       //       borderRadius: radius,
@@ -756,6 +843,35 @@ class QuickMenuModalFrame extends StatelessWidget {
       ),
     ];
   }
+}
+
+class _Windows98ModalBevelPainter extends CustomPainter {
+  const _Windows98ModalBevelPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint highlight = Paint()
+      ..color = const Color(0xFFDFDFDF)
+      ..strokeWidth = 1;
+    final Paint shadow = Paint()
+      ..color = const Color(0xFF808080)
+      ..strokeWidth = 1;
+    canvas.drawLine(const Offset(2.5, 2.5), Offset(size.width - 2.5, 2.5), highlight);
+    canvas.drawLine(const Offset(2.5, 2.5), Offset(2.5, size.height - 2.5), highlight);
+    canvas.drawLine(
+      Offset(size.width - 2.5, 2.5),
+      Offset(size.width - 2.5, size.height - 2.5),
+      shadow,
+    );
+    canvas.drawLine(
+      Offset(2.5, size.height - 2.5),
+      Offset(size.width - 2.5, size.height - 2.5),
+      shadow,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _Windows98ModalBevelPainter oldDelegate) => false;
 }
 
 class _FrameSpec {

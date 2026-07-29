@@ -29,6 +29,9 @@ part 'launcher_designs/matrix_launcher_design.dart';
 part 'launcher_designs/steam_launcher_design.dart';
 part 'launcher_designs/cyber_launcher_design.dart';
 part 'launcher_designs/manga_launcher_design.dart';
+part 'launcher_designs/windows_xp_launcher_design.dart';
+part 'launcher_designs/windows_98_launcher_design.dart';
+part 'launcher_designs/notion_launcher_design.dart';
 
 // ---------------------------------------------------------------------------
 // Extension: per-design widget factories used by LauncherState
@@ -270,6 +273,12 @@ extension LauncherDesignBuilder on LauncherDesign {
         return cyberLauncherOuterDecoration(surface, accent);
       case LauncherDesign.manga:
         return mangaLauncherOuterDecoration(surface, accent);
+      case LauncherDesign.windowsXp:
+        return windowsXpLauncherOuterDecoration();
+      case LauncherDesign.windows98:
+        return windows98LauncherOuterDecoration();
+      case LauncherDesign.notion:
+        return notionLauncherOuterDecoration(surface);
     }
   }
 
@@ -450,6 +459,29 @@ extension LauncherDesignBuilder on LauncherDesign {
             textField: textField,
             trailingBadge: trailingBadge,
             isSearching: isSearching);
+      case LauncherDesign.windowsXp:
+        return WindowsXpLauncherSearchBar(
+          dragHandle: dragHandle,
+          textField: textField,
+          trailingBadge: trailingBadge,
+          isSearching: isSearching,
+        );
+      case LauncherDesign.windows98:
+        return Windows98LauncherSearchBar(
+          dragHandle: dragHandle,
+          textField: textField,
+          trailingBadge: trailingBadge,
+          isSearching: isSearching,
+        );
+      case LauncherDesign.notion:
+        return NotionLauncherSearchBar(
+          accent: accent,
+          onSurface: onSurface,
+          dragHandle: dragHandle,
+          textField: textField,
+          trailingBadge: trailingBadge,
+          isSearching: isSearching,
+        );
     }
   }
 
@@ -734,6 +766,12 @@ extension LauncherDesignBuilder on LauncherDesign {
         return CyberLauncherHeader(label: label, accent: accent);
       case LauncherDesign.manga:
         return MangaLauncherHeader(label: label, accent: accent);
+      case LauncherDesign.windowsXp:
+        return WindowsXpLauncherHeader(label: label);
+      case LauncherDesign.windows98:
+        return Windows98LauncherHeader(label: label);
+      case LauncherDesign.notion:
+        return NotionLauncherHeader(label: label);
     }
   }
 }
