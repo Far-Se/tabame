@@ -39,6 +39,11 @@ class PluginView extends StatefulWidget {
     required this.onLoadMore,
     required this.onEmptyAction,
     required this.onMetadataAction,
+    required this.selectedIds,
+    required this.onToggleSelection,
+    required this.onToggleTree,
+    required this.onChartSelect,
+    required this.onCancelOperation,
     this.onOpenActions,
     this.onMarkdownKeyEvent,
     this.onItemNavigation,
@@ -74,6 +79,11 @@ class PluginView extends StatefulWidget {
   /// A metadata action button was clicked. Preview metadata belongs to its
   /// selected item; detail metadata uses an empty item id.
   final void Function(String itemId, PluginAction action) onMetadataAction;
+  final Set<String> selectedIds;
+  final void Function(String id) onToggleSelection;
+  final void Function(String id, bool expanded) onToggleTree;
+  final void Function(String seriesId, int index, double value) onChartSelect;
+  final void Function(String operationId) onCancelOperation;
 
   /// Ctrl+K pressed inside a form (the launcher opens the actions palette).
   final VoidCallback? onOpenActions;
@@ -190,6 +200,13 @@ class _PluginViewState extends State<PluginView> {
   }
 
   void _tapItem(int index) {
+    // Selection-mode frames use pointer taps to toggle batch membership. Enter
+    // still fires the primary action for the highlighted item, so plugins can
+    // offer an explicit batch command without accidental navigation.
+    if (widget.frame.multiSelect) {
+      widget.onToggleSelection(widget.frame.items[index].id);
+      return;
+    }
     widget.onTapItem(index);
     widget.onItemNavigation?.call();
   }
@@ -212,38 +229,48 @@ class _PluginViewState extends State<PluginView> {
   Widget build(BuildContext context) {
     final PluginRenderFrame frame = widget.frame;
 
+    if (frame.view == PluginViewType.chart) return _withOperation(_buildChart(frame), frame.operation);
+
     if (frame.view == PluginViewType.detail) {
-      return _buildDetail(frame.detailMarkdown ?? '', frame.detailMetadata);
+      return _withOperation(_buildDetail(frame.detailMarkdown ?? '', frame.detailMetadata), frame.operation);
     }
 
     if (frame.view == PluginViewType.chat) {
-      return frame.items.isEmpty ? _buildEmptyOrLoading(frame) : _buildChat(frame);
+      return _withOperation(frame.items.isEmpty ? _buildEmptyOrLoading(frame) : _buildChat(frame), frame.operation);
     }
 
     if (frame.view == PluginViewType.form) {
       final PluginForm? form = frame.form;
-      if (form == null) return _buildEmptyOrLoading(frame);
-      return PluginFormView(
-        form: form,
-        onSubmit: widget.onFormSubmit,
-        onCancel: widget.onFormCancel,
-        onChanged: widget.onFormChange,
-        onOpenActions: widget.onOpenActions,
-      );
+      if (form == null) return _withOperation(_buildEmptyOrLoading(frame), frame.operation);
+      return _withOperation(
+          PluginFormView(
+            form: form,
+            onSubmit: widget.onFormSubmit,
+            onCancel: widget.onFormCancel,
+            onChanged: widget.onFormChange,
+            onOpenActions: widget.onOpenActions,
+          ),
+          frame.operation);
     }
 
     if (frame.items.isEmpty) {
-      return _buildEmptyOrLoading(frame);
+      return _withOperation(_buildEmptyOrLoading(frame), frame.operation);
     }
 
-    final Widget itemsPane = frame.view == PluginViewType.grid ? _buildGrid(frame) : _buildList(frame);
+    final Widget itemsPane = switch (frame.view) {
+      PluginViewType.grid => _buildGrid(frame),
+      PluginViewType.table => _buildTable(frame),
+      PluginViewType.tree => _buildTree(frame),
+      PluginViewType.timeline => _buildTimeline(frame),
+      _ => _buildList(frame),
+    };
 
-    if (!frame.hasPreview) return itemsPane;
+    if (!frame.hasPreview) return _withOperation(itemsPane, frame.operation);
 
     // Split layout: items on the left, a markdown/metadata preview of the
     // selected item on the right.
     final int idx = widget.activeIndex.clamp(0, frame.items.length - 1);
-    return Row(
+    final Widget content = Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Expanded(flex: 5, child: itemsPane),
@@ -251,6 +278,15 @@ class _PluginViewState extends State<PluginView> {
         Expanded(flex: 4, child: _buildPreviewPane(frame.items[idx])),
       ],
     );
+    return _withOperation(content, frame.operation);
+  }
+
+  Widget _withOperation(Widget child, PluginOperation? operation) {
+    if (operation == null) return child;
+    return Column(children: <Widget>[
+      _PluginOperationBar(operation: operation, onCancel: () => widget.onCancelOperation(operation.id)),
+      Expanded(child: child),
+    ]);
   }
 
   Widget _buildEmptyOrLoading(PluginRenderFrame frame) {
@@ -382,7 +418,7 @@ class _PluginViewState extends State<PluginView> {
                       icon: _PluginIcon(name: frame.items[i].icon, accent: Design.accent),
                       title: frame.items[i].title,
                       subtitle: frame.items[i].subtitle,
-                      badge: _accessoryBadge(frame.items[i]),
+                      badge: _accessoryBadge(frame.items[i], multiSelect: frame.multiSelect),
                       inlineMarkup: true,
                       subtitleMaxLines: frame.items[i].subtitleLines,
                     ),
@@ -425,11 +461,20 @@ class _PluginViewState extends State<PluginView> {
     );
   }
 
-  Widget? _accessoryBadge(PluginItem item) {
-    if (item.accessories.isEmpty) return null;
+  Widget? _accessoryBadge(PluginItem item, {bool multiSelect = false}) {
+    if (item.accessories.isEmpty && !multiSelect) return null;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
+        if (multiSelect)
+          GestureDetector(
+            onTap: () => widget.onToggleSelection(item.id),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Icon(widget.selectedIds.contains(item.id) ? Icons.check_box : Icons.check_box_outline_blank,
+                  size: 16, color: widget.selectedIds.contains(item.id) ? Design.accent : Design.text.withAlpha(100)),
+            ),
+          ),
         for (final PluginAccessory accessory in item.accessories)
           Padding(
             padding: const EdgeInsets.only(left: 4),
@@ -504,6 +549,134 @@ class _PluginViewState extends State<PluginView> {
       ),
     );
   }
+
+  Widget _buildTable(PluginRenderFrame frame) {
+    final List<PluginTableColumn> columns = frame.columns.isEmpty
+        ? const <PluginTableColumn>[
+            PluginTableColumn(id: 'title', label: 'Name'),
+            PluginTableColumn(id: 'subtitle', label: 'Details')
+          ]
+        : frame.columns;
+    Widget cell(PluginItem item, PluginTableColumn column) {
+      final String value = column.id == 'title'
+          ? item.title
+          : column.id == 'subtitle'
+              ? item.subtitle
+              : (item.cells[column.id] ?? '');
+      return SizedBox(
+        width: column.width,
+        child: Text(value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: column.align == 'end' ? TextAlign.right : TextAlign.left,
+            style: TextStyle(fontSize: 11.5, color: Design.text.withAlpha(200))),
+      );
+    }
+
+    return WindowsScrollView(
+      controller: _scrollController,
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            color: Design.text.withAlpha(10),
+            child: Row(
+              children: <Widget>[
+                for (final PluginTableColumn column in columns)
+                  Expanded(
+                    child: Text(
+                      column.label.toUpperCase(),
+                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Design.text.withAlpha(120)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          for (int i = 0; i < frame.items.length; i++)
+            KeyedSubtree(
+                key: _keyFor(i),
+                child: _PluginStructuredRow(
+                  selected: i == widget.activeIndex,
+                  marked: widget.selectedIds.contains(frame.items[i].id),
+                  multiSelect: frame.multiSelect,
+                  onTap: () => _tapItem(i),
+                  onHover: () => _hoverSelect(i),
+                  onToggle: () => widget.onToggleSelection(frame.items[i].id),
+                  child: Row(children: <Widget>[
+                    for (final PluginTableColumn column in columns) Expanded(child: cell(frame.items[i], column))
+                  ]),
+                )),
+          if (frame.hasMore) _loadMoreFooter(),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildTree(PluginRenderFrame frame) => WindowsScrollView(
+        controller: _scrollController,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(children: <Widget>[
+            for (int i = 0; i < frame.items.length; i++)
+              KeyedSubtree(
+                  key: _keyFor(i),
+                  child: _PluginStructuredRow(
+                    selected: i == widget.activeIndex,
+                    marked: widget.selectedIds.contains(frame.items[i].id),
+                    multiSelect: frame.multiSelect,
+                    onTap: () => _tapItem(i),
+                    onHover: () => _hoverSelect(i),
+                    onToggle: () => widget.onToggleSelection(frame.items[i].id),
+                    child: Row(children: <Widget>[
+                      SizedBox(width: frame.items[i].depth * 18.0),
+                      GestureDetector(
+                          onTap: () => widget.onToggleTree(frame.items[i].id, !frame.items[i].expanded),
+                          child: Icon(frame.items[i].expanded ? Icons.expand_more : Icons.chevron_right,
+                              size: 17, color: Design.text.withAlpha(145))),
+                      const SizedBox(width: 5),
+                      _PluginIcon(name: frame.items[i].icon, accent: Design.accent, size: 16),
+                      const SizedBox(width: 7),
+                      Expanded(
+                          child: Text(frame.items[i].title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 12, color: Design.text.withAlpha(210)))),
+                      if (frame.items[i].subtitle.isNotEmpty)
+                        Text(frame.items[i].subtitle,
+                            style: TextStyle(fontSize: 10.5, color: Design.text.withAlpha(120))),
+                    ]),
+                  )),
+            if (frame.hasMore) _loadMoreFooter(),
+          ]),
+        ),
+      );
+
+  Widget _buildTimeline(PluginRenderFrame frame) => WindowsScrollView(
+        controller: _scrollController,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Column(children: <Widget>[
+            for (int i = 0; i < frame.items.length; i++)
+              _PluginTimelineRow(
+                item: frame.items[i],
+                selected: i == widget.activeIndex,
+                marked: widget.selectedIds.contains(frame.items[i].id),
+                multiSelect: frame.multiSelect,
+                onTap: () => _tapItem(i),
+                onHover: () => _hoverSelect(i),
+                onToggle: () => widget.onToggleSelection(frame.items[i].id),
+              ),
+            if (frame.hasMore) _loadMoreFooter(),
+          ]),
+        ),
+      );
+
+  Widget _buildChart(PluginRenderFrame frame) => _PluginChart(
+        title: frame.chartTitle,
+        series: frame.chartSeries,
+        onSelect: widget.onChartSelect,
+      );
 
   Widget _buildDetail(String markdown, List<PluginMetadataEntry> metadata) {
     final bool hasMarkdown = markdown.trim().isNotEmpty;
@@ -1271,6 +1444,194 @@ class _DiscordChatBody extends StatelessWidget {
 }
 
 /// A thin determinate bar shown under a list row that carries `"progress"`.
+class _PluginOperationBar extends StatelessWidget {
+  const _PluginOperationBar({required this.operation, required this.onCancel});
+  final PluginOperation operation;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.fromLTRB(14, 7, 10, 7),
+        color: Design.accent.withAlpha(18),
+        child: Row(children: <Widget>[
+          SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 1.5, value: operation.progress, color: Design.accent)),
+          const SizedBox(width: 8),
+          Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+            Text(operation.title,
+                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(220))),
+            if (operation.detail.isNotEmpty)
+              Text(operation.detail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 10, color: Design.text.withAlpha(130))),
+          ])),
+          if (operation.cancellable) TextButton(onPressed: onCancel, child: const Text('Cancel')),
+        ]),
+      );
+}
+
+class _PluginStructuredRow extends StatelessWidget {
+  const _PluginStructuredRow(
+      {required this.selected,
+      required this.marked,
+      required this.multiSelect,
+      required this.onTap,
+      required this.onHover,
+      required this.onToggle,
+      required this.child});
+  final bool selected, marked, multiSelect;
+  final VoidCallback onTap, onHover, onToggle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (_) => onHover(),
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+                color: selected ? Design.accent.withAlpha(34) : Colors.transparent,
+                borderRadius: BorderRadius.circular(5)),
+            child: Row(children: <Widget>[
+              if (multiSelect)
+                GestureDetector(
+                    onTap: onToggle,
+                    child: Padding(
+                        padding: const EdgeInsets.only(right: 7),
+                        child: Icon(marked ? Icons.check_box : Icons.check_box_outline_blank,
+                            size: 16, color: marked ? Design.accent : Design.text.withAlpha(100)))),
+              Expanded(child: child),
+            ]),
+          ),
+        ),
+      );
+}
+
+class _PluginTimelineRow extends StatelessWidget {
+  const _PluginTimelineRow(
+      {required this.item,
+      required this.selected,
+      required this.marked,
+      required this.multiSelect,
+      required this.onTap,
+      required this.onHover,
+      required this.onToggle});
+  final PluginItem item;
+  final bool selected, marked, multiSelect;
+  final VoidCallback onTap, onHover, onToggle;
+
+  @override
+  Widget build(BuildContext context) => _PluginStructuredRow(
+        selected: selected,
+        marked: marked,
+        multiSelect: multiSelect,
+        onTap: onTap,
+        onHover: onHover,
+        onToggle: onToggle,
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+          SizedBox(
+              width: 78,
+              child: Text(item.timestamp ?? '', style: TextStyle(fontSize: 10.5, color: Design.text.withAlpha(125)))),
+          Column(children: <Widget>[
+            Container(width: 9, height: 9, decoration: BoxDecoration(color: Design.accent, shape: BoxShape.circle)),
+            Container(width: 1, height: 30, color: Design.text.withAlpha(35))
+          ]),
+          const SizedBox(width: 10),
+          Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+            Text(item.title,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Design.text.withAlpha(220))),
+            if (item.subtitle.isNotEmpty)
+              Text(item.subtitle,
+                  maxLines: item.subtitleLines,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 11, color: Design.text.withAlpha(145)))
+          ])),
+        ]),
+      );
+}
+
+class _PluginChart extends StatelessWidget {
+  const _PluginChart({required this.title, required this.series, required this.onSelect});
+  final String? title;
+  final List<PluginChartSeries> series;
+  final void Function(String seriesId, int index, double value) onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    if (series.isEmpty)
+      return Center(child: Text('No chart data', style: TextStyle(color: Design.text.withAlpha(120))));
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+        if (title != null)
+          Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(title!, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Design.text))),
+        Expanded(
+            child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) => GestureDetector(
+                      onTapUp: (TapUpDetails details) {
+                        final PluginChartSeries selected = series.first;
+                        final int index =
+                            (details.localPosition.dx / constraints.maxWidth * (selected.values.length - 1))
+                                .round()
+                                .clamp(0, selected.values.length - 1);
+                        onSelect(selected.id, index, selected.values[index]);
+                      },
+                      child: CustomPaint(painter: _PluginChartPainter(series: series), child: const SizedBox.expand()),
+                    ))),
+        const SizedBox(height: 8),
+        Wrap(spacing: 12, children: <Widget>[
+          for (int i = 0; i < series.length; i++)
+            Text(series[i].label, style: TextStyle(fontSize: 10.5, color: series[i].color ?? Design.accent))
+        ]),
+      ]),
+    );
+  }
+}
+
+class _PluginChartPainter extends CustomPainter {
+  const _PluginChartPainter({required this.series});
+  final List<PluginChartSeries> series;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final List<double> values = series.expand((PluginChartSeries s) => s.values).toList();
+    final double min = values.reduce((double a, double b) => a < b ? a : b),
+        max = values.reduce((double a, double b) => a > b ? a : b);
+    for (int s = 0; s < series.length; s++) {
+      final PluginChartSeries seriesItem = series[s];
+      final Path path = Path();
+      for (int i = 0; i < seriesItem.values.length; i++) {
+        final double x = size.width * i / (seriesItem.values.length - 1);
+        final double y = size.height - ((seriesItem.values[i] - min) / (max - min == 0 ? 1 : max - min) * size.height);
+        if (i == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+      }
+      canvas.drawPath(
+          path,
+          Paint()
+            ..color = seriesItem.color ?? (s == 0 ? Design.accent : Design.text.withAlpha(150))
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2
+            ..strokeJoin = StrokeJoin.round);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PluginChartPainter oldDelegate) => !identical(series, oldDelegate.series);
+}
+
 class _PluginProgressBar extends StatelessWidget {
   const _PluginProgressBar({required this.value});
 

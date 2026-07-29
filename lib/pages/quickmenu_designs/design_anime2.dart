@@ -449,7 +449,7 @@ class _AnimeSparklePainter extends CustomPainter {
     for (final Offset rel in _kSparkles) {
       final double x = rel.dx * size.width;
       final double y = rel.dy * size.height;
-      final double r = 2.5;
+      const double r = 2.5;
 
       final Path sparkle = Path()
         ..moveTo(x, y - r)

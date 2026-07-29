@@ -147,9 +147,9 @@ class MainMenuAnimeWidget extends StatelessWidget {
                   children: <Widget>[
                     _RibbonHeader(t: t),
                     if (!user.quickActionsAtBottom)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(9, 3, 9, 0),
-                        child: const TopBar(),
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(9, 3, 9, 0),
+                        child: TopBar(),
                       )
                     else if (user.bottomBarOnTop)
                       const PinnedAndTrayList(),

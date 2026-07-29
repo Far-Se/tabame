@@ -47,6 +47,7 @@ class LauncherPluginHost {
 
   /// Dev mode: watches the plugin folder and hot-restarts the process on save.
   StreamSubscription<FileSystemEvent>? _devWatchSub;
+  final Set<HttpServer> _oauthServers = <HttpServer>{};
   Timer? _devReloadDebounce;
 
   /// Last query text sent to the plugin, replayed after a dev-mode restart so
@@ -475,14 +476,33 @@ class LauncherPluginHost {
   }
 
   /// Triggers an action for an item — `default` on Enter, or a Ctrl+K action id.
-  void sendAction(String id, String action) {
+  void sendAction(
+    String id,
+    String action, {
+    List<String> ids = const <String>[],
+    Map<String, Object?>? parameters,
+  }) {
     if (action == _installDependenciesAction && _process == null) {
       final PluginManifest? manifest = _active;
       if (manifest != null) unawaited(_installDependenciesAndActivate(manifest));
       return;
     }
-    _send(<String, Object?>{'type': 'action', 'id': id, 'action': action});
+    _send(<String, Object?>{
+      'type': 'action',
+      'id': id,
+      'action': action,
+      if (ids.isNotEmpty) 'ids': ids,
+      if (parameters != null) 'parameters': parameters,
+    });
   }
+
+  void sendToggle(String id, bool expanded) =>
+      _send(<String, Object?>{'type': 'toggle', 'id': id, 'expanded': expanded, 'rev': _rev});
+
+  void sendChartSelect(String seriesId, int index, double value) => _send(
+      <String, Object?>{'type': 'chartSelect', 'seriesId': seriesId, 'index': index, 'value': value, 'rev': _rev});
+
+  void sendCancel(String operationId) => _send(<String, Object?>{'type': 'cancel', 'id': operationId, 'rev': _rev});
 
   /// Delivers a form view's field values after the user submits. [button] is
   /// the id of the pressed `form.buttons` entry, when the form declared any.
@@ -638,8 +658,63 @@ class LauncherPluginHost {
         _backgroundGrace = Duration(seconds: seconds);
         debugLog.add(PluginDebugKind.info, 'Background finish granted (${seconds}s after close)');
         return true;
+      case 'oauth':
+        if (!live) return true;
+        _handleOAuthCommand(command);
+        return true;
     }
     return false;
+  }
+
+  /// Starts a localhost OAuth callback receiver owned by the host. Plugins
+  /// supply an authorization URL template containing `{redirectUri}`; the host
+  /// substitutes an ephemeral loopback URL, opens the browser, and returns the
+  /// callback parameters to stdin. Tokens stay plugin-owned and should be
+  /// stored with `storage` + `secret: true`.
+  void _handleOAuthCommand(PluginCommand command) {
+    final Object? rawUrl = command.data['authorizationUrl'];
+    final Object? requestId = command.data['requestId'];
+    if (rawUrl is! String || !rawUrl.contains('{redirectUri}')) {
+      _send(<String, Object?>{
+        'type': 'oauth',
+        if (requestId != null) 'requestId': requestId,
+        'error': 'authorizationUrl must contain {redirectUri}'
+      });
+      return;
+    }
+    unawaited(() async {
+      try {
+        final HttpServer server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        _oauthServers.add(server);
+        final String redirectUri = 'http://${server.address.address}:${server.port}/callback';
+        final String authorizationUrl = rawUrl.replaceAll('{redirectUri}', Uri.encodeComponent(redirectUri));
+        final int timeout =
+            (command.data['timeout'] is num ? (command.data['timeout'] as num).toInt() : 180).clamp(30, 300);
+        final Timer timeoutTimer = Timer(Duration(seconds: timeout), () {
+          if (_oauthServers.remove(server)) {
+            server.close(force: true);
+            _send(<String, Object?>{
+              'type': 'oauth',
+              if (requestId != null) 'requestId': requestId,
+              'error': 'Authorization timed out'
+            });
+          }
+        });
+        server.listen((HttpRequest request) async {
+          final Map<String, String> query = request.uri.queryParameters;
+          request.response.headers.contentType = ContentType.html;
+          request.response.write(
+              '<!doctype html><title>Tabame</title><body>Authorization received. You can return to Tabame.</body>');
+          await request.response.close();
+          timeoutTimer.cancel();
+          if (_oauthServers.remove(server)) await server.close(force: true);
+          _send(<String, Object?>{'type': 'oauth', if (requestId != null) 'requestId': requestId, ...query});
+        });
+        WinUtils.open(authorizationUrl);
+      } catch (error) {
+        _send(<String, Object?>{'type': 'oauth', if (requestId != null) 'requestId': requestId, 'error': '$error'});
+      }
+    }());
   }
 
   /// Gives plugins bounded, read-only access to Tabame's clipboard history.
@@ -707,8 +782,9 @@ class LauncherPluginHost {
 
   Map<String, Object?> _clipboardHistoryEntryMap(ClipboardHistoryEntry entry, {int? previewLimit}) {
     String text = entry.text;
-    if (previewLimit != null && text.length > previewLimit)
+    if (previewLimit != null && text.length > previewLimit) {
       text = '${text.substring(0, previewLimit)}\n\n… Preview truncated';
+    }
     return <String, Object?>{
       'id': entry.id,
       'type': entry.type.name,
@@ -793,6 +869,10 @@ class LauncherPluginHost {
   /// `background` finishing instead keeps running (detached from the UI) for
   /// its granted grace period — still able to write storage and notify.
   Future<void> deactivate() async {
+    for (final HttpServer server in _oauthServers.toList()) {
+      await server.close(force: true);
+    }
+    _oauthServers.clear();
     final Process? process = _process;
     _process = null;
     _active = null;

@@ -211,6 +211,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   late final LauncherPluginHost _pluginHost = LauncherPluginHost(onFrame: _onPluginFrame, onCommand: _onPluginCommand);
   PluginManifest? _activePlugin;
   PluginRenderFrame? _pluginFrame;
+  final Set<String> _pluginSelectedIds = <String>{};
   Timer? _pluginQueryDebounce;
 
   /// Set when Enter is pressed while a query is still waiting out its debounce:
@@ -584,6 +585,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final bool sameItemSet = previous != null && _sameItemIds(previous.items, frame.items);
     setState(() {
       _pluginFrame = frame;
+      if (!frame.multiSelect) _pluginSelectedIds.clear();
+      _pluginSelectedIds.removeWhere((String id) => !frame.items.any((PluginItem item) => item.id == id));
       _isSearching = frame.loading;
       final int count = frame.items.length;
       final int selectIdIndex =
@@ -782,8 +785,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
   Future<bool> _fadePluginWindowTo(double targetOpacity, int transitionVersion, {required Curve curve}) async {
     final double startOpacity = _pluginWindowOpacity;
-    if ((startOpacity - targetOpacity).abs() < 0.01)
+    if ((startOpacity - targetOpacity).abs() < 0.01) {
       return mounted && transitionVersion == _pluginWindowTransitionVersion;
+    }
 
     final Animation<double> opacity = Tween<double>(begin: startOpacity, end: targetOpacity).animate(
       CurvedAnimation(parent: _pluginWindowTransitionController, curve: curve),
@@ -846,6 +850,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         return;
       }
     }
+    // In a bulk-selection frame, Enter has the same intent as clicking the
+    // checkbox: mark/unmark the highlighted row. Batch work remains available
+    // through the frame's Ctrl+K actions.
+    final PluginRenderFrame? selectionFrame = _pluginFrame;
+    if (selectionFrame?.multiSelect == true && selectionFrame!.items.isNotEmpty) {
+      final int index = _activeIndexNotifier.value.clamp(0, selectionFrame.items.length - 1);
+      _togglePluginSelection(selectionFrame.items[index].id);
+      return;
+    }
     // A query keystroke is still waiting out its debounce: the visible frame
     // predates what the user typed, so submitting now would fire the stale
     // (unfiltered) list's item. Flush the query and defer the submit until the
@@ -871,9 +884,23 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
   /// Central action dispatch: shows the action's confirm gate (if any), then
   /// forwards it to the plugin. [itemId] is empty for frame-level actions.
-  void _firePluginAction(String itemId, PluginAction action) {
+  Future<void> _firePluginAction(String itemId, PluginAction action) async {
+    Map<String, Object?>? parameters;
+    if (action.parameters.isNotEmpty) {
+      parameters = await showModalBottomSheet<Map<String, Object?>>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        barrierColor: Colors.transparent,
+        builder: (_) => PluginActionParametersPanel(action: action),
+      );
+      if (parameters == null || _activePlugin == null) return;
+    }
+    final List<String> ids = _pluginFrame?.multiSelect == true && _pluginSelectedIds.isNotEmpty
+        ? _pluginSelectedIds.toList(growable: false)
+        : const <String>[];
     if (action.confirm == null) {
-      _pluginHost.sendAction(itemId, action.id);
+      _pluginHost.sendAction(itemId, action.id, ids: ids, parameters: parameters);
       return;
     }
     showModalBottomSheet<bool>(
@@ -883,7 +910,21 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       barrierColor: Colors.transparent,
       builder: (_) => PluginConfirmPanel(action: action),
     ).then((bool? confirmed) {
-      if (confirmed == true && _activePlugin != null) _pluginHost.sendAction(itemId, action.id);
+      if (confirmed == true && _activePlugin != null) {
+        _pluginHost.sendAction(itemId, action.id, ids: ids, parameters: parameters);
+      }
+    });
+  }
+
+  void _togglePluginSelection(String id) {
+    final PluginRenderFrame? frame = _pluginFrame;
+    if (frame?.multiSelect != true) return;
+    setState(() {
+      if (_pluginSelectedIds.contains(id)) {
+        _pluginSelectedIds.remove(id);
+      } else if (frame!.multiSelectMax == null || _pluginSelectedIds.length < frame.multiSelectMax!) {
+        _pluginSelectedIds.add(id);
+      }
     });
   }
 
@@ -1013,6 +1054,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       return KeyEventResult.handled;
     }
 
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.space &&
+        HardwareKeyboard.instance.isControlPressed &&
+        frame.multiSelect &&
+        frame.items.isNotEmpty) {
+      _togglePluginSelection(frame.items[_activeIndexNotifier.value.clamp(0, frame.items.length - 1)].id);
+      return KeyEventResult.handled;
+    }
+
     // Detail (markdown document) view: arrows and page keys scroll the
     // document. Home/End are left alone — they move the caret in the search
     // field.
@@ -1100,6 +1150,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                 onLoadMore: _pluginHost.sendLoadMore,
                 onEmptyAction: (PluginAction action) => _firePluginAction('', action),
                 onMetadataAction: _firePluginAction,
+                selectedIds: _pluginSelectedIds,
+                onToggleSelection: _togglePluginSelection,
+                onToggleTree: (String id, bool expanded) => _pluginHost.sendToggle(id, expanded),
+                onChartSelect: _pluginHost.sendChartSelect,
+                onCancelOperation: _pluginHost.sendCancel,
                 onOpenActions: _openPluginActions,
                 onMarkdownKeyEvent: _handlePluginKey,
                 onItemNavigation: _requestPluginNavigationFocus,

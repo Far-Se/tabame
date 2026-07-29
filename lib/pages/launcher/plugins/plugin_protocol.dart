@@ -1,3 +1,5 @@
+// ignore_for_file: always_specify_types
+
 import 'dart:convert';
 import 'dart:ui' show Color;
 
@@ -11,10 +13,12 @@ import 'dart:ui' show Color;
 /// 4 = metadata image URLs.
 /// 5 = metadata action buttons, image widths, and preview-side images.
 /// 6 = chat view for message-oriented plugins.
-const int pluginProtocolVersion = 6;
+/// 7 = bulk selection, table/tree/timeline/chart views, cancellable operations,
+///     action parameters, and host-mediated loopback OAuth.
+const int pluginProtocolVersion = 7;
 
 /// The layout a plugin render frame requests.
-enum PluginViewType { list, grid, detail, chat, form }
+enum PluginViewType { list, grid, detail, chat, form, table, tree, timeline, chart }
 
 /// Parses a `#RGB` / `#RRGGBB` / `#AARRGGBB` string from plugin JSON into a
 /// [Color]. Returns null for anything else, so a bad value degrades to the
@@ -48,6 +52,14 @@ PluginViewType _viewFromString(String? value) {
       return PluginViewType.chat;
     case 'form':
       return PluginViewType.form;
+    case 'table':
+      return PluginViewType.table;
+    case 'tree':
+      return PluginViewType.tree;
+    case 'timeline':
+      return PluginViewType.timeline;
+    case 'chart':
+      return PluginViewType.chart;
     case 'list':
     default:
       return PluginViewType.list;
@@ -202,6 +214,7 @@ class PluginAction {
     this.shortcut,
     this.destructive = false,
     this.confirm,
+    this.parameters = const <PluginFormField>[],
   });
 
   final String id;
@@ -218,6 +231,11 @@ class PluginAction {
   /// When set, the host asks for confirmation before forwarding the action.
   final PluginConfirm? confirm;
 
+  /// Optional compact form collected before this action is dispatched. This is
+  /// deliberately the same field grammar as a full plugin form, allowing an
+  /// action such as "Deploy" to ask for a target or change note in context.
+  final List<PluginFormField> parameters;
+
   static PluginAction? fromJson(Object? json) {
     if (json is! Map) return null;
     final Object? id = json['id'];
@@ -232,12 +250,92 @@ class PluginAction {
       shortcut: shortcut is String && shortcut.trim().isNotEmpty ? shortcut.trim().toLowerCase() : null,
       destructive: json['destructive'] == true,
       confirm: PluginConfirm.fromJson(json['confirm']),
+      parameters: json['parameters'] is List
+          ? (json['parameters'] as List)
+              .map<PluginFormField?>(PluginFormField.fromJson)
+              .whereType<PluginFormField>()
+              .toList(growable: false)
+          : const <PluginFormField>[],
     );
   }
 
   static List<PluginAction> listFromJson(Object? json) {
     if (json is! List) return const <PluginAction>[];
     return json.map(fromJson).whereType<PluginAction>().toList(growable: false);
+  }
+}
+
+/// One column in a `table` frame. An item supplies its values via `cells`.
+class PluginTableColumn {
+  const PluginTableColumn({required this.id, required this.label, this.width, this.align = 'start'});
+
+  final String id;
+  final String label;
+  final double? width;
+  final String align;
+
+  static PluginTableColumn? fromJson(Object? json) {
+    if (json is! Map || json['id'] is! String) return null;
+    final String id = json['id'] as String;
+    if (id.trim().isEmpty) return null;
+    final Object? align = json['align'];
+    return PluginTableColumn(
+      id: id,
+      label: json['label'] is String ? json['label'] as String : id,
+      width: json['width'] is num ? (json['width'] as num).toDouble().clamp(64, 420) : null,
+      align: align == 'end' || align == 'center' ? align as String : 'start',
+    );
+  }
+
+  static List<PluginTableColumn> listFromJson(Object? json) => json is List
+      ? json.map(PluginTableColumn.fromJson).whereType<PluginTableColumn>().toList(growable: false)
+      : const <PluginTableColumn>[];
+}
+
+/// A selectable point series for the `chart` view.
+class PluginChartSeries {
+  const PluginChartSeries({required this.id, required this.label, required this.values, this.color});
+  final String id;
+  final String label;
+  final List<double> values;
+  final Color? color;
+
+  static PluginChartSeries? fromJson(Object? json) {
+    if (json is! Map || json['id'] is! String || json['values'] is! List) return null;
+    final List<double> values =
+        (json['values'] as List).whereType<num>().map<double>((num value) => value.toDouble()).toList();
+    if (values.length < 2) return null;
+    final String id = json['id'] as String;
+    return PluginChartSeries(
+      id: id,
+      label: json['label'] is String ? json['label'] as String : id,
+      values: values,
+      color: parsePluginColor(json['color']),
+    );
+  }
+}
+
+/// Long-running work surfaced above a plugin view. The cancel control only
+/// appears when the plugin explicitly declares it cancellable.
+class PluginOperation {
+  const PluginOperation(
+      {required this.id, required this.title, this.detail = '', this.progress, this.cancellable = false});
+  final String id;
+  final String title;
+  final String detail;
+  final double? progress;
+  final bool cancellable;
+
+  static PluginOperation? fromJson(Object? json) {
+    if (json is! Map || json['id'] is! String || (json['id'] as String).trim().isEmpty) return null;
+    final Object? progress = json['progress'];
+    return PluginOperation(
+      id: json['id'] as String,
+      title: json['title'] is String ? json['title'] as String : 'Working…',
+      detail: json['detail'] is String ? json['detail'] as String : '',
+      progress: progress is num ? progress.toDouble().clamp(0, 1) : null,
+      cancellable: json['cancellable'] == true,
+    );
   }
 }
 
@@ -259,6 +357,10 @@ class PluginItem {
     this.section,
     this.progress,
     this.subtitleLines = 1,
+    this.cells = const <String, String>{},
+    this.depth = 0,
+    this.expanded = false,
+    this.timestamp,
   });
 
   final String id;
@@ -296,6 +398,17 @@ class PluginItem {
   /// How many lines the subtitle may wrap to (1–3, from `"lines"`).
   final int subtitleLines;
 
+  /// `table` view cell values, keyed by the frame's `columns[].id`.
+  final Map<String, String> cells;
+
+  /// `tree` view nesting level and visual expansion state. Plugins remain the
+  /// source of truth and receive `toggle` when the disclosure is activated.
+  final int depth;
+  final bool expanded;
+
+  /// `timeline` view's leading time/status label.
+  final String? timestamp;
+
   static PluginItem fromJson(Map<String, dynamic> json, int index) {
     final Object? rawId = json['id'];
     final Object? rawAccessories = json['accessories'];
@@ -305,6 +418,7 @@ class PluginItem {
     final Object? rawProgress = json['progress'];
     final Object? rawLines = json['lines'];
     final Object? rawImages = json['images'];
+    final Object? rawCells = json['cells'];
 
     String? previewMarkdown;
     List<PluginMetadataEntry> previewMetadata = const <PluginMetadataEntry>[];
@@ -354,6 +468,15 @@ class PluginItem {
       section: rawSection is String && rawSection.trim().isNotEmpty ? rawSection.trim() : null,
       progress: rawProgress is num ? rawProgress.toDouble().clamp(0.0, 1.0) : null,
       subtitleLines: rawLines is num ? rawLines.toInt().clamp(1, 3) : 1,
+      cells: rawCells is Map
+          ? rawCells.map<String, String>(
+              (Object? key, Object? value) => MapEntry<String, String>(key.toString(), value?.toString() ?? ''))
+          : const <String, String>{},
+      depth: json['depth'] is num ? (json['depth'] as num).toInt().clamp(0, 12) : 0,
+      expanded: json['expanded'] == true,
+      timestamp: json['timestamp'] is String && (json['timestamp'] as String).trim().isNotEmpty
+          ? (json['timestamp'] as String).trim()
+          : null,
     );
   }
 }
@@ -576,7 +699,7 @@ class PluginCommand {
 
   static const Set<String> knownCommands = <String>{
     'copy', 'paste', 'open', 'hide', 'toast', 'setquery', //
-    'storage', 'clipboardread', 'clipboardhistory', 'notify', 'background',
+    'storage', 'clipboardread', 'clipboardhistory', 'notify', 'background', 'oauth',
   };
 
   /// Parses a decoded `{"type":"command"}` message. Returns null when the
@@ -625,6 +748,12 @@ class PluginRenderFrame {
     this.hasMore = false,
     this.submitInput = false,
     this.detailAppend,
+    this.multiSelect = false,
+    this.multiSelectMax,
+    this.columns = const <PluginTableColumn>[],
+    this.chartSeries = const <PluginChartSeries>[],
+    this.chartTitle,
+    this.operation,
   });
 
   final PluginViewType view;
@@ -652,6 +781,14 @@ class PluginRenderFrame {
   /// instead of replacing the document — streaming LLM output. The host merges
   /// this before the frame reaches the view.
   final String? detailAppend;
+
+  /// Lets the user select several list/grid/table/tree items for batch actions.
+  final bool multiSelect;
+  final int? multiSelectMax;
+  final List<PluginTableColumn> columns;
+  final List<PluginChartSeries> chartSeries;
+  final String? chartTitle;
+  final PluginOperation? operation;
 
   /// Full-width markdown, used when [view] is [PluginView.detail].
   final String? detailMarkdown;
@@ -739,6 +876,12 @@ class PluginRenderFrame {
       hasMore: hasMore,
       submitInput: submitInput,
       detailAppend: null,
+      multiSelect: multiSelect,
+      multiSelectMax: multiSelectMax,
+      columns: columns,
+      chartSeries: chartSeries,
+      chartTitle: chartTitle,
+      operation: operation,
     );
   }
 
@@ -800,6 +943,8 @@ class PluginRenderFrame {
     final Object? grid = json['grid'];
     final Object? detail = json['detail'];
     final Object? preview = json['preview'];
+    final Object? selection = json['selection'];
+    final Object? chart = json['chart'];
 
     int gridColumns = 4;
     double gridAspectRatio = 1.0;
@@ -853,6 +998,14 @@ class PluginRenderFrame {
     final Object? loadingText = json['loadingText'];
     final Object? placeholder = json['placeholder'];
     final Object? selectId = json['selectId'];
+    final int? multiSelectMax =
+        selection is Map && selection['max'] is num ? (selection['max'] as num).toInt().clamp(1, 999) : null;
+    final List<PluginChartSeries> chartSeries = chart is Map && chart['series'] is List
+        ? (chart['series'] as List)
+            .map<PluginChartSeries?>(PluginChartSeries.fromJson)
+            .whereType<PluginChartSeries>()
+            .toList(growable: false)
+        : const <PluginChartSeries>[];
 
     // `loading` is either a bool or `{"progress": 0..1}` for a determinate bar.
     final Object? rawLoading = json['loading'];
@@ -889,6 +1042,12 @@ class PluginRenderFrame {
       hasMore: json['hasMore'] == true,
       submitInput: json['inputMode'] == 'submit',
       detailAppend: detailAppend,
+      multiSelect: selection == true || (selection is Map && selection['enabled'] != false),
+      multiSelectMax: multiSelectMax,
+      columns: PluginTableColumn.listFromJson(json['columns']),
+      chartSeries: chartSeries,
+      chartTitle: chart is Map && chart['title'] is String ? chart['title'] as String : null,
+      operation: PluginOperation.fromJson(json['operation']),
     );
   }
 }

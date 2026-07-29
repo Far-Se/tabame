@@ -251,11 +251,15 @@ Notes:
 
 | Message       | When                                                                                                             | Fields                                                                                                                                                                                       |
 | ------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `init`        | Once, right after your process starts                                                                            | `query`: initial text after the keyword; `protocol`: int protocol version (currently 5); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"` |
+| `init`        | Once, right after your process starts                                                                            | `query`: initial text after the keyword; `protocol`: int protocol version (currently 7); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"` |
 | `query`       | On every keystroke while the keyword is active (not sent in `inputMode: "submit"`)                               | `text`: current text after the keyword; `rev`: integer generation counter                                                                                                                    |
 | `submitQuery` | **Enter** while the frame declared `inputMode: "submit"` — the whole query line at once (chat-style input)       | `text`, `rev`                                                                                                                                                                                |
 | `select`      | When the highlighted item changes                                                                                | `id`: the selected item's id; `rev`                                                                                                                                                          |
-| `action`      | On **Enter** (fires `action` = `"default"`), a **Ctrl+K** pick, an action **shortcut**, or the empty state's CTA | `id`: the item's id (`""` for frame-level actions and the empty-state button); `action`: `"default"` or the chosen action's id                                                               |
+| `action`      | On **Enter** (fires `action` = `"default"`), a **Ctrl+K** pick, an action **shortcut**, or the empty state's CTA | `id`: the item's id (`""` for frame-level actions and the empty-state button); `action`: `"default"` or the chosen action's id; optional `ids`: bulk-selected IDs; optional `parameters`: values collected for the action |
+| `toggle`      | A tree disclosure was activated                                                                                 | `id`, `expanded`, `rev` — render the expanded/collapsed children yourself                                                                                                                     |
+| `chartSelect` | A point on an interactive chart was clicked                                                                     | `seriesId`, `index`, `value`, `rev`                                                                                                                                                            |
+| `cancel`      | The user cancelled a declared operation                                                                         | `id`, `rev`                                                                                                                                                                                    |
+| `oauth`       | Reply to an `oauth` command                                                                                     | `requestId` (echoed), plus provider callback query fields such as `code`, `state`, or `error`                                                                                                  |
 | `submit`      | When the user submits a **form** view                                                                            | `values`: `{fieldId: value}` (strings, booleans, numbers, string lists — see §8); `button`: the pressed `form.buttons` id (absent for the default CTA)                                       |
 | `change`      | A form field with `"watch": true` changed                                                                        | `id`: the field's id; `values`: all current field values                                                                                                                                     |
 | `loadMore`    | The user scrolled near the end of a frame with `hasMore: true`                                                   | `rev` — answer with a longer item list                                                                                                                                                       |
@@ -317,6 +321,7 @@ Instead of shelling out to `clip`/`start` yourself, ask the host:
 | `notify`           | `title`?, `text`                                         | Fires a **native Windows notification** (works even while finishing in the background — see `background`). `title` defaults to the plugin name.                                                                                                                                                                                                             |
 | `storage`          | `op`, `key`?, `value`?, `secret`?, `requestId`?          | Per-plugin persistent key-value store. `op` is `"set"`, `"get"`, `"delete"`, or `"keys"`. Plain values live in `.tabame-store.json` in the plugin folder; `"secret": true` routes the value to the **Windows Credential Manager** instead (strings only; not listed by `keys`). `get`/`keys` reply with a `{"type":"storage"}` message echoing `requestId`. |
 | `background`       | `timeout`?                                               | Requests shutdown grace: after the launcher hides / the user leaves, the process is **not killed** for up to `timeout` seconds (default 30, max 300) so it can finish work. While detached it can still use `storage` and `notify`, but frames and UI commands are dropped. Send it **before** `hide`.                                                      |
+| `oauth`            | `authorizationUrl`, `requestId`?, `timeout`?            | Starts a host-owned ephemeral loopback callback listener and opens the authorization URL. `authorizationUrl` **must** include the literal `{redirectUri}` placeholder; Tabame URL-encodes and substitutes it. It replies with `{"type":"oauth",...}`. Exchange the returned code yourself and store tokens using `storage` with `secret: true`. |
 
 Example stdout lines:
 
@@ -369,7 +374,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 {
   "type": "render", // required, always "render"
   "rev": 0, // echo the query's rev, or 0 for unsolicited
-  "view": "list", // "list" | "grid" | "detail" | "chat" | "form"   (default "list")
+  "view": "list", // "list" | "grid" | "detail" | "chat" | "form" | "table" | "tree" | "timeline" | "chart"
   "loading": false, // bool, or {"progress": 0.4} for a determinate spinner
   "loadingText": "Searching…", // caption shown under the spinner while loading
   "emptyText": "No results", // shown when items is empty and not loading
@@ -384,13 +389,21 @@ slow response to "rom" from overwriting the fresh results for "rome".
   "selectId": "item-3", // move the highlight to this item
   "hasMore": false, // more items exist -> loadMore events
   "inputMode": "submit", // Enter submits the query (chat-style)
+  "selection": { "enabled": true, "max": 20 }, // Ctrl+Space or row checkbox; actions receive ids
+  "columns": [{ "id": "status", "label": "Status", "align": "end" }], // table view
+  "chart": { "title": "Latency", "series": [{ "id": "p95", "label": "p95", "values": [24, 31], "color": "#63A0EA" }] },
+  "operation": { "id": "deploy-42", "title": "Deploying", "progress": 0.4, "cancellable": true },
   "items": [/* see §7 */],
 }
 ```
 
 | Field              | Type           | Notes                                                                                                                                                                                                                                                                            |
 | ------------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `view`             | string         | `"list"` (rows), `"grid"` (tiles), `"detail"` (full-width markdown), `"chat"` (message feed), or `"form"` (inputs). Default `list`.                                                                                                                                              |
+| `view`             | string         | `"list"` (rows), `"grid"` (tiles), `"detail"` (full-width markdown), `"chat"` (message feed), `"form"` (inputs), `"table"`, `"tree"`, `"timeline"`, or `"chart"`. Default `list`. |
+| `selection`        | bool/object    | Enable bulk selection. `Enter` and `Ctrl+Space` toggle the highlighted item; list/table/tree/timeline also expose a pointer checkbox. `{max}` caps the selection count. Selected IDs arrive in `action.ids`. |
+| `columns`          | array          | `table` columns: `{id,label,width?,align?}`. Items provide matching string values in `cells`. |
+| `chart`            | object         | `chart` view data: `{title?,series:[{id,label?,values:[number,number,...],color?}]}`. Clicking a point sends `chartSelect`. |
+| `operation`        | object         | A visible long-running operation `{id,title,detail?,progress?:0..1,cancellable?:bool}`. A cancellable operation sends `cancel`. |
 | `loading`          | bool or object | When truthy and `items` empty, a spinner is shown. `{"progress": 0..1}` makes it determinate.                                                                                                                                                                                    |
 | `loadingText`      | string         | Optional caption shown **under the spinner** while `loading`. Use this (not `emptyText`) for "Searching…"-style progress text — `emptyText` is only shown when _not_ loading.                                                                                                    |
 | `emptyText`        | string         | Message when there are no items. Default `"No results"`.                                                                                                                                                                                                                         |
@@ -673,6 +686,10 @@ Each action (item- or frame-level) supports:
     "message": "This cannot be undone.",
     "confirmLabel": "Delete",
   },
+  "parameters": [
+    { "id": "environment", "type": "dropdown", "label": "Environment", "required": true,
+      "options": ["staging", "production"] }
+  ], // compact host form; values return in action.parameters
 }
 ```
 

@@ -215,7 +215,7 @@ class _LedgerMarginPainter extends CustomPainter {
     final Paint rule = Paint()
       ..color = p.rule
       ..strokeWidth = 0.6;
-    canvas.drawLine(Offset(_ruleX, 6), Offset(_ruleX, size.height - 6), rule);
+    canvas.drawLine(const Offset(_ruleX, 6), Offset(_ruleX, size.height - 6), rule);
 
     final Paint ring = Paint()
       ..color = p.holeRing

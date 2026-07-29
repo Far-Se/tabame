@@ -7,6 +7,7 @@ import '../../../widgets/widgets/windows_scroll.dart';
 import '../launcher_modal_theme.dart';
 import '../result/result_row.dart';
 import 'plugin_icons.dart';
+import 'plugin_form_view.dart';
 import 'plugin_protocol.dart';
 import 'plugin_shortcut.dart';
 
@@ -400,6 +401,35 @@ class PluginConfirmPanel extends StatefulWidget {
 
   @override
   State<PluginConfirmPanel> createState() => _PluginConfirmPanelState();
+}
+
+/// Compact parameter collection shown before an action is dispatched. It
+/// reuses the regular form controls so action parameters have identical
+/// validation and picker behaviour to a full `form` frame.
+class PluginActionParametersPanel extends StatelessWidget {
+  const PluginActionParametersPanel({super.key, required this.action});
+
+  final PluginAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      type: MaterialType.transparency,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
+          child: Material(
+            color: Colors.transparent,
+            child: PluginFormView(
+              form: PluginForm(title: action.title, submitLabel: 'Continue', fields: action.parameters),
+              onSubmit: (Map<String, Object?> values, {String? button}) => Navigator.of(context).pop(values),
+              onCancel: () => Navigator.of(context).pop(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _PluginConfirmPanelState extends State<PluginConfirmPanel> {
