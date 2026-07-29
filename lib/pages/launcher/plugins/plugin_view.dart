@@ -785,12 +785,7 @@ class _PluginViewState extends State<PluginView> {
       return MouseRegion(
         cursor: SystemMouseCursors.zoomIn,
         child: GestureDetector(
-          onTapDown: (TapDownDetails details) => _showImageMenu(
-            context,
-            details.globalPosition,
-            value,
-            isSvg: isSvg,
-          ),
+          onTapDown: (TapDownDetails details) => _openImageLightbox(context, url, isSvg: isSvg),
           onSecondaryTapDown: (TapDownDetails details) => _showImageMenu(
             context,
             details.globalPosition,

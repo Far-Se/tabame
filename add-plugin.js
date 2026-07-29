@@ -23,6 +23,18 @@ function fail(message) {
   process.exit(1);
 }
 
+function parseJson(raw, fileName) {
+  // UTF-8 files created by some Windows tools can begin with a byte-order
+  // mark. JSON.parse rejects that character, even though editors commonly
+  // display the file as valid JSON.
+  const withoutBom = raw.replace(/^\uFEFF/, "");
+  try {
+    return JSON.parse(withoutBom);
+  } catch (err) {
+    fail(`${fileName} is not valid JSON: ${err.message}`);
+  }
+}
+
 const pluginFolder = process.argv[2];
 if (!pluginFolder) {
   fail("Usage: node add-plugin.js <PluginFolder>");
@@ -39,12 +51,7 @@ if (!fs.existsSync(manifestPath) || !fs.statSync(manifestPath).isFile()) {
 // Always read as 'utf8' explicitly — this is what avoids the mangled
 // special-character issue from the PowerShell version.
 const manifestRaw = fs.readFileSync(manifestPath, "utf8");
-let manifest;
-try {
-  manifest = JSON.parse(manifestRaw);
-} catch (err) {
-  fail(`plugin.json is not valid JSON: ${err.message}`);
-}
+const manifest = parseJson(manifestRaw, "plugin.json");
 
 for (const field of [
   "name",
@@ -110,12 +117,7 @@ for (const file of ["config.example.json", "README.md"]) {
 
 const registryPath = path.join(repoRoot, "resources", "plugins.json");
 const registryRaw = fs.readFileSync(registryPath, "utf8");
-let registry;
-try {
-  registry = JSON.parse(registryRaw);
-} catch (err) {
-  fail(`resources/plugins.json is not valid JSON: ${err.message}`);
-}
+const registry = parseJson(registryRaw, "resources/plugins.json");
 
 if (!Array.isArray(registry.plugins)) {
   fail('resources/plugins.json is missing a "plugins" array.');

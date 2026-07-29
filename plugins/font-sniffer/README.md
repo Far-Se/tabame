@@ -11,8 +11,9 @@ Type the keyword **`fonts`**, enter a URL, press **Enter**.
 
 - **Ranked font list** — each row is a font family with its usage (`%` of glyphs
   + a progress bar) and a `web font` / `system` badge.
-- **Preview font** (Ctrl+K) — renders a full specimen sheet **in the actual font**
-  and shows it inside the launcher. Web fonts are rendered from their real file
+- **Selection preview** — pausing on a font renders its specimen on demand in the
+  preview pane; it never renders the whole list up front. Ctrl+K can still open
+  the selected specimen full-screen. Web fonts are rendered from their real file
   (inlined, so it's exactly what the site uses); system fonts render from your OS.
   **Esc** returns to the list.
 - **Download font** (Ctrl+K, web fonts) — saves the font file to your **Downloads**

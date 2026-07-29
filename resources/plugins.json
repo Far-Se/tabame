@@ -1,4 +1,4 @@
-﻿{
+{
   "version": 1,
   "plugins": [
     {
@@ -55,7 +55,7 @@
       "id": "tailwind",
       "name": "Tailwind CSS",
       "keyword": "tw",
-      "description": "Search \u0026 inspect Tailwind CSS utilities — see the generated CSS, copy the class, and jump to the docs.",
+      "description": "Search & inspect Tailwind CSS utilities — see the generated CSS, copy the class, and jump to the docs.",
       "icon": "palette",
       "runtime": "node",
       "author": "Far-Se",
@@ -84,7 +84,7 @@
     },
     {
       "id": "symbols",
-      "name": "Symbols \u0026 Characters",
+      "name": "Symbols & Characters",
       "keyword": "sym",
       "description": "Search and copy special characters, math symbols, punctuation, and language characters.",
       "icon": "tag",
@@ -131,7 +131,7 @@
       "id": "trakt",
       "name": "Trakt",
       "keyword": "trakt",
-      "description": "Search movies \u0026 shows, browse trending/popular, and manage your Trakt watchlist, history \u0026 calendar.",
+      "description": "Search movies & shows, browse trending/popular, and manage your Trakt watchlist, history & calendar.",
       "icon": "video",
       "runtime": "node",
       "author": "Far-Se",
@@ -176,7 +176,7 @@
       "id": "mdblist",
       "name": "MDBList",
       "keyword": "mdb",
-      "description": "Search movies \u0026 shows, browse lists, and manage your watchlist via mdblist.com",
+      "description": "Search movies & shows, browse lists, and manage your watchlist via mdblist.com",
       "icon": "star",
       "runtime": "node",
       "author": "Far-Se",
@@ -269,7 +269,7 @@
     },
     {
       "id": "ip-domain-lookup",
-      "name": "IP \u0026 Domain Lookup",
+      "name": "IP & Domain Lookup",
       "keyword": "ip",
       "description": "Geolocate IP addresses and look up domain WHOIS/DNS info",
       "icon": "globe",
@@ -299,7 +299,7 @@
     },
     {
       "id": "todo-reminders",
-      "name": "To-Do \u0026 Reminders",
+      "name": "To-Do & Reminders",
       "keyword": "todo",
       "description": "Quick-add and manage to-dos with due dates, priorities, and tags right from the launcher.",
       "icon": "check",
@@ -335,7 +335,7 @@
       "id": "sysnet",
       "name": "SysNet",
       "keyword": "sysnet",
-      "description": "System \u0026 network toolbox: ports, processes, WiFi, adapters, ping, public IP, DNS flush.",
+      "description": "System & network toolbox: ports, processes, WiFi, adapters, ping, public IP, DNS flush.",
       "icon": "server",
       "runtime": "python",
       "author": "Far-Se",
@@ -442,6 +442,21 @@
         "fonts/Lato-Bold.ttf": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/fonts/Lato-Bold.ttf",
         "fonts/Lato-Regular.ttf": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/fonts/Lato-Regular.ttf",
         "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather_plugin/README.md"
+      }
+    },
+    {
+      "id": "spell_check",
+      "name": "Spell Check",
+      "keyword": "spell",
+      "description": "Spell-checks what you type and suggests corrections, with a personal custom dictionary",
+      "icon": "edit",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/spell_check",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/spell_check/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/spell_check/main.py"
       }
     }
   ]

@@ -197,6 +197,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   bool _isResizingResults = false;
 
   final List<String> _folderBrowsingStack = <String>[];
+  final List<String> _folderBrowsingQueryStack = <String>[];
 
   List<LauncherSearchResultItem> _results = <LauncherSearchResultItem>[];
   bool _isSearching = false;
@@ -1766,6 +1767,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         searchMode == LauncherSearchMode.mixed;
     if (!isFileBrowsingMode && _folderBrowsingStack.isNotEmpty) {
       _folderBrowsingStack.clear();
+      _folderBrowsingQueryStack.clear();
     }
 
     final int gen = ++_searchGeneration;
@@ -1826,6 +1828,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       setResults: _setResults,
       isActiveSearch: (int requestId, String query, {bool trimLeft = false}) => _isActiveSearch(requestId),
       browsingPath: isFileBrowsingMode && _folderBrowsingStack.isNotEmpty ? _folderBrowsingStack.last : null,
+      browsingQuery: isFileBrowsingMode && _folderBrowsingQueryStack.isNotEmpty ? _folderBrowsingQueryStack.last : null,
       canGoBack: isFileBrowsingMode && _folderBrowsingStack.isNotEmpty,
       onBrowseFolder: isFileBrowsingMode ? _browseFolder : null,
       onOpenFolderInExplorer: isFileBrowsingMode ? _openFolderInExplorer : null,
@@ -3728,7 +3731,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   /// Drills into [folderPath] inside the Launcher (desktop `;` browse mode).
   /// Pushes [folderPath] onto the history stack so "Go back" can pop it.
   void _browseFolder(String folderPath) {
-    setState(() => _folderBrowsingStack.add(folderPath));
+    setState(() {
+      _folderBrowsingStack.add(folderPath);
+      _folderBrowsingQueryStack.add(LauncherQuery.parse(_controller.text).normalized);
+    });
     _onSearchChanged(_controller.text);
     // After results render, skip past the two pinned action items
     // (index 0 = "Open Folder in Explorer", index 1 = "Go Back")
@@ -3744,7 +3750,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   /// If the stack becomes empty we return to the normal desktop search.
   void _goBackDesktopFolder() {
     if (_folderBrowsingStack.isEmpty) return;
-    setState(() => _folderBrowsingStack.removeLast());
+    setState(() {
+      _folderBrowsingStack.removeLast();
+      _folderBrowsingQueryStack.removeLast();
+    });
     _onSearchChanged(_controller.text);
     _resetSelection();
   }
@@ -3756,6 +3765,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     user.launcherSearchText = '';
     _folderBrowsingStack.clear();
+    _folderBrowsingQueryStack.clear();
   }
 
   /// Opens the currently selected result in Windows Explorer if it is a Directory.

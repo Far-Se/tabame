@@ -43,6 +43,9 @@ let currentUrl = null; // normalized URL of the current results
 let scanning = false; // guards against overlapping scans
 let busy = false; // guards against overlapping preview/download work
 let theme = {}; // { accent, text, background, dark } from the init handshake
+let selectedItemId = ""; // current list selection, reported by Tabame's select event
+let selectionToken = 0; // prevents a slow specimen from replacing a newer selection
+const inlinePreviewLoading = new Set(); // item ids whose side-pane specimen is rendering
 
 const cache = new Map(); // normalizedUrl -> scan result (so re-scans are instant)
 const specimenCache = new Map(); // font family -> generated specimen PNG path
@@ -397,15 +400,17 @@ function renderInput(rev, text) {
   });
 }
 
-function fontPreview(font, pct) {
+function fontPreview(font, pct, specimenPath, loading = false) {
   const isWeb = font.isCustom;
-  const md = [
+  let md = [
     `## ${font.family}`,
     "",
     isWeb
       ? "_Custom web font, loaded via `@font-face`._"
       : "_System / locally-installed font (a fallback or an OS font)._",
   ].join("\n");
+  if (specimenPath) md += `\n\n![specimen](${pathToFileURL(specimenPath).href})`;
+
   const metadata = [
     {
       label: "Type",
@@ -417,7 +422,14 @@ function fontPreview(font, pct) {
       label: "Usage",
       text: `${pct}%  ·  ${font.glyphCount.toLocaleString()} glyphs`,
     },
-    { label: "Preview", text: `Press Ctrl+K and Select Preview.` },
+    {
+      label: "Preview",
+      text: specimenPath
+        ? "Generated for the current selection"
+        : loading
+          ? "Rendering specimen…"
+          : "Select this font to generate a specimen",
+    },
   ];
   if (font.weight)
     metadata.push({ label: "Weight", text: String(font.weight) });
@@ -768,7 +780,12 @@ function fontItem(font, total) {
     progress: Math.min(1, font.glyphCount / total),
     accessories,
     actions,
-    preview: fontPreview(font, pct),
+    preview: fontPreview(
+      font,
+      pct,
+      specimenCache.get(`${font.family}|${src || ""}`),
+      inlinePreviewLoading.has("font:" + font.family),
+    ),
   };
 }
 
@@ -777,8 +794,10 @@ function fontItem(font, total) {
 function fileItem(url) {
   const name = fileNameForUrl(url);
   const ext = extFromUrl(url) || (name.match(/\.([a-z0-9]+)$/i) || [])[1] || "";
+  const id = "file:" + url;
+  const specimenPath = specimenCache.get(`${name}|${url}`);
   return {
-    id: "file:" + url,
+    id,
     title: name,
     subtitle: hostOf(url),
     icon: "download",
@@ -791,7 +810,9 @@ function fileItem(url) {
       { id: "copy", title: "Copy file URL", icon: "link" },
     ],
     preview: {
-      markdown: `## ${name}`,
+      markdown: specimenPath
+        ? `## ${name}\n\n![specimen](${pathToFileURL(specimenPath).href})`
+        : `## ${name}`,
       metadata: [
         {
           label: "Type",
@@ -801,9 +822,67 @@ function fileItem(url) {
         },
         { label: "Host", text: hostOf(url) },
         { label: "URL", text: shortUrl(url), url, icon: "link" },
+        {
+          label: "Preview",
+          text: specimenPath
+            ? "Generated for the current selection"
+            : inlinePreviewLoading.has(id)
+              ? "Rendering specimen…"
+              : "Select this font to generate a specimen",
+        },
       ],
     },
   };
+}
+
+// Tabame emits `select` whenever the highlighted list item changes. Generate
+// only that item's specimen for the built-in preview pane; the token check keeps
+// a slow render from updating the pane after the user has moved elsewhere.
+function prepareSelectedPreview(id, rev) {
+  if (screen !== "results" || (!id.startsWith("font:") && !id.startsWith("file:")))
+    return;
+
+  const token = ++selectionToken;
+  selectedItemId = id;
+  setTimeout(async () => {
+    if (token !== selectionToken || screen !== "results") return;
+
+    let name;
+    let url = null;
+    let format = "";
+    let kind;
+    if (id.startsWith("font:")) {
+      const family = id.slice("font:".length);
+      const data = cache.get(currentUrl);
+      const font = data && data.rendered.find((f) => f.family === family);
+      if (!font) return;
+      const source = font.urls && font.urls.length ? font.urls[0] : null;
+      name = font.family;
+      url = font.isCustom && source ? source.url : null;
+      format = source ? source.format : "";
+      kind = font.isCustom ? "web font" : "system font";
+    } else {
+      url = id.slice("file:".length);
+      name = fileNameForUrl(url);
+      format = extFromUrl(url);
+      kind = "font file";
+    }
+
+    const cacheKey = `${name}|${url || ""}`;
+    if (!specimenCache.get(cacheKey)) {
+      inlinePreviewLoading.add(id);
+      renderResults(rev, resultsFilter);
+    }
+    try {
+      await renderSpecimenFor(name, url, format, kind);
+    } catch (error) {
+      log("inline preview failed:", error && error.stack ? error.stack : error);
+    } finally {
+      inlinePreviewLoading.delete(id);
+      if (token === selectionToken && screen === "results" && selectedItemId === id)
+        renderResults(0, resultsFilter);
+    }
+  }, 160);
 }
 
 function renderResults(rev, filter) {
@@ -997,13 +1076,16 @@ function handleMessage(msg) {
     case "action":
       handleAction(msg.id || "", msg.action || "default");
       break;
+    case "select":
+      prepareSelectedPreview(msg.id || "", msg.rev || 0);
+      break;
     case "back":
       handleBack();
       break;
     case "close":
       void shutdown();
       break;
-    // 'select' / 'tab' / 'submit': not used by this plugin.
+    // 'tab' / 'submit': not used by this plugin.
   }
 }
 

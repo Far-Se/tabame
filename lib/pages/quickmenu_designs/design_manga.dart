@@ -155,7 +155,7 @@ class MainMenuMangaWidget extends StatelessWidget {
                     _PanelLabel(text: 'WINDOWS', m: m),
                     const TaskBar(),
                     if (!user.bottomBarOnTop) ...<Widget>[
-                      _PanelLabel(text: 'PINNED', m: m),
+                      // _PanelLabel(text: 'PINNED', m: m),
                       const PinnedAndTrayList(),
                     ],
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
@@ -184,7 +184,7 @@ class _ImpactHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 30,
+      height: 26,
       decoration: BoxDecoration(
         color: m.gutter,
         border: Border(bottom: BorderSide(color: m.gutter, width: 2.2)),
@@ -400,7 +400,7 @@ class _CaptionFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(6, 3, 6, 5),
+      margin: const EdgeInsets.fromLTRB(0, 3, 0, 0),
       decoration: BoxDecoration(border: Border.all(color: m.gutter, width: 1.4)),
       padding: const EdgeInsets.fromLTRB(4, 1, 4, 1),
       child: const PinnedAndTrayList(),

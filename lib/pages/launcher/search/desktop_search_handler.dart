@@ -26,7 +26,7 @@ class FolderSearchHandler {
             _listFolderContentsInBackground,
             <String, Object?>{
               'folderPath': browsingPath,
-              'query': context.lowerQuery,
+              'query': _folderQuery(context.lowerQuery, context.browsingQuery),
             },
           );
         } catch (_) {}
@@ -157,16 +157,27 @@ class FolderSearchHandler {
   }
 }
 
+String _folderQuery(String fullQuery, String? browsingQuery) {
+  final String prefix = browsingQuery?.trim().toLowerCase() ?? '';
+  if (prefix.isEmpty || !fullQuery.startsWith(prefix)) return fullQuery;
+
+  final int prefixLength = prefix.length;
+  if (fullQuery.length > prefixLength && !RegExp(r'\s').hasMatch(fullQuery[prefixLength])) {
+    return fullQuery;
+  }
+  return fullQuery.substring(prefixLength).trimLeft();
+}
+
 List<Map<String, Object?>> _listFolderContentsInBackground(Map<String, Object?> args) {
   final String folderPath = args['folderPath'] as String;
-  // final String query = (args['query'] as String? ?? '').toLowerCase();
+  final String query = (args['query'] as String? ?? '').toLowerCase();
 
   final Directory dir = Directory(folderPath);
   if (!dir.existsSync()) return <Map<String, Object?>>[];
 
   final List<FileSystemEntity> entries = <FileSystemEntity>[];
   try {
-    entries.addAll(dir.listSync(recursive: false, followLinks: false));
+    entries.addAll(dir.listSync(recursive: true, followLinks: false));
   } catch (_) {
     return <Map<String, Object?>>[];
   }
@@ -188,8 +199,8 @@ List<Map<String, Object?>> _listFolderContentsInBackground(Map<String, Object?> 
     // Skip desktop.ini.
     if (name.toLowerCase() == 'desktop.ini') continue;
 
-    // Filter by query when the user has typed something.
-    // if (query.isNotEmpty && !name.toLowerCase().contains(query)) continue;
+    // Filter the opened folder and all of its descendants by text entered after it was opened.
+    if (query.isNotEmpty && !name.toLowerCase().contains(query)) continue;
 
     results.add(<String, Object?>{
       'path': entity.path,

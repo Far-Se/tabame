@@ -68,9 +68,8 @@ Future<void> showQuickMenuModal({
               return KeyEventResult.ignored;
             },
             child: FractionallySizedBox(
-              heightFactor: Globals.quickMenuPage == QuickMenuPage.launcher && user.launcherFullPopups
-                  ? 0.95
-                  : heightFactor,
+              heightFactor:
+                  Globals.quickMenuPage == QuickMenuPage.launcher && user.launcherFullPopups ? 0.95 : heightFactor,
               child: Theme(
                 data: modalTheme,
                 child: Material(
@@ -107,9 +106,10 @@ Future<void> showQuickMenuModal({
                             width: frameWidth,
                             constraints: BoxConstraints(
                                 maxHeight: 520,
-                                minHeight: Globals.quickMenuPage == QuickMenuPage.launcher
-                                    ? Globals.launcherCurrentSize.height + 10
-                                    : Globals.quickMenuCurrentHeight),
+                                minHeight: (Globals.quickMenuPage == QuickMenuPage.launcher
+                                        ? Globals.launcherCurrentSize.height + 10
+                                        : Globals.quickMenuCurrentHeight)
+                                    .clamp(0.0, 520.0)),
                             child: child,
                           ),
                         )),

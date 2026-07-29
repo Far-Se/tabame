@@ -1,0 +1,9 @@
+{
+  "name": "Spell Check",
+  "keyword": "spell",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "edit",
+  "description": "Spell-checks what you type and suggests corrections, with a personal custom dictionary",
+  "pip": ["pyspellchecker"]
+}

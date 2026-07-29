@@ -1,7 +1,12 @@
+// ignore_for_file: unused_import, unused_element
+
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
 import '../../pages/launcher/launcher_modal_theme.dart';
+import '../../pages/quickmenu_designs/design_family_guy.dart';
+import '../../pages/quickmenu_designs/design_outrun2.dart';
+import '../../pages/quickmenu_designs/design_winamp.dart';
 import '../globals.dart';
 import '../settings.dart';
 
@@ -375,6 +380,53 @@ class QuickMenuModalFrame extends StatelessWidget {
             CustomPaint(painter: _RibbonCornerPainter(accent)),
           ],
         ),
+      QuickMenuDesigns.cyber => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.92),
+            border: Border.all(
+              color: accent.withValues(alpha: isDark ? 0.7 : 0.5),
+              width: 1.2,
+            ),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: accent.withValues(alpha: isDark ? 0.35 : 0.2),
+                blurRadius: 16,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          underlays: <Widget>[
+            CustomPaint(painter: _AnimeGridPainter(accent.withValues(alpha: isDark ? 0.08 : 0.05))),
+          ],
+          overlays: <Widget>[
+            CustomPaint(painter: _AnimeFrameOverlayPainter(accent)),
+          ],
+        ),
+      QuickMenuDesigns.tech => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.85), // Frosted glass feel
+            border: Border.all(
+              color: accent.withValues(alpha: isDark ? 0.4 : 0.3),
+              width: 1.0,
+            ),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.15),
+                blurRadius: 30,
+                spreadRadius: 0,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          underlays: <Widget>[
+            CustomPaint(painter: _TechBlueprintPainter(text.withValues(alpha: isDark ? 0.04 : 0.03))),
+          ],
+          overlays: <Widget>[
+            CustomPaint(painter: _TechHUDOverlayPainter(accent)),
+          ],
+        ),
       QuickMenuDesigns.manga => _FrameSpec(
           decoration: BoxDecoration(
             borderRadius: radius,
@@ -389,19 +441,254 @@ class QuickMenuModalFrame extends StatelessWidget {
             CustomPaint(painter: _MangaCornerTicksPainter(text)),
           ],
         ),
-      QuickMenuDesigns.impact => _FrameSpec(
+      // QuickMenuDesigns.impact => _FrameSpec(
+      //     decoration: BoxDecoration(
+      //       borderRadius: radius,
+      //       color: bg.withValues(alpha: 0.97),
+      //       border: Border.all(color: text.withValues(alpha: isDark ? 0.85 : 1), width: 2.5),
+      //     ),
+      //     underlays: <Widget>[
+      //       CustomPaint(painter: _ImpactHalftonePainter(accent.withValues(alpha: isDark ? 0.09 : 0.07))),
+      //     ],
+      //     overlays: <Widget>[
+      //       CustomPaint(painter: _ImpactSpeedlinePainter(accent: accent, ink: text)),
+      //     ],
+      //   ),
+      QuickMenuDesigns.outrun => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.95),
+            border: Border.all(
+              color: accent.withValues(alpha: isDark ? 0.8 : 0.6),
+              width: 1.5,
+            ),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: accent.withValues(alpha: isDark ? 0.4 : 0.25),
+                blurRadius: 18,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          underlays: <Widget>[
+            CustomPaint(painter: _OutrunGridPainter(accent.withValues(alpha: isDark ? 0.12 : 0.08))),
+          ],
+          overlays: <Widget>[
+            CustomPaint(painter: _OutrunFramePainter(accent)),
+          ],
+        ),
+      QuickMenuDesigns.anime2 => _FrameSpec(
           decoration: BoxDecoration(
             borderRadius: radius,
             color: bg.withValues(alpha: 0.97),
-            border: Border.all(color: text.withValues(alpha: isDark ? 0.85 : 1), width: 2.5),
+            border: Border.all(
+              color: accent.withValues(alpha: isDark ? 0.30 : 0.40),
+              width: 1.0,
+            ),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: accent.withValues(alpha: isDark ? 0.18 : 0.12),
+                blurRadius: 20,
+                spreadRadius: -4,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           underlays: <Widget>[
-            CustomPaint(painter: _ImpactHalftonePainter(accent.withValues(alpha: isDark ? 0.09 : 0.07))),
+            // Soft floating dust / sparkles under the content
+            CustomPaint(
+              painter: _AnimeDustPainter(
+                accent.withValues(alpha: isDark ? 0.20 : 0.28),
+              ),
+            ),
           ],
           overlays: <Widget>[
-            CustomPaint(painter: _ImpactSpeedlinePainter(accent: accent, ink: text)),
+            // Star-shaped corner brackets
+            CustomPaint(
+              painter: _AnimeStarBracketPainter(
+                accent: accent,
+                tick: text.withValues(alpha: isDark ? 0.35 : 0.45),
+              ),
+            ),
           ],
         ),
+      QuickMenuDesigns.outrun2 => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.96),
+            border: Border.all(
+              color: accent,
+              width: 1.5,
+            ),
+            boxShadow: <BoxShadow>[
+              // Tight neon core glow
+              BoxShadow(
+                color: accent.withValues(alpha: isDark ? 0.45 : 0.38),
+                blurRadius: 12,
+                spreadRadius: -2,
+              ),
+              // Diffuse atmospheric haze
+              BoxShadow(
+                color: accent.withValues(alpha: isDark ? 0.22 : 0.16),
+                blurRadius: 32,
+                spreadRadius: 4,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          underlays: <Widget>[
+            // Sunset band at the top of the modal
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 50,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: <Color>[
+                      const Color(0xFFFF00AA).withValues(alpha: isDark ? 0.28 : 0.22),
+                      const Color(0xFFFF7700).withValues(alpha: isDark ? 0.12 : 0.08),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Perspective highway grid
+            CustomPaint(
+              painter: Outrun2GridPainter(
+                color: accent.withValues(alpha: isDark ? 0.20 : 0.15),
+              ),
+              size: Size.infinite,
+            ),
+          ],
+          overlays: <Widget>[
+            // Neon corner brackets + CRT scanlines
+            CustomPaint(
+              painter: _OutrunNeonBracketPainter(
+                accent: accent,
+                secondary: text.withValues(alpha: isDark ? 0.50 : 0.60),
+              ),
+              size: Size.infinite,
+            ),
+            CustomPaint(
+              painter: OutrunScanlinePainter(
+                text.withValues(alpha: isDark ? 0.05 : 0.04),
+              ),
+              size: Size.infinite,
+            ),
+          ],
+        ),
+      QuickMenuDesigns.winamp => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.97),
+            border: Border.all(
+              color: text.withValues(alpha: isDark ? 0.16 : 0.28),
+              width: 1,
+            ),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.20),
+                blurRadius: 8,
+                spreadRadius: 0,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          underlays: <Widget>[
+            // Brushed metal grain
+            CustomPaint(
+              painter: WinampBrushedPainter(isDark: isDark),
+              size: Size.infinite,
+            ),
+            // Cylindrical sheen
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: <Color>[
+                    Colors.white.withValues(alpha: isDark ? 0.06 : 0.18),
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: isDark ? 0.10 : 0.06),
+                  ],
+                  stops: const <double>[0.0, 0.5, 1.0],
+                ),
+              ),
+            ),
+          ],
+          overlays: <Widget>[
+            // 3D bevel frame
+            CustomPaint(
+              painter: _WinampFramePainter(
+                hi: isDark ? Colors.white.withValues(alpha: 0.18) : Colors.white.withValues(alpha: 0.65),
+                lo: isDark ? Colors.black.withValues(alpha: 0.55) : Colors.black.withValues(alpha: 0.32),
+              ),
+              size: Size.infinite,
+            ),
+            // LED accent corner ticks
+            CustomPaint(
+              painter: WinampLcdPainter(
+                accent: accent,
+                glow: (Design.gradientAlpha.clamp(0, 255)) / 255.0,
+                isDark: isDark,
+              ),
+              size: Size.infinite,
+            ),
+          ],
+        ),
+      // QuickMenuDesigns.familyGuy => _FrameSpec(
+      //     decoration: BoxDecoration(
+      //       borderRadius: radius,
+      //       color: bg.withValues(alpha: 0.98),
+      //       border: Border.all(color: const Color(0xff1A1A1A), width: 3),
+      //       boxShadow: <BoxShadow>[
+      //         BoxShadow(
+      //           color: Colors.black.withValues(alpha: isDark ? 0.50 : 0.25),
+      //           blurRadius: 0,
+      //           spreadRadius: 0,
+      //           offset: const Offset(5, 5),
+      //         ),
+      //       ],
+      //     ),
+      //     underlays: <Widget>[
+      //       // Living-room wallpaper crosshatch
+      //       CustomPaint(
+      //         painter: WallpaperPainter(
+      //           color: text.withValues(alpha: isDark ? 0.04 : 0.06),
+      //         ),
+      //         size: Size.infinite,
+      //       ),
+      //     ],
+      //     overlays: <Widget>[
+      //       // Thick cartoon frame + character peeking from corner
+      //       CustomPaint(
+      //         painter: _FamilyGuyFramePainter(
+      //           outline: const Color(0xff1A1A1A),
+      //           shadow: isDark ? Colors.black.withValues(alpha: 0.45) : Colors.black.withValues(alpha: 0.20),
+      //         ),
+      //         size: Size.infinite,
+      //       ),
+      //       // Stewie peeking from bottom-left of modal
+      //       const Positioned(
+      //         bottom: -4,
+      //         left: 4,
+      //         width: 28,
+      //         height: 32,
+      //         child: IgnorePointer(
+      //           child: CustomPaint(
+      //             painter: StewieSilhouettePainter(
+      //               color: Color(0xff1A1A1A),
+      //             ),
+      //           ),
+      //         ),
+      //       ),
+      //     ],
+      //   ),
     };
 
     final bool hasBevel = spec.bevel != null;
@@ -580,7 +867,7 @@ class _ConsoleBrushedPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rnd = math.Random(7);
+    final math.Random rnd = math.Random(7);
     final Color strokeColor = isDark ? Colors.white : Colors.black;
     final Paint paint = Paint()..strokeWidth = 1;
     final double diag = size.width + size.height;
@@ -888,6 +1175,279 @@ class _ImpactSpeedlinePainter extends CustomPainter {
       oldDelegate.accent != accent || oldDelegate.ink != ink;
 }
 
+/// Perspective wireframe grid for the modal background.
+class _OutrunGridPainter extends CustomPainter {
+  const _OutrunGridPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    final double horizon = size.height * 0.4;
+    final double bottom = size.height;
+    final double cx = size.width / 2;
+
+    // Horizontal lines
+    for (int i = 1; i <= 12; i++) {
+      final double t = i / 12.0;
+      final double y = horizon + (bottom - horizon) * (t * t);
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+
+    // Vertical lines converging to center
+    for (int i = -10; i <= 10; i++) {
+      if (i == 0) continue;
+      final double xBottom = cx + (i * (size.width / 8.0));
+      canvas.drawLine(Offset(xBottom, bottom), Offset(cx, horizon), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _OutrunGridPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Neon corner brackets for the modal overlay.
+class _OutrunFramePainter extends CustomPainter {
+  const _OutrunFramePainter(this.accent);
+
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint glowPaint = Paint()
+      ..color = accent
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
+    final Paint solidPaint = Paint()
+      ..color = accent
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    // Top-left
+    canvas.drawLine(const Offset(0, 20), const Offset(0, 0), glowPaint);
+    canvas.drawLine(const Offset(0, 0), const Offset(20, 0), glowPaint);
+    canvas.drawLine(const Offset(0, 20), const Offset(0, 0), solidPaint);
+    canvas.drawLine(const Offset(0, 0), const Offset(20, 0), solidPaint);
+
+    // Bottom-right
+    canvas.drawLine(Offset(size.width, size.height - 20), Offset(size.width, size.height), glowPaint);
+    canvas.drawLine(Offset(size.width, size.height), Offset(size.width - 20, size.height), glowPaint);
+    canvas.drawLine(Offset(size.width, size.height - 20), Offset(size.width, size.height), solidPaint);
+    canvas.drawLine(Offset(size.width, size.height), Offset(size.width - 20, size.height), solidPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _OutrunFramePainter oldDelegate) => oldDelegate.accent != accent;
+}
+
+/// Tiny floating dust motes — used as a modal underlay.
+class _AnimeDustPainter extends CustomPainter {
+  const _AnimeDustPainter(this.color);
+
+  final Color color;
+
+  static const List<Offset> _kDust = <Offset>[
+    Offset(0.12, 0.10),
+    Offset(0.88, 0.14),
+    Offset(0.48, 0.08),
+    Offset(0.06, 0.40),
+    Offset(0.94, 0.44),
+    Offset(0.28, 0.30),
+    Offset(0.72, 0.34),
+    Offset(0.18, 0.60),
+    Offset(0.86, 0.64),
+    Offset(0.52, 0.54),
+    Offset(0.22, 0.80),
+    Offset(0.78, 0.78),
+    Offset(0.12, 0.92),
+    Offset(0.90, 0.90),
+    Offset(0.50, 0.96),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()..color = color;
+    for (final Offset rel in _kDust) {
+      final double x = rel.dx * size.width;
+      final double y = rel.dy * size.height;
+      canvas.drawCircle(Offset(x, y), 1.2, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _AnimeDustPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Star-shaped corner brackets — replaces sharp HUD lines with soft
+/// 5-point stars in each corner.
+class _AnimeStarBracketPainter extends CustomPainter {
+  const _AnimeStarBracketPainter({required this.accent, required this.tick});
+
+  final Color accent;
+  final Color tick;
+
+  static const double _inset = 5.0;
+  static const double _starSize = 6.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint starPaint = Paint()..color = accent;
+    final Paint tickPaint = Paint()
+      ..color = tick
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+
+    final double right = size.width - _inset;
+    final double bottom = size.height - _inset;
+
+    // Corner stars
+    _drawStar(canvas, _inset, _inset, _starSize, starPaint);
+    _drawStar(canvas, right, _inset, _starSize, starPaint);
+    _drawStar(canvas, right, bottom, _starSize, starPaint);
+    _drawStar(canvas, _inset, bottom, _starSize, starPaint);
+
+    // Mid-edge ticks (small cross ticks, not full lines)
+    final double cx = size.width / 2;
+    final double cy = size.height / 2;
+    canvas.drawLine(Offset(cx, _inset - 2), Offset(cx, _inset + 3), tickPaint);
+    canvas.drawLine(Offset(cx, bottom - 3), Offset(cx, bottom + 2), tickPaint);
+    canvas.drawLine(Offset(_inset - 2, cy), Offset(_inset + 3, cy), tickPaint);
+    canvas.drawLine(Offset(right - 3, cy), Offset(right + 2, cy), tickPaint);
+  }
+
+  void _drawStar(Canvas canvas, double cx, double cy, double r, Paint paint) {
+    final double outer = r;
+    final double inner = r * 0.45;
+    final Path path = Path();
+    for (int i = 0; i < 5; i++) {
+      final double a1 = (i * 4 * math.pi / 5) - math.pi / 2;
+      final double a2 = ((i * 4 + 2) * math.pi / 5) - math.pi / 2;
+      if (i == 0) {
+        path.moveTo(cx + math.cos(a1) * outer, cy + math.sin(a1) * outer);
+      } else {
+        path.lineTo(cx + math.cos(a1) * outer, cy + math.sin(a1) * outer);
+      }
+      path.lineTo(cx + math.cos(a2) * inner, cy + math.sin(a2) * inner);
+    }
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _AnimeStarBracketPainter oldDelegate) =>
+      oldDelegate.accent != accent || oldDelegate.tick != tick;
+}
+
+/// Hard 3D bevel frame drawn around the modal edge.
+class _WinampFramePainter extends CustomPainter {
+  const _WinampFramePainter({required this.hi, required this.lo});
+
+  final Color hi;
+  final Color lo;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint hiPaint = Paint()
+      ..color = hi
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+    final Paint loPaint = Paint()
+      ..color = lo
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+
+    // Top & left (highlight)
+    canvas.drawLine(Offset.zero, Offset(size.width, 0), hiPaint);
+    canvas.drawLine(Offset.zero, Offset(0, size.height), hiPaint);
+
+    // Bottom & right (shadow)
+    canvas.drawLine(
+      Offset(0, size.height - 0.5),
+      Offset(size.width, size.height - 0.5),
+      loPaint,
+    );
+    canvas.drawLine(
+      Offset(size.width - 0.5, 0),
+      Offset(size.width - 0.5, size.height),
+      loPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _WinampFramePainter oldDelegate) => oldDelegate.hi != hi || oldDelegate.lo != lo;
+}
+
+/// Sharp neon corner brackets with a built-in glow effect (drawn thick+thin).
+class _OutrunNeonBracketPainter extends CustomPainter {
+  const _OutrunNeonBracketPainter({
+    required this.accent,
+    required this.secondary,
+  });
+
+  final Color accent;
+  final Color secondary;
+
+  static const double _inset = 6.0;
+  static const double _len = 14.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint glow = Paint()
+      ..color = accent.withValues(alpha: 0.35)
+      ..strokeWidth = 4.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.square;
+
+    final Paint core = Paint()
+      ..color = accent
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.square;
+
+    final Paint tick = Paint()
+      ..color = secondary
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    final double r = size.width - _inset;
+    final double b = size.height - _inset;
+
+    void drawBracket(double x1, double y1, double x2, double y2, double x3, double y3) {
+      final Path path = Path()
+        ..moveTo(x1, y1)
+        ..lineTo(x2, y2)
+        ..lineTo(x3, y3);
+      canvas.drawPath(path, glow);
+      canvas.drawPath(path, core);
+    }
+
+    // Four corners
+    drawBracket(_inset, _inset + _len, _inset, _inset, _inset + _len, _inset);
+    drawBracket(r - _len, _inset, r, _inset, r, _inset + _len);
+    drawBracket(r, b - _len, r, b, r - _len, b);
+    drawBracket(_inset + _len, b, _inset, b, _inset, b - _len);
+
+    // Mid-edge alignment ticks
+    final double cx = size.width / 2;
+    final double cy = size.height / 2;
+    canvas.drawLine(Offset(cx, _inset - 2), Offset(cx, _inset + 4), tick);
+    canvas.drawLine(Offset(cx, b - 4), Offset(cx, b + 2), tick);
+    canvas.drawLine(Offset(_inset - 2, cy), Offset(_inset + 4, cy), tick);
+    canvas.drawLine(Offset(r - 4, cy), Offset(r + 2, cy), tick);
+  }
+
+  @override
+  bool shouldRepaint(covariant _OutrunNeonBracketPainter oldDelegate) =>
+      oldDelegate.accent != accent || oldDelegate.secondary != secondary;
+}
+
 /// A scatter of tiny fixed sparkles across the modal — same low-key dust
 /// texture language as the QuickMenu panel's sparkle field, but static
 /// (no timer) since the modal frame paints once per build.
@@ -930,6 +1490,142 @@ class _SparkleDustPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SparkleDustPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Fine digital grid pattern running under the whole modal panel.
+class _AnimeGridPainter extends CustomPainter {
+  const _AnimeGridPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 0.5;
+
+    // Vertical lines
+    for (double x = 0; x < size.width; x += 14) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    // Horizontal lines
+    for (double y = 0; y < size.height; y += 14) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _AnimeGridPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Glitchy reticle marks and status nodes overlaid on the modal edges.
+class _AnimeFrameOverlayPainter extends CustomPainter {
+  const _AnimeFrameOverlayPainter(this.accent);
+
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint glowPaint = Paint()
+      ..color = accent
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    final Paint solidPaint = Paint()
+      ..color = accent
+      ..style = PaintingStyle.fill;
+
+    // Top-right reticle mark
+    canvas.drawLine(
+      Offset(size.width - 24, 6),
+      Offset(size.width - 6, 6),
+      glowPaint,
+    );
+    canvas.drawLine(
+      Offset(size.width - 6, 6),
+      Offset(size.width - 6, 24),
+      glowPaint,
+    );
+    canvas.drawCircle(Offset(size.width - 6, 6), 2.5, solidPaint);
+
+    // Bottom-left reticle mark
+    canvas.drawLine(
+      Offset(24, size.height - 6),
+      Offset(6, size.height - 6),
+      glowPaint,
+    );
+    canvas.drawLine(
+      Offset(6, size.height - 6),
+      Offset(6, size.height - 24),
+      glowPaint,
+    );
+    canvas.drawCircle(Offset(6, size.height - 6), 2.5, solidPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _AnimeFrameOverlayPainter oldDelegate) => oldDelegate.accent != accent;
+}
+
+/// Fine dot-matrix blueprint pattern for the modal background.
+class _TechBlueprintPainter extends CustomPainter {
+  const _TechBlueprintPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()..color = color;
+    const double step = 18.0;
+    const double radius = 1.5;
+
+    for (double x = step; x < size.width; x += step) {
+      for (double y = step; y < size.height; y += step) {
+        canvas.drawCircle(Offset(x, y), radius, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _TechBlueprintPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Soft glowing edge accents for the modal overlay.
+class _TechHUDOverlayPainter extends CustomPainter {
+  const _TechHUDOverlayPainter(this.accent);
+
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint glowPaint = Paint()
+      ..color = accent
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+
+    // Top right soft bracket
+    final Path topRight = Path()
+      ..moveTo(size.width - 50, 6)
+      ..lineTo(size.width - 6, 6)
+      ..lineTo(size.width - 6, 50);
+    canvas.drawPath(topRight, glowPaint);
+
+    // Bottom left soft bracket
+    final Path bottomLeft = Path()
+      ..moveTo(50, size.height - 6)
+      ..lineTo(6, size.height - 6)
+      ..lineTo(6, size.height - 50);
+    canvas.drawPath(bottomLeft, glowPaint);
+
+    // Small accent pip at top right
+    final Paint solidPaint = Paint()
+      ..color = accent
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(size.width - 6, 6), 3, solidPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TechHUDOverlayPainter oldDelegate) => oldDelegate.accent != accent;
 }
 
 /// A little bow tucked into the top-right corner, top right — two curved
@@ -1008,4 +1704,46 @@ class _FoundryCornerMarkPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _FoundryCornerMarkPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Thick cartoon frame with hard offset shadow (no blur — pure cutout).
+class _FamilyGuyFramePainter extends CustomPainter {
+  const _FamilyGuyFramePainter({required this.outline, required this.shadow});
+
+  final Color outline;
+  final Color shadow;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint outlinePaint = Paint()
+      ..color = outline
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke;
+
+    final Paint shadowPaint = Paint()
+      ..color = shadow
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke;
+
+    final Rect rect = Rect.fromLTWH(1.5, 1.5, size.width - 3, size.height - 3);
+
+    // Hard drop shadow (offset, no blur)
+    canvas.drawRect(rect.translate(4, 4), shadowPaint);
+
+    // Main outline
+    canvas.drawRect(rect, outlinePaint);
+
+    // Inner "cartoon" highlight line (white, inset 1px)
+    canvas.drawRect(
+      rect.deflate(2),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.15)
+        ..strokeWidth = 1
+        ..style = PaintingStyle.stroke,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _FamilyGuyFramePainter oldDelegate) =>
+      oldDelegate.outline != outline || oldDelegate.shadow != shadow;
 }

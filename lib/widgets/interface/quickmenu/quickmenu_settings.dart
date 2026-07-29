@@ -205,7 +205,7 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
             ),
             const SizedBox(height: 6),
             Text(
-              design.name,
+              design.displayName,
               style: TextStyle(
                 fontSize: Design.baseFontSize + 2,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,

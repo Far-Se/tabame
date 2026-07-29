@@ -981,7 +981,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                         color: design == current ? accent : onSurface.withValues(alpha: 0.5),
                       ),
                       const SizedBox(width: 10),
-                      Text(design.name, style: const TextStyle(fontSize: 13)),
+                      Text(design.displayName, style: const TextStyle(fontSize: 13)),
                     ],
                   ),
                 );
@@ -997,7 +997,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Text(
-                      current.name,
+                      current.displayName,
                       style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.bold, color: accent),
                     ),
                     const SizedBox(width: 4),

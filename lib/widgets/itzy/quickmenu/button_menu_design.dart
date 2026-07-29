@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../models/classes/boxes.dart';
@@ -55,6 +56,16 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   late _QuickMenuPaletteMode _paletteMode;
   late final List<Map<ColorSwatch<Object>, String>> _lightPresets;
   late final List<Map<ColorSwatch<Object>, String>> _darkPresets;
+  final ScrollController _quickMenuDesignScrollController = ScrollController();
+  final ScrollController _launcherDesignScrollController = ScrollController();
+  final List<GlobalKey> _quickMenuDesignKeys = List<GlobalKey>.generate(
+    QuickMenuDesigns.values.length,
+    (_) => GlobalKey(),
+  );
+  final List<GlobalKey> _launcherDesignKeys = List<GlobalKey>.generate(
+    LauncherDesign.values.length,
+    (_) => GlobalKey(),
+  );
 
   bool _isBackdropProcessing = false;
   int _backdropProcessingTotal = 0;
@@ -75,11 +86,44 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
       getPredefinedColorSet(darkThemeOptions, 1, maximum: 24),
       getPredefinedColorSet(darkThemeOptions, 2, maximum: 24),
     ];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _centerSelectedDesign(isQuickMenu: true);
+      _centerSelectedDesign(isQuickMenu: false);
+    });
   }
 
   @override
   void dispose() {
+    _quickMenuDesignScrollController.dispose();
+    _launcherDesignScrollController.dispose();
     super.dispose();
+  }
+
+  void _centerSelectedDesign({required bool isQuickMenu, int attempt = 0}) {
+    final int selectedIndex = isQuickMenu
+        ? QuickMenuDesigns.values.indexOf(user.currentQuickMenuDesign)
+        : LauncherDesign.values.indexOf(user.launcherDesign);
+    final ScrollController controller =
+        isQuickMenu ? _quickMenuDesignScrollController : _launcherDesignScrollController;
+    final BuildContext? selectedContext =
+        (isQuickMenu ? _quickMenuDesignKeys : _launcherDesignKeys)[selectedIndex].currentContext;
+
+    if (!mounted) return;
+    if (!controller.hasClients || selectedContext == null) {
+      if (attempt < 2) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _centerSelectedDesign(isQuickMenu: isQuickMenu, attempt: attempt + 1);
+        });
+      }
+      return;
+    }
+
+    Scrollable.ensureVisible(
+      selectedContext,
+      alignment: 0.5,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   ThemeColors get _selectedTheme {
@@ -193,7 +237,8 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   }
 
   Future<void> _resetCurrentPalette() async {
-    final QMDesignThemeSet defaults = Settings.createDefaultQuickMenuDesignThemes()[user.currentQuickMenuDesign.name]!;
+    final QMDesignThemeSet defaults =
+        Settings.createDefaultQuickMenuDesignThemes()[user.currentQuickMenuDesign.displayName]!;
     await _updateTheme(() {
       if (_paletteMode == _QuickMenuPaletteMode.dark) {
         user.darkTheme = defaults.darkTheme.copyWith();
@@ -405,14 +450,17 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           const SizedBox(height: 7),
           SizedBox(
             height: 38,
-            child: ListView.separated(
+            child: ListView(
+              controller: isQuickMenu ? _quickMenuDesignScrollController : _launcherDesignScrollController,
               scrollDirection: Axis.horizontal,
               primary: false,
+              scrollCacheExtent: const ScrollCacheExtent.pixels(10000),
               dragStartBehavior: DragStartBehavior.down,
               physics: const ClampingScrollPhysics(),
-              itemCount: isQuickMenu ? QuickMenuDesigns.values.length : LauncherDesign.values.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 6),
-              itemBuilder: (BuildContext context, int index) {
+              children:
+                  List<Widget>.generate(isQuickMenu ? QuickMenuDesigns.values.length : LauncherDesign.values.length, (
+                int index,
+              ) {
                 QuickMenuDesigns design = QuickMenuDesigns.classic;
                 bool selected = isQuickMenu
                     ? user.currentQuickMenuDesign == design
@@ -423,6 +471,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                   selected = user.currentQuickMenuDesign == design;
                 }
                 return ChoiceChip(
+                  key: (isQuickMenu ? _quickMenuDesignKeys : _launcherDesignKeys)[index],
                   label: isQuickMenu
                       ? Text(_designTitle(design))
                       : Text(LauncherDesign.values[index].name.toUpperCaseFirst()),
@@ -452,7 +501,8 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                   ),
                   backgroundColor: onSurface.withAlpha(8),
                 );
-              },
+              }).expand((Widget chip) => <Widget>[chip, const SizedBox(width: 6)]).toList()
+                    ..removeLast(),
             ),
           ),
         ],
@@ -1402,7 +1452,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   }
 
   String _designTitle(QuickMenuDesigns design) {
-    return design.name;
+    return design.displayName;
   }
 }
 

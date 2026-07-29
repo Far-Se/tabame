@@ -50,6 +50,7 @@ class LauncherSearchContext {
   final SetResultsCallback _setResultsRaw;
   final IsActiveSearchCallback isActiveSearch;
   final String? browsingPath;
+  final String? browsingQuery;
   final void Function(String)? onBrowseFolder;
   final void Function(String)? onOpenFolderInExplorer;
   final VoidCallback? onGoBack;
@@ -66,6 +67,7 @@ class LauncherSearchContext {
     required SetResultsCallback setResults,
     required this.isActiveSearch,
     this.browsingPath,
+    this.browsingQuery,
     this.onBrowseFolder,
     this.onOpenFolderInExplorer,
     this.onGoBack,

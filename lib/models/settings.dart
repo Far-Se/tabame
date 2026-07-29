@@ -47,34 +47,18 @@ enum QuickMenuDesigns {
   console,
   foundry,
   anime,
+  anime2,
+  cyber,
+  tech,
   manga,
-  impact,
+  // impact,
+  outrun,
+  outrun2,
+  winamp,
+  // familyGuy,
   ;
 
-  String get name {
-    return switch (this) {
-      QuickMenuDesigns.modern => "Modern",
-      QuickMenuDesigns.classic => "Classic",
-      QuickMenuDesigns.interface => "Interface",
-      QuickMenuDesigns.matrix => "Matrix",
-      QuickMenuDesigns.serene => "Serene",
-      QuickMenuDesigns.aurora => "Aurora",
-      QuickMenuDesigns.terminal => "Terminal",
-      QuickMenuDesigns.cassette => "Cassette",
-      QuickMenuDesigns.fluent => "Fluent",
-      QuickMenuDesigns.gazette => "Gazette",
-      QuickMenuDesigns.player => "Player",
-      QuickMenuDesigns.steam => "Steam",
-      QuickMenuDesigns.manifesto => "Manifesto",
-      QuickMenuDesigns.vector => "Vector",
-      QuickMenuDesigns.ledger => "Ledger",
-      QuickMenuDesigns.console => "Console",
-      QuickMenuDesigns.foundry => "Foundry",
-      QuickMenuDesigns.anime => "Anime",
-      QuickMenuDesigns.manga => "Manga",
-      QuickMenuDesigns.impact => "Impact",
-    };
-  }
+  String get displayName => name.toUpperCaseFirst();
 }
 
 enum LauncherDesign {
@@ -322,7 +306,7 @@ class Settings {
 
   static Map<String, QMDesignThemeSet> createDefaultQuickMenuDesignThemes() {
     return <String, QMDesignThemeSet>{
-      QuickMenuDesigns.modern.name: QMDesignThemeSet(
+      QuickMenuDesigns.modern.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffD5E0FB),
           textColor: const Color(0xff3A404A),
@@ -344,7 +328,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.classic.name: QMDesignThemeSet(
+      QuickMenuDesigns.classic.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffECE2D7),
           textColor: const Color(0xff3D342B),
@@ -369,7 +353,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.interface.name: QMDesignThemeSet(
+      QuickMenuDesigns.interface.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffEEF4F8),
           textColor: const Color(0xff223444),
@@ -395,7 +379,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.matrix.name: QMDesignThemeSet(
+      QuickMenuDesigns.matrix.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffF2F2F2),
           textColor: const Color(0xff003B00),
@@ -421,7 +405,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.serene.name: QMDesignThemeSet(
+      QuickMenuDesigns.serene.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffF5F0EB),
           textColor: const Color(0xff2C2118),
@@ -447,7 +431,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.aurora.name: QMDesignThemeSet(
+      QuickMenuDesigns.aurora.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xff080706),
           textColor: const Color(0xff241B3A),
@@ -473,7 +457,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.terminal.name: QMDesignThemeSet(
+      QuickMenuDesigns.terminal.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xFF1E1E1E),
           textColor: const Color(0xFFD4D4D4),
@@ -499,7 +483,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.cassette.name: QMDesignThemeSet(
+      QuickMenuDesigns.cassette.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffD9D2C3),
           textColor: const Color(0xff3B3428),
@@ -525,7 +509,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.fluent.name: QMDesignThemeSet(
+      QuickMenuDesigns.fluent.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffF3F3F3),
           textColor: const Color(0xff1B1B1B),
@@ -551,7 +535,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.gazette.name: QMDesignThemeSet(
+      QuickMenuDesigns.gazette.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffF6F1E5),
           textColor: const Color(0xff26211A),
@@ -577,7 +561,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.player.name: QMDesignThemeSet(
+      QuickMenuDesigns.player.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffC7CBD4),
           textColor: const Color(0xff23262C),
@@ -603,7 +587,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.steam.name: QMDesignThemeSet(
+      QuickMenuDesigns.steam.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffDFE7EF),
           textColor: const Color(0xff1B2838),
@@ -629,7 +613,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.manifesto.name: QMDesignThemeSet(
+      QuickMenuDesigns.manifesto.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffF2EEDB),
           textColor: const Color(0xff171713),
@@ -655,7 +639,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.vector.name: QMDesignThemeSet(
+      QuickMenuDesigns.vector.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffEEF3EE),
           textColor: const Color(0xff15211B),
@@ -681,7 +665,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.ledger.name: QMDesignThemeSet(
+      QuickMenuDesigns.ledger.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffF3EDDC),
           textColor: const Color(0xff2B2419),
@@ -707,7 +691,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.console.name: QMDesignThemeSet(
+      QuickMenuDesigns.console.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffDCDFE2),
           textColor: const Color(0xff23272B),
@@ -733,7 +717,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.foundry.name: QMDesignThemeSet(
+      QuickMenuDesigns.foundry.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffE7E2D8),
           textColor: const Color(0xff2B2A26),
@@ -759,7 +743,7 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.anime.name: QMDesignThemeSet(
+      QuickMenuDesigns.anime.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffFFF3F8),
           textColor: const Color(0xff4A2E3B),
@@ -785,7 +769,59 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.manga.name: QMDesignThemeSet(
+      QuickMenuDesigns.cyber.name: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffF3E8FF), // Soft lavender blush
+          textColor: const Color(0xff3B0764), // Deep violet
+          accentColor: const Color(0xffD946EF), // Fuchsia neon
+          gradientAlpha: 65,
+          uiFontFamily: 'Segoe UI',
+          uiFontWeight: 500,
+          entryFontFamily: 'Segoe UI',
+          entryFontWeight: 700,
+          borderRadius: 2, // Sharp, mecha-style corners
+          baseFontSize: 11,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff050217), // Near-black with blue tint
+          textColor: const Color(0xffE2E8F0), // Slate-100
+          accentColor: const Color(0xff22D3EE), // Cyan neon
+          gradientAlpha: 90,
+          uiFontFamily: 'Segoe UI',
+          uiFontWeight: 500,
+          entryFontFamily: 'Segoe UI',
+          entryFontWeight: 700,
+          borderRadius: 2,
+          baseFontSize: 11,
+        ),
+      ),
+      QuickMenuDesigns.tech.displayName: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffF8FAFC), // Clean slate
+          textColor: const Color(0xff1E293B), // Deep navy/slate
+          accentColor: const Color(0xff2563EB), // Electric blue
+          gradientAlpha: 50,
+          uiFontFamily: 'Segoe UI',
+          uiFontWeight: 400,
+          entryFontFamily: 'Segoe UI',
+          entryFontWeight: 600,
+          borderRadius: 12, // Modern, soft rounded corners
+          baseFontSize: 11,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff0B1120), // Deep space blue/black
+          textColor: const Color(0xffE2E8F0), // Crisp off-white
+          accentColor: const Color(0xff38BDF8), // Bright sky blue
+          gradientAlpha: 70,
+          uiFontFamily: 'Segoe UI',
+          uiFontWeight: 400,
+          entryFontFamily: 'Segoe UI',
+          entryFontWeight: 600,
+          borderRadius: 12,
+          baseFontSize: 11,
+        ),
+      ),
+      QuickMenuDesigns.manga.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffF7F3EA), // aged manga page
           textColor: const Color(0xff1B1B1B), // ink black
@@ -811,32 +847,162 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.impact.name: QMDesignThemeSet(
+      // QuickMenuDesigns.impact.displayName: QMDesignThemeSet(
+      //   lightTheme: _defaultThemeColors(
+      //     background: const Color(0xffFFFCF6), // manga paper white
+      //     textColor: const Color(0xff17171B), // ink black
+      //     accentColor: const Color(0xffE8354C), // shonen red
+      //     gradientAlpha: 60,
+      //     uiFontFamily: 'Segoe UI',
+      //     uiFontWeight: 600,
+      //     entryFontFamily: 'Segoe UI',
+      //     entryFontWeight: 800,
+      //     borderRadius: 2,
+      //     baseFontSize: 10,
+      //   ),
+      //   darkTheme: _defaultThemeColors(
+      //     background: const Color(0xff0C0C11), // night-arc black
+      //     textColor: const Color(0xffF3F3F6),
+      //     accentColor: const Color(0xff35E6E0), // electric cyan
+      //     gradientAlpha: 75,
+      //     uiFontFamily: 'Segoe UI',
+      //     uiFontWeight: 600,
+      //     entryFontFamily: 'Segoe UI',
+      //     entryFontWeight: 800,
+      //     borderRadius: 2,
+      //     baseFontSize: 10,
+      //   ),
+      // ),
+      QuickMenuDesigns.outrun.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
-          background: const Color(0xffFFFCF6), // manga paper white
-          textColor: const Color(0xff17171B), // ink black
-          accentColor: const Color(0xffE8354C), // shonen red
+          background: const Color(0xffF8F0FF), // Very light pastel lavender
+          textColor: const Color(0xff1A0B2E), // Deep purple
+          accentColor: const Color(0xffD300C5), // Hot magenta
           gradientAlpha: 60,
-          uiFontFamily: 'Segoe UI',
-          uiFontWeight: 600,
-          entryFontFamily: 'Segoe UI',
-          entryFontWeight: 800,
-          borderRadius: 2,
+          uiFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
+          borderRadius: 2, // Sharp retro edges
           baseFontSize: 10,
         ),
         darkTheme: _defaultThemeColors(
-          background: const Color(0xff0C0C11), // night-arc black
-          textColor: const Color(0xffF3F3F6),
-          accentColor: const Color(0xff35E6E0), // electric cyan
-          gradientAlpha: 75,
-          uiFontFamily: 'Segoe UI',
-          uiFontWeight: 600,
-          entryFontFamily: 'Segoe UI',
-          entryFontWeight: 800,
+          background: const Color(0xff0D0221), // Deep midnight purple
+          textColor: const Color(0xffE0AAFF), // Soft neon lavender
+          accentColor: const Color(0xff05D9E8), // Electric cyan
+          gradientAlpha: 85,
+          uiFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
           borderRadius: 2,
           baseFontSize: 10,
         ),
       ),
+      QuickMenuDesigns.anime2.displayName: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffFFF5FA),
+          textColor: const Color(0xff2D182E),
+          accentColor: const Color(0xffE85D9A),
+          gradientAlpha: 55,
+          uiFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
+          borderRadius: 12,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff1A0F1E),
+          textColor: const Color(0xffF8D4E8),
+          accentColor: const Color(0xffFF7EB9),
+          gradientAlpha: 70,
+          uiFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
+          borderRadius: 12,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.outrun2.displayName: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xff2D1B4E), // Twilight purple
+          textColor: const Color(0xff00F0FF), // Electric cyan
+          accentColor: const Color(0xffFF00AA), // Hot magenta
+          gradientAlpha: 55,
+          uiFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
+          borderRadius: 2, // Sharp 80s CRT angles
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff0A0514), // Midnight void
+          textColor: const Color(0xff00F0FF), // Electric cyan
+          accentColor: const Color(0xffFF00AA), // Hot magenta
+          gradientAlpha: 70,
+          uiFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
+          borderRadius: 2,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.winamp.displayName: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffD6D2CE), // Brushed aluminium
+          textColor: const Color(0xff1A1A1A), // Dark pixel readout
+          accentColor: const Color(0xff00C853), // LED green
+          gradientAlpha: 55,
+          uiFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
+          borderRadius: 1, // Sharp Winamp corners
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff1E1E1E), // Charcoal chassis
+          textColor: const Color(0xffC0C0C0), // Silver LCD text
+          accentColor: const Color(0xff00FF41), // Bright LED green
+          gradientAlpha: 70,
+          uiFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
+          borderRadius: 1,
+          baseFontSize: 10,
+        ),
+      ),
+      // QuickMenuDesigns.familyGuy.displayName: QMDesignThemeSet(
+      //   lightTheme: _defaultThemeColors(
+      //     background: const Color(0xffF0EBE0), // Living-room wall beige
+      //     textColor: const Color(0xff1A1A1A), // Thick cartoon black
+      //     accentColor: const Color(0xffFFE135), // Peter's shirt yellow
+      //     gradientAlpha: 55,
+      //     uiFontFamily: 'Consolas',
+      //     uiFontWeight: 400,
+      //     entryFontFamily: 'Consolas',
+      //     entryFontWeight: 700,
+      //     borderRadius: 6, // Slightly rounded like the show's shapes
+      //     baseFontSize: 10,
+      //   ),
+      //   darkTheme: _defaultThemeColors(
+      //     background: const Color(0xff1E1E28), // Night-time Quahog
+      //     textColor: const Color(0xffF5F5F5), // Off-white
+      //     accentColor: const Color(0xffFFE135), // Same iconic yellow
+      //     gradientAlpha: 70,
+      //     uiFontFamily: 'Consolas',
+      //     uiFontWeight: 400,
+      //     entryFontFamily: 'Consolas',
+      //     entryFontWeight: 700,
+      //     borderRadius: 6,
+      //     baseFontSize: 10,
+      //   ),
+      // ),
     };
   }
 
@@ -883,7 +1049,7 @@ class Settings {
 
   void saveActiveThemesToCurrentDesign([QuickMenuDesigns? design]) {
     final QuickMenuDesigns target = design ?? currentQuickMenuDesign;
-    quickMenuDesignThemes[target.name] = QMDesignThemeSet(
+    quickMenuDesignThemes[target.displayName] = QMDesignThemeSet(
       lightTheme: lightTheme.copyWith(),
       darkTheme: darkTheme.copyWith(),
     );
@@ -894,14 +1060,14 @@ class Settings {
     ThemeColors? fallbackLightTheme,
     ThemeColors? fallbackDarkTheme,
   }) {
-    final QMDesignThemeSet? savedThemeSet = quickMenuDesignThemes[design.name];
+    final QMDesignThemeSet? savedThemeSet = quickMenuDesignThemes[design.displayName];
     lightTheme = (savedThemeSet?.lightTheme ??
             fallbackLightTheme ??
-            Settings.createDefaultQuickMenuDesignThemes()[design.name]!.lightTheme)
+            Settings.createDefaultQuickMenuDesignThemes()[design.displayName]!.lightTheme)
         .copyWith();
     darkTheme = (savedThemeSet?.darkTheme ??
             fallbackDarkTheme ??
-            Settings.createDefaultQuickMenuDesignThemes()[design.name]!.darkTheme)
+            Settings.createDefaultQuickMenuDesignThemes()[design.displayName]!.darkTheme)
         .copyWith();
     saveActiveThemesToCurrentDesign(design);
   }

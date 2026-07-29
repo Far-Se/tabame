@@ -5,25 +5,32 @@ import '../../models/classes/boxes/quick_menu_box.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
 import 'design_anime.dart';
+import 'design_anime2.dart';
+import 'design_cyber.dart';
 import 'design_aurora.dart';
 import 'design_cassette.dart';
 import 'design_classic.dart';
 import 'design_console.dart';
+// import 'design_family_guy.dart';
 import 'design_fluent.dart';
 import 'design_foundry.dart';
 import 'design_gazette.dart';
-import 'design_impact.dart';
+// import 'design_impact.dart';
 import 'design_interface.dart';
 import 'design_ledger.dart';
 import 'design_manga.dart';
 import 'design_matrix.dart';
 import 'design_manifesto.dart';
 import 'design_modern.dart';
+import 'design_outrun.dart';
+import 'design_outrun2.dart';
 import 'design_player.dart';
 import 'design_serene.dart';
 import 'design_steam.dart';
+import 'design_tech.dart';
 import 'design_terminal.dart';
 import 'design_vector.dart';
+import 'design_winamp.dart';
 
 class LoadQuickMenuDesign extends StatefulWidget {
   const LoadQuickMenuDesign({super.key});
@@ -103,8 +110,15 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.console => MainMenuConsoleWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.foundry => MainMenuFoundryWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.anime => MainMenuAnimeWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.anime2 => MainMenuAnime2Widget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.cyber => MainMenuCyberWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.tech => MainMenuTechWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.manga => MainMenuMangaWidget(key: ValueKey<int>(_refreshCounter)),
-      QuickMenuDesigns.impact => MainMenuImpactWidget(key: ValueKey<int>(_refreshCounter)),
+      // QuickMenuDesigns.impact => MainMenuImpactWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.outrun => MainMenuOutrunWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.outrun2 => MainMenuOutrun2Widget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.winamp => MainMenuWinampWidget(key: ValueKey<int>(_refreshCounter)),
+      // QuickMenuDesigns.familyGuy => MainMenuFamilyGuyWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }
 }
