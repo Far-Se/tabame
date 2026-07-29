@@ -1,0 +1,11 @@
+{
+  "name": "Weather",
+  "id": "weather-widget",
+  "keyword": "wr",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "weather",
+  "description": "Wide weather + 7-day forecast image, background shifts with the hour",
+  "pip": ["pillow"],
+  "dev": false
+}

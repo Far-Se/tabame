@@ -1,0 +1,8 @@
+{
+  "name": "BC Uninstaller",
+  "keyword": "uninstall",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "trash",
+  "description": "Search installed apps, queue several, and batch-uninstall them via BC Uninstaller."
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Windows Folders",
+  "keyword": "wf",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "folder",
+  "description": "Browse and jump to special Windows folders (AppData, Downloads, Startup, ProgramData, ...)"
+}

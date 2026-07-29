@@ -1,5 +1,5 @@
 {
-  "name": "Spell Check",
+  "name": "Spell Check & Dictionary",
   "keyword": "spell",
   "runtime": "python",
   "entry": "main.py",

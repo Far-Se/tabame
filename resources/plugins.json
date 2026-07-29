@@ -458,6 +458,98 @@
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/spell_check/plugin.json",
         "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/spell_check/main.py"
       }
+    },
+    {
+      "id": "bcuninstaller",
+      "name": "BC Uninstaller",
+      "keyword": "uninstall",
+      "description": "Search installed apps, queue several, and batch-uninstall them via BC Uninstaller.",
+      "icon": "trash",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/bcuninstaller",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/bcuninstaller/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/bcuninstaller/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/bcuninstaller/README.md"
+      }
+    },
+    {
+      "id": "notes-plugin",
+      "name": "Notes",
+      "keyword": "note",
+      "description": "Quick-capture notes with tags, pinning, search, and a full editor",
+      "icon": "note",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/notes-plugin",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/notes-plugin/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/notes-plugin/main.py"
+      }
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "keyword": "discord",
+      "description": "Browse servers/channels and send messages using your Discord user token",
+      "icon": "chat",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/discord",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/discord/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/discord/main.py"
+      }
+    },
+    {
+      "id": "windows-folders",
+      "name": "Windows Folders",
+      "keyword": "wf",
+      "description": "Browse and jump to special Windows folders (AppData, Downloads, Startup, ProgramData, ...)",
+      "icon": "folder",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/windows-folders",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/windows-folders/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/windows-folders/main.py"
+      }
+    },
+    {
+      "id": "weather-widget",
+      "name": "Weather",
+      "keyword": "wr",
+      "description": "Wide weather + 7-day forecast image, background shifts with the hour",
+      "icon": "weather",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/weather-plugin",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather-plugin/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather-plugin/main.py"
+      }
+    },
+    {
+      "id": "shows",
+      "name": "TV Shows Tracker",
+      "keyword": "shows",
+      "description": "Track TV shows via TMDB — season calendar, next air dates, and episode ratings",
+      "icon": "video",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/shows",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/shows/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/shows/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/shows/README.md"
+      }
     }
   ]
 }

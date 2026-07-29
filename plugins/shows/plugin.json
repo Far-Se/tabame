@@ -1,0 +1,9 @@
+{
+  "name": "TV Shows Tracker",
+  "keyword": "shows",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "video",
+  "description": "Track TV shows via TMDB — season calendar, next air dates, and episode ratings",
+  "pip": ["requests", "pillow>=10"]
+}
