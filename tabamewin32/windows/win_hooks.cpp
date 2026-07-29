@@ -68,6 +68,8 @@ LRESULT CALLBACK mHandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam)
         button = BTN_RIGHT;
         break;
     case WM_MBUTTONDOWN:
+        // Middle-button events remain distinct from right clicks so individual
+        // mouse-gesture bindings can use either button.
         down = true;
         [[fallthrough]];
     case WM_MBUTTONUP:

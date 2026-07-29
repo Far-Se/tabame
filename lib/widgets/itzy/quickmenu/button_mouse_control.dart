@@ -50,6 +50,7 @@ class _MouseControlPanelState extends State<MouseControlPanel> {
   late MouseControlConfig _config;
   String _expandedCorner = '';
   String _newPattern = 'R';
+  String _newButton = 'right';
   GestureAction _newAction = GestureAction();
 
   @override
@@ -133,7 +134,7 @@ class _MouseControlPanelState extends State<MouseControlPanel> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Hold the right mouse button and draw a stroke. Plain right-clicks are untouched.',
+                      'Each gesture can use the right or middle mouse button. Plain clicks are untouched.',
                       style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(120)),
                     ),
                     const SizedBox(height: 8),
@@ -363,6 +364,22 @@ class _MouseControlPanelState extends State<MouseControlPanel> {
             ),
           ),
           const SizedBox(width: 10),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: binding.button,
+              isDense: true,
+              style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w600, color: Design.accent),
+              items: const <DropdownMenuItem<String>>[
+                DropdownMenuItem<String>(value: 'right', child: Text('Right')),
+                DropdownMenuItem<String>(value: 'middle', child: Text('Middle')),
+              ],
+              onChanged: (String? value) {
+                binding.button = value ?? 'right';
+                _save();
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               _actionSummary(binding.action),
@@ -432,6 +449,19 @@ class _MouseControlPanelState extends State<MouseControlPanel> {
               ),
               const Spacer(),
               DropdownButton<String>(
+                value: _newButton,
+                isDense: true,
+                underline: const SizedBox.shrink(),
+                style:
+                    TextStyle(fontSize: Design.baseFontSize + 0.5, fontWeight: FontWeight.w600, color: Design.accent),
+                items: const <DropdownMenuItem<String>>[
+                  DropdownMenuItem<String>(value: 'right', child: Text('Right click')),
+                  DropdownMenuItem<String>(value: 'middle', child: Text('Middle click')),
+                ],
+                onChanged: (String? value) => setState(() => _newButton = value ?? 'right'),
+              ),
+              const SizedBox(width: 8),
+              DropdownButton<String>(
                 value: _newPattern,
                 isDense: true,
                 underline: const SizedBox.shrink(),
@@ -463,6 +493,7 @@ class _MouseControlPanelState extends State<MouseControlPanel> {
                       _config.gestures.add(MouseGestureBinding(
                         id: DateTime.now().millisecondsSinceEpoch.toString(),
                         pattern: _newPattern,
+                        button: _newButton,
                         action: _newAction.copyWith(),
                       ));
                       _newAction = GestureAction();

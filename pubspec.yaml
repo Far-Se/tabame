@@ -83,6 +83,7 @@ flutter:
     - resources/gradient/
     - resources/devtools.png
     - resources/beep.mp3
+    - resources/pop.mp3
     - resources/camera_click.mp3
     - resources/emoji.json
     - resources/images/checkerboard.png

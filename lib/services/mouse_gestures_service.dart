@@ -11,8 +11,9 @@ import '../models/classes/saved_maps.dart';
 import '../models/win32/keys.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win_utils.dart';
+import '../pages/color_picker/win32_helper.dart';
 
-/// Hot corners + right-button mouse gestures, driven by a lightweight cursor
+/// Hot corners + right/middle-button mouse gestures, driven by a lightweight cursor
 /// poller in the QuickMenu process (no extra native hooks — the generic
 /// `WinHooks` channel handler would clobber the main tabamewin32 listener).
 ///
@@ -20,7 +21,7 @@ import '../models/win32/win_utils.dart';
 /// [MouseControlConfig.cornerDwellMs] fires that corner's action, re-armed only
 /// after the cursor leaves the corner.
 ///
-/// Gestures: while the right mouse button is held, the pointer path is sampled
+/// Gestures: while the right or middle mouse button is held, the pointer path is sampled
 /// at 20 ms and tokenized into cardinal strokes (L/R/U/D, e.g. "RD" = right
 /// then down). On release the matching binding fires. The button is only
 /// observed — never swallowed — so ordinary right-clicks are untouched; if a
@@ -44,6 +45,7 @@ class MouseGesturesService {
 
   // Gesture state.
   final List<PointXY> _points = <PointXY>[];
+  String _capturedButton = '';
 
   void init() => applyConfig();
 
@@ -71,9 +73,12 @@ class MouseGesturesService {
   void _idleTick() {
     try {
       if (_captureTimer != null) return;
-      if (_config.gesturesEnabled && _rightButtonHeld()) {
-        _beginCapture();
-        return;
+      if (_config.gesturesEnabled) {
+        final String button = _heldGestureButton();
+        if (button.isNotEmpty) {
+          _beginCapture(button);
+          return;
+        }
       }
       if (_config.hotCornersEnabled) _cornerTick();
     } catch (e, s) {
@@ -81,7 +86,16 @@ class MouseGesturesService {
     }
   }
 
-  bool _rightButtonHeld() => (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
+  String _heldGestureButton() {
+    if ((GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0) return 'right';
+    if ((GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0) return 'middle';
+    return '';
+  }
+
+  bool _capturedButtonHeld() {
+    final int button = _capturedButton == 'middle' ? VK_MBUTTON : VK_RBUTTON;
+    return (GetAsyncKeyState(button) & 0x8000) != 0;
+  }
 
   /// Raw physical cursor position — corner checks compare against the physical
   /// GetSystemMetrics sizes, so the DPI-scaled WinUtils.getMousePos won't do.
@@ -137,17 +151,18 @@ class MouseGesturesService {
   // Mouse gestures
   // ---------------------------------------------------------------------------
 
-  void _beginCapture() {
+  void _beginCapture(String button) {
     _points
       ..clear()
       ..add(_cursorPos());
+    _capturedButton = button;
     _captureTimer = Timer.periodic(const Duration(milliseconds: _captureIntervalMs), (Timer _) => _captureTick());
   }
 
   void _captureTick() {
     try {
       _points.add(_cursorPos());
-      if (_rightButtonHeld()) {
+      if (_capturedButtonHeld()) {
         // Safety valve: a 15s hold is not a gesture (games, drag operations).
         if (_points.length > 750) _endCapture(run: false);
         return;
@@ -162,7 +177,10 @@ class MouseGesturesService {
   void _endCapture({required bool run}) {
     _captureTimer?.cancel();
     _captureTimer = null;
-    if (!run) return;
+    if (!run) {
+      _capturedButton = '';
+      return;
+    }
 
     final String pattern = _classify(_points);
     _points.clear();
@@ -170,14 +188,18 @@ class MouseGesturesService {
 
     MouseGestureBinding? match;
     for (final MouseGestureBinding binding in _config.gestures) {
-      if (binding.enabled && binding.action.isSet && binding.pattern == pattern) {
+      if (binding.enabled && binding.action.isSet && binding.button == _capturedButton && binding.pattern == pattern) {
         match = binding;
         break;
       }
     }
-    if (match == null) return;
+    if (match == null) {
+      _capturedButton = '';
+      return;
+    }
 
     final GestureAction action = match.action;
+    _capturedButton = '';
     // The release may have opened a context menu under the cursor — dismiss it
     // (menu windows use the #32768 class) before running the action.
     Timer(const Duration(milliseconds: 120), () {
@@ -205,9 +227,8 @@ class MouseGesturesService {
       accumulatedY += points[i].Y - points[i - 1].Y;
       if (accumulatedX.abs() < _strokeThresholdPx && accumulatedY.abs() < _strokeThresholdPx) continue;
 
-      final String direction = accumulatedX.abs() >= accumulatedY.abs()
-          ? (accumulatedX > 0 ? 'R' : 'L')
-          : (accumulatedY > 0 ? 'D' : 'U');
+      final String direction =
+          accumulatedX.abs() >= accumulatedY.abs() ? (accumulatedX > 0 ? 'R' : 'L') : (accumulatedY > 0 ? 'D' : 'U');
       if (direction != currentDirection) {
         tokens += direction;
         currentDirection = direction;
@@ -239,5 +260,6 @@ class MouseGesturesService {
         WinKeys.send(action.value);
         break;
     }
+    Win32Helper.playPopSound();
   }
 }

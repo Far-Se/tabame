@@ -181,6 +181,15 @@ class Win32Helper {
     await player.dispose();
   }
 
+  static Future<void> playPopSound() async {
+    final AudioPlayer player = AudioPlayer();
+    await player.setAsset('resources/pop.mp3');
+    await player.seek(Duration.zero);
+    await player.play();
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    await player.dispose();
+  }
+
   static Future<void> instantColorPicker() async {
     if (QuickMenuFunctions.isQuickMenuVisible) {
       QuickMenuFunctions.hideQuickMenu();

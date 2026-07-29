@@ -1612,24 +1612,28 @@ class GestureAction {
 }
 
 /// One mouse gesture: a stroke [pattern] (tokens L/R/U/D, e.g. "RD" = right
-/// then down while holding the right mouse button) mapped to a [GestureAction].
+/// then down while holding the configured gesture mouse button) mapped to a
+/// [GestureAction].
 class MouseGestureBinding {
   String id;
   String pattern;
+  String button;
   GestureAction action;
   bool enabled;
 
   MouseGestureBinding({
     required this.id,
     required this.pattern,
+    this.button = 'right',
     GestureAction? action,
     this.enabled = true,
   }) : action = action ?? GestureAction();
 
-  MouseGestureBinding copyWith({String? id, String? pattern, GestureAction? action, bool? enabled}) {
+  MouseGestureBinding copyWith({String? id, String? pattern, String? button, GestureAction? action, bool? enabled}) {
     return MouseGestureBinding(
       id: id ?? this.id,
       pattern: pattern ?? this.pattern,
+      button: button ?? this.button,
       action: action ?? this.action.copyWith(),
       enabled: enabled ?? this.enabled,
     );
@@ -1638,6 +1642,7 @@ class MouseGestureBinding {
   Map<String, dynamic> toMap() => <String, dynamic>{
         'id': id,
         'pattern': pattern,
+        'button': button,
         'action': action.toMap(),
         'enabled': enabled,
       };
@@ -1645,6 +1650,7 @@ class MouseGestureBinding {
   factory MouseGestureBinding.fromMap(Map<String, dynamic> map) => MouseGestureBinding(
         id: (map['id'] ?? '') as String,
         pattern: (map['pattern'] ?? '') as String,
+        button: map['button'] == 'middle' ? 'middle' : 'right',
         action: GestureAction.fromMap((map['action'] as Map<String, dynamic>?) ?? <String, dynamic>{}),
         enabled: (map['enabled'] ?? true) as bool,
       );
@@ -1655,6 +1661,7 @@ class MouseGestureBinding {
 class MouseControlConfig extends SavedMap {
   bool hotCornersEnabled;
   bool gesturesEnabled;
+
   int cornerDwellMs;
   int cornerSizePx;
   Map<String, GestureAction> corners;
