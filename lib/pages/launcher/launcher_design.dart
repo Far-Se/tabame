@@ -446,6 +446,17 @@ class LauncherThemeData {
   bool get isManifesto => design == LauncherDesign.manifesto;
   bool get isOrbit => design == LauncherDesign.orbit;
   bool get isAnime => design == LauncherDesign.anime;
+  bool get isQuickMenuInspired => switch (design) {
+        LauncherDesign.tech ||
+        LauncherDesign.vector ||
+        LauncherDesign.outrun2 ||
+        LauncherDesign.matrix ||
+        LauncherDesign.steam ||
+        LauncherDesign.cyber ||
+        LauncherDesign.manga =>
+          true,
+        _ => false,
+      };
 
   /// Leading glyph in the search bar — a chevron prompt for the Command/Terminal
   /// consoles, a leaf for Zen, a drafting compass for Blueprint, a radar scope
@@ -463,6 +474,13 @@ class LauncherThemeData {
         LauncherDesign.manifesto => Icons.arrow_forward,
         LauncherDesign.orbit => Icons.radar,
         LauncherDesign.anime => Icons.auto_awesome_rounded,
+        LauncherDesign.tech => Icons.memory_rounded,
+        LauncherDesign.vector => Icons.radar_rounded,
+        LauncherDesign.outrun2 => Icons.bolt_rounded,
+        LauncherDesign.matrix => Icons.terminal_rounded,
+        LauncherDesign.steam => Icons.settings_rounded,
+        LauncherDesign.cyber => Icons.hub_rounded,
+        LauncherDesign.manga => Icons.auto_stories_rounded,
       };
 
   double get searchIconSize => switch (design) {
@@ -478,6 +496,13 @@ class LauncherThemeData {
         LauncherDesign.manifesto => 18.0,
         LauncherDesign.orbit => 19.0,
         LauncherDesign.anime => 19.0,
+        LauncherDesign.tech => 19.0,
+        LauncherDesign.vector => 18.0,
+        LauncherDesign.outrun2 => 20.0,
+        LauncherDesign.matrix => 18.0,
+        LauncherDesign.steam => 18.0,
+        LauncherDesign.cyber => 19.0,
+        LauncherDesign.manga => 19.0,
       };
 
   bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent;
@@ -495,6 +520,13 @@ class LauncherThemeData {
         LauncherDesign.manifesto => 17.0,
         LauncherDesign.orbit => 15.0,
         LauncherDesign.anime => 16.0,
+        LauncherDesign.tech => 15.0,
+        LauncherDesign.vector => 15.0,
+        LauncherDesign.outrun2 => 16.0,
+        LauncherDesign.matrix => 14.0,
+        LauncherDesign.steam => 15.0,
+        LauncherDesign.cyber => 15.0,
+        LauncherDesign.manga => 16.0,
       };
   FontWeight? get searchFontWeight => switch (design) {
         LauncherDesign.serene => FontWeight.w400,
@@ -509,6 +541,13 @@ class LauncherThemeData {
         LauncherDesign.manifesto => FontWeight.w600,
         LauncherDesign.orbit => FontWeight.w500,
         LauncherDesign.anime => FontWeight.w500,
+        LauncherDesign.tech => FontWeight.w600,
+        LauncherDesign.vector => FontWeight.w600,
+        LauncherDesign.outrun2 => FontWeight.w700,
+        LauncherDesign.matrix => FontWeight.w500,
+        LauncherDesign.steam => FontWeight.w600,
+        LauncherDesign.cyber => FontWeight.w600,
+        LauncherDesign.manga => FontWeight.w700,
       };
 
   double get frameRadius => switch (design) {
@@ -524,6 +563,13 @@ class LauncherThemeData {
         LauncherDesign.manifesto => 0.0,
         LauncherDesign.orbit => 10.0,
         LauncherDesign.anime => 16.0,
+        LauncherDesign.tech => 10.0,
+        LauncherDesign.vector => 4.0,
+        LauncherDesign.outrun2 => 0.0,
+        LauncherDesign.matrix => 2.0,
+        LauncherDesign.steam => 6.0,
+        LauncherDesign.cyber => 4.0,
+        LauncherDesign.manga => 14.0,
       };
 
   EdgeInsets get resultsListPadding => const EdgeInsets.all(8.0);

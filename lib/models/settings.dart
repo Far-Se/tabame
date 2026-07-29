@@ -81,6 +81,16 @@ enum LauncherDesign {
   ///
   /// Persisted by index — append-only to preserve stored preferences.
   anime,
+
+  /// Launcher counterparts to the named Quick Menu visual languages.
+  /// Kept append-only because this preference is persisted by index.
+  tech,
+  vector,
+  outrun2,
+  matrix,
+  steam,
+  cyber,
+  manga,
 }
 
 enum LightSwitchMode { off, fixed, sunrise }

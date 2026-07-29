@@ -7,6 +7,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
+import '../../models/util/theme_colors.dart';
 import '../quickmenu_designs/design_backdrop_stable.dart';
 import 'launcher_design.dart';
 
@@ -22,6 +23,13 @@ part 'launcher_designs/transit_launcher_design.dart';
 part 'launcher_designs/fluent_launcher_design.dart';
 part 'launcher_designs/orbit_launcher_design.dart';
 part 'launcher_designs/anime_launcher_design.dart';
+part 'launcher_designs/tech_launcher_design.dart';
+part 'launcher_designs/vector_launcher_design.dart';
+part 'launcher_designs/outrun2_launcher_design.dart';
+part 'launcher_designs/matrix_launcher_design.dart';
+part 'launcher_designs/steam_launcher_design.dart';
+part 'launcher_designs/cyber_launcher_design.dart';
+part 'launcher_designs/manga_launcher_design.dart';
 
 // ---------------------------------------------------------------------------
 // Extension: per-design widget factories used by LauncherState
@@ -248,6 +256,20 @@ extension LauncherDesignBuilder on LauncherDesign {
             ),
           ],
         );
+      case LauncherDesign.tech:
+        return techLauncherOuterDecoration(surface, accent);
+      case LauncherDesign.vector:
+        return vectorLauncherOuterDecoration(surface, accent);
+      case LauncherDesign.outrun2:
+        return outrun2LauncherOuterDecoration(surface, accent);
+      case LauncherDesign.matrix:
+        return matrixLauncherOuterDecoration(surface, accent);
+      case LauncherDesign.steam:
+        return steamLauncherOuterDecoration(surface, accent);
+      case LauncherDesign.cyber:
+        return cyberLauncherOuterDecoration(surface, accent);
+      case LauncherDesign.manga:
+        return mangaLauncherOuterDecoration(surface, accent);
     }
   }
 
@@ -371,6 +393,63 @@ extension LauncherDesignBuilder on LauncherDesign {
           trailingBadge: trailingBadge,
           isSearching: isSearching,
         );
+      case LauncherDesign.tech:
+        return TechLauncherSearchBar(
+            accent: accent,
+            onSurface: onSurface,
+            dragHandle: dragHandle,
+            textField: textField,
+            trailingBadge: trailingBadge,
+            isSearching: isSearching);
+      case LauncherDesign.vector:
+        return VectorLauncherSearchBar(
+            accent: accent,
+            onSurface: onSurface,
+            dragHandle: dragHandle,
+            textField: textField,
+            trailingBadge: trailingBadge,
+            isSearching: isSearching);
+      case LauncherDesign.outrun2:
+        return Outrun2LauncherSearchBar(
+            surface: surface,
+            accent: accent,
+            dragHandle: dragHandle,
+            textField: textField,
+            trailingBadge: trailingBadge,
+            isSearching: isSearching);
+      case LauncherDesign.matrix:
+        return MatrixLauncherSearchBar(
+            accent: accent,
+            onSurface: onSurface,
+            dragHandle: dragHandle,
+            textField: textField,
+            trailingBadge: trailingBadge,
+            isSearching: isSearching);
+      case LauncherDesign.steam:
+        return SteamLauncherSearchBar(
+            accent: accent,
+            onSurface: onSurface,
+            dragHandle: dragHandle,
+            textField: textField,
+            trailingBadge: trailingBadge,
+            isSearching: isSearching);
+      case LauncherDesign.cyber:
+        return CyberLauncherSearchBar(
+            accent: accent,
+            onSurface: onSurface,
+            dragHandle: dragHandle,
+            textField: textField,
+            trailingBadge: trailingBadge,
+            isSearching: isSearching);
+      case LauncherDesign.manga:
+        return MangaLauncherSearchBar(
+            surface: surface,
+            accent: accent,
+            onSurface: onSurface,
+            dragHandle: dragHandle,
+            textField: textField,
+            trailingBadge: trailingBadge,
+            isSearching: isSearching);
     }
   }
 
@@ -641,6 +720,20 @@ extension LauncherDesignBuilder on LauncherDesign {
             ],
           ),
         );
+      case LauncherDesign.tech:
+        return TechLauncherHeader(label: label, accent: accent);
+      case LauncherDesign.vector:
+        return VectorLauncherHeader(label: label, accent: accent);
+      case LauncherDesign.outrun2:
+        return Outrun2LauncherHeader(label: label, accent: accent);
+      case LauncherDesign.matrix:
+        return MatrixLauncherHeader(label: label, accent: accent);
+      case LauncherDesign.steam:
+        return SteamLauncherHeader(label: label, accent: accent);
+      case LauncherDesign.cyber:
+        return CyberLauncherHeader(label: label, accent: accent);
+      case LauncherDesign.manga:
+        return MangaLauncherHeader(label: label, accent: accent);
     }
   }
 }

@@ -174,6 +174,13 @@ class LauncherResultRow extends StatelessWidget {
       LauncherDesign.manifesto => _buildManifesto(context),
       LauncherDesign.orbit => _buildOrbit(context),
       LauncherDesign.anime => _buildClassic(context),
+      LauncherDesign.tech => _buildClassic(context),
+      LauncherDesign.vector => _buildOrbit(context),
+      LauncherDesign.outrun2 => _buildGlass(context),
+      LauncherDesign.matrix => _buildTerminal(context),
+      LauncherDesign.steam => _buildFluent(context),
+      LauncherDesign.cyber => _buildCommand(context),
+      LauncherDesign.manga => _buildManifesto(context),
     };
   }
 

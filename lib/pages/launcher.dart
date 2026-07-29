@@ -4130,154 +4130,151 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final LauncherThemeData launcherTheme = LauncherThemeData(design: _design);
 
     // Build the shared inner content once — no per-design duplication.
-    final Widget layoutContent = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        // ── Search bar ──────────────────────────────────────────────────────
-        _design.buildSearchBar(
-          surface: theme.colorScheme.surface,
-          accent: accent,
-          onSurface: onSurface,
-          dragHandle: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onPanStart: (_) => windowManager.startDragging(),
-            child: Icon(
-              // Token-driven: no inline ternary on _design.
-              launcherTheme.searchIcon,
-              size: launcherTheme.searchIconSize,
-              color: launcherTheme.searchIconUsesOnSurface ? onSurface.withAlpha(160) : accent,
-            ),
-          ),
-          textField: TextField(
-            controller: _controller,
-            focusNode: _focusNode,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: onSurface,
-              fontSize: launcherTheme.searchFontSize,
-              fontWeight: launcherTheme.searchFontWeight,
-            ),
-            decoration: InputDecoration(
-              hintText: (_activePlugin != null ? _pluginFrame?.placeholder : null) ??
-                  'Search applications, files, bookmarks...',
-              hintStyle: TextStyle(color: onSurface.withAlpha(70)),
-              border: InputBorder.none,
-              isDense: true,
-              contentPadding: EdgeInsets.only(
-                left: 0,
-                top: 6,
-                bottom: 6,
-                right: (_infoText != null || _copiedFiles.isNotEmpty) ? 120 : 8,
-              ),
-            ),
-            onChanged: _onSearchChanged,
-            onSubmitted: _onSubmitted,
-          ),
-          trailingBadge: _buildTrailingBadge(accent, onSurface),
-          isSearching: _isSearching,
+    final Widget searchContent = _design.buildSearchBar(
+      surface: theme.colorScheme.surface,
+      accent: accent,
+      onSurface: onSurface,
+      dragHandle: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onPanStart: (_) => windowManager.startDragging(),
+        child: Icon(
+          // Token-driven: no inline ternary on _design.
+          launcherTheme.searchIcon,
+          size: launcherTheme.searchIconSize,
+          color: launcherTheme.searchIconUsesOnSurface ? onSurface.withAlpha(160) : accent,
         ),
+      ),
+      textField: TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: onSurface,
+          fontSize: launcherTheme.searchFontSize,
+          fontWeight: launcherTheme.searchFontWeight,
+        ),
+        decoration: InputDecoration(
+          hintText:
+              (_activePlugin != null ? _pluginFrame?.placeholder : null) ?? 'Search applications, files, bookmarks...',
+          hintStyle: TextStyle(color: onSurface.withAlpha(70)),
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: EdgeInsets.only(
+            left: 0,
+            top: 6,
+            bottom: 6,
+            right: (_infoText != null || _copiedFiles.isNotEmpty) ? 120 : 8,
+          ),
+        ),
+        onChanged: _onSearchChanged,
+        onSubmitted: _onSubmitted,
+      ),
+      trailingBadge: _buildTrailingBadge(accent, onSurface),
+      isSearching: _isSearching,
+    );
 
-        // ── Results area ────────────────────────────────────────────────────
-        Material(
-          type: MaterialType.transparency,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: 260, maxHeight: _resultsMaxHeight),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                if (_activePlugin == null && !hasInput && _results.isNotEmpty)
-                  _buildResultsHeaderWithBadges(accent, onSurface),
-                if (_activePlugin != null)
-                  Expanded(child: _buildPluginBody())
-                else
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: ValueListenableBuilder<int>(
-                        valueListenable: _activeIndexNotifier,
-                        builder: (BuildContext context, int activeIndex, Widget? child) {
-                          return ValueListenableBuilder<bool>(
-                            valueListenable: _isRepeatingKey,
-                            builder: (BuildContext context, bool isRepeatingKey, Widget? child) {
-                              return ListView.builder(
-                                controller: _scrollController,
-                                shrinkWrap: true,
-                                itemCount: _results.length,
-                                itemBuilder: (BuildContext context, int index) {
-                                  final LauncherSearchResultItem result = _results[index];
-                                  final bool isSelected = index == activeIndex;
-                                  late final Widget resultWidget;
-                                  if (result.isShortcut) {
-                                    resultWidget = _buildShortcutResult(
-                                        context, theme, result.shortcut!, index, isSelected, isRepeatingKey);
-                                  } else if (result.isFile) {
-                                    resultWidget = _buildFileResult(context, theme, result.entity!, result.nodeId,
-                                        index, isSelected, isRepeatingKey);
-                                  } else if (result.isApp) {
-                                    resultWidget = _buildAppResult(context, theme, result.appResult!, result.nodeId,
-                                        index, isSelected, isRepeatingKey);
-                                  } else if (result.isWindow) {
-                                    resultWidget = _buildWindowResult(
-                                        context, theme, result.window!, index, isSelected, isRepeatingKey);
-                                  } else if (result.isBrowserTab) {
-                                    resultWidget = _buildBrowserTabResult(
-                                        context, theme, result.browserTab!, index, isSelected, isRepeatingKey);
-                                  } else if (result.isBookmark) {
-                                    resultWidget = _buildBookmarkResult(
-                                        context, theme, result.bookmarkResult!, index, isSelected, isRepeatingKey);
-                                  } else if (result.isNotion) {
-                                    resultWidget = _buildNotionResult(
-                                        context, theme, result.notionResult!, index, isSelected, isRepeatingKey);
-                                  } else if (result.isObsidian) {
-                                    resultWidget = _buildObsidianResult(
-                                        context, theme, result.obsidianResult!, index, isSelected, isRepeatingKey);
-                                  } else if (result.isSteam) {
-                                    resultWidget = _buildSteamResult(
-                                        context, theme, result.steamResult!, index, isSelected, isRepeatingKey);
-                                  } else if (result.isInfo) {
-                                    resultWidget = _buildInfoResult(
-                                        context, theme, result.infoResult!, index, isSelected, isRepeatingKey);
-                                  } else {
-                                    resultWidget = _buildQuickActionResult(
-                                        context, theme, result.quickAction!, index, isSelected, isRepeatingKey);
-                                  }
-                                  final Widget resultWithDivider = result.shortcut?.showDividerBefore == true
-                                      ? Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: <Widget>[
-                                            Divider(
-                                              height: 17,
-                                              thickness: 1,
-                                              indent: 12,
-                                              endIndent: 12,
-                                              color: theme.colorScheme.outlineVariant.withAlpha(150),
-                                            ),
-                                            resultWidget,
-                                          ],
-                                        )
-                                      : resultWidget;
-                                  return KeyedSubtree(
-                                    key: _resultKeys[_resultKeyId(result, index)],
-                                    child: MouseRegion(
-                                      onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
-                                      child: Stack(
-                                        alignment: Alignment.centerRight,
-                                        children: <Widget>[resultWithDivider],
-                                      ),
-                                    ),
-                                  );
-                                },
+    final Widget resultsContent = Material(
+      type: MaterialType.transparency,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: 260, maxHeight: _resultsMaxHeight),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            if (_activePlugin == null && !hasInput && _results.isNotEmpty)
+              _buildResultsHeaderWithBadges(accent, onSurface),
+            if (_activePlugin != null)
+              Expanded(child: _buildPluginBody())
+            else
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ValueListenableBuilder<int>(
+                    valueListenable: _activeIndexNotifier,
+                    builder: (BuildContext context, int activeIndex, Widget? child) {
+                      return ValueListenableBuilder<bool>(
+                        valueListenable: _isRepeatingKey,
+                        builder: (BuildContext context, bool isRepeatingKey, Widget? child) {
+                          return ListView.builder(
+                            controller: _scrollController,
+                            shrinkWrap: true,
+                            itemCount: _results.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              final LauncherSearchResultItem result = _results[index];
+                              final bool isSelected = index == activeIndex;
+                              late final Widget resultWidget;
+                              if (result.isShortcut) {
+                                resultWidget = _buildShortcutResult(
+                                    context, theme, result.shortcut!, index, isSelected, isRepeatingKey);
+                              } else if (result.isFile) {
+                                resultWidget = _buildFileResult(
+                                    context, theme, result.entity!, result.nodeId, index, isSelected, isRepeatingKey);
+                              } else if (result.isApp) {
+                                resultWidget = _buildAppResult(context, theme, result.appResult!, result.nodeId, index,
+                                    isSelected, isRepeatingKey);
+                              } else if (result.isWindow) {
+                                resultWidget = _buildWindowResult(
+                                    context, theme, result.window!, index, isSelected, isRepeatingKey);
+                              } else if (result.isBrowserTab) {
+                                resultWidget = _buildBrowserTabResult(
+                                    context, theme, result.browserTab!, index, isSelected, isRepeatingKey);
+                              } else if (result.isBookmark) {
+                                resultWidget = _buildBookmarkResult(
+                                    context, theme, result.bookmarkResult!, index, isSelected, isRepeatingKey);
+                              } else if (result.isNotion) {
+                                resultWidget = _buildNotionResult(
+                                    context, theme, result.notionResult!, index, isSelected, isRepeatingKey);
+                              } else if (result.isObsidian) {
+                                resultWidget = _buildObsidianResult(
+                                    context, theme, result.obsidianResult!, index, isSelected, isRepeatingKey);
+                              } else if (result.isSteam) {
+                                resultWidget = _buildSteamResult(
+                                    context, theme, result.steamResult!, index, isSelected, isRepeatingKey);
+                              } else if (result.isInfo) {
+                                resultWidget = _buildInfoResult(
+                                    context, theme, result.infoResult!, index, isSelected, isRepeatingKey);
+                              } else {
+                                resultWidget = _buildQuickActionResult(
+                                    context, theme, result.quickAction!, index, isSelected, isRepeatingKey);
+                              }
+                              final Widget resultWithDivider = result.shortcut?.showDividerBefore == true
+                                  ? Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        Divider(
+                                          height: 17,
+                                          thickness: 1,
+                                          indent: 12,
+                                          endIndent: 12,
+                                          color: theme.colorScheme.outlineVariant.withAlpha(150),
+                                        ),
+                                        resultWidget,
+                                      ],
+                                    )
+                                  : resultWidget;
+                              return KeyedSubtree(
+                                key: _resultKeys[_resultKeyId(result, index)],
+                                child: MouseRegion(
+                                  onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
+                                  child: Stack(
+                                    alignment: Alignment.centerRight,
+                                    children: <Widget>[resultWithDivider],
+                                  ),
+                                ),
                               );
                             },
                           );
                         },
-                      ),
-                    ),
+                      );
+                    },
                   ),
-              ],
-            ),
-          ),
+                ),
+              ),
+          ],
         ),
-      ],
+      ),
+    );
+    final Widget layoutContent = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[searchContent, resultsContent],
     );
     final Widget innerContent = Stack(
       children: <Widget>[
@@ -4373,6 +4370,59 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
           resultCount: _results.length,
           child: innerContent,
         ),
+      LauncherDesign.tech => TechLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent),
+      LauncherDesign.vector => VectorLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent),
+      LauncherDesign.outrun2 => Outrun2LauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent),
+      LauncherDesign.matrix => MatrixLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          searchChild: searchContent,
+          resultsChild: Stack(
+            children: <Widget>[
+              resultsContent,
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: _buildHeightResizeHandle(accent, onSurface),
+              ),
+            ],
+          )),
+      LauncherDesign.steam => SteamLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent),
+      LauncherDesign.cyber => CyberLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent),
+      LauncherDesign.manga => MangaLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          resultCount: _results.length,
+          child: innerContent),
     };
 
     return Theme(

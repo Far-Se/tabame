@@ -97,6 +97,13 @@ class LauncherModalTokens {
       case LauncherDesign.command:
       case LauncherDesign.glass:
       case LauncherDesign.anime:
+      case LauncherDesign.tech:
+      case LauncherDesign.vector:
+      case LauncherDesign.outrun2:
+      case LauncherDesign.matrix:
+      case LauncherDesign.steam:
+      case LauncherDesign.cyber:
+      case LauncherDesign.manga:
         final Color onSurface = theme.colorScheme.onSurface;
         return LauncherModalTokens._(
           design: design,
@@ -137,6 +144,13 @@ class LauncherModalTokens {
         LauncherDesign.manifesto => 0.0,
         LauncherDesign.orbit => 4.0,
         LauncherDesign.anime => 12.0,
+        LauncherDesign.tech => 8.0,
+        LauncherDesign.vector => 4.0,
+        LauncherDesign.outrun2 => 0.0,
+        LauncherDesign.matrix => 2.0,
+        LauncherDesign.steam => 6.0,
+        LauncherDesign.cyber => 4.0,
+        LauncherDesign.manga => 10.0,
       };
 
   /// Designs whose controls carry a visible accent outline (console/drafting
