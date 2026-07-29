@@ -91,10 +91,58 @@ static BOOL CALLBACK CollectBrowserWindowsProc(HWND hwnd, LPARAM lParam) {
   return TRUE;
 }
 
-// Locate the tab strip (`Tab` control) inside a browser window so that the
-// subsequent TabItem search stays scoped and fast. Returns the window root as a
-// fallback when the strip cannot be isolated. Caller owns the returned scope
-// reference only when *scopeOut is set.
+// Web pages can expose ARIA role="tab" widgets through UIA using exactly the
+// same Tab/TabItem control types as the browser's own tab strip. Browser chrome
+// lives outside the page's Document control, so reject every Tab control whose
+// ancestors include a Document before choosing an enumeration scope.
+static bool HasDocumentAncestor(IUIAutomation *automation,
+                                IUIAutomationElement *element,
+                                IUIAutomationElement *root) {
+  IUIAutomationTreeWalker *walker = nullptr;
+  if (FAILED(automation->get_RawViewWalker(&walker)) || !walker)
+    return true; // Do not risk treating page content as browser chrome.
+
+  // Keep the conservative default unless the walk reaches the browser-window
+  // root. A broken provider must not make an unclassified page control valid.
+  bool hasDocumentAncestor = true;
+  IUIAutomationElement *current = nullptr;
+  if (FAILED(walker->GetParentElement(element, &current))) {
+    walker->Release();
+    return true;
+  }
+  while (current) {
+    BOOL isRoot = FALSE;
+    if (SUCCEEDED(automation->CompareElements(current, root, &isRoot)) &&
+        isRoot) {
+      hasDocumentAncestor = false;
+      current->Release();
+      break;
+    }
+
+    CONTROLTYPEID controlType = 0;
+    if (SUCCEEDED(current->get_CurrentControlType(&controlType)) &&
+        controlType == UIA_DocumentControlTypeId) {
+      hasDocumentAncestor = true;
+      current->Release();
+      break;
+    }
+
+    IUIAutomationElement *parent = nullptr;
+    HRESULT parentResult = walker->GetParentElement(current, &parent);
+    current->Release();
+    if (FAILED(parentResult))
+      break;
+    current = parent;
+  }
+
+  walker->Release();
+  return hasDocumentAncestor;
+}
+
+// Locate the browser-chrome tab strip (`Tab` control) inside a browser window
+// so that the subsequent TabItem search stays scoped and fast. Unlike the old
+// implementation, this deliberately has no window-root fallback: a broad
+// fallback would include ARIA tabs from the active web page.
 static IUIAutomationElement *
 ScopeToTabStrip(IUIAutomation *automation, IUIAutomationElement *root,
                 IUIAutomationElement **scopeOut) {
@@ -106,10 +154,49 @@ ScopeToTabStrip(IUIAutomation *automation, IUIAutomationElement *root,
   if (SUCCEEDED(automation->CreatePropertyCondition(UIA_ControlTypePropertyId,
                                                     vTab, &tabCond)) &&
       tabCond) {
-    root->FindFirst(TreeScope_Descendants, tabCond, scopeOut);
+    IUIAutomationElementArray *candidates = nullptr;
+    root->FindAll(TreeScope_Descendants, tabCond, &candidates);
     tabCond->Release();
+
+    if (candidates) {
+      int count = 0;
+      candidates->get_Length(&count);
+      for (int i = 0; i < count && !*scopeOut; i++) {
+        IUIAutomationElement *candidate = nullptr;
+        candidates->GetElement(i, &candidate);
+        if (!candidate)
+          continue;
+
+        if (HasDocumentAncestor(automation, candidate, root)) {
+          candidate->Release();
+          continue;
+        }
+
+        // Tab-like browser-chrome controls (for example Chromium tab-group
+        // headers) may have no TabItem descendants and are not tab strips.
+        VARIANT vTabItem;
+        vTabItem.vt = VT_I4;
+        vTabItem.lVal = UIA_TabItemControlTypeId;
+        IUIAutomationCondition *tabItemCond = nullptr;
+        IUIAutomationElement *tabItem = nullptr;
+        if (SUCCEEDED(automation->CreatePropertyCondition(
+                UIA_ControlTypePropertyId, vTabItem, &tabItemCond)) &&
+            tabItemCond) {
+          candidate->FindFirst(TreeScope_Descendants, tabItemCond, &tabItem);
+          tabItemCond->Release();
+        }
+
+        if (tabItem) {
+          tabItem->Release();
+          *scopeOut = candidate;
+        } else {
+          candidate->Release();
+        }
+      }
+      candidates->Release();
+    }
   }
-  return *scopeOut ? *scopeOut : root;
+  return *scopeOut;
 }
 
 static IUIAutomationElementArray *FindTabItems(IUIAutomation *automation,
@@ -151,7 +238,8 @@ std::vector<BrowserTab> EnumerateBrowserTabs() {
     IUIAutomationElement *scope = nullptr;
     IUIAutomationElement *searchRoot = ScopeToTabStrip(automation, root, &scope);
 
-    IUIAutomationElementArray *items = FindTabItems(automation, searchRoot);
+    IUIAutomationElementArray *items =
+        searchRoot ? FindTabItems(automation, searchRoot) : nullptr;
     if (items) {
       int count = 0;
       items->get_Length(&count);
@@ -256,7 +344,8 @@ bool FocusBrowserTab(int hwndValue, int index, const std::wstring &title) {
   if (SUCCEEDED(automation->ElementFromHandle(hwnd, &root)) && root) {
     IUIAutomationElement *scope = nullptr;
     IUIAutomationElement *searchRoot = ScopeToTabStrip(automation, root, &scope);
-    IUIAutomationElementArray *items = FindTabItems(automation, searchRoot);
+    IUIAutomationElementArray *items =
+        searchRoot ? FindTabItems(automation, searchRoot) : nullptr;
 
     if (items) {
       int count = 0;
