@@ -685,7 +685,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   void _setPluginQuery(String text) {
     final PluginManifest? plugin = _activePlugin;
     if (plugin == null) return;
-    final String next = text.isEmpty ? '${plugin.keyword} ' : '${plugin.keyword} $text';
+    final String next = text.isEmpty ? plugin.keyword : '${plugin.keyword} $text';
     if (_controller.text == next) return;
     _controller.text = next;
     _controller.selection = TextSelection.collapsed(offset: next.length);

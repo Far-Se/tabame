@@ -88,3 +88,6 @@ AGENTS.md
 client_secret.json
 */.tabame-store.json
 */client_secret.json
+**/package-lock*
+**/.tabame-store.json
+**/client_secret.json

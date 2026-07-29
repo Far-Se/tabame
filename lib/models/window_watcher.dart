@@ -333,8 +333,71 @@ class WindowWatcher {
   /// z-order) and activates the first one that is neither the currently active
   /// window nor Tabame's own window. This lets you "peel back" to the window
   /// sitting just beneath whatever is currently focused under the pointer.
+  static Future<void> showLastWindowUnderCursor() async {
+    await fetchWindows();
 
-  static void showLastWindowUnderCursor() async {
+    final Pointer<POINT> lpPoint = calloc<POINT>();
+
+    try {
+      GetCursorPos(lpPoint);
+
+      final PointXY mousePos = PointXY(
+        X: lpPoint.ref.x,
+        Y: lpPoint.ref.y,
+      );
+
+      final int ownHandle = Win32.getMainHandle();
+      final Set<int> validHandles = list.map((window) => window.hWnd).toSet();
+
+      int topWindow = 0;
+      int windowBehind = 0;
+
+      // Enumerate windows in actual desktop Z-order, from top to bottom.
+      int hWnd = GetTopWindow(0);
+
+      while (hWnd != 0) {
+        if (hWnd != ownHandle && validHandles.contains(hWnd) && IsWindowVisible(hWnd) != 0 && IsIconic(hWnd) == 0) {
+          final Square rect = Win32.getWindowRect(hwnd: hWnd);
+
+          final bool isUnderCursor =
+              mousePos.X.isBetween(rect.x, rect.x + rect.width) && mousePos.Y.isBetween(rect.y, rect.y + rect.height);
+
+          if (isUnderCursor) {
+            if (topWindow == 0) {
+              topWindow = hWnd;
+            } else {
+              windowBehind = hWnd;
+              break;
+            }
+          }
+        }
+
+        hWnd = GetWindow(hWnd, GW_HWNDNEXT);
+      }
+
+      if (topWindow == 0) return;
+
+      // First activate the currently visible/topmost window.
+      Win32.activateWindow(topWindow);
+
+      if (windowBehind == 0) return;
+
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      // Then bring the window directly behind it to the foreground.
+      Win32.activateWindow(windowBehind);
+
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+
+      if (GetForegroundWindow() != windowBehind) {
+        Win32.activateWindow(windowBehind);
+      }
+    } finally {
+      free(lpPoint);
+    }
+  }
+
+  static void showLastWindowUnderCursorOld() async {
     await fetchWindows();
     final Pointer<POINT> lpPoint = calloc<POINT>();
     GetCursorPos(lpPoint);
