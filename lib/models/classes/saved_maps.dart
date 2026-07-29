@@ -468,6 +468,7 @@ class ThemeColors {
   String uiFontFamily;
   int uiFontWeight;
   bool uiFontItalic;
+  bool useUiFontForLauncher;
   String entryFontFamily;
   int entryFontWeight;
   bool entryFontItalic;
@@ -489,6 +490,7 @@ class ThemeColors {
     this.uiFontFamily = 'Jura',
     this.uiFontWeight = 400,
     this.uiFontItalic = false,
+    this.useUiFontForLauncher = false,
     this.entryFontFamily = 'Jura',
     this.entryFontWeight = 700,
     this.entryFontItalic = false,
@@ -515,6 +517,7 @@ class ThemeColors {
     String? uiFontFamily,
     int? uiFontWeight,
     bool? uiFontItalic,
+    bool? useUiFontForLauncher,
     String? entryFontFamily,
     int? entryFontWeight,
     bool? entryFontItalic,
@@ -537,6 +540,7 @@ class ThemeColors {
       uiFontFamily: uiFontFamily ?? this.uiFontFamily,
       uiFontWeight: uiFontWeight ?? this.uiFontWeight,
       uiFontItalic: uiFontItalic ?? this.uiFontItalic,
+      useUiFontForLauncher: useUiFontForLauncher ?? this.useUiFontForLauncher,
       entryFontFamily: entryFontFamily ?? this.entryFontFamily,
       entryFontWeight: entryFontWeight ?? this.entryFontWeight,
       entryFontItalic: entryFontItalic ?? this.entryFontItalic,
@@ -562,6 +566,7 @@ class ThemeColors {
       'uiFontFamily': uiFontFamily,
       'uiFontWeight': uiFontWeight,
       'uiFontItalic': uiFontItalic,
+      'useUiFontForLauncher': useUiFontForLauncher,
       'entryFontFamily': entryFontFamily,
       'entryFontWeight': entryFontWeight,
       'entryFontItalic': entryFontItalic,
@@ -587,6 +592,7 @@ class ThemeColors {
       uiFontFamily: (map['uiFontFamily'] ?? 'Jura') as String,
       uiFontWeight: (map['uiFontWeight'] ?? 400) as int,
       uiFontItalic: (map['uiFontItalic'] ?? false) as bool,
+      useUiFontForLauncher: (map['useUiFontForLauncher'] ?? false) as bool,
       entryFontFamily: (map['entryFontFamily'] ?? 'Jura') as String,
       entryFontWeight: (map['entryFontWeight'] ?? 700) as int,
       entryFontItalic: (map['entryFontItalic'] ?? false) as bool,
@@ -611,7 +617,7 @@ class ThemeColors {
 
   @override
   String toString() {
-    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $text, accentColor: $accent, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropPath: $backdropPath, backdropOpacity: $backdropOpacity, backdropLauncher: $backdropLauncher, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd, borderRadius: $borderRadius, baseFontSize: $baseFontSize)';
+    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $text, accentColor: $accent, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, useUiFontForLauncher: $useUiFontForLauncher, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropPath: $backdropPath, backdropOpacity: $backdropOpacity, backdropLauncher: $backdropLauncher, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd, borderRadius: $borderRadius, baseFontSize: $baseFontSize)';
   }
 
   @override
@@ -625,6 +631,7 @@ class ThemeColors {
         other.uiFontFamily == uiFontFamily &&
         other.uiFontWeight == uiFontWeight &&
         other.uiFontItalic == uiFontItalic &&
+        other.useUiFontForLauncher == useUiFontForLauncher &&
         other.entryFontFamily == entryFontFamily &&
         other.entryFontWeight == entryFontWeight &&
         other.entryFontItalic == entryFontItalic &&
@@ -649,6 +656,7 @@ class ThemeColors {
         uiFontFamily.hashCode ^
         uiFontWeight.hashCode ^
         uiFontItalic.hashCode ^
+        useUiFontForLauncher.hashCode ^
         entryFontFamily.hashCode ^
         entryFontWeight.hashCode ^
         entryFontItalic.hashCode ^
@@ -1529,8 +1537,7 @@ class WindowLayoutEntry {
         width: (map['width'] ?? 0) as int,
         height: (map['height'] ?? 0) as int,
         showCmd: (map['showCmd'] ?? 1) as int,
-        hookedEntries:
-            (map['hookedEntries'] as List<dynamic>? ?? <dynamic>[]).map((dynamic e) => e as int).toList(),
+        hookedEntries: (map['hookedEntries'] as List<dynamic>? ?? <dynamic>[]).map((dynamic e) => e as int).toList(),
       );
 }
 

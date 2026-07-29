@@ -3,6 +3,32 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/settings.dart';
 
+TextStyle launcherTextStyle(TextStyle designStyle) {
+  if (!Design.useUiFontForLauncher) return designStyle;
+
+  try {
+    return GoogleFonts.getFont(
+      Design.uiFontFamily,
+      textStyle: designStyle.copyWith(
+        fontWeight: FontWeight(Design.uiFontWeight),
+        fontStyle: Design.uiFontItalic ? FontStyle.italic : FontStyle.normal,
+      ),
+    );
+  } catch (_) {
+    return designStyle;
+  }
+}
+
+TextTheme launcherTextTheme(TextTheme designTextTheme) {
+  if (!Design.useUiFontForLauncher) return designTextTheme;
+
+  try {
+    return GoogleFonts.getTextTheme(Design.uiFontFamily, designTextTheme);
+  } catch (_) {
+    return designTextTheme;
+  }
+}
+
 /// Shared visual tokens for the Terminal (CLI) launcher design.
 ///
 /// The Terminal design overrides the active theme with a forced console palette
@@ -43,13 +69,13 @@ abstract final class TerminalTokens {
     double? letterSpacing,
     double? height,
   }) {
-    return GoogleFonts.jetBrainsMono(
+    return launcherTextStyle(GoogleFonts.jetBrainsMono(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
       letterSpacing: letterSpacing,
       height: height,
-    );
+    ));
   }
 }
 
@@ -87,13 +113,13 @@ abstract final class ZenTokens {
     double? letterSpacing,
     double? height,
   }) {
-    return GoogleFonts.quicksand(
+    return launcherTextStyle(GoogleFonts.quicksand(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
       letterSpacing: letterSpacing,
       height: height,
-    );
+    ));
   }
 }
 
@@ -111,13 +137,13 @@ abstract final class GlassTokens {
     double? letterSpacing,
     double? height,
   }) {
-    return GoogleFonts.inter(
+    return launcherTextStyle(GoogleFonts.inter(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
       letterSpacing: letterSpacing,
       height: height,
-    );
+    ));
   }
 }
 
@@ -161,13 +187,13 @@ abstract final class BlueprintTokens {
     double? letterSpacing,
     double? height,
   }) {
-    return GoogleFonts.chakraPetch(
+    return launcherTextStyle(GoogleFonts.chakraPetch(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
       letterSpacing: letterSpacing,
       height: height,
-    );
+    ));
   }
 }
 
@@ -211,13 +237,13 @@ abstract final class TransitTokens {
     double? letterSpacing,
     double? height,
   }) {
-    return GoogleFonts.overpass(
+    return launcherTextStyle(GoogleFonts.overpass(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
       letterSpacing: letterSpacing,
       height: height,
-    );
+    ));
   }
 }
 
@@ -268,7 +294,7 @@ abstract final class FluentTokens {
     double? letterSpacing,
     double? height,
   }) {
-    return TextStyle(
+    return launcherTextStyle(TextStyle(
       fontFamily: 'Segoe UI Variable Text',
       fontFamilyFallback: const <String>['Segoe UI'],
       fontSize: fontSize,
@@ -276,7 +302,7 @@ abstract final class FluentTokens {
       color: color,
       letterSpacing: letterSpacing,
       height: height,
-    );
+    ));
   }
 }
 
@@ -304,7 +330,7 @@ abstract final class ManifestoTokens {
     double? letterSpacing,
     double? height,
   }) {
-    return TextStyle(
+    return launcherTextStyle(TextStyle(
       fontFamily: 'Bahnschrift Condensed',
       fontFamilyFallback: const <String>['Bahnschrift', 'Segoe UI'],
       fontSize: fontSize,
@@ -312,7 +338,7 @@ abstract final class ManifestoTokens {
       color: color,
       letterSpacing: letterSpacing,
       height: height,
-    );
+    ));
   }
 
   static TextStyle body({
@@ -322,7 +348,7 @@ abstract final class ManifestoTokens {
     double? letterSpacing,
     double? height,
   }) {
-    return TextStyle(
+    return launcherTextStyle(TextStyle(
       fontFamily: 'Segoe UI Variable Text',
       fontFamilyFallback: const <String>['Segoe UI'],
       fontSize: fontSize,
@@ -330,7 +356,7 @@ abstract final class ManifestoTokens {
       color: color,
       letterSpacing: letterSpacing,
       height: height,
-    );
+    ));
   }
 }
 
@@ -375,13 +401,13 @@ abstract final class OrbitTokens {
     double? letterSpacing,
     double? height,
   }) {
-    return GoogleFonts.spaceGrotesk(
+    return launcherTextStyle(GoogleFonts.spaceGrotesk(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
       letterSpacing: letterSpacing,
       height: height,
-    );
+    ));
   }
 
   /// Telemetry voice — IBM Plex Mono for readouts, micro labels and kbd hints.
@@ -392,13 +418,13 @@ abstract final class OrbitTokens {
     double? letterSpacing,
     double? height,
   }) {
-    return GoogleFonts.ibmPlexMono(
+    return launcherTextStyle(GoogleFonts.ibmPlexMono(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
       letterSpacing: letterSpacing,
       height: height,
-    );
+    ));
   }
 }
 

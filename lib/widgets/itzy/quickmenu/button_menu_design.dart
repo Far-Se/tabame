@@ -1137,6 +1137,46 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
               ],
             ),
           ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () async {
+              await _updateTheme(() {
+                _selectedTheme.useUiFontForLauncher = !_selectedTheme.useUiFontForLauncher;
+              });
+              Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              decoration: BoxDecoration(
+                color: _selectedTheme.useUiFontForLauncher ? accent.withAlpha(10) : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Checkbox(
+                    value: _selectedTheme.useUiFontForLauncher,
+                    onChanged: (bool? value) async {
+                      await _updateTheme(() {
+                        _selectedTheme.useUiFontForLauncher = value ?? false;
+                      });
+                      Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+                    },
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Use this font for launcher too',
+                    style: TextStyle(
+                      fontSize: Design.baseFontSize + 0.5,
+                      fontWeight: FontWeight.w600,
+                      color: onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 10),
           Row(
             children: <Widget>[

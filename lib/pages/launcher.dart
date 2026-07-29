@@ -4041,7 +4041,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
             : isManifesto
                 ? ManifestoTokens.accent(isDark)
                 : Design.accent;
-    final ThemeData theme = isTerminal
+    final ThemeData designTheme = isTerminal
         ? baseTheme.copyWith(
             colorScheme: baseTheme.colorScheme.copyWith(
               surface: TerminalTokens.bg(isDark),
@@ -4122,6 +4122,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                                 : isGlass
                                     ? baseTheme.copyWith(textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme))
                                     : baseTheme;
+    final ThemeData theme = Design.useUiFontForLauncher
+        ? designTheme.copyWith(textTheme: launcherTextTheme(designTheme.textTheme))
+        : designTheme;
     final Color onSurface = theme.colorScheme.onSurface;
     final bool hasInput = _controller.text.trim().isNotEmpty;
     final LauncherThemeData launcherTheme = LauncherThemeData(design: _design);

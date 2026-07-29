@@ -99,6 +99,7 @@ class Design {
   static String get uiFontFamily => user.themeColors.uiFontFamily;
   static int get uiFontWeight => user.themeColors.uiFontWeight;
   static bool get uiFontItalic => user.themeColors.uiFontItalic;
+  static bool get useUiFontForLauncher => user.themeColors.useUiFontForLauncher;
   static String get entryFontFamily => user.themeColors.entryFontFamily;
   static int get entryFontWeight => user.themeColors.entryFontWeight;
   static bool get entryFontItalic => user.themeColors.entryFontItalic;
