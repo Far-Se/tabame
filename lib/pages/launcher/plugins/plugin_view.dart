@@ -1363,8 +1363,9 @@ Widget _mdListMarker(bool isOrdered, int depth, int index) {
 }
 
 /// Resolves a plugin icon string to a widget: a `#RRGGBB` color swatch, a
-/// Material icon name, a local `file://` image, or a remote `https://` image
-/// (images fall back to the icon on error).
+/// Material icon name, an inline `data:image/...` URI, a local `file://` image,
+/// or a remote `https://` raster or SVG image (images fall back to the icon on
+/// error).
 class _PluginIcon extends StatelessWidget {
   const _PluginIcon({required this.name, required this.accent, this.size = 16});
   final String? name;
@@ -1386,31 +1387,92 @@ class _PluginIcon extends StatelessWidget {
         ),
       );
     }
+    if (value != null && value.startsWith('data:image/')) {
+      final Widget fallback = Icon(PluginIcons.fallback, size: size, color: accent);
+      // Inline icons are decoded synchronously during build, so reject
+      // unexpectedly large plugin payloads before allocating their bytes.
+      if (value.length > 2 * 1024 * 1024) return fallback;
+      try {
+        final UriData data = UriData.parse(value);
+        final Uint8List bytes = data.contentAsBytes();
+        if (bytes.isEmpty) return fallback;
+        final bool isSvg = data.mimeType.toLowerCase() == 'image/svg+xml';
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: isSvg
+              ? SvgPicture.memory(
+                  bytes,
+                  width: size + 6,
+                  height: size + 6,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => fallback,
+                )
+              : Image.memory(
+                  bytes,
+                  width: size + 6,
+                  height: size + 6,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => fallback,
+                ),
+        );
+      } catch (_) {
+        return fallback;
+      }
+    }
     if (value != null && (value.startsWith('http://') || value.startsWith('https://'))) {
+      final Widget fallback = Icon(PluginIcons.fallback, size: size, color: accent);
+      final bool isSvg = Uri.tryParse(value)?.path.toLowerCase().endsWith('.svg') ?? false;
       return ClipRRect(
         borderRadius: BorderRadius.circular(4),
-        child: Image.network(
-          value,
-          width: size + 6,
-          height: size + 6,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Icon(PluginIcons.fallback, size: size, color: accent),
-        ),
+        child: isSvg
+            ? SvgPicture.network(
+                value,
+                width: size + 6,
+                height: size + 6,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => fallback,
+              )
+            : Image.network(
+                value,
+                width: size + 6,
+                height: size + 6,
+                fit: BoxFit.cover,
+                // Some favicon endpoints return SVG without a `.svg` path.
+                // If raster decoding fails, let flutter_svg inspect the same
+                // URL before falling back to the generic plugin icon.
+                errorBuilder: (_, __, ___) => SvgPicture.network(
+                  value,
+                  width: size + 6,
+                  height: size + 6,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => fallback,
+                ),
+              ),
       );
     }
     if (value != null && value.startsWith('file://')) {
       final String path = Uri.parse(value).toFilePath(windows: true);
       final File file = File(path);
       if (file.existsSync()) {
+        final Widget fallback = Icon(PluginIcons.fallback, size: size, color: accent);
+        final bool isSvg = file.path.toLowerCase().endsWith('.svg');
         return ClipRRect(
           borderRadius: BorderRadius.circular(4),
-          child: Image.file(
-            file,
-            width: size + 6,
-            height: size + 6,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Icon(PluginIcons.fallback, size: size, color: accent),
-          ),
+          child: isSvg
+              ? SvgPicture.file(
+                  file,
+                  width: size + 6,
+                  height: size + 6,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => fallback,
+                )
+              : Image.file(
+                  file,
+                  width: size + 6,
+                  height: size + 6,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => fallback,
+                ),
         );
       }
     }

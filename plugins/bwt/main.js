@@ -54,7 +54,10 @@ class BrowserBridge {
       clearTimeout(request.timer);
       this.pending.delete(requestId);
       if (message.ok) request.resolve(message.result);
-      else request.reject(new Error(message.error || "Browser bridge request failed"));
+      else
+        request.reject(
+          new Error(message.error || "Browser bridge request failed"),
+        );
       return;
     }
 
@@ -72,7 +75,8 @@ class BrowserBridge {
     this.enabled = Boolean(status.enabled);
     this.running = Boolean(status.running);
     this.connected = Boolean(status.connected);
-    if (Number.isInteger(Number(status.port))) this.config.port = Number(status.port);
+    if (Number.isInteger(Number(status.port)))
+      this.config.port = Number(status.port);
     if (typeof status.token === "string") this.config.token = status.token;
     this.clientInfo = {
       extensionVersion: String(status.extensionVersion || "unknown"),
@@ -139,7 +143,7 @@ bridge.start();
 
 function favicon(tab) {
   const value = String(tab.favIconUrl || "");
-  return /^https?:\/\//i.test(value) ? value : "globe";
+  return /^(?:https?:\/\/|data:image\/)/i.test(value) ? value : "globe";
 }
 
 function siteName(url) {
@@ -261,13 +265,21 @@ function tabItem(tab) {
 }
 
 function filterTabs(tabs, text) {
-  const needle = String(text || "").trim().toLowerCase();
+  const needle = String(text || "")
+    .trim()
+    .toLowerCase();
   if (!needle) return tabs;
   return tabs.filter(
     (tab) =>
-      String(tab.title || "").toLowerCase().includes(needle) ||
-      String(tab.url || "").toLowerCase().includes(needle) ||
-      String(tab.group?.title || "").toLowerCase().includes(needle),
+      String(tab.title || "")
+        .toLowerCase()
+        .includes(needle) ||
+      String(tab.url || "")
+        .toLowerCase()
+        .includes(needle) ||
+      String(tab.group?.title || "")
+        .toLowerCase()
+        .includes(needle),
   );
 }
 
@@ -325,7 +337,7 @@ async function renderTabs(rev, text, quiet = false) {
     });
     render(rev, "list", {
       items: tabs.map(tabItem),
-      preview: { enabled: true },
+      preview: { enabled: false, wide: false },
       placeholder: "Filter tabs by title or URL…",
       empty: {
         icon: "search",

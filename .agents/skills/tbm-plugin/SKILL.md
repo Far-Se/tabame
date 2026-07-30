@@ -92,7 +92,7 @@ Full frame/item fields (views `list`/`grid`/`detail`, `loading`, `emptyText`, `g
 - **Escape exits the whole plugin** (no built-in "back") — for multi-screen plugins keep your own `screen` state and add a "◀ Back" item or a Ctrl+K `back` action.
 - **Slow work:** emit a `loading:true` frame (echoing the rev) first, then the result frame.
 - **Never crash on bad input** — wrap handlers in try/except and render the error as a `detail` frame.
-- **Icons** must be a name from spec §11 (case-insensitive) or a `file://`/`https://` **raster** (PNG/JPG, no SVG).
+- **Icons** must be a name from spec §11 (case-insensitive), a `data:image/...` URI (up to 2 MB), or a `file://`/`https://` raster or SVG image.
 - On Windows, Tabame sets `PYTHONIOENCODING=utf-8` / `PYTHONUTF8=1` for Python; Node/Bun are UTF-8 already.
 
 ## Doing real work

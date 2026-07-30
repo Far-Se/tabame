@@ -176,7 +176,7 @@ Aligned key-value rows, preferred over markdown tables:
   "id": "unique-id", // stable, unique per frame; echoed in select/action
   "title": "Main text", // supports **bold** `code`, nothing else
   "subtitle": "Secondary text", // same markdown-lite
-  "icon": "star", // §7 name | #RRGGBB swatch | file://|https:// raster (no SVG)
+  "icon": "star", // §7 name | #RRGGBB | data:image/... | file://|https:// raster/SVG
   "section": "Today", // list/grid: group header on value change from prev item; keep same-section items adjacent
   "lines": 1, // list: subtitle wrap lines, 1–3
   "progress": 0.6, // list: thin progress bar, 0..1
@@ -198,7 +198,7 @@ Aligned key-value rows, preferred over markdown tables:
 - **detail**: single scrollable markdown doc (`detail.markdown`) + optional `detail.metadata`. No items. Supports headings/lists/bold/code/blockquotes; links clickable; text selectable; code blocks get copy button; images open in lightbox. ↑/↓ scroll, PageUp/PageDown jump page. `detail.wide:true` widens window. Query keystrokes still send `query` (re-render per query), or use `inputMode:"submit"` + stream via `detail.append` (§9) for chat-style.
 - **chat**: message feed; item = message (`title`=author, `subtitle`=body, `icon`=avatar URL, `accessories`=timestamp, `images`=HTTP(S) attachment URLs). Pair with `inputMode:"submit"`; Enter → `submitQuery`. Auto-follows bottom while reading latest.
 - **form**: see below.
-- **preview pane (split)**: set `preview.enabled:true` on list/grid — items left, selected item's `preview.markdown`/`metadata` right; window widens, restores on exit. Ignored for detail/form.
+- **preview pane (split)**: set frame-level `preview.enabled:true` on list/grid — items left, selected item's `preview.markdown`/`metadata` right. The window widens by default; set frame-level `preview.wide:false` to keep normal width. Item-level preview objects contain content only. Ignored for detail/form.
 
 ### Form
 
@@ -300,7 +300,7 @@ Launcher owns selection (react to `select` optionally, e.g. lazy preview — usu
 
 ## 10. Icons
 
-Name (case-insensitive, trailing `_rounded/_outlined/_sharp/_filled` ignored; unknown→generic) | hex color (`#F80`,`#FF8800`,`#AARRGGBB`, renders swatch) | `file://`/`https://` raster (no SVG).
+Name (case-insensitive, trailing `_rounded/_outlined/_sharp/_filled` ignored; unknown→generic) | hex color (`#F80`,`#FF8800`,`#AARRGGBB`, renders swatch) | `data:image/...` URI (≤2 MB) | `file://`/`https://` raster or SVG.
 
 ```
 search star favorite heart home settings gear folder file document link globe world
@@ -385,7 +385,7 @@ except Exception as e:
 - Use commands (§5.1) for clipboard/open/hide/toast — never shell out.
 - cwd = plugin folder (put `config.json` there).
 - Deps auto-install: Python `pip`/`requirements.txt`; Node/Bun `package.json` (§3) — lazy-load heavy ones.
-- Icons: §10 name, `#RRGGBB`, or raster URL only.
+- Icons: §10 name, `#RRGGBB`, `data:image/...` URI (≤2 MB), or raster/SVG URL.
 - Prefer `metadata` rows (§6.1) over markdown tables.
 - Same-`section` items must stay adjacent.
 - `canGoBack:true` on sub-screens only (handle `back`); never on a dead-end frame.

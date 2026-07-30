@@ -385,7 +385,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
   "grid": { "columns": 4, "aspectRatio": 1.0 }, // only used by "grid" view
   "detail": { "markdown": "# Hi", "metadata": [/* see §7.1 */] }, // only used by "detail" view
   "form": {/* see §8, form */}, // only used by "form" view
-  "preview": { "enabled": true }, // split preview pane (list/grid)
+  "preview": { "enabled": true, "wide": false }, // split preview pane; wide defaults to true
   "canGoBack": false, // Escape sends {"type":"back"} instead of exiting
   "actions": [/* frame-level Ctrl+K actions, see §9 */],
   "selectId": "item-3", // move the highlight to this item
@@ -421,6 +421,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `detail.wide`      | bool           | Widens the launcher window for the document (like the split preview does), restoring it when you leave. Default false.                                                                                                                                                           |
 | `form`             | object         | The form definition when `view` is `"form"`. See §8.                                                                                                                                                                                                                             |
 | `preview.enabled`  | bool           | When `true` (list/grid only), a split preview pane appears on the right showing the **selected item's** preview. The launcher window widens automatically and restores when you leave. (You may also pass `"preview": true`.)                                                    |
+| `preview.wide`     | bool           | Controls whether an enabled split preview widens the launcher window. Default true. Set false on the frame's `preview` object to keep the normal window width; item-level `preview` objects only provide content and do not control window sizing.                                  |
 | `canGoBack`        | bool           | When `true`, **Escape sends `{"type":"back"}`** (render your previous screen) instead of exiting the plugin. Leave it false on your root screen. Default false.                                                                                                                  |
 | `actions`          | array          | **Frame-level actions** shown in the Ctrl+K palette regardless of the highlighted item (refresh, create, sign out…), after the item's own actions. Same shape as item actions (§9), fired with an empty `id`.                                                                    |
 | `selectId`         | string         | Moves the highlight to the item with this id — keep the cursor on the same row after a refresh/reorder (`rev: 0` re-render).                                                                                                                                                     |
@@ -461,7 +462,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `id`          | string             | **Give every item a stable, unique id.** It's echoed back in `select`/`action`.                                                                                                                                                                                                                      |
 | `title`       | string             | Primary line. May contain `**bold**` and `` `code` `` spans — anything more is literal text.                                                                                                                                                                                                         |
 | `subtitle`    | string             | Secondary line (dimmed). Same markdown-lite subset.                                                                                                                                                                                                                                                  |
-| `icon`        | string             | Icon name (§11), a `#RRGGBB` color (renders a swatch), or a `file://` / `https://` **raster** image (PNG/JPG; no SVG).                                                                                                                                                                               |
+| `icon`        | string             | Icon name (§11), a `#RRGGBB` color (renders a swatch), a `data:image/...` URI (up to 2 MB), or a `file://` / `https://` raster or SVG image.                                                                                                                                                          |
 | `section`     | string             | List view: items are grouped under a slim header whenever this value differs from the previous item's. Keep items with the same section adjacent.                                                                                                                                                    |
 | `lines`       | int 1–3            | List view: how many lines the subtitle may wrap to. Default 1.                                                                                                                                                                                                                                       |
 | `progress`    | number 0–1         | List view: renders a thin progress bar under the row (downloads, timers).                                                                                                                                                                                                                            |
@@ -654,7 +655,10 @@ Set `"preview": {"enabled": true}` on a `list` or `grid` frame. The launcher
 shows the items on the left and, on the right, the **selected item's**
 `preview.markdown` and/or `preview.metadata` (§7.1). As the user arrows through
 items, the pane updates from each item's `preview`. The window widens to fit and
-restores when the plugin exits. (Ignored for `detail` and `form` views.)
+restores when the plugin exits. Set `"preview": {"enabled": true, "wide": false}`
+on the **frame** to keep the normal launcher width. A `wide` field inside an
+item's `preview` is ignored because item previews contain content only. (The
+frame preview is ignored for `detail` and `form` views.)
 
 ---
 
@@ -732,7 +736,8 @@ a generic plugin icon. You can also pass:
 
 - a **hex color** (`#F80`, `#FF8800`, `#AARRGGBB`) — renders a rounded color
   swatch (color pickers, tag colors), or
-- a `file://` or `https://` URL to a **raster** image (PNG/JPG — **not SVG**).
+- a `data:image/...` URI (base64 or percent-encoded, up to 2 MB), or
+- a `file://` or `https://` URL to a raster image (PNG/JPG/WebP) or SVG.
 
 Available names:
 
@@ -915,7 +920,7 @@ except Exception as e:
 - [ ] Use **commands** (§5.2) for clipboard / open / hide / toast — don't shell out to `clip`/`start`.
 - [ ] Remember the working directory is the **plugin folder** (put `config.json` there).
 - [ ] Need libraries? Tabame auto-installs them on first run — **Python:** `"pip"` / `requirements.txt`; **Node/Bun:** a `package.json` (§4.1). Lazy-load heavy deps so a failed install degrades gracefully.
-- [ ] Icons must be a name from §11, a `#RRGGBB` color, or a `file://`/`https://` **raster** image.
+- [ ] Icons must be a name from §11, a `#RRGGBB` color, a `data:image/...` URI (up to 2 MB), or a `file://`/`https://` raster or SVG image.
 - [ ] Prefer `metadata` rows (§7.1) over markdown tables for structured facts.
 - [ ] Keep items sharing a `section` adjacent — headers appear on value _changes_ (lists **and** grids).
 - [ ] Set `canGoBack: true` on sub-screens (and handle `back`); leave it off your root screen.
