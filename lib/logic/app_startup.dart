@@ -12,6 +12,7 @@ import '../models/globals.dart';
 import '../models/settings.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
+import '../services/browser_bridge_service.dart';
 import 'error_handler.dart';
 
 class AppStartup {
@@ -61,6 +62,10 @@ class AppStartup {
 
   static Future<void> registerServices() async {
     await registerAll();
+    if (user.page == TPage.quickmenu) {
+      await BrowserBridgeService.instance.initialize();
+      Debug.add("Registered: Browser bridge");
+    }
     if (File("${WinUtils.getTabameAppDataFolder()}\\enable_debug.txt").existsSync()) {
       Debug.methodDebug(clean: true);
     }

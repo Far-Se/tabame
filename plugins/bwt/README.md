@@ -6,7 +6,7 @@ There is no command menu or drill-down: the tab list is the plugin's root view.
 ## Pairing
 
 Pair the `extension/tabame-connector` extension once through the main `browser`
-plugin. Both plugins read:
+plugin. Tabame's app-owned bridge stores its shared pairing data in:
 
 ```text
 %localappdata%\Tabame\browser-bridge.json
@@ -17,9 +17,9 @@ No second token or extension configuration is required.
 ## Install
 
 1. Copy this folder to `%localappdata%\Tabame\plugins\bwt\`.
-2. Ensure Node.js is on `PATH`. Tabame installs the `ws` dependency on first
-   launch.
-3. Reopen the launcher and type **`bwt`**.
+2. Ensure Node.js is on `PATH`.
+3. Open **Launcher Plugins** and enable **Persistent browser connector**.
+4. Reopen the launcher and type **`bwt`**.
 
 ## Controls
 

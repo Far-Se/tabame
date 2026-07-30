@@ -1,9 +1,0 @@
-{
-  "name": "tabame-browser-bridge",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Loopback WebSocket bridge for the Tabame Browser launcher plugin",
-  "dependencies": {
-    "ws": "^8.21.1"
-  }
-}

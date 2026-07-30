@@ -704,7 +704,7 @@ class PluginCommand {
 
   static const Set<String> knownCommands = <String>{
     'copy', 'paste', 'open', 'hide', 'toast', 'setquery', //
-    'storage', 'clipboardread', 'clipboardhistory', 'notify', 'background', 'oauth',
+    'storage', 'clipboardread', 'clipboardhistory', 'notify', 'background', 'oauth', 'browserbridge',
   };
 
   /// Parses a decoded `{"type":"command"}` message. Returns null when the

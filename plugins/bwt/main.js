@@ -1,30 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-const crypto = require("crypto");
-const fs = require("fs");
-const path = require("path");
-const { WebSocketServer } = require("ws");
-
-const DEFAULT_PORT = 17373;
-const CONFIG_PATH =
-  process.env.TABAME_BROWSER_BRIDGE_CONFIG ||
-  (process.env.LOCALAPPDATA
-    ? path.join(process.env.LOCALAPPDATA, "Tabame", "browser-bridge.json")
-    : path.join(process.cwd(), "browser-bridge.json"));
-const LEGACY_CONFIG_PATH = process.env.LOCALAPPDATA
-  ? path.join(
-      process.env.LOCALAPPDATA,
-      "Tabame",
-      "plugins",
-      "browser",
-      "bridge-config.json",
-    )
-  : null;
 const REQUEST_TIMEOUT_MS = 15_000;
-const EXTENSION_ORIGIN = /^chrome-extension:\/\/[a-p]{32}\/?$/;
-const PORT_RETRY_LIMIT = 30;
-const PORT_RETRY_DELAY_MS = 100;
+const config = { token: "", port: 17373 };
 
 function send(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
@@ -42,227 +20,99 @@ function log(...parts) {
   console.error(...parts);
 }
 
-function readOrCreateSharedConfig() {
-  function readConfig(filePath) {
-    if (!filePath) return null;
-    try {
-      const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
-      const port = Number(parsed.port);
-      if (
-        typeof parsed.token === "string" &&
-        parsed.token.length >= 32 &&
-        Number.isInteger(port) &&
-        port >= 1024 &&
-        port <= 65535
-      ) {
-        return { token: parsed.token, port };
-      }
-    } catch {
-      // Missing and invalid candidates are handled below.
-    }
-    return null;
-  }
-
-  const shared = readConfig(CONFIG_PATH);
-  if (shared) return shared;
-
-  const config =
-    readConfig(LEGACY_CONFIG_PATH) || {
-      port: DEFAULT_PORT,
-      token: crypto.randomBytes(32).toString("base64url"),
-    };
-  fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
-  fs.writeFileSync(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, {
-    encoding: "utf8",
-    mode: 0o600,
-  });
-  return config;
-}
-
-function safeEqual(left, right) {
-  const a = Buffer.from(String(left || "").replace(/\s+/g, ""));
-  const b = Buffer.from(String(right || "").replace(/\s+/g, ""));
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
-}
-
 class BrowserBridge {
   constructor(config, onStateChange, onEvent) {
     this.config = config;
     this.onStateChange = onStateChange;
     this.onEvent = onEvent;
-    this.client = null;
-    this.clientInfo = null;
-    this.server = null;
+    this.connected = false;
+    this.enabled = false;
+    this.running = false;
+    this.clientInfo = {};
     this.pending = new Map();
     this.startError = null;
-    this.retryTimer = null;
-    this.closed = false;
+    this.requestCounter = 0;
   }
 
-  start(attempt = 0) {
-    if (this.closed) return;
-    const server = new WebSocketServer({
-      host: "127.0.0.1",
-      port: this.config.port,
-      path: "/tabame",
-      maxPayload: 256 * 1024,
-    });
+  start() {
+    void this.refreshStatus();
+  }
 
-    server.on("connection", (socket, request) =>
-      this.handleConnection(socket, request),
-    );
-    server.once("listening", () => {
-      if (this.closed) {
-        server.close();
-        return;
-      }
-      this.server = server;
-      this.startError = null;
-      log(`Browser bridge listening on 127.0.0.1:${this.config.port}`);
+  refreshStatus() {
+    return this.callHost("status").then((status) => {
+      this.applyStatus(status);
       this.onStateChange();
-    });
-    server.once("error", (error) => {
-      if (
-        error.code === "EADDRINUSE" &&
-        attempt < PORT_RETRY_LIMIT &&
-        !this.closed
-      ) {
-        this.retryTimer = setTimeout(
-          () => this.start(attempt + 1),
-          PORT_RETRY_DELAY_MS,
-        );
-        return;
-      }
-      this.startError = error.message;
-      log("Browser bridge error:", error.message);
-      this.onStateChange();
+      return status;
     });
   }
 
-  handleConnection(socket, request) {
-    const origin = request.headers.origin || "";
-    if (!EXTENSION_ORIGIN.test(origin)) {
-      socket.close(1008, "Extension origin required");
+  handleHostMessage(message) {
+    if (typeof message.requestId === "string") {
+      const requestId = message.requestId;
+      const request = this.pending.get(requestId);
+      if (!request) return;
+      clearTimeout(request.timer);
+      this.pending.delete(requestId);
+      if (message.ok) request.resolve(message.result);
+      else request.reject(new Error(message.error || "Browser bridge request failed"));
       return;
     }
 
-    let authenticated = false;
-    const authTimer = setTimeout(() => {
-      if (!authenticated) socket.close(1008, "Authentication timeout");
-    }, 5_000);
-
-    socket.on("message", (data) => {
-      let message;
-      try {
-        message = JSON.parse(data.toString());
-      } catch {
-        socket.close(1003, "JSON required");
-        return;
-      }
-
-      if (!authenticated) {
-        if (
-          message.type !== "hello" ||
-          message.protocol !== 1 ||
-          !safeEqual(message.token, this.config.token)
-        ) {
-          socket.close(1008, "Authentication failed");
-          return;
-        }
-        authenticated = true;
-        clearTimeout(authTimer);
-        if (this.client && this.client !== socket) {
-          this.client.close(1012, "Replaced by a new connector session");
-        }
-        this.client = socket;
-        this.clientInfo = {
-          extensionVersion: String(message.extensionVersion || "unknown"),
-          connectedAt: new Date().toISOString(),
-        };
-        socket.send(
-          JSON.stringify({
-            type: "welcome",
-            protocol: 1,
-            serverVersion: "0.1.0",
-          }),
-        );
-        this.onStateChange();
-        return;
-      }
-
-      this.handleMessage(socket, message);
-    });
-
-    socket.on("close", () => {
-      clearTimeout(authTimer);
-      if (this.client !== socket) return;
-      this.client = null;
-      this.clientInfo = null;
-      for (const pending of this.pending.values()) {
-        clearTimeout(pending.timer);
-        pending.reject(new Error("Browser connector disconnected"));
-      }
-      this.pending.clear();
+    if (message.event === "connection.changed") {
+      this.applyStatus(message.data || {});
       this.onStateChange();
-    });
-
-    socket.on("error", (error) => log("Connector socket error:", error.message));
-  }
-
-  handleMessage(socket, message) {
-    if (message.type === "ping") {
-      socket.send(JSON.stringify({ type: "pong", at: Date.now() }));
       return;
     }
-    if (message.type === "response" && typeof message.id === "string") {
-      const pending = this.pending.get(message.id);
-      if (!pending) return;
-      clearTimeout(pending.timer);
-      this.pending.delete(message.id);
-      if (message.ok) pending.resolve(message.result);
-      else pending.reject(new Error(message.error || "Browser request failed"));
-      return;
-    }
-    if (message.type === "event" && typeof message.event === "string") {
+    if (typeof message.event === "string") {
       this.onEvent(message.event, message.data || {});
     }
   }
 
-  get connected() {
-    return Boolean(this.client && this.client.readyState === this.client.OPEN);
+  applyStatus(status) {
+    this.enabled = Boolean(status.enabled);
+    this.running = Boolean(status.running);
+    this.connected = Boolean(status.connected);
+    if (Number.isInteger(Number(status.port))) this.config.port = Number(status.port);
+    if (typeof status.token === "string") this.config.token = status.token;
+    this.clientInfo = {
+      extensionVersion: String(status.extensionVersion || "unknown"),
+      browser: String(status.browser || "unknown"),
+      connectedAt: status.connectedAt || null,
+    };
+    this.startError = status.error
+      ? String(status.error)
+      : !this.enabled
+        ? "The persistent browser connector is disabled. Enable it in Launcher Plugins."
+        : !this.running
+          ? "The persistent browser connector is starting."
+          : null;
   }
 
-  request(method, params = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
-    if (!this.connected) {
-      return Promise.reject(
-        new Error("Waiting for the globally paired Tabame Connector."),
-      );
-    }
-    const id = crypto.randomUUID();
+  callHost(op, fields = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+    const requestId = `bwt-${process.pid}-${Date.now()}-${this.requestCounter++}`;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error(`Browser request timed out: ${method}`));
+        this.pending.delete(requestId);
+        reject(new Error(`Tabame browser bridge timed out: ${op}`));
       }, timeoutMs);
-      this.pending.set(id, { resolve, reject, timer });
-      this.client.send(JSON.stringify({ type: "request", id, method, params }));
+      this.pending.set(requestId, { resolve, reject, timer });
+      command("browserBridge", { op, requestId, ...fields, timeoutMs });
     });
   }
 
+  request(method, params = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+    return this.callHost("request", { method, params }, timeoutMs);
+  }
+
   close() {
-    this.closed = true;
-    clearTimeout(this.retryTimer);
     for (const pending of this.pending.values()) {
       clearTimeout(pending.timer);
-      pending.reject(new Error("Browser tabs plugin closed"));
+      pending.reject(new Error("Browser plugin closed"));
     }
     this.pending.clear();
-    if (this.client) this.client.close(1001, "Launcher plugin closed");
-    if (this.server) this.server.close();
   }
 }
 
-const config = readOrCreateSharedConfig();
 const state = {
   initialized: false,
   query: "",
@@ -422,10 +272,20 @@ function filterTabs(tabs, text) {
 }
 
 function renderWaiting(rev) {
+  if (!bridge.enabled) {
+    render(rev, "detail", {
+      detail: {
+        markdown:
+          "# Persistent browser connector is off\n\nOpen **Launcher Plugins** and enable **Persistent browser connector**, then return to `bwt`.",
+      },
+      actions: [{ id: "refresh", title: "Check again", icon: "refresh" }],
+    });
+    return;
+  }
   if (bridge.startError) {
     render(rev, "detail", {
       detail: {
-        markdown: `# Browser bridge unavailable\n\n${escapeMarkdown(bridge.startError)}\n\nClose any other browser launcher plugin and reopen \`bwt\`.`,
+        markdown: `# Browser bridge unavailable\n\n${escapeMarkdown(bridge.startError)}\n\nCheck the connector status in **Launcher Plugins**.`,
       },
       actions: [{ id: "refresh", title: "Try again", icon: "refresh" }],
     });
@@ -539,6 +399,7 @@ async function handleAction(id, action) {
     if (id.startsWith("tab:")) {
       await handleTabAction(id, action);
     } else if (action === "refresh") {
+      await bridge.refreshStatus();
       await renderTabs(0, state.query);
     }
   } catch (error) {
@@ -576,6 +437,9 @@ async function handleLine(line) {
   switch (message.type) {
     case "close":
       shutdown();
+      break;
+    case "browserBridge":
+      bridge.handleHostMessage(message);
       break;
     case "init":
     case "query":

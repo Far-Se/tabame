@@ -7,6 +7,7 @@ import '../../../pages/launcher/plugins/plugin_gallery.dart';
 import '../../../pages/launcher/plugins/plugin_icons.dart';
 import '../../../pages/launcher/plugins/plugin_manifest.dart';
 import '../../../pages/launcher/plugins/plugin_registry.dart';
+import '../../../services/browser_bridge_service.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 import '../../widgets/windows_scroll.dart';
@@ -268,7 +269,6 @@ Build a plugin with your favorite AI coding assistant:
   Widget _buildInstalled() {
     final List<PluginManifest> plugins = PluginRegistry.manifests;
     final int enabledCount = plugins.where((PluginManifest m) => m.enabled).length;
-    if (plugins.isEmpty) return _buildInstalledEmpty();
 
     return WindowsScrollView(
       child: Padding(
@@ -277,19 +277,30 @@ Build a plugin with your favorite AI coding assistant:
           crossAxisAlignment: C.start,
           children: <Widget>[
             _buildSectionLabel(
+              label: "Browser integration",
+              countText: "Optional",
+              icon: Icons.language_rounded,
+            ),
+            const SizedBox(height: 8),
+            const _BrowserBridgeCard(),
+            const SizedBox(height: 16),
+            _buildSectionLabel(
               label: "Installed",
               countText: "$enabledCount/${plugins.length}",
               icon: Icons.extension_rounded,
             ),
             const SizedBox(height: 8),
-            for (final PluginManifest m in plugins) ...<Widget>[
-              _PluginCard(
-                manifest: m,
-                busy: _busyId == m.id,
-                onToggle: (bool value) => _toggle(m, value),
-              ),
-              const SizedBox(height: 8),
-            ],
+            if (plugins.isEmpty)
+              _buildInstalledEmpty()
+            else
+              for (final PluginManifest m in plugins) ...<Widget>[
+                _PluginCard(
+                  manifest: m,
+                  busy: _busyId == m.id,
+                  onToggle: (bool value) => _toggle(m, value),
+                ),
+                const SizedBox(height: 8),
+              ],
           ],
         ),
       ),
@@ -297,9 +308,15 @@ Build a plugin with your favorite AI coding assistant:
   }
 
   Widget _buildInstalledEmpty() {
-    return Center(
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Design.text.withAlpha(7),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Design.text.withAlpha(16)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(18),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -538,6 +555,136 @@ Build a plugin with your favorite AI coding assistant:
         const SizedBox(width: 8),
         Expanded(child: Divider(height: 1, color: Design.text.withAlpha(20))),
       ],
+    );
+  }
+}
+
+class _BrowserBridgeCard extends StatelessWidget {
+  const _BrowserBridgeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<BrowserBridgeStatus>(
+      valueListenable: BrowserBridgeService.instance.statusNotifier,
+      builder: (BuildContext context, BrowserBridgeStatus status, Widget? child) {
+        final Color accent = Design.accent;
+        final Color text = Design.text;
+        final bool enabled = status.enabled;
+        final (String, Color, IconData) state = switch (status.phase) {
+          BrowserBridgePhase.disabled => (
+              'Off · browser plugins cannot connect',
+              text.withAlpha(120),
+              Icons.power_settings_new_rounded,
+            ),
+          BrowserBridgePhase.starting => (
+              'Starting on 127.0.0.1:${status.port}',
+              accent,
+              Icons.hourglass_top_rounded,
+            ),
+          BrowserBridgePhase.waiting => (
+              'On · waiting for the Chromium extension',
+              const Color(0xFFD18B47),
+              Icons.link_off_rounded,
+            ),
+          BrowserBridgePhase.connected => (
+              'Connected${status.extensionVersion.isEmpty ? '' : ' · extension ${status.extensionVersion}'}',
+              const Color(0xFF3D9B72),
+              Icons.link_rounded,
+            ),
+          BrowserBridgePhase.error => (
+              status.error.isEmpty ? 'Could not start the connector' : status.error,
+              const Color(0xFFC86464),
+              Icons.error_outline_rounded,
+            ),
+        };
+
+        return Container(
+          padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
+          decoration: BoxDecoration(
+            color: enabled ? accent.withAlpha(10) : text.withAlpha(7),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: enabled ? accent.withAlpha(30) : text.withAlpha(16)),
+          ),
+          child: Row(
+            crossAxisAlignment: C.start,
+            children: <Widget>[
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: (enabled ? accent : text).withAlpha(enabled ? 28 : 14),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.language_rounded, size: 16, color: enabled ? accent : text.withAlpha(130)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: C.start,
+                  children: <Widget>[
+                    Text(
+                      'Persistent browser connector',
+                      style: TextStyle(
+                        fontSize: Design.baseFontSize + 1.5,
+                        fontWeight: FontWeight.w700,
+                        color: text.withAlpha(enabled ? 235 : 150),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Keeps the extension paired while Tabame is running, so browser plugins open instantly.',
+                      style: TextStyle(
+                        fontSize: Design.baseFontSize - 0.5,
+                        height: 1.25,
+                        color: text.withAlpha(enabled ? 140 : 100),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Row(
+                      children: <Widget>[
+                        Icon(state.$3, size: 12, color: state.$2),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            state.$1,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: Design.baseFontSize - 1,
+                              fontWeight: FontWeight.w600,
+                              color: state.$2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 40,
+                height: 30,
+                child: Center(
+                  child: status.phase == BrowserBridgePhase.starting
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: accent),
+                        )
+                      : Transform.scale(
+                          scale: 0.7,
+                          child: Switch(
+                            value: enabled,
+                            activeThumbColor: accent,
+                            onChanged: (bool value) => BrowserBridgeService.instance.setEnabled(value),
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

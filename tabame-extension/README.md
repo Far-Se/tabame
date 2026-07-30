@@ -2,8 +2,8 @@
 
 Manifest V3 Chromium extension that gives the Tabame launcher controlled access
 to the current browser profile. The bridge is loopback-only, authenticates with
-a generated token, and accepts requests only while the `browser` launcher plugin
-is running.
+a generated token, and accepts requests only while Tabame's optional persistent
+browser connector is enabled.
 
 ## Install
 
@@ -11,13 +11,14 @@ is running.
 2. Enable **Developer mode**.
 3. Choose **Load unpacked** and select this `extension/tabame-connector` folder.
 4. Install the companion launcher plugin from `plugins/browser`.
-5. Open Tabame, type `browser`, and open **Connection & pairing**.
-6. Copy the token, click the extension icon, paste the token, and save.
+5. In Tabame, open **Launcher Plugins** and enable **Persistent browser
+   connector**.
+6. Type `browser` and open **Connection & pairing**.
+7. Copy the token, click the extension icon, paste the token, and save.
 
-The launcher grants the pairing bridge up to five minutes of background time,
-so clicking the Chromium toolbar does not tear down the connection mid-setup.
-If the launcher was already closed, the token is still saved: type `browser`
-again and the extension will connect automatically.
+The bridge remains available while Tabame is running, independently of whether
+a browser launcher plugin is open. Turning the setting off closes the loopback
+server and disconnects the extension.
 
 Chromium may ask for local-network permission the first time the extension
 connects. The connection only targets `127.0.0.1:17373`.
@@ -30,7 +31,8 @@ connects. The connection only targets `127.0.0.1:17373`.
 - Open a temporary inactive ChatGPT analytics tab, read the Codex remaining
   percentage, and close the temporary tab.
 - Push tab-change events to the launcher for live refreshes.
-- Wake periodically to reconnect after Chromium suspends the MV3 service worker.
+- Maintain the connection while Tabame is running and wake periodically after
+  Chromium suspends the MV3 service worker.
 
 ## Security
 
@@ -49,8 +51,7 @@ The versioned request/response and event schema is documented in
 
 ## Professional roadmap
 
-- Move the bridge into Tabame's always-running host or provide a signed native
-  messaging host for instant wake-up and packaged installation.
+- Provide a signed native messaging host for packaged browser installation.
 - Add optional, separately granted capabilities for bookmarks, history,
   downloads, reading list, and current-page/selection handoff.
 - Add named browser sessions and tab-group save/restore.

@@ -116,7 +116,7 @@ If the app draws incorrectly, usually when your PC is under stress (cpu 100%) ri
 <tr>
 <td width="33%" align="center">
 <img src="https://raw.githubusercontent.com/far-se/tabame/main/resources/quickmenu1.webp" width="100%"><br/>
-<sub><b>Multiple designs</b> &middot; 18 Different Designs that are fully customizable.</sub>
+<sub><b>Multiple designs</b> &middot; 28 Different Designs that are fully customizable.</sub>
 </td>
 <td width="33%" align="center">
 <img src="https://raw.githubusercontent.com/far-se/tabame/main/resources/quickmenu2.webp" width="100%"><br/>
@@ -181,7 +181,7 @@ If things get crowded you can move pinned apps and tray icons onto the same row.
 <tr>
 <td width="33%" align="center">
 <img src="https://raw.githubusercontent.com/far-se/tabame/main/resources/launcher1.webp" width="100%"><br/>
-<sub><b>Multiple designs</b> &middot; 12 Different Designs each with a unique look and feel.</sub>
+<sub><b>Multiple designs</b> &middot; 22 Different Designs each with a unique look and feel.</sub>
 </td>
 <td width="33%" align="center">
 <img src="https://raw.githubusercontent.com/far-se/tabame/main/resources/launcher2.webp" width="100%"><br/>

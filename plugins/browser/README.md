@@ -5,20 +5,20 @@ Control Chromium through the companion **Tabame Connector** extension.
 ## Install
 
 1. Copy this folder to `%localappdata%\Tabame\plugins\browser\`.
-2. Make sure Node.js is on `PATH`. Tabame installs the small `ws` dependency on
-   first launch.
+2. Make sure Node.js is on `PATH`.
 3. Load `extension/tabame-connector` as an unpacked Chromium extension.
-4. Reopen the Tabame launcher and type **`browser`**.
-5. Open **Connection & pairing**, copy the token, and paste it into the
+4. Open **Launcher Plugins** and enable **Persistent browser connector**.
+5. Reopen the Tabame launcher and type **`browser`**.
+6. Open **Connection & pairing**, copy the token, and paste it into the
    extension popup.
 
-The pairing screen keeps its loopback bridge alive for up to five minutes after
-the launcher loses focus, allowing the Chromium toolbar popup to connect. The
-background process exits immediately after pairing succeeds.
+The optional connector is owned by Tabame rather than this plugin. Once enabled,
+it stays paired while Tabame is running, so browser plugins open without waiting
+for an extension reconnect.
 
-The plugin stores its random pairing token in
+Tabame stores its random pairing token in
 `%localappdata%\Tabame\browser-bridge.json`. Browser-capable launcher plugins
-such as `browser` and `bwt` share that token and port, so the Chromium extension
+such as `browser` and `bwt` use the app-owned bridge, so the Chromium extension
 is paired once per Windows account/browser profile. Existing
 `plugins\browser\bridge-config.json` credentials migrate automatically.
 
@@ -39,4 +39,5 @@ pin/unpin, reload, duplicate, and copy URL.
 - Protocol: JSON request/response frames, version 1
 - Authentication: generated 256-bit token
 - Origin policy: `chrome-extension://` origins only
-- Lifetime: the server exists only while the launcher plugin is active
+- Lifetime: the server stays active while Tabame is running and the optional
+  **Persistent browser connector** setting is enabled

@@ -8,6 +8,7 @@ import '../../../logic/error_handler.dart';
 import '../../../models/clipboard_history.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
+import '../../../services/browser_bridge_service.dart';
 import 'plugin_debug.dart';
 import 'plugin_manifest.dart';
 import 'plugin_protocol.dart';
@@ -25,7 +26,9 @@ import 'plugin_storage.dart';
 /// `Process.start(..., runInShell: false)`, decode stdout line-by-line, write
 /// events to stdin, and stop by asking nicely before killing.
 class LauncherPluginHost {
-  LauncherPluginHost({required this.onFrame, required this.onCommand});
+  LauncherPluginHost({required this.onFrame, required this.onCommand}) {
+    _browserBridgeSub = BrowserBridgeService.instance.events.listen(_handleBrowserBridgeEvent);
+  }
 
   /// Called on the UI isolate with every accepted render frame (and with an
   /// error frame if the process dies unexpectedly).
@@ -44,6 +47,7 @@ class LauncherPluginHost {
   PluginManifest? _active;
   StreamSubscription<String>? _stdoutSub;
   StreamSubscription<String>? _stderrSub;
+  late final StreamSubscription<BrowserBridgeEvent> _browserBridgeSub;
 
   /// Dev mode: watches the plugin folder and hot-restarts the process on save.
   StreamSubscription<FileSystemEvent>? _devWatchSub;
@@ -662,8 +666,87 @@ class LauncherPluginHost {
         if (!live) return true;
         _handleOAuthCommand(command);
         return true;
+      case 'browserbridge':
+        if (!live) return true;
+        _handleBrowserBridgeCommand(command);
+        return true;
     }
     return false;
+  }
+
+  void _handleBrowserBridgeCommand(PluginCommand command) {
+    final Object? requestId = command.data['requestId'];
+    final Object? rawOp = command.data['op'];
+    final String op = rawOp is String ? rawOp.toLowerCase() : 'status';
+
+    if (op == 'status') {
+      _send(<String, Object?>{
+        'type': 'browserBridge',
+        if (requestId != null) 'requestId': requestId,
+        'ok': true,
+        'result': BrowserBridgeService.instance.status.toJson(
+          token: BrowserBridgeService.instance.pairingToken,
+        ),
+      });
+      return;
+    }
+
+    if (op != 'request') {
+      _send(<String, Object?>{
+        'type': 'browserBridge',
+        if (requestId != null) 'requestId': requestId,
+        'ok': false,
+        'error': 'Unknown browserBridge operation: $op',
+      });
+      return;
+    }
+
+    final Object? rawMethod = command.data['method'];
+    if (rawMethod is! String || rawMethod.isEmpty) {
+      _send(<String, Object?>{
+        'type': 'browserBridge',
+        if (requestId != null) 'requestId': requestId,
+        'ok': false,
+        'error': 'browserBridge request requires a method',
+      });
+      return;
+    }
+    final Object? rawParams = command.data['params'];
+    final Map<String, Object?> params =
+        rawParams is Map ? rawParams.cast<String, Object?>() : const <String, Object?>{};
+    final Object? rawTimeout = command.data['timeoutMs'];
+    final int timeoutMs = (rawTimeout is num ? rawTimeout.toInt() : 30000).clamp(1000, 60000);
+
+    unawaited(BrowserBridgeService.instance
+        .request(
+      rawMethod,
+      params: params,
+      timeout: Duration(milliseconds: timeoutMs),
+    )
+        .then((Object? result) {
+      _send(<String, Object?>{
+        'type': 'browserBridge',
+        if (requestId != null) 'requestId': requestId,
+        'ok': true,
+        'result': result,
+      });
+    }).catchError((Object error) {
+      _send(<String, Object?>{
+        'type': 'browserBridge',
+        if (requestId != null) 'requestId': requestId,
+        'ok': false,
+        'error': error.toString().replaceFirst(RegExp(r'^(Bad state|TimeoutException):\s*'), ''),
+      });
+    }));
+  }
+
+  void _handleBrowserBridgeEvent(BrowserBridgeEvent event) {
+    if (!isActive || _closing) return;
+    _send(<String, Object?>{
+      'type': 'browserBridge',
+      'event': event.name,
+      'data': event.data,
+    });
   }
 
   /// Starts a localhost OAuth callback receiver owned by the host. Plugins
@@ -943,6 +1026,7 @@ class LauncherPluginHost {
 
   /// Fire-and-forget shutdown for [State.dispose].
   void dispose() {
+    unawaited(_browserBridgeSub.cancel());
     unawaited(deactivate());
   }
 }

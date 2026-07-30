@@ -1,22 +1,10 @@
 #!/usr/bin/env node
 "use strict";
 
-const crypto = require("crypto");
-const fs = require("fs");
-const path = require("path");
-const { WebSocketServer } = require("ws");
-
-const DEFAULT_PORT = 17373;
-const LEGACY_CONFIG_PATH = path.join(process.cwd(), "bridge-config.json");
-const CONFIG_PATH =
-  process.env.TABAME_BROWSER_BRIDGE_CONFIG ||
-  (process.env.LOCALAPPDATA
-    ? path.join(process.env.LOCALAPPDATA, "Tabame", "browser-bridge.json")
-    : LEGACY_CONFIG_PATH);
 const ANALYTICS_URL =
   "https://chatgpt.com/codex/cloud/settings/analytics#usage";
 const REQUEST_TIMEOUT_MS = 30_000;
-const EXTENSION_ORIGIN = /^chrome-extension:\/\/[a-p]{32}$/;
+const config = { token: "", port: 17373 };
 
 function send(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
@@ -34,211 +22,104 @@ function log(...parts) {
   console.error(...parts);
 }
 
-function loadOrCreateConfig() {
-  function readConfig(filePath) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
-      const port = Number(parsed.port);
-      if (
-        typeof parsed.token === "string" &&
-        parsed.token.length >= 32 &&
-        Number.isInteger(port) &&
-        port >= 1024 &&
-        port <= 65535
-      ) {
-        return { token: parsed.token, port };
-      }
-    } catch {
-      // Missing and invalid candidates are handled by migration/generation.
-    }
-    return null;
-  }
-
-  const shared = readConfig(CONFIG_PATH);
-  if (shared) return shared;
-
-  const migrated =
-    CONFIG_PATH !== LEGACY_CONFIG_PATH ? readConfig(LEGACY_CONFIG_PATH) : null;
-  const config =
-    migrated || {
-      port: DEFAULT_PORT,
-      token: crypto.randomBytes(32).toString("base64url"),
-    };
-
-  try {
-    fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
-    fs.writeFileSync(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, {
-      encoding: "utf8",
-      mode: 0o600,
-    });
-  } catch (error) {
-    throw new Error(`Cannot write shared browser pairing config: ${error.message}`);
-  }
-  return config;
-}
-
-function safeEqual(left, right) {
-  const a = Buffer.from(String(left || "").replace(/\s+/g, ""));
-  const b = Buffer.from(String(right || "").replace(/\s+/g, ""));
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
-}
-
 class BrowserBridge {
   constructor(config, onStateChange, onEvent) {
     this.config = config;
     this.onStateChange = onStateChange;
     this.onEvent = onEvent;
-    this.client = null;
-    this.clientInfo = null;
-    this.server = null;
+    this.connected = false;
+    this.enabled = false;
+    this.running = false;
+    this.clientInfo = {};
     this.pending = new Map();
     this.startError = null;
+    this.requestCounter = 0;
   }
 
   start() {
-    this.server = new WebSocketServer({
-      host: "127.0.0.1",
-      port: this.config.port,
-      path: "/tabame",
-      maxPayload: 256 * 1024,
-    });
-    this.server.on("connection", (socket, request) =>
-      this.handleConnection(socket, request),
-    );
-    this.server.on("listening", () => {
-      log(`Browser bridge listening on 127.0.0.1:${this.config.port}`);
+    void this.refreshStatus();
+  }
+
+  refreshStatus() {
+    return this.callHost("status").then((status) => {
+      this.applyStatus(status);
       this.onStateChange();
-    });
-    this.server.on("error", (error) => {
-      this.startError = error.message;
-      log("Browser bridge error:", error.message);
-      this.onStateChange();
+      return status;
     });
   }
 
-  handleConnection(socket, request) {
-    const origin = request.headers.origin || "";
-    if (!EXTENSION_ORIGIN.test(origin)) {
-      socket.close(1008, "Extension origin required");
+  handleHostMessage(message) {
+    if (typeof message.requestId === "string") {
+      const requestId = message.requestId;
+      const request = this.pending.get(requestId);
+      if (!request) return;
+      clearTimeout(request.timer);
+      this.pending.delete(requestId);
+      if (message.ok) request.resolve(message.result);
+      else request.reject(new Error(message.error || "Browser bridge request failed"));
       return;
     }
 
-    let authenticated = false;
-    const authTimer = setTimeout(() => {
-      if (!authenticated) socket.close(1008, "Authentication timeout");
-    }, 5_000);
-
-    socket.on("message", (data) => {
-      let message;
-      try {
-        message = JSON.parse(data.toString());
-      } catch {
-        socket.close(1003, "JSON required");
-        return;
-      }
-
-      if (!authenticated) {
-        if (
-          message.type !== "hello" ||
-          message.protocol !== 1 ||
-          !safeEqual(message.token, this.config.token)
-        ) {
-          socket.close(1008, "Authentication failed");
-          return;
-        }
-        authenticated = true;
-        clearTimeout(authTimer);
-        if (this.client && this.client !== socket) {
-          this.client.close(1012, "Replaced by a new connector session");
-        }
-        this.client = socket;
-        this.clientInfo = {
-          extensionVersion: String(message.extensionVersion || "unknown"),
-          browser: String(message.userAgent || "unknown"),
-          origin,
-          connectedAt: new Date().toISOString(),
-        };
-        socket.send(
-          JSON.stringify({
-            type: "welcome",
-            protocol: 1,
-            serverVersion: "0.1.0",
-          }),
-        );
-        this.onStateChange();
-        return;
-      }
-
-      this.handleMessage(socket, message);
-    });
-
-    socket.on("close", () => {
-      clearTimeout(authTimer);
-      if (this.client !== socket) return;
-      this.client = null;
-      this.clientInfo = null;
-      for (const pending of this.pending.values()) {
-        clearTimeout(pending.timer);
-        pending.reject(new Error("Browser connector disconnected"));
-      }
-      this.pending.clear();
+    if (message.event === "connection.changed") {
+      this.applyStatus(message.data || {});
       this.onStateChange();
-    });
-
-    socket.on("error", (error) => log("Connector socket error:", error.message));
-  }
-
-  handleMessage(socket, message) {
-    if (message.type === "ping") {
-      socket.send(JSON.stringify({ type: "pong", at: Date.now() }));
       return;
     }
-
-    if (message.type === "response" && typeof message.id === "string") {
-      const pending = this.pending.get(message.id);
-      if (!pending) return;
-      clearTimeout(pending.timer);
-      this.pending.delete(message.id);
-      if (message.ok) pending.resolve(message.result);
-      else pending.reject(new Error(message.error || "Browser request failed"));
-      return;
-    }
-
-    if (message.type === "event" && typeof message.event === "string") {
+    if (typeof message.event === "string") {
       this.onEvent(message.event, message.data || {});
     }
   }
 
-  get connected() {
-    return Boolean(this.client && this.client.readyState === this.client.OPEN);
+  applyStatus(status) {
+    this.enabled = Boolean(status.enabled);
+    this.running = Boolean(status.running);
+    this.connected = Boolean(status.connected);
+    if (Number.isInteger(Number(status.port))) this.config.port = Number(status.port);
+    if (typeof status.token === "string") this.config.token = status.token;
+    this.clientInfo = {
+      extensionVersion: String(status.extensionVersion || "unknown"),
+      browser: String(status.browser || "unknown"),
+      connectedAt: status.connectedAt || null,
+    };
+    this.startError = status.error
+      ? String(status.error)
+      : !this.enabled
+        ? "The persistent browser connector is disabled. Enable it in Launcher Plugins."
+        : !this.running
+          ? "The persistent browser connector is starting."
+          : null;
   }
 
-  request(method, params = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
-    if (!this.connected) {
-      return Promise.reject(
-        new Error(
-          "Tabame Connector is offline. Open Connection & pairing for setup.",
-        ),
-      );
-    }
-    const id = crypto.randomUUID();
+  callHost(op, fields = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+    const requestId = `browser-${process.pid}-${Date.now()}-${this.requestCounter++}`;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error(`Browser request timed out: ${method}`));
+        this.pending.delete(requestId);
+        reject(new Error(`Tabame browser bridge timed out: ${op}`));
       }, timeoutMs);
-      this.pending.set(id, { resolve, reject, timer });
-      this.client.send(JSON.stringify({ type: "request", id, method, params }));
+      this.pending.set(requestId, { resolve, reject, timer });
+      command("browserBridge", { op, requestId, ...fields, timeoutMs });
     });
   }
 
+  request(method, params = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+    return this.callHost("request", { method, params }, timeoutMs);
+  }
+
   close() {
-    if (this.client) this.client.close(1001, "Launcher plugin closed");
-    if (this.server) this.server.close();
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timer);
+      pending.reject(new Error("Browser plugin closed"));
+    }
+    this.pending.clear();
   }
 }
 
-const config = loadOrCreateConfig();
+/*
+ * Browser requests are routed by Tabame's app-owned bridge. Keeping this
+ * adapter inside the plugin preserves its UI/state model while removing the
+ * per-plugin WebSocket server and third-party `ws` dependency.
+ */
 const state = {
   screen: "root",
   query: "",
@@ -246,27 +127,12 @@ const state = {
   itemData: new Map(),
   usageRemaining: null,
   initialized: false,
-  pairingGraceRequested: false,
-  pairingGraceUntil: 0,
-  detached: false,
-  pairingShutdownTimer: null,
   extensionEventTimer: null,
 };
 
 const bridge = new BrowserBridge(
   config,
   () => {
-    if (state.detached) {
-      if (bridge.connected) {
-        command("notify", {
-          title: "Tabame Browser",
-          text: "Chromium extension paired successfully.",
-        });
-        clearTimeout(state.pairingShutdownTimer);
-        state.pairingShutdownTimer = setTimeout(shutdown, 250);
-      }
-      return;
-    }
     if (state.initialized) {
       renderCurrent(0, state.query, { refresh: true });
     }
@@ -634,12 +500,15 @@ function renderConnection(rev) {
   const token = config.token;
   const tokenDisplay = token.replace(/(.{6})/g, "$1 ").trim();
   const connected = bridge.connected;
-  if (!connected && !state.pairingGraceRequested) {
-    state.pairingGraceRequested = true;
-    state.pairingGraceUntil = Date.now() + 300_000;
-    command("background", { timeout: 300 });
-  }
-  const markdown = connected
+  const markdown = !bridge.enabled
+    ? [
+        "# Persistent browser connector is off",
+        "",
+        "Open **Launcher Plugins** and enable **Persistent browser connector**.",
+        "",
+        "The bridge is optional and remains completely stopped while this setting is off.",
+      ].join("\n")
+    : connected
     ? [
         "# Browser connector is online",
         "",
@@ -669,8 +538,8 @@ function renderConnection(rev) {
       metadata: [
         {
           label: "Status",
-          text: connected ? "Connected" : "Waiting for extension",
-          color: connected ? "#3D9B72" : "#D18B47",
+          text: !bridge.enabled ? "Disabled" : connected ? "Connected" : "Waiting for extension",
+          color: !bridge.enabled ? "#8A7F88" : connected ? "#3D9B72" : "#D18B47",
         },
         { label: "Address", text: `127.0.0.1:${config.port}`, icon: "server" },
         ...(connected
@@ -693,7 +562,9 @@ function renderConnection(rev) {
       ],
     },
     actions: [
-      { id: "copy_token", title: "Copy pairing token", icon: "key" },
+      ...(bridge.enabled && token
+        ? [{ id: "copy_token", title: "Copy pairing token", icon: "key" }]
+        : []),
       {
         id: "copy_address",
         title: "Copy bridge address",
@@ -825,6 +696,7 @@ async function handleAction(id, action) {
     }
 
     if (action === "refresh") {
+      if (state.screen === "connection") await bridge.refreshStatus();
       if (state.screen === "usage") await renderUsage(0, true);
       else renderCurrent(0, state.query, { refresh: true });
       return;
@@ -872,7 +744,7 @@ process.stdin.on("data", (chunk) => {
 });
 
 process.stdin.on("end", () => {
-  if (!keepPairingBridgeAlive()) shutdown();
+  shutdown();
 });
 
 async function handleLine(line) {
@@ -886,7 +758,10 @@ async function handleLine(line) {
 
   switch (message.type) {
     case "close":
-      if (!keepPairingBridgeAlive()) shutdown();
+      shutdown();
+      break;
+    case "browserBridge":
+      bridge.handleHostMessage(message);
       break;
     case "init":
     case "query":
@@ -906,28 +781,10 @@ async function handleLine(line) {
 }
 
 let shuttingDown = false;
-function keepPairingBridgeAlive() {
-  if (
-    !bridge.connected &&
-    state.pairingGraceUntil > Date.now() &&
-    !shuttingDown
-  ) {
-    state.detached = true;
-    clearTimeout(state.pairingShutdownTimer);
-    state.pairingShutdownTimer = setTimeout(
-      shutdown,
-      Math.max(0, state.pairingGraceUntil - Date.now()),
-    );
-    return true;
-  }
-  return false;
-}
-
 function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
   clearTimeout(state.extensionEventTimer);
-  clearTimeout(state.pairingShutdownTimer);
   bridge.close();
   setTimeout(() => process.exit(0), 20);
 }

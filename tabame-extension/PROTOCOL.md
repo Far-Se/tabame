@@ -3,8 +3,9 @@
 Protocol version: **1**
 
 Transport: WebSocket at `ws://127.0.0.1:17373/tabame`. Every message is one
-JSON object. The launcher owns the server; the extension is the reconnecting
-client.
+JSON object. Tabame's optional app-owned browser bridge owns the server; the
+extension is the reconnecting client. The server remains available independently
+of launcher-plugin lifetimes while the setting is enabled.
 
 ## Session
 
