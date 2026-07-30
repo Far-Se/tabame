@@ -46,35 +46,44 @@ Widget _mountModalLayer(Widget layer) {
 }
 
 ThemeData _legacyPopupTheme(ThemeData inherited, {required bool windowsXp}) {
-  final Color face = windowsXp ? const Color(0xFFECE9D8) : const Color(0xFFC0C0C0);
+  final bool isDark = Design.background.computeLuminance() < 0.5;
+  final Color face = isDark
+      ? Design.background
+      : windowsXp
+          ? const Color(0xFFECE9D8)
+          : const Color(0xFFC0C0C0);
+  final Color foreground = isDark ? Design.text : const Color(0xFF000000);
+  final Color field = isDark ? Color.alphaBlend(Design.text.withAlpha(12), face) : const Color(0xFFFFFFFF);
   final Color primary = windowsXp ? const Color(0xFF245EDC) : const Color(0xFF000080);
   final Color shadow = windowsXp ? const Color(0xFFACA899) : const Color(0xFF808080);
   final String fontFamily = windowsXp ? 'Tahoma' : 'MS Sans Serif';
   final List<String> fallbacks =
       windowsXp ? const <String>['Verdana', 'Segoe UI'] : const <String>['Tahoma', 'Segoe UI'];
   final BorderRadius inputRadius = BorderRadius.circular(windowsXp ? 2 : 0);
-  final ColorScheme scheme = ColorScheme.light(
+  final ColorScheme scheme = (isDark ? ColorScheme.dark : ColorScheme.light)(
     primary: primary,
     onPrimary: const Color(0xFFFFFFFF),
     secondary: primary,
     onSecondary: const Color(0xFFFFFFFF),
     surface: face,
-    onSurface: const Color(0xFF000000),
+    onSurface: foreground,
     outline: shadow,
     outlineVariant: shadow.withAlpha(130),
   );
-  final ThemeData light = ThemeData.light(useMaterial3: inherited.useMaterial3);
-  final TextTheme textTheme = light.textTheme.apply(
+  final ThemeData base = isDark
+      ? ThemeData.dark(useMaterial3: inherited.useMaterial3)
+      : ThemeData.light(useMaterial3: inherited.useMaterial3);
+  final TextTheme textTheme = base.textTheme.apply(
     fontFamily: fontFamily,
     fontFamilyFallback: fallbacks,
-    bodyColor: const Color(0xFF000000),
-    displayColor: const Color(0xFF000000),
+    bodyColor: foreground,
+    displayColor: foreground,
   );
   final OutlineInputBorder fieldBorder = OutlineInputBorder(
     borderRadius: inputRadius,
     borderSide: BorderSide(color: shadow),
   );
-  return light.copyWith(
+  return base.copyWith(
     colorScheme: scheme,
     scaffoldBackgroundColor: face,
     canvasColor: face,
@@ -85,15 +94,15 @@ ThemeData _legacyPopupTheme(ThemeData inherited, {required bool windowsXp}) {
     splashColor: primary.withAlpha(30),
     textTheme: textTheme,
     primaryTextTheme: textTheme,
-    iconTheme: const IconThemeData(color: Color(0xFF000000)),
-    primaryIconTheme: const IconThemeData(color: Color(0xFF000000)),
+    iconTheme: IconThemeData(color: foreground),
+    primaryIconTheme: IconThemeData(color: foreground),
     dividerTheme: DividerThemeData(color: shadow, thickness: 1, space: 1),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFFFFFFFF),
-      labelStyle: const TextStyle(color: Color(0xFF000000)),
+      fillColor: field,
+      labelStyle: TextStyle(color: foreground),
       floatingLabelStyle: TextStyle(color: primary),
-      hintStyle: const TextStyle(color: Color(0xFF666666)),
+      hintStyle: TextStyle(color: foreground.withAlpha(150)),
       border: fieldBorder,
       enabledBorder: fieldBorder,
       focusedBorder: fieldBorder.copyWith(
@@ -101,18 +110,22 @@ ThemeData _legacyPopupTheme(ThemeData inherited, {required bool windowsXp}) {
       ),
     ),
     listTileTheme: ListTileThemeData(
-      textColor: const Color(0xFF000000),
-      iconColor: const Color(0xFF000000),
+      textColor: foreground,
+      iconColor: foreground,
       selectedColor: const Color(0xFFFFFFFF),
       selectedTileColor: primary,
     ),
     tooltipTheme: TooltipThemeData(
       decoration: BoxDecoration(
-        color: windowsXp ? const Color(0xFFFFFFE1) : face,
-        border: Border.all(color: const Color(0xFF000000)),
+        color: isDark
+            ? field
+            : windowsXp
+                ? const Color(0xFFFFFFE1)
+                : face,
+        border: Border.all(color: foreground),
         borderRadius: BorderRadius.circular(windowsXp ? 2 : 0),
       ),
-      textStyle: const TextStyle(color: Color(0xFF000000), fontSize: 11),
+      textStyle: TextStyle(color: foreground, fontSize: 11),
     ),
     textSelectionTheme: TextSelectionThemeData(
       cursorColor: primary,
@@ -837,15 +850,15 @@ class QuickMenuModalFrame extends StatelessWidget {
             ],
           ),
           underlays: <Widget>[
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 34,
-              child: ColoredBox(
-                color: isDark ? const Color(0xFF191919) : const Color(0xFFF7F6F3),
-              ),
-            ),
+            // Positioned(
+            //   left: 0,
+            //   right: 0,
+            //   bottom: 0,
+            //   height: 34,
+            //   child: ColoredBox(
+            //     color: isDark ? const Color(0xFF191919) : const Color(0xFFF7F6F3),
+            //   ),
+            // ),
           ],
         ),
       // QuickMenuDesigns.familyGuy => _FrameSpec(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
@@ -46,7 +47,8 @@ class MainMenuFoundryWidget extends StatelessWidget {
                       )
                     else if (user.bottomBarOnTop)
                       _FoundryBand(index: '02', label: 'PINNED', palette: palette, child: const PinnedAndTrayList()),
-                    _FoundryBand(index: '03', label: 'WINDOWS', palette: palette, child: const TaskBar()),
+                    DragToMoveArea(
+                        child: _FoundryBand(index: '03', label: 'WINDOWS', palette: palette, child: const TaskBar())),
                     if (!user.bottomBarOnTop)
                       _FoundryBand(index: '04', label: 'PINNED', palette: palette, child: const PinnedAndTrayList()),
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),

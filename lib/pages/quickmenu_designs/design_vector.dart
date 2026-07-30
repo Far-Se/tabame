@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
@@ -64,7 +65,7 @@ class MainMenuVectorWidget extends StatelessWidget {
                     const PinnedAndTrayList(),
                   ] else
                     const SizedBox(height: 2),
-                  _SectionIndex(index: '¤', label: 'WINDOWS', p: p),
+                  DragToMoveArea(child: _SectionIndex(index: '¤', label: 'WINDOWS', p: p)),
                   Container(
                     padding: const EdgeInsets.fromLTRB(4, 2, 4, 2),
                     decoration: BoxDecoration(

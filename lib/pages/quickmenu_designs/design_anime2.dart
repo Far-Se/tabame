@@ -1,6 +1,7 @@
 import 'dart:math' show cos, sin, pi;
 
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
@@ -66,7 +67,7 @@ class MainMenuAnime2Widget extends StatelessWidget {
                   ] else
                     const SizedBox(height: 4),
 
-                  _AnimeSectionMarker(label: 'WINDOWS', p: p),
+                  DragToMoveArea(child: _AnimeSectionMarker(label: 'WINDOWS', p: p)),
                   _AnimeBubble(
                     p: p,
                     inset: true,

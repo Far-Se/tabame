@@ -11,14 +11,16 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 
 abstract final class _Win98Colors {
-  static const Color face = Color(0xFFC0C0C0);
-  static const Color light = Color(0xFFFFFFFF);
-  static const Color highlight = Color(0xFFDFDFDF);
-  static const Color shadow = Color(0xFF808080);
-  static const Color dark = Color(0xFF000000);
+  static bool get _isDark => Design.background.computeLuminance() < 0.5;
+  static Color get face => _isDark ? Design.background : const Color(0xFFC0C0C0);
+  static Color get light => _isDark ? Design.text.withAlpha(220) : const Color(0xFFFFFFFF);
+  static Color get highlight => _isDark ? Design.text.withAlpha(150) : const Color(0xFFDFDFDF);
+  static Color get shadow => _isDark ? Design.text.withAlpha(80) : const Color(0xFF808080);
+  static Color get dark => _isDark ? Design.text : const Color(0xFF000000);
   static const Color title = Color(0xFF000080);
   static const Color titleLight = Color(0xFF1084D0);
-  static const Color field = Color(0xFFFFFFFF);
+  static Color get field =>
+      _isDark ? Color.alphaBlend(Design.text.withAlpha(12), Design.background) : const Color(0xFFFFFFFF);
 }
 
 class MainMenuWindows98Widget extends StatelessWidget {
@@ -136,7 +138,7 @@ class _Win98CaptionButton extends StatelessWidget {
             child: Center(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'MS Sans Serif',
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -198,13 +200,13 @@ class _Win98Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: <Widget>[
         _Win98Bevel(
           raised: true,
           child: ColoredBox(
             color: _Win98Colors.face,
-            child: Padding(
+            child: const Padding(
               padding: EdgeInsets.fromLTRB(5, 3, 7, 3),
               child: Row(
                 mainAxisSize: MainAxisSize.min,

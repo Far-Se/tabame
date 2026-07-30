@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
@@ -63,7 +64,7 @@ class MainMenuTechWidget extends StatelessWidget {
                     const PinnedAndTrayList(),
                   ] else
                     const SizedBox(height: 4),
-                  _TechHeader(label: 'ACTIVE WINDOWS', p: p),
+                  DragToMoveArea(child: _TechHeader(label: 'ACTIVE WINDOWS', p: p)),
                   _TechCard(
                     p: p,
                     inset: true,

@@ -174,7 +174,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   final LauncherSearchToken _searchToken = LauncherSearchToken();
 
   final TextEditingController _controller = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
+  final FocusNode _searchFocusNode = FocusNode(debugLabel: 'Launcher search');
+  final FocusNode _resultsFocusNode = FocusNode(debugLabel: 'Launcher results');
   final ScrollController _scrollController = ScrollController();
   final ValueNotifier<int> _activeIndexNotifier = ValueNotifier<int>(0);
   final ValueNotifier<bool> _isRepeatingKey = ValueNotifier<bool>(false);
@@ -1080,13 +1081,21 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final LogicalKeyboardKey key = event.logicalKey;
 
     if (key == LogicalKeyboardKey.arrowDown) {
-      index = isGrid ? (index + cols).clamp(0, count - 1) : (index + 1) % count;
+      index = isGrid ? (index + cols).clamp(0, count - 1) : (index + 1).clamp(0, count - 1);
     } else if (key == LogicalKeyboardKey.arrowUp) {
-      index = isGrid ? (index - cols < 0 ? index : index - cols) : (index - 1 + count) % count;
+      if ((!isGrid && index == 0) || (isGrid && index < cols)) {
+        _focusSearch();
+        return KeyEventResult.handled;
+      }
+      index = isGrid ? index - cols : index - 1;
     } else if (isGrid && key == LogicalKeyboardKey.arrowRight) {
       index = (index + 1).clamp(0, count - 1);
     } else if (isGrid && key == LogicalKeyboardKey.arrowLeft) {
       index = (index - 1).clamp(0, count - 1);
+    } else if (key == LogicalKeyboardKey.home) {
+      index = 0;
+    } else if (key == LogicalKeyboardKey.end) {
+      index = count - 1;
     } else {
       return KeyEventResult.ignored;
     }
@@ -1261,11 +1270,32 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   }
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    // The results focus node also wraps plugin content. When one of its
+    // descendants (for example, a plugin form field) owns primary focus, let
+    // that control handle the key instead of redirecting input to the search.
+    if (node == _resultsFocusNode && !node.hasPrimaryFocus) {
+      return KeyEventResult.ignored;
+    }
+
     if (event is KeyDownEvent || event is KeyRepeatEvent) {
       // A running plugin owns navigation/selection/actions.
       if (_activePlugin != null) {
+        final PluginViewType? pluginView = _pluginFrame?.view;
+        if (node == _searchFocusNode &&
+            _pluginFrame?.items.isNotEmpty == true &&
+            pluginView != PluginViewType.detail &&
+            pluginView != PluginViewType.chat &&
+            pluginView != PluginViewType.form &&
+            (event.logicalKey == LogicalKeyboardKey.arrowDown || event.logicalKey == LogicalKeyboardKey.arrowUp)) {
+          if (event is KeyDownEvent) _enterPluginResultBrowsing(event.logicalKey);
+          return KeyEventResult.handled;
+        }
         final KeyEventResult pluginResult = _handlePluginKey(event);
         if (pluginResult != KeyEventResult.ignored) return pluginResult;
+      }
+      if (node == _resultsFocusNode) {
+        final KeyEventResult editingResult = _handleResultEditingKey(event);
+        if (editingResult != KeyEventResult.ignored) return editingResult;
       }
       if (event is KeyDownEvent &&
           ((event.logicalKey == LogicalKeyboardKey.keyK && HardwareKeyboard.instance.isControlPressed) ||
@@ -1317,6 +1347,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       }
       // Escape: go back to quickmenu
       if (event.logicalKey == LogicalKeyboardKey.escape) {
+        if (node == _resultsFocusNode) {
+          if (event is KeyDownEvent) _focusSearch();
+          return KeyEventResult.handled;
+        }
         if (kReleaseMode) {
           QuickMenuFunctions.hideQuickMenu();
           Win32.activateWindow(Globals.lastFocusedWinHWND);
@@ -1333,10 +1367,16 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         return KeyEventResult.handled;
       }
 
-      if (event.logicalKey == LogicalKeyboardKey.arrowDown ||
-          event.logicalKey == LogicalKeyboardKey.arrowUp ||
-          event.logicalKey == LogicalKeyboardKey.home ||
-          event.logicalKey == LogicalKeyboardKey.end) {
+      final bool isVerticalArrow =
+          event.logicalKey == LogicalKeyboardKey.arrowDown || event.logicalKey == LogicalKeyboardKey.arrowUp;
+      final bool isResultNavigationKey = isVerticalArrow ||
+          (node == _resultsFocusNode &&
+              (event.logicalKey == LogicalKeyboardKey.home || event.logicalKey == LogicalKeyboardKey.end));
+      if (isResultNavigationKey) {
+        if (node == _searchFocusNode) {
+          if (event is KeyDownEvent) _enterResultBrowsing(event.logicalKey);
+          return KeyEventResult.handled;
+        }
         if (_lastPressedKey == event.logicalKey) return KeyEventResult.handled;
         _lastPressedKey = event.logicalKey;
 
@@ -1366,6 +1406,121 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     return KeyEventResult.ignored;
   }
 
+  /// Lets result browsing remain a real focus mode without making the user
+  /// explicitly return to the search box before typing. Printable input and
+  /// destructive editing keys move focus back and update the query in-place.
+  KeyEventResult _handleResultEditingKey(KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
+
+    final LogicalKeyboardKey key = event.logicalKey;
+    final HardwareKeyboard keyboard = HardwareKeyboard.instance;
+    if (keyboard.isControlPressed && key == LogicalKeyboardKey.keyA) {
+      _focusSearch();
+      _controller.selection = TextSelection(baseOffset: 0, extentOffset: _controller.text.length);
+      return KeyEventResult.handled;
+    }
+    if (keyboard.isControlPressed && key == LogicalKeyboardKey.keyV) {
+      _focusSearch();
+      unawaited(_pasteIntoSearch());
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.backspace) {
+      _deleteFromSearch(backwards: true);
+      _focusSearch();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.delete) {
+      _deleteFromSearch(backwards: false);
+      _focusSearch();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight) {
+      _focusSearch();
+      return KeyEventResult.handled;
+    }
+
+    final String? character = event.character;
+    final bool isPrintable =
+        character != null && character.isNotEmpty && character.runes.every((int rune) => rune >= 0x20 && rune != 0x7F);
+    final bool isCommandChord = keyboard.isMetaPressed || (keyboard.isControlPressed && !keyboard.isAltPressed);
+    if (!isPrintable || isCommandChord) return KeyEventResult.ignored;
+
+    _replaceSearchSelection(character);
+    _focusSearch();
+    return KeyEventResult.handled;
+  }
+
+  void _enterResultBrowsing(LogicalKeyboardKey key) {
+    if (_results.isEmpty) return;
+    _resultsFocusNode.requestFocus();
+    _hasKeyboardNavigatedCurrentQuery = true;
+    final int current = _activeIndexNotifier.value.clamp(0, _results.length - 1);
+    _activeIndexNotifier.value = key == LogicalKeyboardKey.arrowUp
+        ? (current - 1 + _results.length) % _results.length
+        : (current + 1) % _results.length;
+    _scrollToActiveIndex();
+  }
+
+  void _enterPluginResultBrowsing(LogicalKeyboardKey key) {
+    final List<PluginItem> items = _pluginFrame?.items ?? const <PluginItem>[];
+    if (items.isEmpty) return;
+    _resultsFocusNode.requestFocus();
+    final int current = _activeIndexNotifier.value.clamp(0, items.length - 1);
+    _setPluginSelection(
+      key == LogicalKeyboardKey.arrowUp ? (current - 1 + items.length) % items.length : (current + 1) % items.length,
+    );
+  }
+
+  Future<void> _pasteIntoSearch() async {
+    final ClipboardData? data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (!mounted || data?.text == null) return;
+    _replaceSearchSelection(data!.text!);
+  }
+
+  void _replaceSearchSelection(String replacement) {
+    final TextSelection selection = _validSearchSelection();
+    final String text = _controller.text;
+    final String nextText = text.replaceRange(selection.start, selection.end, replacement);
+    final int caret = selection.start + replacement.length;
+    _controller.value = TextEditingValue(
+      text: nextText,
+      selection: TextSelection.collapsed(offset: caret),
+    );
+    _onSearchChanged(nextText);
+  }
+
+  void _deleteFromSearch({required bool backwards}) {
+    final TextSelection selection = _validSearchSelection();
+    final String text = _controller.text;
+    int start = selection.start;
+    int end = selection.end;
+
+    if (selection.isCollapsed) {
+      if (backwards) {
+        if (start == 0) return;
+        start -= text.substring(0, start).characters.last.length;
+      } else {
+        if (end == text.length) return;
+        end += text.substring(end).characters.first.length;
+      }
+    }
+
+    final String nextText = text.replaceRange(start, end, '');
+    _controller.value = TextEditingValue(
+      text: nextText,
+      selection: TextSelection.collapsed(offset: start),
+    );
+    _onSearchChanged(nextText);
+  }
+
+  TextSelection _validSearchSelection() {
+    final TextSelection selection = _controller.selection;
+    if (selection.isValid && selection.start <= _controller.text.length && selection.end <= _controller.text.length) {
+      return selection;
+    }
+    return TextSelection.collapsed(offset: _controller.text.length);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1386,23 +1541,21 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
     Globals.quickMenuSearchInputVersion.addListener(_consumePendingQuickMenuSearchInput);
     FocusManager.instance.addListener(_onFocusManagerChanged);
-    _focusNode.onKeyEvent = _onKeyEvent;
+    _searchFocusNode.onKeyEvent = _onKeyEvent;
+    _resultsFocusNode.onKeyEvent = _onKeyEvent;
 
-    _focusNode.requestFocus();
+    _searchFocusNode.requestFocus();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       Win32.setWindowInvisible(false);
       _canConsumePendingInput = true;
       _startWindowRefreshLoop();
       _consumePendingQuickMenuSearchInput();
-      _focusNode.requestFocus();
+      _searchFocusNode.requestFocus();
 
       unawaited(_refreshLauncherCatalogs());
 
       _onSearchChanged(_controller.text);
-      Future<void>.delayed(const Duration(milliseconds: 5),
-          () => _controller.selection = TextSelection.collapsed(offset: _controller.text.length)); // <- This
-      // setState(() {});
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1414,7 +1567,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     Future<void>.delayed(const Duration(milliseconds: 200), () {
       if (mounted) {
         windowManager.focus();
-        _resetSelection();
+        _focusSearch();
       }
     });
   }
@@ -1458,7 +1611,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _windowRefreshTimer?.cancel();
     _launcherFocusRetryTimer?.cancel();
     _controller.dispose();
-    _focusNode.dispose();
+    _searchFocusNode.dispose();
+    _resultsFocusNode.dispose();
     _scrollController.dispose();
     _activeIndexNotifier.dispose();
     super.dispose();
@@ -1515,8 +1669,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   void requestFocusIfNeeded(bool focusWindow) {
     if (!_canFocusLauncher) return;
     if (focusWindow) unawaited(windowManager.focus());
-    if (!_focusNode.hasPrimaryFocus) {
-      _resetSelection();
+    if (!_searchFocusNode.hasPrimaryFocus && !_resultsFocusNode.hasPrimaryFocus) {
+      _focusSearch();
     }
   }
 
@@ -1532,7 +1686,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   void _requestPluginNavigationFocus() {
     if (!mounted || _activePlugin == null || _pluginFrame?.view == PluginViewType.form) return;
     void restore() {
-      if (mounted && _activePlugin != null && _pluginFrame?.view != PluginViewType.form) _focusNode.requestFocus();
+      if (mounted && _activePlugin != null && _pluginFrame?.view != PluginViewType.form) {
+        _resultsFocusNode.requestFocus();
+      }
     }
 
     restore();
@@ -1542,7 +1698,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   }
 
   void _onFocusManagerChanged() {
-    if (!_canFocusLauncher || _focusNode.hasPrimaryFocus) return;
+    if (!_canFocusLauncher || _searchFocusNode.hasPrimaryFocus || _resultsFocusNode.hasPrimaryFocus) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _requestLauncherFocus();
     });
@@ -1562,9 +1718,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     if (_results.isEmpty) return;
     _hasKeyboardNavigatedCurrentQuery = true;
     if (key == LogicalKeyboardKey.arrowDown) {
-      _activeIndexNotifier.value = ((_activeIndexNotifier.value + 1) % _results.length).toInt();
+      _activeIndexNotifier.value = (_activeIndexNotifier.value + 1).clamp(0, _results.length - 1);
     } else if (key == LogicalKeyboardKey.arrowUp) {
-      _activeIndexNotifier.value = ((_activeIndexNotifier.value - 1 + _results.length) % _results.length).toInt();
+      if (_activeIndexNotifier.value == 0) {
+        _focusSearch();
+        return;
+      }
+      _activeIndexNotifier.value = (_activeIndexNotifier.value - 1).clamp(0, _results.length - 1);
     } else if (key == LogicalKeyboardKey.home) {
       _activeIndexNotifier.value = 0;
     } else if (key == LogicalKeyboardKey.end) {
@@ -2297,7 +2457,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _controller.text = '';
     _controller.selection = const TextSelection.collapsed(offset: 0);
     _onSearchChanged('');
-    _resetSelection();
+    _focusSearch();
   }
 
   /// Heuristic for "this target is a web address" (drives favicon icons).
@@ -2737,7 +2897,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     if (mounted) {
       _controller.clear();
       _setResults(_launcherShortcuts, isSearching: false);
-      _resetSelection();
+      _focusSearch();
     }
 
     if (kReleaseMode) {
@@ -2827,7 +2987,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         // _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
         _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
         _onSearchChanged(_controller.text);
-        _resetSelection();
+        _focusSearch();
       },
     );
   }
@@ -3721,7 +3881,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     // _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
     _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
     _onSearchChanged(_controller.text);
-    _resetSelection();
+    _focusSearch();
   }
 
   void _onSubmitted(String query) {
@@ -3742,7 +3902,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       onRunAction: _executeLauncherActionResult,
     ).execute(result);
 
-    _resetSelection();
+    _focusSearch();
   }
 
   void _executeLauncherActionResult(QuickActionMenuEntry action) {
@@ -3817,7 +3977,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       _folderBrowsingQueryStack.removeLast();
     });
     _onSearchChanged(_controller.text);
-    _resetSelection();
+    _focusSearch();
   }
 
   /// Opens [folderPath] in Windows Explorer and hides the launcher.
@@ -3994,31 +4154,14 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     triggerFirstTappableDescendant(actionKey.currentContext);
   }
 
-  void handlePostFrameCallback(TextSelection savedSelection) {
-    if (savedSelection.isValid) {
-      _controller.selection = savedSelection;
-    } else {
-      // Fallback: collapse to end if previous selection was invalid
-      final int len = _controller.text.length;
-      _controller.selection = TextSelection.collapsed(offset: len);
-    }
-  }
-
   // ---------------------------------------------------------------------------
   // Build
   // ---------------------------------------------------------------------------
-  void _resetSelection() {
-    // final TextSelection savedSelection = _controller.selection;
-    _focusNode.requestFocus();
-
-    Future<void>.delayed(const Duration(milliseconds: 4), () {
-      if (mounted) handlePostFrameCallback(TextSelection.collapsed(offset: _controller.text.length));
-    });
-    if (mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) handlePostFrameCallback(TextSelection.collapsed(offset: _controller.text.length));
-      });
-    }
+  void _focusSearch() {
+    if (!mounted) return;
+    final TextSelection selection = _validSearchSelection();
+    _searchFocusNode.requestFocus();
+    _controller.selection = selection;
   }
 
   @override
@@ -4216,7 +4359,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       ),
       textField: TextField(
         controller: _controller,
-        focusNode: _focusNode,
+        focusNode: _searchFocusNode,
+        selectAllOnFocus: false,
         style: theme.textTheme.bodyMedium?.copyWith(
           color: onSurface,
           fontSize: launcherTheme.searchFontSize,
@@ -4242,103 +4386,107 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       isSearching: _isSearching,
     );
 
-    final Widget resultsContent = Material(
-      type: MaterialType.transparency,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: 260, maxHeight: _resultsMaxHeight),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            if (_activePlugin == null && !hasInput && _results.isNotEmpty)
-              _buildResultsHeaderWithBadges(accent, onSurface),
-            if (_activePlugin != null)
-              Expanded(child: _buildPluginBody())
-            else
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ValueListenableBuilder<int>(
-                    valueListenable: _activeIndexNotifier,
-                    builder: (BuildContext context, int activeIndex, Widget? child) {
-                      return ValueListenableBuilder<bool>(
-                        valueListenable: _isRepeatingKey,
-                        builder: (BuildContext context, bool isRepeatingKey, Widget? child) {
-                          return ListView.builder(
-                            controller: _scrollController,
-                            shrinkWrap: true,
-                            itemCount: _results.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              final LauncherSearchResultItem result = _results[index];
-                              final bool isSelected = index == activeIndex;
-                              late final Widget resultWidget;
-                              if (result.isShortcut) {
-                                resultWidget = _buildShortcutResult(
-                                    context, theme, result.shortcut!, index, isSelected, isRepeatingKey);
-                              } else if (result.isFile) {
-                                resultWidget = _buildFileResult(
-                                    context, theme, result.entity!, result.nodeId, index, isSelected, isRepeatingKey);
-                              } else if (result.isApp) {
-                                resultWidget = _buildAppResult(context, theme, result.appResult!, result.nodeId, index,
-                                    isSelected, isRepeatingKey);
-                              } else if (result.isWindow) {
-                                resultWidget = _buildWindowResult(
-                                    context, theme, result.window!, index, isSelected, isRepeatingKey);
-                              } else if (result.isBrowserTab) {
-                                resultWidget = _buildBrowserTabResult(
-                                    context, theme, result.browserTab!, index, isSelected, isRepeatingKey);
-                              } else if (result.isBookmark) {
-                                resultWidget = _buildBookmarkResult(
-                                    context, theme, result.bookmarkResult!, index, isSelected, isRepeatingKey);
-                              } else if (result.isNotion) {
-                                resultWidget = _buildNotionResult(
-                                    context, theme, result.notionResult!, index, isSelected, isRepeatingKey);
-                              } else if (result.isObsidian) {
-                                resultWidget = _buildObsidianResult(
-                                    context, theme, result.obsidianResult!, index, isSelected, isRepeatingKey);
-                              } else if (result.isSteam) {
-                                resultWidget = _buildSteamResult(
-                                    context, theme, result.steamResult!, index, isSelected, isRepeatingKey);
-                              } else if (result.isInfo) {
-                                resultWidget = _buildInfoResult(
-                                    context, theme, result.infoResult!, index, isSelected, isRepeatingKey);
-                              } else {
-                                resultWidget = _buildQuickActionResult(
-                                    context, theme, result.quickAction!, index, isSelected, isRepeatingKey);
-                              }
-                              final Widget resultWithDivider = result.shortcut?.showDividerBefore == true
-                                  ? Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: <Widget>[
-                                        Divider(
-                                          height: 17,
-                                          thickness: 1,
-                                          indent: 12,
-                                          endIndent: 12,
-                                          color: theme.colorScheme.outlineVariant.withAlpha(150),
-                                        ),
-                                        resultWidget,
-                                      ],
-                                    )
-                                  : resultWidget;
-                              return KeyedSubtree(
-                                key: _resultKeys[_resultKeyId(result, index)],
-                                child: MouseRegion(
-                                  onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
-                                  child: Stack(
-                                    alignment: Alignment.centerRight,
-                                    children: <Widget>[resultWithDivider],
+    final Widget resultsContent = Focus(
+      focusNode: _resultsFocusNode,
+      skipTraversal: true,
+      child: Material(
+        type: MaterialType.transparency,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: 260, maxHeight: _resultsMaxHeight),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (_activePlugin == null && !hasInput && _results.isNotEmpty)
+                _buildResultsHeaderWithBadges(accent, onSurface),
+              if (_activePlugin != null)
+                Expanded(child: _buildPluginBody())
+              else
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: _activeIndexNotifier,
+                      builder: (BuildContext context, int activeIndex, Widget? child) {
+                        return ValueListenableBuilder<bool>(
+                          valueListenable: _isRepeatingKey,
+                          builder: (BuildContext context, bool isRepeatingKey, Widget? child) {
+                            return ListView.builder(
+                              controller: _scrollController,
+                              shrinkWrap: true,
+                              itemCount: _results.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                final LauncherSearchResultItem result = _results[index];
+                                final bool isSelected = index == activeIndex;
+                                late final Widget resultWidget;
+                                if (result.isShortcut) {
+                                  resultWidget = _buildShortcutResult(
+                                      context, theme, result.shortcut!, index, isSelected, isRepeatingKey);
+                                } else if (result.isFile) {
+                                  resultWidget = _buildFileResult(
+                                      context, theme, result.entity!, result.nodeId, index, isSelected, isRepeatingKey);
+                                } else if (result.isApp) {
+                                  resultWidget = _buildAppResult(context, theme, result.appResult!, result.nodeId,
+                                      index, isSelected, isRepeatingKey);
+                                } else if (result.isWindow) {
+                                  resultWidget = _buildWindowResult(
+                                      context, theme, result.window!, index, isSelected, isRepeatingKey);
+                                } else if (result.isBrowserTab) {
+                                  resultWidget = _buildBrowserTabResult(
+                                      context, theme, result.browserTab!, index, isSelected, isRepeatingKey);
+                                } else if (result.isBookmark) {
+                                  resultWidget = _buildBookmarkResult(
+                                      context, theme, result.bookmarkResult!, index, isSelected, isRepeatingKey);
+                                } else if (result.isNotion) {
+                                  resultWidget = _buildNotionResult(
+                                      context, theme, result.notionResult!, index, isSelected, isRepeatingKey);
+                                } else if (result.isObsidian) {
+                                  resultWidget = _buildObsidianResult(
+                                      context, theme, result.obsidianResult!, index, isSelected, isRepeatingKey);
+                                } else if (result.isSteam) {
+                                  resultWidget = _buildSteamResult(
+                                      context, theme, result.steamResult!, index, isSelected, isRepeatingKey);
+                                } else if (result.isInfo) {
+                                  resultWidget = _buildInfoResult(
+                                      context, theme, result.infoResult!, index, isSelected, isRepeatingKey);
+                                } else {
+                                  resultWidget = _buildQuickActionResult(
+                                      context, theme, result.quickAction!, index, isSelected, isRepeatingKey);
+                                }
+                                final Widget resultWithDivider = result.shortcut?.showDividerBefore == true
+                                    ? Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: <Widget>[
+                                          Divider(
+                                            height: 17,
+                                            thickness: 1,
+                                            indent: 12,
+                                            endIndent: 12,
+                                            color: theme.colorScheme.outlineVariant.withAlpha(150),
+                                          ),
+                                          resultWidget,
+                                        ],
+                                      )
+                                    : resultWidget;
+                                return KeyedSubtree(
+                                  key: _resultKeys[_resultKeyId(result, index)],
+                                  child: MouseRegion(
+                                    onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
+                                    child: Stack(
+                                      alignment: Alignment.centerRight,
+                                      children: <Widget>[resultWithDivider],
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      );
-                    },
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -4532,7 +4680,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       data: launcherThemeData,
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
-        onTap: _resetSelection,
         onSecondaryTap: _openActionsForActiveResult,
         child: appearanceFrame,
       ),

@@ -97,7 +97,7 @@ class WindowsXpLauncherSearchBar extends StatelessWidget {
         ),
         Container(
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: WindowsXpTokens.surface,
             border: Border(bottom: BorderSide(color: Color(0xFFACA899))),
           ),
@@ -115,7 +115,7 @@ class WindowsXpLauncherSearchBar extends StatelessWidget {
                 child: Container(
                   constraints: const BoxConstraints(minHeight: 31),
                   padding: const EdgeInsets.fromLTRB(6, 1, 5, 1),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: WindowsXpTokens.controlLight,
                     border: Border(
                       left: BorderSide(color: WindowsXpTokens.controlShadow, width: 2),
@@ -248,7 +248,7 @@ class _WindowsXpFooter extends StatelessWidget {
           constraints: const BoxConstraints(minWidth: 18),
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
           alignment: Alignment.center,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: WindowsXpTokens.surface,
             border: Border(
               left: BorderSide(color: WindowsXpTokens.controlLight),

@@ -1,6 +1,7 @@
 // ignore_for_file: unused_element
 
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
@@ -66,7 +67,7 @@ class MainMenuOutrunWidget extends StatelessWidget {
                     const PinnedAndTrayList(),
                   ], //else
                   // const SizedBox(height: 4),
-                  _OutrunHeader(label: 'WINDOWS', p: p),
+                  DragToMoveArea(child: _OutrunHeader(label: 'WINDOWS', p: p)),
                   _NeonBox(
                     p: p,
                     color: p.magenta,

@@ -1,7 +1,7 @@
 part of '../launcher_design_builder.dart';
 
 BoxDecoration windows98LauncherOuterDecoration() {
-  return const BoxDecoration(
+  return BoxDecoration(
     color: Windows98Tokens.face,
     border: Border(
       left: BorderSide(color: Windows98Tokens.light, width: 2),
@@ -182,7 +182,7 @@ class Windows98LauncherFrame extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(1),
           child: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Windows98Tokens.face,
               border: Border(
                 left: BorderSide(color: Windows98Tokens.highlight),
@@ -296,7 +296,7 @@ class _Windows98EtchedLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         ColoredBox(color: Windows98Tokens.shadow, child: SizedBox(height: 1, width: double.infinity)),

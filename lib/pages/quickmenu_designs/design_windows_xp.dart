@@ -15,12 +15,14 @@ import '../../widgets/quickmenu/top_bar.dart';
 /// XP used opaque ivory work areas, saturated blue chrome, hard one-pixel
 /// bevels and a green Start affordance.
 abstract final class _XpColors {
+  static bool get _isDark => Design.background.computeLuminance() < 0.5;
   static const Color blueDark = Color(0xFF003399);
   static const Color blue = Color(0xFF245EDC);
   static const Color blueLight = Color(0xFF5A8CF0);
   static const Color blueHighlight = Color(0xFF7AA5F7);
-  static const Color cream = Color(0xFFECE9D8);
-  static const Color creamLight = Color(0xFFFFFEF5);
+  static Color get cream => _isDark ? Design.background : const Color(0xFFECE9D8);
+  static Color get creamLight =>
+      _isDark ? Color.alphaBlend(Design.text.withAlpha(10), Design.background) : const Color(0xFFFFFEF5);
   static const Color orange = Color(0xFFFF8C00);
   // static const Color greenDark = Color(0xFF2C811A);
   // static const Color green = Color(0xFF4BAE31);
@@ -64,9 +66,9 @@ class MainMenuWindowsXpWidget extends StatelessWidget {
                   const _XpPinnedBand()
                 else
                   const SizedBox(height: 3),
-                const ColoredBox(
+                ColoredBox(
                   color: _XpColors.creamLight,
-                  child: Padding(
+                  child: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 2),
                     child: TaskBar(),
                   ),
@@ -93,7 +95,7 @@ class _XpMenuHeader extends StatelessWidget {
     return Container(
       height: 35,
       padding: const EdgeInsets.fromLTRB(8, 5, 9, 5),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -166,7 +168,7 @@ class _XpInsetBand extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: padding,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _XpColors.cream,
         border: Border(
           top: BorderSide(color: _XpColors.creamLight),
@@ -183,7 +185,7 @@ class _XpPinnedBand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
+    return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.centerLeft,

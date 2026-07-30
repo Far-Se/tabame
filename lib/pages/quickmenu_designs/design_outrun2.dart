@@ -1,6 +1,7 @@
 import 'dart:math' show cos, sin, pi, pow;
 
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
@@ -62,7 +63,7 @@ class MainMenuOutrun2Widget extends StatelessWidget {
                     const PinnedAndTrayList(),
                   ] else
                     const SizedBox(height: 4),
-                  _OutrunSectionMarker(label: 'WINDOWS', p: p),
+                  DragToMoveArea(child: _OutrunSectionMarker(label: 'WINDOWS', p: p)),
                   _OutrunNeonBox(
                     p: p,
                     inset: true,

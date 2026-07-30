@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
@@ -269,26 +270,28 @@ class _DispatchColumn extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 3, 8, 0),
-            child: Row(
-              children: <Widget>[
-                Expanded(child: Container(height: 0.8, color: g.ruleFaint)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Text(
-                    "ACTIVE WINDOWS",
-                    style: TextStyle(
-                      fontSize: Design.baseFontSize - 2.5,
-                      fontFamily: Design.uiFontFamily,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 2.4,
-                      color: g.byline,
+          DragToMoveArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 3, 8, 0),
+              child: Row(
+                children: <Widget>[
+                  Expanded(child: Container(height: 0.8, color: g.ruleFaint)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Text(
+                      "ACTIVE WINDOWS",
+                      style: TextStyle(
+                        fontSize: Design.baseFontSize - 2.5,
+                        fontFamily: Design.uiFontFamily,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 2.4,
+                        color: g.byline,
+                      ),
                     ),
                   ),
-                ),
-                Expanded(child: Container(height: 0.8, color: g.ruleFaint)),
-              ],
+                  Expanded(child: Container(height: 0.8, color: g.ruleFaint)),
+                ],
+              ),
             ),
           ),
           const Padding(

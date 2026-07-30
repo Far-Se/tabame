@@ -311,17 +311,20 @@ abstract final class FluentTokens {
 /// Unlike theme-adaptive designs, this remains the canonical blue/olive-ivory
 /// Luna shell in both host brightness modes. XP had no dark system appearance.
 abstract final class WindowsXpTokens {
-  static const Color surface = Color(0xFFECE9D8);
-  static const Color paper = Color(0xFFFFFEF5);
+  static bool get _isDark => Design.background.computeLuminance() < 0.5;
+  static Color get surface => _isDark ? Design.background : const Color(0xFFECE9D8);
+  static Color get paper =>
+      _isDark ? Color.alphaBlend(Design.text.withAlpha(10), Design.background) : const Color(0xFFFFFEF5);
   static const Color blueDark = Color(0xFF003399);
   static const Color blue = Color(0xFF245EDC);
   static const Color blueLight = Color(0xFF5A8CF0);
   static const Color blueHighlight = Color(0xFF7AA5F7);
   static const Color selection = Color(0xFF316AC5);
-  static const Color foreground = Color(0xFF000000);
-  static const Color dim = Color(0xFF5D5D5D);
+  static Color get foreground => _isDark ? Design.text : const Color(0xFF000000);
+  static Color get dim => _isDark ? Design.text.withAlpha(170) : const Color(0xFF5D5D5D);
   static const Color controlShadow = Color(0xFF716F64);
-  static const Color controlLight = Color(0xFFFFFFFF);
+  static Color get controlLight =>
+      _isDark ? Color.alphaBlend(Design.text.withAlpha(12), Design.background) : const Color(0xFFFFFFFF);
   static const Color orange = Color(0xFFFF8C00);
   static const Color green = Color(0xFF4BAE31);
 
@@ -346,17 +349,19 @@ abstract final class WindowsXpTokens {
 
 /// Windows 98 shell palette, beveled control colors and bitmap-era type.
 abstract final class Windows98Tokens {
-  static const Color face = Color(0xFFC0C0C0);
-  static const Color field = Color(0xFFFFFFFF);
-  static const Color light = Color(0xFFFFFFFF);
-  static const Color highlight = Color(0xFFDFDFDF);
-  static const Color shadow = Color(0xFF808080);
-  static const Color dark = Color(0xFF000000);
+  static bool get _isDark => Design.background.computeLuminance() < 0.5;
+  static Color get face => _isDark ? Design.background : const Color(0xFFC0C0C0);
+  static Color get field =>
+      _isDark ? Color.alphaBlend(Design.text.withAlpha(12), Design.background) : const Color(0xFFFFFFFF);
+  static Color get light => _isDark ? Design.text.withAlpha(220) : const Color(0xFFFFFFFF);
+  static Color get highlight => _isDark ? Design.text.withAlpha(150) : const Color(0xFFDFDFDF);
+  static Color get shadow => _isDark ? Design.text.withAlpha(80) : const Color(0xFF808080);
+  static Color get dark => _isDark ? Design.text.withAlpha(45) : const Color(0xFF000000);
   static const Color title = Color(0xFF000080);
   static const Color titleLight = Color(0xFF1084D0);
   static const Color selection = Color(0xFF000080);
-  static const Color foreground = Color(0xFF000000);
-  static const Color dim = Color(0xFF5A5A5A);
+  static Color get foreground => _isDark ? Design.text : const Color(0xFF000000);
+  static Color get dim => _isDark ? Design.text.withAlpha(170) : const Color(0xFF5A5A5A);
 
   static TextStyle system({
     double? fontSize,

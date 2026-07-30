@@ -347,7 +347,7 @@ class WindowWatcher {
       );
 
       final int ownHandle = Win32.getMainHandle();
-      final Set<int> validHandles = list.map((window) => window.hWnd).toSet();
+      final Set<int> validHandles = list.map((Window window) => window.hWnd).toSet();
 
       int topWindow = 0;
       int windowBehind = 0;

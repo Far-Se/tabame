@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
@@ -64,7 +65,7 @@ class MainMenuLedgerWidget extends StatelessWidget {
                       ),
                     ] else
                       const SizedBox(height: 3),
-                    _LedgerHeading(label: 'WINDOWS', code: '02', p: p),
+                    DragToMoveArea(child: _LedgerHeading(label: 'WINDOWS', code: '02', p: p)),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(2, 2, 2, 2),
                       child: DecoratedBox(

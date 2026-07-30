@@ -152,7 +152,7 @@ class MainMenuMangaWidget extends StatelessWidget {
                       )
                     else if (user.bottomBarOnTop)
                       const PinnedAndTrayList(),
-                    _PanelLabel(text: 'WINDOWS', m: m),
+                    DragToMoveArea(child: _PanelLabel(text: 'WINDOWS', m: m)),
                     const TaskBar(),
                     if (!user.bottomBarOnTop) ...<Widget>[
                       // _PanelLabel(text: 'PINNED', m: m),

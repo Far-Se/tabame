@@ -313,8 +313,8 @@ class LauncherResultRow extends StatelessWidget {
                         child: badge,
                       ),
                     if (isSelected)
-                      const Padding(
-                        padding: EdgeInsets.only(left: 6),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
                         child: Icon(Icons.arrow_right, size: 16, color: Windows98Tokens.light),
                       ),
                   ],

@@ -51,10 +51,10 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
       title: "Behavior",
       subtitle: "Panel focus and pop-up management",
       children: <Widget>[
-        _buildSectionTitle(context, "QuickMenu Design"),
-        const SizedBox(height: 12),
-        _buildDesignSelector(context, constraints),
-        const SizedBox(height: 16),
+        // _buildSectionTitle(context, "QuickMenu Design"),
+        // const SizedBox(height: 12),
+        // _buildDesignSelector(context, constraints),
+        // const SizedBox(height: 16),
         _buildToggleSetting(
           title: "Hide when losing focus",
           subtitle: "Close Tabame when clicking external windows",
@@ -157,6 +157,7 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
     );
   }
 
+  // ignore: unused_element
   Widget _buildDesignSelector(BuildContext context, BoxConstraints constraints) {
     final bool isWide = constraints.maxWidth > 550;
 
@@ -322,6 +323,7 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
     );
   }
 
+  // ignore: unused_element
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),

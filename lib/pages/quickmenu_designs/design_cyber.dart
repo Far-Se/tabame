@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
@@ -60,7 +61,7 @@ class MainMenuCyberWidget extends StatelessWidget {
                     const PinnedAndTrayList(),
                   ] else
                     const SizedBox(height: 4),
-                  _AnimeHeader(label: 'WINDOWS', p: p),
+                  DragToMoveArea(child: _AnimeHeader(label: 'WINDOWS', p: p)),
                   Container(
                     margin: const EdgeInsets.symmetric(vertical: 3, horizontal: 4),
                     decoration: BoxDecoration(

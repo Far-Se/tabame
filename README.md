@@ -88,7 +88,7 @@ Tabame is basically one fast popup with a lot packed into it. Here's the tour.
 
 ### ⚠️ A well known bug:
 
-Sometimes (2–3 times a week), the app draws incorrectly. To fix this, right-click where the Tabame logo should be.
+If the app draws incorrectly, usually when your PC is under stress (cpu 100%) right-click where the Tabame logo should be and the app will redraw completely
 
 - [🎛️ QuickMenu](#%EF%B8%8F-quickmenu) - the main popup
 - [🚀 Launcher](#-launcher) - type to find anything

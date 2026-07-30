@@ -34,15 +34,15 @@ class _ChangelogState extends State<Changelog> {
 ## UI
 Refactor the whole UI, added more QuickMenu Designs.
 ## Launcher
-Added Launcher, that can be trigger by typing in QuickMenu.
+Added Launcher, that can be trigger by typing in QuickMenu. Plus plugins and a lot of new designs.
 ## QuickMenu
-Can be resized, better focus management.
-Taskbar: Added badges for apps if you have notifications.
-Traybar: better integration.
+Redone the whole QuickMenu
 ## QuickActions
 Adapted the modals, added multiple Quick Actions Buttons.
 ## Interface Settings
 New Settings panel. Re-aranged and modernized all pages.
+## Other features
+QuickClick, Fancyshot capture/record, Screen Tools, and all the other features.
 
 """,
       '1.3': """

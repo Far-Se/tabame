@@ -93,7 +93,7 @@ class LauncherModalTokens {
           dim: OrbitTokens.dim(isDark),
         );
       case LauncherDesign.windowsXp:
-        return const LauncherModalTokens._(
+        return LauncherModalTokens._(
           design: LauncherDesign.windowsXp,
           isDark: false,
           surface: WindowsXpTokens.surface,
@@ -102,7 +102,7 @@ class LauncherModalTokens {
           dim: WindowsXpTokens.dim,
         );
       case LauncherDesign.windows98:
-        return const LauncherModalTokens._(
+        return LauncherModalTokens._(
           design: LauncherDesign.windows98,
           isDark: false,
           surface: Windows98Tokens.face,
@@ -490,7 +490,7 @@ class LauncherModalHeader extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           border: Border.all(color: tokens.accent.withAlpha(70)),
         ),
-      LauncherDesign.windowsXp => const BoxDecoration(
+      LauncherDesign.windowsXp => BoxDecoration(
           color: WindowsXpTokens.paper,
           border: Border(
             left: BorderSide(color: WindowsXpTokens.controlLight),
@@ -499,7 +499,7 @@ class LauncherModalHeader extends StatelessWidget {
             bottom: BorderSide(color: WindowsXpTokens.controlShadow),
           ),
         ),
-      LauncherDesign.windows98 => const BoxDecoration(
+      LauncherDesign.windows98 => BoxDecoration(
           color: Windows98Tokens.face,
           border: Border(
             left: BorderSide(color: Windows98Tokens.light, width: 2),
