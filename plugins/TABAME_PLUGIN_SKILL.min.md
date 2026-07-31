@@ -101,9 +101,17 @@ Only `{"type":"render",...}` and `{"type":"command","command":"...",...}` are me
 | `storage`          | `op`(`set`\|`get`\|`delete`\|`keys`),`key`?,`value`?,`secret`?,`requestId`?      | Per-plugin KV store, in `.tabame-store.json` unless `secret:true` (→ Windows Credential Manager, strings only, not in `keys`). `get`/`keys` reply `{"type":"storage",...}` echoing `requestId`. |
 | `background`       | `timeout`?(default 30, max 300)                                                  | Grace period after hide/leave before kill, to finish work. While detached: `storage`/`notify` still work, UI commands dropped. Send before `hide`.                                              |
 | `oauth`            | `authorizationUrl`(must contain literal `{redirectUri}`),`requestId`?,`timeout`? | Host loopback listener + opens auth URL; replies `{"type":"oauth",...}`. Exchange code yourself, store via `storage secret:true`.                                                               |
-| `browserBridge`    | `op`,`requestId`,`method`?,`params`?,`timeoutMs`?                                | Uses the optional app-owned Chromium bridge. `status` returns connector/pairing state; `request` forwards an allowlisted method. Replies/events use `{"type":"browserBridge",...}`.             |
+| `browserBridge`    | `op`,`requestId`,`method`?,`params`?,`timeoutMs`?                                | Uses the optional app-owned Chromium bridge. `status` returns connector/pairing state; `request` forwards an allowlisted method, including generic `javascript.execute`. Replies/events use `{"type":"browserBridge",...}`. |
 
 Notes: combine effects with multiple lines (`copy`+`hide` = copy-and-dismiss, but toast is skipped since launcher is already gone).
+
+For plugin-owned browser tasks, call `javascript.execute` with
+`params:{code,tabId?,input?,world?,allFrames?/frameIds?,injectImmediately?}`.
+The code may use `await`, receives JSON `input`, and returns JSON data; it runs
+in Chromium's `USER_SCRIPT` world by default. Only HTTP(S) tabs are supported,
+**Allow User Scripts** must be enabled, and browser-capable plugins must be
+trusted. Use `tabs.open`/`tabs.list`/`tabs.close` for plugin-owned temporary-tab
+lifecycle. See `tabame-extension/PROTOCOL.md`.
 
 ### 5.2 `rev` staleness rule
 

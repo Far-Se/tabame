@@ -5,6 +5,35 @@ const ANALYTICS_URL =
   "https://chatgpt.com/codex/cloud/settings/analytics#usage";
 const REQUEST_TIMEOUT_MS = 30_000;
 const config = { token: "", port: 17373 };
+const CODEX_USAGE_SCRIPT = `
+const deadline = Date.now() + Math.max(1000, Number(input?.timeoutMs) || 20000);
+let snapshot = null;
+while (Date.now() < deadline) {
+  const bodyText = document.body ? document.body.innerText : "";
+  const match =
+    bodyText.match(/(\\d+)%\\Wremaining/i) ||
+    bodyText.match(/(\\d+)%\\W+remaining/i);
+  snapshot = {
+    remainingPercent: match ? Number(match[1]) : null,
+    pageTitle: document.title,
+    pageUrl: location.href,
+  };
+  if (Number.isFinite(snapshot.remainingPercent)) {
+    return {
+      ...snapshot,
+      usedPercent: 100 - snapshot.remainingPercent,
+      fetchedAt: new Date().toISOString(),
+    };
+  }
+  await new Promise((resolve) => setTimeout(resolve, 500));
+}
+if (snapshot && !snapshot.pageUrl.startsWith("https://chatgpt.com/")) {
+  throw new Error("ChatGPT redirected away from the analytics page");
+}
+throw new Error(
+  "Codex usage was not found. Make sure this browser profile is signed in to ChatGPT and has Codex access.",
+);
+`;
 
 function send(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
@@ -434,7 +463,57 @@ async function renderAudio(rev, text, quiet = false) {
   }
 }
 
-async function renderUsage(rev, refresh = false) {
+function delay(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function waitForTabReady(tabId, timeoutMs = 20_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const snapshot = await bridge.request("tabs.list");
+    const tab = (snapshot.tabs || []).find((candidate) => candidate.id === tabId);
+    if (!tab) throw new Error("The temporary analytics tab was closed");
+    if (tab.status === "complete") return tab;
+    await delay(250);
+  }
+  throw new Error("The analytics page did not finish loading");
+}
+
+async function fetchCodexUsage() {
+  let analyticsTab = null;
+  try {
+    analyticsTab = await bridge.request("tabs.open", {
+      url: ANALYTICS_URL,
+      active: false,
+    });
+    if (!Number.isInteger(analyticsTab?.id)) {
+      throw new Error("Chromium did not return a temporary tab id");
+    }
+    await waitForTabReady(analyticsTab.id);
+    const execution = await bridge.request(
+      "javascript.execute",
+      {
+        tabId: analyticsTab.id,
+        code: CODEX_USAGE_SCRIPT,
+        input: { timeoutMs: 20_000 },
+      },
+      45_000,
+    );
+    const result = execution?.result;
+    if (!result || !Number.isFinite(Number(result.remainingPercent))) {
+      throw new Error("The Codex usage script returned an invalid result");
+    }
+    return result;
+  } finally {
+    if (Number.isInteger(analyticsTab?.id)) {
+      await bridge
+        .request("tabs.close", { tabId: analyticsTab.id })
+        .catch(() => {});
+    }
+  }
+}
+
+async function renderUsage(rev) {
   render(rev, "list", {
     loading: true,
     loadingText: "Opening ChatGPT analytics in the background…",
@@ -442,7 +521,7 @@ async function renderUsage(rev, refresh = false) {
     canGoBack: true,
   });
   try {
-    const result = await bridge.request("codex.usage", { refresh }, 35_000);
+    const result = await fetchCodexUsage();
     const remaining = Number(result.remainingPercent);
     state.usageRemaining = remaining;
     render(rev, "list", {
@@ -519,10 +598,11 @@ function renderConnection(rev) {
     : [
         "# Pair the Chromium extension",
         "",
-        "1. Load `extension/tabame-connector` from `chrome://extensions`.",
-        "2. Click the **Tabame Connector** toolbar icon.",
-        "3. Paste the token below and keep the default port.",
-        "4. Click **Save & connect**.",
+        "1. Load `tabame-extension` from `chrome://extensions`.",
+        "2. Enable **Allow User Scripts** on the extension details page if shown.",
+        "3. Click the **Tabame Connector** toolbar icon.",
+        "4. Paste the token below and keep the default port.",
+        "5. Click **Save & connect**.",
         "",
         "### Pairing token",
         "",
@@ -621,7 +701,7 @@ function renderCurrent(rev, text, options = {}) {
       return renderAudio(rev, state.query, Boolean(options.quiet));
     case "usage":
       if (options.refresh) return;
-      return renderUsage(rev, Boolean(options.refresh));
+      return renderUsage(rev);
     case "connection":
       return renderConnection(rev);
     default:
@@ -690,14 +770,14 @@ async function handleAction(id, action) {
         await bridge.request("tabs.open", { url: ANALYTICS_URL, active: true });
         command("hide");
       } else {
-        await renderUsage(0, true);
+        await renderUsage(0);
       }
       return;
     }
 
     if (action === "refresh") {
       if (state.screen === "connection") await bridge.refreshStatus();
-      if (state.screen === "usage") await renderUsage(0, true);
+      if (state.screen === "usage") await renderUsage(0);
       else renderCurrent(0, state.query, { refresh: true });
       return;
     }

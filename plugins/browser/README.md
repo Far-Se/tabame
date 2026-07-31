@@ -6,7 +6,8 @@ Control Chromium through the companion **Tabame Connector** extension.
 
 1. Copy this folder to `%localappdata%\Tabame\plugins\browser\`.
 2. Make sure Node.js is on `PATH`.
-3. Load `extension/tabame-connector` as an unpacked Chromium extension.
+3. Load `tabame-extension` as an unpacked Chromium extension and enable
+   **Allow User Scripts** on its details page when Chromium shows that toggle.
 4. Open **Launcher Plugins** and enable **Persistent browser connector**.
 5. Reopen the Tabame launcher and type **`browser`**.
 6. Open **Connection & pairing**, copy the token, and paste it into the
@@ -24,8 +25,9 @@ is paired once per Windows account/browser profile. Existing
 
 ## Commands
 
-- **Codex usage** — opens ChatGPT Codex analytics in an inactive temporary tab,
-  waits for the page, reads `(\d+)% … remaining`, and closes the tab.
+- **Codex usage** — plugin-owned logic opens ChatGPT Codex analytics in an
+  inactive temporary tab, sends its extraction JavaScript through
+  `javascript.execute`, and closes the tab.
 - **All browser tabs** — searchable list with favicons and tab state.
 - **Playing audio** — audible tabs with the best current candidate first.
 - **Connection & pairing** — live status, extension version, port, and token.
@@ -41,3 +43,5 @@ pin/unpin, reload, duplicate, and copy URL.
 - Origin policy: `chrome-extension://` origins only
 - Lifetime: the server stays active while Tabame is running and the optional
   **Persistent browser connector** setting is enabled
+- Site-specific tasks live in plugins; the extension exposes the generic
+  `javascript.execute` method documented in `tabame-extension/PROTOCOL.md`

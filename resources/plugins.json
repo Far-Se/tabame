@@ -550,6 +550,68 @@
         "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/shows/main.py",
         "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/shows/README.md"
       }
+    },
+    {
+      "id": "google-translate",
+      "name": "Google Translate",
+      "keyword": "gt",
+      "description": "Translate text with Google Translate (free, no API key)",
+      "icon": "translate",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/google-translate",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/google-translate/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/google-translate/main.py"
+      }
+    },
+    {
+      "id": "spotify",
+      "name": "Spotify",
+      "keyword": "spo",
+      "description": "Search Spotify and control playback — tracks, artists, albums, playlists, queue, devices, history.",
+      "icon": "music",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/spotify",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/spotify/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/spotify/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/spotify/README.md"
+      }
+    },
+    {
+      "id": "deepl",
+      "name": "DeepL Translate",
+      "keyword": "deepl",
+      "description": "Translate text via DeepL - predefined target languages, plus quick 'to es' / 'from en to es' overrides",
+      "icon": "translate",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/deepl",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/deepl/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/deepl/main.py"
+      }
+    },
+    {
+      "id": "mail",
+      "name": "Mail",
+      "keyword": "mail",
+      "description": "Read and send email over IMAP/POP3 + SMTP — Gmail, Yahoo, or any custom server.",
+      "icon": "mail",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/mail",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/mail/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/mail/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/mail/README.md"
+      }
     }
   ]
 }

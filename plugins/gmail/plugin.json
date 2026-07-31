@@ -1,15 +1,11 @@
 {
   "name": "Gmail",
   "id": "gmail",
-  "keyword": "mail",
+  "keyword": "gmail",
   "runtime": "python",
   "entry": "main.py",
   "icon": "mail",
   "description": "Search, read, compose, reply and triage Gmail",
-  "pip": [
-    "google-auth",
-    "google-auth-oauthlib",
-    "google-api-python-client"
-  ],
+  "pip": ["google-auth", "google-auth-oauthlib", "google-api-python-client"],
   "dev": false
 }

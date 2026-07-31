@@ -1,0 +1,9 @@
+{
+  "name": "Spotify",
+  "keyword": "spo",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "music",
+  "description": "Search Spotify and control playback — tracks, artists, albums, playlists, queue, devices, history.",
+  "pip": ["requests"]
+}

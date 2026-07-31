@@ -2,7 +2,7 @@
   "id": "tabame-browser",
   "name": "Browser",
   "keyword": "browser",
-  "description": "Control Chromium tabs and inspect Codex usage through the Tabame Connector",
+  "description": "Control Chromium tabs and run plugin-owned browser tasks through the Tabame Connector",
   "icon": "globe",
   "runtime": "node",
   "entry": "main.js",

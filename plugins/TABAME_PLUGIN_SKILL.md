@@ -323,7 +323,7 @@ Instead of shelling out to `clip`/`start` yourself, ask the host:
 | `storage`          | `op`, `key`?, `value`?, `secret`?, `requestId`?          | Per-plugin persistent key-value store. `op` is `"set"`, `"get"`, `"delete"`, or `"keys"`. Plain values live in `.tabame-store.json` in the plugin folder; `"secret": true` routes the value to the **Windows Credential Manager** instead (strings only; not listed by `keys`). `get`/`keys` reply with a `{"type":"storage"}` message echoing `requestId`. |
 | `background`       | `timeout`?                                               | Requests shutdown grace: after the launcher hides / the user leaves, the process is **not killed** for up to `timeout` seconds (default 30, max 300) so it can finish work. While detached it can still use `storage` and `notify`, but frames and UI commands are dropped. Send it **before** `hide`.                                                      |
 | `oauth`            | `authorizationUrl`, `requestId`?, `timeout`?            | Starts a host-owned ephemeral loopback callback listener and opens the authorization URL. `authorizationUrl` **must** include the literal `{redirectUri}` placeholder; Tabame URL-encodes and substitutes it. It replies with `{"type":"oauth",...}`. Exchange the returned code yourself and store tokens using `storage` with `secret: true`. |
-| `browserBridge`    | `op`, `requestId`, `method`?, `params`?, `timeoutMs`?    | Uses Tabame's optional persistent Chromium connector. `op:"status"` returns enabled/running/connected state plus pairing metadata. `op:"request"` forwards an allowlisted browser method and replies with `{"type":"browserBridge","requestId","ok","result"}` (or `error`). Connection and tab-change events arrive as unsolicited `browserBridge` messages. |
+| `browserBridge`    | `op`, `requestId`, `method`?, `params`?, `timeoutMs`?    | Uses Tabame's optional persistent Chromium connector. `op:"status"` returns enabled/running/connected state plus pairing metadata. `op:"request"` forwards an allowlisted browser method—including generic `javascript.execute`—and replies with `{"type":"browserBridge","requestId","ok","result"}` (or `error`). Connection and tab-change events arrive as unsolicited `browserBridge` messages. |
 
 Example stdout lines:
 
@@ -344,6 +344,49 @@ Notes:
   don't expect to keep running afterwards.
 - A `copy` followed by `hide` skips the toast — the launcher is gone before it
   would render.
+
+#### Plugin-owned browser JavaScript
+
+Browser-capable plugins can keep site-specific tasks in the plugin instead of
+adding them to Tabame or the companion extension. Send a `browserBridge`
+request with method `javascript.execute`:
+
+```json
+{
+  "type": "command",
+  "command": "browserBridge",
+  "op": "request",
+  "requestId": "page-title-1",
+  "method": "javascript.execute",
+  "params": {
+    "tabId": 42,
+    "code": "return { title: document.title, url: location.href, selector: input.selector };",
+    "input": { "selector": "main" }
+  },
+  "timeoutMs": 30000
+}
+```
+
+The reply arrives on stdin as
+`{"type":"browserBridge","requestId":"page-title-1","ok":true,"result":...}`.
+
+- `code` is required, may use `await`, and returns data with `return` (128 KiB
+  maximum).
+- `input` is any JSON value available to the script as `input`. Returned data
+  must be JSON-serializable (192 KiB maximum).
+- `tabId` defaults to the active tab. Use `tabs.open`, `tabs.list`, and
+  `tabs.close` to let the plugin own temporary-tab lifecycle.
+- `world` is `"USER_SCRIPT"` by default; request `"MAIN"` only when access to
+  page JavaScript globals is necessary.
+- `allFrames:true` or `frameIds:[...]` targets frames. The top frame is the
+  default. `injectImmediately:true` skips the normal `document_idle` preference.
+- Only HTTP(S) tabs are scriptable. Chromium's **Allow User Scripts** toggle
+  must be enabled for the companion extension.
+
+This capability can read and change authenticated pages in the connected
+profile. Only install browser-capable plugins you trust. See
+`tabame-extension/PROTOCOL.md` and `plugins/browser/main.js` for the complete
+contract and a working temporary-tab data fetcher.
 
 ### 5.3 The `rev` staleness rule (important)
 

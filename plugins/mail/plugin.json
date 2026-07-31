@@ -1,0 +1,9 @@
+{
+  "name": "Mail",
+  "keyword": "mail",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "mail",
+  "description": "Read and send email over IMAP/POP3 + SMTP — Gmail, Yahoo, or any custom server.",
+  "dev": false
+}

@@ -5,7 +5,7 @@ There is no command menu or drill-down: the tab list is the plugin's root view.
 
 ## Pairing
 
-Pair the `extension/tabame-connector` extension once through the main `browser`
+Pair the `tabame-extension` extension once through the main `browser`
 plugin. Tabame's app-owned bridge stores its shared pairing data in:
 
 ```text

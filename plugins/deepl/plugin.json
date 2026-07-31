@@ -1,0 +1,9 @@
+{
+  "name": "DeepL Translate",
+  "keyword": "deepl",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "translate",
+  "description": "Translate text via DeepL - predefined target languages, plus quick 'to es' / 'from en to es' overrides",
+  "pip": ["requests"]
+}
