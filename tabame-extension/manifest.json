@@ -1,19 +1,19 @@
 {
   "manifest_version": 3,
   "name": "Tabame Connector",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A secure local bridge between Chromium and the Tabame launcher.",
-  "minimum_chrome_version": "116",
+  "minimum_chrome_version": "135",
   "permissions": [
     "alarms",
-    "scripting",
     "storage",
     "tabGroups",
-    "tabs"
+    "tabs",
+    "userScripts"
   ],
   "host_permissions": [
-    "http://127.0.0.1/*",
-    "https://chatgpt.com/*"
+    "http://*/*",
+    "https://*/*"
   ],
   "background": {
     "service_worker": "background.js"

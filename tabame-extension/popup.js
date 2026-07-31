@@ -29,9 +29,13 @@ async function refreshStatus(syncFields = true) {
   stateLamp.classList.toggle("connected", status.connected);
 
   if (status.connected) {
-    statusTitle.textContent = "Connected";
-    statusDetail.textContent =
-      "Tabame can inspect and control this browser profile.";
+    statusTitle.textContent = status.userScriptsAvailable
+      ? "Connected"
+      : "Connected · scripts disabled";
+    statusDetail.textContent = status.userScriptsAvailable
+      ? "Trusted Tabame plugins can inspect and control this browser profile."
+      : status.userScriptsError ||
+        'Enable "Allow User Scripts" on this extension\'s details page.';
     return status;
   }
 

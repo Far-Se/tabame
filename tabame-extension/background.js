@@ -3,12 +3,12 @@
 const BRIDGE_HOST = "127.0.0.1";
 const DEFAULT_PORT = 17373;
 const BRIDGE_PATH = "/tabame";
-const ANALYTICS_URL =
-  "https://chatgpt.com/codex/cloud/settings/analytics#usage";
 const KEEPALIVE_MS = 20_000;
 const RECONNECT_MIN_MS = 800;
 const RECONNECT_MAX_MS = 12_000;
 const REQUEST_TIMEOUT_MS = 25_000;
+const MAX_SCRIPT_BYTES = 128 * 1024;
+const MAX_SCRIPT_RESULT_BYTES = 192 * 1024;
 const RECONNECT_ALARM = "tabame-connector-reconnect";
 
 let socket = null;
@@ -176,9 +176,10 @@ async function handleBridgeMessage(raw) {
   if (!id) return;
 
   try {
+    const timeoutMs = requestTimeoutMs(message.timeoutMs);
     const result = await withTimeout(
       dispatchRequest(message.method, message.params || {}),
-      REQUEST_TIMEOUT_MS,
+      timeoutMs,
       `Request timed out: ${message.method}`,
     );
     sendBridge({ type: "response", id, ok: true, result });
@@ -214,6 +215,12 @@ function withTimeout(promise, timeoutMs, message) {
   });
 }
 
+function requestTimeoutMs(value) {
+  const requested = Number(value);
+  if (!Number.isFinite(requested)) return REQUEST_TIMEOUT_MS;
+  return Math.min(60_000, Math.max(1_000, Math.trunc(requested) - 250));
+}
+
 async function dispatchRequest(method, params) {
   switch (method) {
     case "bridge.ping":
@@ -242,8 +249,8 @@ async function dispatchRequest(method, params) {
       return serializeTab(await chrome.tabs.duplicate(requireTabId(params)));
     case "tabs.open":
       return openTab(params.url, params.active !== false);
-    case "codex.usage":
-      return getCodexUsage();
+    case "javascript.execute":
+      return executeJavascript(params);
     default:
       throw new Error(`Unsupported bridge method: ${method}`);
   }
@@ -363,82 +370,142 @@ async function openTab(url, active) {
   );
 }
 
-async function waitForTabComplete(tabId, timeoutMs = 20_000) {
-  const existing = await chrome.tabs.get(tabId);
-  if (existing.status === "complete") return existing;
-
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      chrome.tabs.onUpdated.removeListener(onUpdated);
-      reject(new Error("The analytics page did not finish loading"));
-    }, timeoutMs);
-
-    function onUpdated(updatedTabId, changeInfo, tab) {
-      if (updatedTabId !== tabId || changeInfo.status !== "complete") return;
-      clearTimeout(timer);
-      chrome.tabs.onUpdated.removeListener(onUpdated);
-      resolve(tab);
-    }
-
-    chrome.tabs.onUpdated.addListener(onUpdated);
+async function resolveScriptTab(params) {
+  if (params.tabId != null) {
+    return chrome.tabs.get(requireTabId(params));
+  }
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    lastFocusedWindow: true,
   });
+  if (!tab || !Number.isInteger(tab.id)) {
+    throw new Error("No active browser tab is available");
+  }
+  return tab;
 }
 
-async function readUsageFromTab(tabId) {
-  const results = await chrome.scripting.executeScript({
-    target: { tabId },
-    func: () => {
-      const bodyText = document.body ? document.body.innerText : "";
-      const match =
-        bodyText.match(/(\d+)%\Wremaining/i) ||
-        bodyText.match(/(\d+)%\W+remaining/i);
-      return {
-        remainingPercent: match ? Number(match[1]) : null,
-        pageTitle: document.title,
-        pageUrl: location.href,
-      };
-    },
-  });
-  return results[0] ? results[0].result : null;
-}
-
-async function getCodexUsage() {
-  let analyticsTab;
+function requireScriptPage(tab) {
+  const value = tab.url || tab.pendingUrl || "";
+  let parsed;
   try {
-    analyticsTab = await chrome.tabs.create({
-      url: ANALYTICS_URL,
-      active: false,
-    });
-    await waitForTabComplete(analyticsTab.id);
+    parsed = new URL(value);
+  } catch {
+    throw new Error("The target tab does not have a scriptable URL");
+  }
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    throw new Error("JavaScript can only run in HTTP or HTTPS tabs");
+  }
+  return parsed.href;
+}
 
-    const deadline = Date.now() + 20_000;
-    let snapshot = null;
-    while (Date.now() < deadline) {
-      snapshot = await readUsageFromTab(analyticsTab.id);
-      if (snapshot && Number.isFinite(snapshot.remainingPercent)) {
-        return {
-          ...snapshot,
-          usedPercent: 100 - snapshot.remainingPercent,
-          fetchedAt: new Date().toISOString(),
-        };
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
+function scriptTarget(tabId, params) {
+  const target = { tabId };
+  if (params.allFrames === true) {
+    if (params.frameIds != null) {
+      throw new Error("allFrames and frameIds cannot be used together");
     }
+    target.allFrames = true;
+    return target;
+  }
+  if (params.frameIds == null) return target;
+  if (!Array.isArray(params.frameIds) || params.frameIds.length === 0) {
+    throw new Error("frameIds must be a non-empty array");
+  }
+  target.frameIds = params.frameIds.map((value) => {
+    const frameId = Number(value);
+    if (!Number.isInteger(frameId) || frameId < 0) {
+      throw new Error("frameIds must contain non-negative integers");
+    }
+    return frameId;
+  });
+  return target;
+}
 
-    if (snapshot && !snapshot.pageUrl.startsWith("https://chatgpt.com/")) {
-      throw new Error("ChatGPT redirected away from the analytics page");
-    }
+async function ensureUserScriptsAvailable() {
+  if (!chrome.userScripts || typeof chrome.userScripts.execute !== "function") {
     throw new Error(
-      "Codex usage was not found. Make sure this browser profile is signed in to ChatGPT and has Codex access.",
+      'JavaScript execution is disabled. Open this extension in chrome://extensions and enable "Allow User Scripts".',
     );
-  } finally {
-    if (analyticsTab && Number.isInteger(analyticsTab.id)) {
-      try {
-        await chrome.tabs.remove(analyticsTab.id);
-      } catch {
-        // The user may have closed the temporary tab first.
-      }
-    }
+  }
+  try {
+    await chrome.userScripts.getScripts();
+  } catch {
+    throw new Error(
+      'JavaScript execution is disabled. Open this extension in chrome://extensions and enable "Allow User Scripts".',
+    );
+  }
+}
+
+async function executeJavascript(params) {
+  const code = typeof params.code === "string" ? params.code : "";
+  if (!code.trim()) throw new Error("javascript.execute requires non-empty code");
+  if (new TextEncoder().encode(code).length > MAX_SCRIPT_BYTES) {
+    throw new Error(`JavaScript code cannot exceed ${MAX_SCRIPT_BYTES} bytes`);
+  }
+
+  await ensureUserScriptsAvailable();
+  const tab = await resolveScriptTab(params);
+  const pageUrl = requireScriptPage(tab);
+  const worldValue = String(params.world || "USER_SCRIPT").toUpperCase();
+  if (!["USER_SCRIPT", "MAIN"].includes(worldValue)) {
+    throw new Error('world must be "USER_SCRIPT" or "MAIN"');
+  }
+
+  const input = Object.hasOwn(params, "input") ? params.input : null;
+  const source = [
+    '"use strict";',
+    "(async (input) => {",
+    code,
+    `})(${JSON.stringify(input)})`,
+  ].join("\n");
+  const injection = {
+    target: scriptTarget(tab.id, params),
+    world: worldValue,
+    js: [{ code: source }],
+  };
+  if (params.injectImmediately === true) {
+    injection.injectImmediately = true;
+  }
+
+  const injectionResults = await chrome.userScripts.execute(injection);
+  const results = injectionResults.map((entry) => ({
+    frameId: entry.frameId,
+    documentId: entry.documentId || null,
+    result: Object.hasOwn(entry, "result") ? entry.result : null,
+    ...(entry.error ? { error: entry.error } : {}),
+  }));
+  if (results.length === 1 && results[0].error) {
+    throw new Error(results[0].error);
+  }
+
+  const response = {
+    tabId: tab.id,
+    pageUrl,
+    world: worldValue,
+    result: results[0] ? results[0].result : null,
+    results,
+    executedAt: new Date().toISOString(),
+  };
+  let serialized;
+  try {
+    serialized = JSON.stringify(response);
+  } catch {
+    throw new Error("The JavaScript result must be JSON-serializable");
+  }
+  if (new TextEncoder().encode(serialized).length > MAX_SCRIPT_RESULT_BYTES) {
+    throw new Error(
+      `The JavaScript result cannot exceed ${MAX_SCRIPT_RESULT_BYTES} bytes`,
+    );
+  }
+  return response;
+}
+
+async function userScriptsStatus() {
+  try {
+    await ensureUserScriptsAvailable();
+    return { available: true, error: "" };
+  } catch (error) {
+    return { available: false, error: normalizeError(error) };
   }
 }
 
@@ -502,16 +569,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || message.type !== "popup") return false;
 
   if (message.action === "status") {
-    void readBridgeConfig().then((config) =>
-      sendResponse({
-        connected: authenticated,
-        connecting: Boolean(socket),
-        configured: Boolean(config.token),
-        port: config.port,
-        token: config.token,
-        lastError,
-        version: extensionVersion(),
-      }),
+    void Promise.all([readBridgeConfig(), userScriptsStatus()]).then(
+      ([config, scripts]) =>
+        sendResponse({
+          connected: authenticated,
+          connecting: Boolean(socket),
+          configured: Boolean(config.token),
+          port: config.port,
+          token: config.token,
+          lastError,
+          version: extensionVersion(),
+          userScriptsAvailable: scripts.available,
+          userScriptsError: scripts.error,
+        }),
     );
     return true;
   }

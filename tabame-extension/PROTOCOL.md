@@ -40,9 +40,12 @@ Launcher to extension:
   "type": "request",
   "id": "uuid",
   "method": "tabs.list",
-  "params": {}
+  "params": {},
+  "timeoutMs": 30000
 }
 ```
+
+`timeoutMs` is optional and clamped to 1–60 seconds.
 
 Successful response:
 
@@ -80,10 +83,48 @@ Failed response:
 | `tabs.reload` | `tabId` | Completion |
 | `tabs.duplicate` | `tabId` | New tab |
 | `tabs.open` | `url`, optional `active` | New tab |
-| `codex.usage` | — | Remaining/used percentage and timestamp |
+| `javascript.execute` | `code`, optional `tabId`, `input`, `world`, `allFrames`/`frameIds`, `injectImmediately` | Runs plugin-supplied JavaScript in an HTTP(S) tab and returns its JSON-serializable result |
 
-`tabs.open` accepts only HTTP and HTTPS URLs. There is intentionally no generic
-JavaScript-evaluation method.
+`tabs.open` accepts only HTTP and HTTPS URLs.
+
+### Plugin-owned JavaScript
+
+`javascript.execute` is the generic building block for browser-backed plugins.
+The extension does not contain site-specific fetchers. A plugin can open or
+select a tab with the tab methods above, send its own task script, consume the
+result, and close temporary tabs itself.
+
+```json
+{
+  "type": "request",
+  "id": "uuid",
+  "method": "javascript.execute",
+  "params": {
+    "tabId": 42,
+    "code": "return { title: document.title, url: location.href, selector: input.selector };",
+    "input": { "selector": "main" },
+    "world": "USER_SCRIPT"
+  }
+}
+```
+
+- `code` is required, may use `await`, and returns a value with `return`.
+  It is capped at 128 KiB.
+- `input` is any JSON value exposed to the script as the local `input`
+  variable. Results must be JSON-serializable and are capped at 192 KiB.
+- `tabId` defaults to the active tab in the last-focused window.
+- `world` is `USER_SCRIPT` by default or `MAIN` when page JavaScript globals
+  are required.
+- `allFrames: true` or `frameIds: [...]` targets frames; they are mutually
+  exclusive. The top frame is the default.
+- `injectImmediately: true` skips the normal `document_idle` preference.
+- The result object contains `tabId`, `pageUrl`, `world`, the first-frame
+  `result`, all per-frame `results`, and `executedAt`.
+
+The connector only injects into HTTP(S) pages. Chromium must expose and allow
+the `userScripts` API; on current Chromium versions, enable **Allow User
+Scripts** on the extension's details page. Arbitrary browser-page code is a
+powerful capability, so only install Tabame plugins you trust.
 
 ## Events
 
