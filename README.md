@@ -12,7 +12,7 @@
 
 Tabame (Ta-ba-me -> **TA**sk**BA**r**ME**nu) started as a Windows taskbar replacement. I don't like the flashing icons, the badges, the notifications and all the stuff Microsoft keeps pushing into my face. So I made a little popup menu (the **QuickMenu**) that shows my open windows, my audio, my pinned apps - and nothing else unless I ask for it.
 
-Then I kept getting ideas. "It'd be nice if I could also..." - and that's how it grew into the thing you see now: a launcher, a media player, screenshot and drawing tools, a password vault, an authenticator, reminders, activity tracking, file utilities, and a pile of small things I use every day.
+Then I kept getting ideas. "It'd be nice if I could also..." - and that's how it grew into the thing you see now: a launcher, launcher plugins, a media player, screenshot and drawing tools, a password vault, an authenticator, reminders, activity tracking, file utilities, and a pile of small things I use every day that now total more than 250,000 lines of code.
 
 It's all made by one person (me), for the way I actually use my computer. It's free, it's open source, and it tries to stay out of your way until you press a hotkey.
 
@@ -597,16 +597,12 @@ Make it look how you like. Change the background, text and accent colors - pick 
 
 On top of the colors, both the QuickMenu and the Launcher come with several built-in **designs** (layouts), so you can pick the vibe that fits you instead of being stuck with one look.
 
-**QuickMenu designs** - Classic, Interface, Modern, Matrix, Serene, Aurora and Terminal. Anything from clean-and-simple to a more terminal/hacker look.
-
-**Launcher designs** - Classic, Serene, Command, Terminal, Zen and Glass. Same idea for the search box: from a plain list to a glassy, command-palette style.
-
 Switch designs from the **QuickMenuDesign** action, and brand it as your own with a custom icon and a splash image above the menu if you want.
 
 ---
 
 # 🙃 Outro
 
-I started this to learn Dart and Flutter. In my head it was only ever going to be the QuickMenu - but every time I used it I had another idea, and it snowballed into Tabame (a random name I came up with). It's grown a lot, and I'm kind of proud of how much one person managed to cram into it.
+I started this to learn Dart and Flutter. In my head it was only ever going to be the QuickMenu - but every time I used it I had another idea, and it snowballed into Tabame. It's grown a lot, and I'm kind of proud of how much one person managed to cram into it.
 
 ### If you find it useful, you can [buy me a coffee](https://www.buymeacoffee.com/far.se) ☕

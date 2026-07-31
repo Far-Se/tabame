@@ -295,7 +295,10 @@ class _PluginReadmePanelState extends State<PluginReadmePanel> {
                           child: SelectionArea(
                             child: widget.markdown.trim().isEmpty
                                 ? Text('README.md is empty.', style: tokens.text(color: tokens.dim))
-                                : MarkdownBlock(data: widget.markdown),
+                                : MarkdownBlock(
+                                    data: widget.markdown,
+                                    config: _markdownConfig(tokens),
+                                  ),
                           ),
                         ),
                       ),
@@ -314,6 +317,198 @@ class _PluginReadmePanelState extends State<PluginReadmePanel> {
       ),
     );
   }
+
+  /// Replaces markdown_widget's light-mode defaults with the palette and
+  /// typography of the active launcher design. The package otherwise renders
+  /// several elements (notably code, headings, rules, and list markers) with
+  /// hard-coded grays that lose contrast in themed modal surfaces.
+  MarkdownConfig _markdownConfig(LauncherModalTokens tokens) {
+    final Color text = tokens.onSurface;
+    final Color accent = tokens.accent;
+
+    _ReadmeHeadingConfig heading(
+      MarkdownTag tag,
+      double size, {
+      int alpha = 255,
+      double letterSpacing = 0,
+      HeadingDivider? divider,
+      EdgeInsets padding = const EdgeInsets.only(top: 10, bottom: 3),
+    }) {
+      return _ReadmeHeadingConfig(
+        tag: tag.name,
+        style: tokens.text(
+          color: text.withAlpha(alpha),
+          fontSize: size,
+          fontWeight: FontWeight.w700,
+          letterSpacing: letterSpacing,
+          height: 1.3,
+        ),
+        divider: divider,
+        padding: padding,
+      );
+    }
+
+    final Color coolTone = Color.lerp(accent, text, 0.32)!;
+    final Color warmTone = Color.lerp(accent, const Color(0xFFE3A85B), 0.42)!;
+    final Map<String, TextStyle> codeTheme = <String, TextStyle>{
+      'root': TextStyle(color: text, backgroundColor: Colors.transparent),
+      'comment': TextStyle(color: text.withAlpha(120), fontStyle: FontStyle.italic),
+      'quote': TextStyle(color: text.withAlpha(120), fontStyle: FontStyle.italic),
+      'meta': TextStyle(color: text.withAlpha(170)),
+      'keyword': TextStyle(color: accent),
+      'selector-tag': TextStyle(color: accent),
+      'built_in': TextStyle(color: accent),
+      'tag': TextStyle(color: accent),
+      'type': TextStyle(color: coolTone),
+      'number': TextStyle(color: coolTone),
+      'literal': TextStyle(color: coolTone),
+      'string': TextStyle(color: warmTone),
+      'attr': TextStyle(color: warmTone),
+      'title': TextStyle(color: warmTone),
+      'section': TextStyle(color: warmTone),
+      'function': TextStyle(color: warmTone),
+    };
+
+    return MarkdownConfig(
+      configs: <WidgetConfig>[
+        PConfig(textStyle: tokens.text(color: text.withAlpha(225), fontSize: 13, height: 1.5)),
+        heading(
+          MarkdownTag.h1,
+          18,
+          letterSpacing: -0.2,
+          divider: HeadingDivider(color: text.withAlpha(32), space: 6, height: 1),
+          padding: const EdgeInsets.only(top: 12, bottom: 5),
+        ),
+        heading(
+          MarkdownTag.h2,
+          15.5,
+          divider: HeadingDivider(color: text.withAlpha(24), space: 5, height: 1),
+          padding: const EdgeInsets.only(top: 12, bottom: 4),
+        ),
+        heading(MarkdownTag.h3, 14),
+        heading(MarkdownTag.h4, 13, alpha: 225),
+        heading(MarkdownTag.h5, 12, alpha: 195),
+        heading(MarkdownTag.h6, 11.5, alpha: 155, letterSpacing: 0.3),
+        HrConfig(height: 1, color: text.withAlpha(30)),
+        ListConfig(
+          marginLeft: 22,
+          marker: (bool ordered, int depth, int index) =>
+              _readmeListMarker(tokens, ordered: ordered, depth: depth, index: index),
+        ),
+        CheckBoxConfig(
+          builder: (bool checked) => Padding(
+            padding: const EdgeInsets.only(right: 5, top: 1),
+            child: Icon(
+              checked ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+              size: 15,
+              color: checked ? accent : text.withAlpha(125),
+            ),
+          ),
+        ),
+        CodeConfig(
+          style: TextStyle(
+            color: accent,
+            backgroundColor: accent.withAlpha(28),
+            fontFamily: 'Consolas',
+            fontSize: 12.5,
+          ),
+        ),
+        PreConfig(
+          textStyle: const TextStyle(fontFamily: 'Consolas', fontSize: 12.5, height: 1.45),
+          styleNotMatched: TextStyle(color: text),
+          theme: codeTheme,
+          decoration: BoxDecoration(
+            color: text.withAlpha(tokens.isDark ? 14 : 10),
+            border: Border.all(color: accent.withAlpha(42)),
+            borderRadius: BorderRadius.circular(tokens.controlRadius.clamp(3, 7)),
+          ),
+          padding: const EdgeInsets.all(10),
+        ),
+        BlockquoteConfig(
+          sideColor: accent.withAlpha(150),
+          sideWith: 3,
+          textColor: text.withAlpha(205),
+          padding: const EdgeInsets.fromLTRB(12, 2, 0, 2),
+        ),
+        TableConfig(
+          border: TableBorder.all(color: text.withAlpha(42)),
+          headerRowDecoration: BoxDecoration(color: accent.withAlpha(20)),
+          headerStyle: tokens.text(fontSize: 12, fontWeight: FontWeight.w700, color: accent),
+          bodyStyle: tokens.text(fontSize: 12, color: text.withAlpha(225)),
+          headPadding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
+          bodyPadding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
+        ),
+        LinkConfig(
+          style: tokens
+              .text(
+                color: accent,
+                fontWeight: FontWeight.w600,
+              )
+              .copyWith(
+                decoration: TextDecoration.underline,
+                decorationColor: accent.withAlpha(150),
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A heading config with launcher-sized type instead of markdown_widget's
+/// oversized article defaults and fixed light-gray dividers.
+class _ReadmeHeadingConfig extends HeadingConfig {
+  const _ReadmeHeadingConfig({
+    required this.tag,
+    required this.style,
+    this.divider,
+    this.padding = const EdgeInsets.only(top: 10, bottom: 3),
+  });
+
+  @override
+  final String tag;
+  @override
+  final TextStyle style;
+  @override
+  final HeadingDivider? divider;
+  @override
+  final EdgeInsets padding;
+}
+
+Widget _readmeListMarker(
+  LauncherModalTokens tokens, {
+  required bool ordered,
+  required int depth,
+  required int index,
+}) {
+  final Color markerColor = tokens.accent.withAlpha(210);
+  if (ordered) {
+    return Container(
+      alignment: Alignment.topRight,
+      padding: const EdgeInsets.only(right: 6, top: 1),
+      child: Text(
+        '${index + 1}.',
+        style: tokens.text(
+          color: markerColor,
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+          height: 1.5,
+        ),
+      ),
+    );
+  }
+
+  final BoxDecoration decoration = switch (depth) {
+    0 => BoxDecoration(color: markerColor, shape: BoxShape.circle),
+    1 => BoxDecoration(border: Border.all(color: markerColor, width: 1.2), shape: BoxShape.circle),
+    _ => BoxDecoration(color: markerColor.withAlpha(160), borderRadius: BorderRadius.circular(1)),
+  };
+  return Padding(
+    padding: const EdgeInsets.only(right: 8, top: 7),
+    child: Align(
+      alignment: Alignment.topRight,
+      child: Container(width: 5, height: 5, decoration: decoration),
+    ),
+  );
 }
 
 class _PluginActionRow extends StatelessWidget {

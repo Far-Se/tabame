@@ -92,7 +92,7 @@ class BrowserBridgeService {
     'tabs.reload',
     'tabs.duplicate',
     'tabs.open',
-    'codex.usage',
+    'javascript.execute',
   };
 
   final ValueNotifier<BrowserBridgeStatus> statusNotifier = ValueNotifier<BrowserBridgeStatus>(
@@ -231,6 +231,7 @@ class BrowserBridgeService {
       'id': id,
       'method': method,
       'params': params,
+      'timeoutMs': timeout.inMilliseconds,
     }));
     return completer.future;
   }
