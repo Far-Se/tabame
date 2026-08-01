@@ -1,0 +1,10 @@
+{
+  "id": "rss-read-later",
+  "name": "RSS & Read Later",
+  "keyword": "rss",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "book",
+  "description": "Follow RSS/Atom feeds, browse new articles, organize nested categories, and save stories for later.",
+  "dev": false
+}

@@ -16,10 +16,10 @@ editor form for longer notes.
 Storage: plain notes.json in the plugin folder (working directory).
 """
 
-import sys
 import json
 import os
 import re
+import sys
 import uuid
 from datetime import datetime, timedelta
 
@@ -31,6 +31,7 @@ STATE = {"screen": "root", "query": ""}
 # --------------------------------------------------------------------------
 # stdout / stderr helpers
 # --------------------------------------------------------------------------
+
 
 def send(frame):
     sys.stdout.write(json.dumps(frame) + "\n")
@@ -48,6 +49,7 @@ def cmd(command, **fields):
 # --------------------------------------------------------------------------
 # storage
 # --------------------------------------------------------------------------
+
 
 def load_notes():
     if not os.path.exists(STORE_PATH):
@@ -134,13 +136,19 @@ def note_actions(n):
             "title": "Unpin" if n["pinned"] else "Pin",
             "icon": "star",
         },
-        {"id": "copy", "title": "Copy content", "icon": "copy", "shortcut": "ctrl+shift+c"},
+        {
+            "id": "copy",
+            "title": "Copy content",
+            "icon": "copy",
+            "shortcut": "ctrl+shift+c",
+        },
         {"id": "duplicate", "title": "Duplicate", "icon": "copy"},
         {
             "id": "delete",
             "title": "Delete",
             "icon": "trash",
             "destructive": True,
+            "shortcut": "ctrl+shift+d",
             "confirm": DELETE_CONFIRM(n["title"]),
         },
     ]
@@ -148,7 +156,9 @@ def note_actions(n):
 
 def note_preview(n):
     body = n["body"].strip() if n["body"] else ""
-    md = f"# {n['title'] or '(untitled)'}\n\n" + (body if body else "*No additional content*")
+    md = f"# {n['title'] or '(untitled)'}\n\n" + (
+        body if body else "*No additional content*"
+    )
     meta = [
         {
             "label": "Status",
@@ -160,6 +170,11 @@ def note_preview(n):
         {"separator": True},
         {"label": "Created", "text": fmt_dt(n["created"])},
         {"label": "Updated", "text": fmt_dt(n["updated"])},
+        {
+            "label": "Actions",
+            "text": "Note content",
+            "actions": [{"id": "copy", "title": "Copy", "icon": "copy"}],
+        },
     ]
     # drop the None color key rather than sending an invalid value
     for row in meta:
@@ -170,7 +185,9 @@ def note_preview(n):
 
 def note_item(n):
     body = (n["body"] or "").strip().replace("\n", " ")
-    subtitle = (body[:80] + "…") if len(body) > 80 else (body or "No additional content")
+    subtitle = (
+        (body[:80] + "…") if len(body) > 80 else (body or "No additional content")
+    )
     accessories = []
     if n["pinned"]:
         accessories.append({"text": "Pinned", "icon": "star", "color": "#F5B400"})
@@ -237,7 +254,12 @@ def group_sections(notes):
 
 
 ROOT_FRAME_ACTIONS = [
-    {"id": "newblank", "title": "New note (full editor)", "icon": "note", "shortcut": "ctrl+n"},
+    {
+        "id": "newblank",
+        "title": "New note (full editor)",
+        "icon": "note",
+        "shortcut": "ctrl+n",
+    },
 ]
 
 
@@ -256,13 +278,15 @@ def render_root(rev, query, select_id=None):
                 bits.append("tags: " + ", ".join(tags_q))
             if pinned_q:
                 bits.append("pinned")
-            items.append({
-                "id": f"new:{q}",
-                "title": f"Create note: {title_q or q}",
-                "subtitle": " · ".join(bits) if bits else "Press Enter to add",
-                "icon": "add",
-                "actions": [{"id": "default", "title": "Create", "icon": "add"}],
-            })
+            items.append(
+                {
+                    "id": f"new:{q}",
+                    "title": f"Create note: {title_q or q}",
+                    "subtitle": " · ".join(bits) if bits else "Press Enter to add",
+                    "icon": "add",
+                    "actions": [{"id": "default", "title": "Create", "icon": "add"}],
+                }
+            )
         matches = [n for n in notes if matches_query(n, q)]
         matches = sorted(matches, key=lambda n: n["updated"], reverse=True)
         matches.sort(key=lambda n: 0 if n["pinned"] else 1)
@@ -318,20 +342,25 @@ def open_detail(note_id):
         return
     STATE["screen"] = f"detail:{note_id}"
     md, meta = note_preview(n)
-    send({
-        "type": "render",
-        "rev": 0,
-        "view": "detail",
-        "canGoBack": True,
-        "detail": {"markdown": md, "metadata": meta, "wide": True},
-        "actions": note_actions(n),
-    })
+    send(
+        {
+            "type": "render",
+            "rev": 0,
+            "view": "detail",
+            "canGoBack": True,
+            "detail": {"markdown": md, "metadata": meta, "wide": True},
+            "actions": note_actions(n),
+        }
+    )
 
 
 def open_form(note=None):
     if note is None:
         STATE["screen"] = "form:new"
-        title, values = "New Note", {"title": "", "body": "", "tags": [], "pinned": False}
+        title, values = (
+            "New Note",
+            {"title": "", "body": "", "tags": [], "pinned": False},
+        )
     else:
         STATE["screen"] = f"form:edit:{note['id']}"
         title, values = "Edit Note", note
@@ -365,18 +394,21 @@ def open_form(note=None):
             "value": values["pinned"],
         },
     ]
-    send({
-        "type": "render",
-        "rev": 0,
-        "view": "form",
-        "canGoBack": True,
-        "form": {"title": title, "submitLabel": "Save", "fields": fields},
-    })
+    send(
+        {
+            "type": "render",
+            "rev": 0,
+            "view": "form",
+            "canGoBack": True,
+            "form": {"title": title, "submitLabel": "Save", "fields": fields},
+        }
+    )
 
 
 # --------------------------------------------------------------------------
 # action handling
 # --------------------------------------------------------------------------
+
 
 def quick_add(raw):
     title, tags, pinned = parse_quick(raw)
@@ -425,8 +457,7 @@ def handle_note_action(note_id, action, from_detail):
             render_root(0, STATE.get("query", ""), select_id=note_id)
 
     elif action == "copy":
-        text = n["title"] + ("\n\n" + n["body"] if n["body"] else "")
-        cmd("copy", text=text)
+        cmd("copy", text=n["body"] or "")
 
     elif action == "duplicate":
         ts = now_iso()
@@ -523,6 +554,7 @@ def handle_back():
 # main loop
 # --------------------------------------------------------------------------
 
+
 def main():
     for line in sys.stdin:
         line = line.strip()
@@ -553,13 +585,15 @@ def main():
             # "select", "tab", "change", "loadMore" are not used by this plugin.
         except Exception as e:
             log("unhandled error:", e)
-            send({
-                "type": "render",
-                "rev": 0,
-                "view": "detail",
-                "canGoBack": True,
-                "detail": {"markdown": f"# Error\n\n```\n{e}\n```"},
-            })
+            send(
+                {
+                    "type": "render",
+                    "rev": 0,
+                    "view": "detail",
+                    "canGoBack": True,
+                    "detail": {"markdown": f"# Error\n\n```\n{e}\n```"},
+                }
+            )
 
 
 if __name__ == "__main__":

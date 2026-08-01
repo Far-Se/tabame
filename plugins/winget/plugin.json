@@ -1,0 +1,9 @@
+{
+  "name": "WinGet",
+  "keyword": "winget",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "download",
+  "description": "Search, install, update and uninstall apps via winget",
+  "dev": true
+}
