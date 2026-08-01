@@ -5,6 +5,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../globals.dart';
 import '../../settings.dart';
 import '../../win32/win32.dart';
+import '../../win32/win_utils.dart';
 import '../saved_maps.dart';
 import 'boxes_base.dart';
 
@@ -131,6 +132,7 @@ class QuickMenuFunctions {
     }
 
     if (visible) {
+      WinUtils.setWindowFullyTransparent(Win32.hWnd);
       Globals.quickMenuPage = type;
 
       if (DateTime.now().millisecondsSinceEpoch - hiddenTime > 150) {
@@ -158,6 +160,7 @@ class QuickMenuFunctions {
           await listener.onQuickMenuVisible(type, center);
         }
         shownTime = DateTime.now().millisecondsSinceEpoch;
+        // WinUtils.setWindowFullyOpaque(Win32.hWnd);
 
         // if (IsWindowVisible(Win32.hWnd) == 0 && visible == true) ShowWindow(Win32.hWnd, SW_SHOW);
       } else {

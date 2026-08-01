@@ -89,7 +89,7 @@ class _PluginActionsPanelState extends State<PluginActionsPanel> {
   void _moveActive(int offset) {
     final int actionCount = _actions.length;
     if (actionCount == 0) return;
-    setState(() => _activeIndex = (_activeIndex + offset).clamp(0, actionCount - 1));
+    setState(() => _activeIndex = (_activeIndex + offset) % actionCount);
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollActiveIntoView());
   }
 

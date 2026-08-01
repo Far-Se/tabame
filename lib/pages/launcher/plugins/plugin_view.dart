@@ -53,8 +53,11 @@ class PluginView extends StatefulWidget {
   final PluginRenderFrame frame;
   final int activeIndex;
   final bool isRepeating;
-  final void Function(int index) onTapItem;
-  final void Function(int index) onHoverItem;
+
+  /// [frame] is the top-level frame for ordinary views and the owning panel's
+  /// nested frame for dashboard items.
+  final void Function(PluginRenderFrame frame, int index) onTapItem;
+  final void Function(PluginRenderFrame frame, int index) onHoverItem;
 
   /// Launcher-owned controller for the detail document, so arrow/page keys
   /// (handled by the launcher) can scroll it.
@@ -103,7 +106,11 @@ class PluginView extends StatefulWidget {
 class _PluginViewState extends State<PluginView> {
   final ScrollController _scrollController = ScrollController();
   final ScrollController _dashboardScrollController = ScrollController();
-  final Map<int, GlobalKey> _itemKeys = <int, GlobalKey>{};
+  final Map<String, ScrollController> _dashboardPanelScrollControllers = <String, ScrollController>{};
+  final Map<(PluginRenderFrame, int), GlobalKey> _itemKeys = <(PluginRenderFrame, int), GlobalKey>{};
+
+  PluginRenderFrame? _dashboardActiveFrame;
+  int _dashboardActiveIndex = -1;
 
   // When the selection moves because the pointer hovered a new row, we must NOT
   // scroll it into view — recentering the list under the cursor makes it hover
@@ -120,6 +127,9 @@ class _PluginViewState extends State<PluginView> {
   void dispose() {
     _scrollController.dispose();
     _dashboardScrollController.dispose();
+    for (final ScrollController controller in _dashboardPanelScrollControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -134,6 +144,11 @@ class _PluginViewState extends State<PluginView> {
       }
     }
     if (oldWidget.frame.items.length != widget.frame.items.length) _loadMoreRequested = false;
+    if (!identical(oldWidget.frame, widget.frame)) {
+      _dashboardActiveFrame = null;
+      _dashboardActiveIndex = -1;
+      _itemKeys.clear();
+    }
     _followStreamingDetail(oldWidget);
     _followChat(oldWidget);
   }
@@ -196,26 +211,43 @@ class _PluginViewState extends State<PluginView> {
 
   /// Reports a hover selection to the launcher, flagging the resulting
   /// [activeIndex] change so [didUpdateWidget] skips the auto-scroll.
-  void _hoverSelect(int index) {
-    if (index != widget.activeIndex) _selectionFromHover = true;
-    widget.onHoverItem(index);
+  void _hoverSelect(PluginRenderFrame frame, int index) {
+    if (identical(frame, widget.frame)) {
+      if (index != widget.activeIndex) _selectionFromHover = true;
+    } else if (!identical(_dashboardActiveFrame, frame) || _dashboardActiveIndex != index) {
+      setState(() {
+        _dashboardActiveFrame = frame;
+        _dashboardActiveIndex = index;
+      });
+    }
+    widget.onHoverItem(frame, index);
   }
 
-  void _tapItem(int index) {
+  void _tapItem(PluginRenderFrame frame, int index) {
     // Selection-mode frames use pointer taps to toggle batch membership. Enter
     // still fires the primary action for the highlighted item, so plugins can
     // offer an explicit batch command without accidental navigation.
-    if (widget.frame.multiSelect) {
-      widget.onToggleSelection(widget.frame.items[index].id);
+    if (frame.multiSelect) {
+      widget.onToggleSelection(frame.items[index].id);
       return;
     }
-    widget.onTapItem(index);
+    if (!identical(frame, widget.frame)) {
+      setState(() {
+        _dashboardActiveFrame = frame;
+        _dashboardActiveIndex = index;
+      });
+    }
+    widget.onTapItem(frame, index);
     widget.onItemNavigation?.call();
   }
 
+  bool _isSelected(PluginRenderFrame frame, int index) => identical(frame, widget.frame)
+      ? index == widget.activeIndex
+      : identical(frame, _dashboardActiveFrame) && index == _dashboardActiveIndex;
+
   void _scrollActiveIntoView() {
     if (!mounted) return;
-    final BuildContext? itemContext = _itemKeys[widget.activeIndex]?.currentContext;
+    final BuildContext? itemContext = _itemKeys[(widget.frame, widget.activeIndex)]?.currentContext;
     if (itemContext == null) return;
     Scrollable.ensureVisible(
       itemContext,
@@ -225,7 +257,10 @@ class _PluginViewState extends State<PluginView> {
     );
   }
 
-  GlobalKey _keyFor(int index) => _itemKeys.putIfAbsent(index, () => GlobalKey());
+  GlobalKey _keyFor(PluginRenderFrame frame, int index) => _itemKeys.putIfAbsent((frame, index), () => GlobalKey());
+
+  ScrollController _dashboardPanelController(String panelId) =>
+      _dashboardPanelScrollControllers.putIfAbsent(panelId, ScrollController.new);
 
   @override
   Widget build(BuildContext context) {
@@ -343,6 +378,7 @@ class _PluginViewState extends State<PluginView> {
 
   Widget _dashboardPanel(PluginDashboardPanel panel, {bool fill = false}) {
     final PluginRenderFrame frame = panel.frame;
+    final ScrollController scrollController = _dashboardPanelController(panel.id);
     if (frame.view == PluginViewType.operation && frame.operation != null) {
       final Widget operation = Padding(
         padding: const EdgeInsets.only(bottom: 10),
@@ -356,16 +392,24 @@ class _PluginViewState extends State<PluginView> {
           ? Align(alignment: Alignment.topCenter, child: SizedBox(height: height, child: operation))
           : SizedBox(height: height, child: operation);
     }
-    final Widget body = switch (frame.view) {
-      PluginViewType.detail => _buildDetail(frame.detailMarkdown ?? '', frame.detailMetadata),
-      PluginViewType.table => _buildTable(frame),
-      PluginViewType.tree => _buildTree(frame),
-      PluginViewType.timeline => _buildTimeline(frame),
-      PluginViewType.chart => _buildChart(frame),
-      PluginViewType.operation => _buildEmptyOrLoading(frame),
-      PluginViewType.grid => _buildGrid(frame),
-      _ => _buildList(frame),
-    };
+    final bool itemView = frame.view == PluginViewType.list ||
+        frame.view == PluginViewType.grid ||
+        frame.view == PluginViewType.table ||
+        frame.view == PluginViewType.tree ||
+        frame.view == PluginViewType.timeline;
+    final Widget body = itemView && frame.items.isEmpty
+        ? _buildEmptyOrLoading(frame)
+        : switch (frame.view) {
+            PluginViewType.detail =>
+              _buildDetail(frame.detailMarkdown ?? '', frame.detailMetadata, controller: scrollController),
+            PluginViewType.table => _buildTable(frame, controller: scrollController),
+            PluginViewType.tree => _buildTree(frame, controller: scrollController),
+            PluginViewType.timeline => _buildTimeline(frame, controller: scrollController),
+            PluginViewType.chart => _buildChart(frame),
+            PluginViewType.operation => _buildEmptyOrLoading(frame),
+            PluginViewType.grid => _buildGrid(frame, controller: scrollController),
+            _ => _buildList(frame, controller: scrollController),
+          };
     final double height = panel.height ?? (frame.view == PluginViewType.operation ? 64 : 240);
     final Widget card = Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -377,10 +421,29 @@ class _PluginViewState extends State<PluginView> {
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-            child: Text(panel.title,
-                style: TextStyle(
-                    fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.7, color: Design.text.withAlpha(140))),
+            padding: const EdgeInsets.fromLTRB(12, 4, 6, 2),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(panel.title,
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.7,
+                          color: Design.text.withAlpha(140))),
+                ),
+                for (final PluginAction action in frame.frameActions)
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+                    padding: EdgeInsets.zero,
+                    tooltip: action.title,
+                    icon: Icon(PluginIcons.resolve(action.icon), size: 15),
+                    color: action.destructive ? const Color(0xFFE5534B) : Design.text.withAlpha(155),
+                    onPressed: () => widget.onMetadataAction('', action),
+                  ),
+              ],
+            ),
           ),
           Expanded(child: body),
         ]),
@@ -493,11 +556,11 @@ class _PluginViewState extends State<PluginView> {
     );
   }
 
-  Widget _buildList(PluginRenderFrame frame) {
+  Widget _buildList(PluginRenderFrame frame, {ScrollController? controller}) {
     return NotificationListener<ScrollNotification>(
       onNotification: _onScrollNotification,
       child: WindowsScrollView(
-        controller: _scrollController,
+        controller: controller ?? _scrollController,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -505,16 +568,16 @@ class _PluginViewState extends State<PluginView> {
               if (frame.items[i].section != null && (i == 0 || frame.items[i].section != frame.items[i - 1].section))
                 _sectionHeader(frame.items[i].section!),
               KeyedSubtree(
-                key: _keyFor(i),
+                key: _keyFor(frame, i),
                 child: Column(
                   children: <Widget>[
                     LauncherResultRow(
-                      isSelected: i == widget.activeIndex,
+                      isSelected: _isSelected(frame, i),
                       isRepeating: widget.isRepeating,
                       accent: Design.accent,
                       onSurface: Design.text,
-                      onTap: () => _tapItem(i),
-                      onHover: () => _hoverSelect(i),
+                      onTap: () => _tapItem(frame, i),
+                      onHover: () => _hoverSelect(frame, i),
                       icon: _PluginIcon(name: frame.items[i].icon, accent: Design.accent),
                       title: frame.items[i].title,
                       subtitle: frame.items[i].subtitle,
@@ -588,7 +651,7 @@ class _PluginViewState extends State<PluginView> {
     );
   }
 
-  Widget _buildGrid(PluginRenderFrame frame) {
+  Widget _buildGrid(PluginRenderFrame frame, {ScrollController? controller}) {
     // Partition the items into runs sharing a `section`, each run its own grid
     // under a header (sections are ignored inside a run — keep them adjacent,
     // like the list view).
@@ -616,12 +679,12 @@ class _PluginViewState extends State<PluginView> {
         itemBuilder: (BuildContext context, int offset) {
           final int i = start + offset;
           return KeyedSubtree(
-            key: _keyFor(i),
+            key: _keyFor(frame, i),
             child: _PluginGridTile(
               item: frame.items[i],
-              isSelected: i == widget.activeIndex,
-              onTap: () => _tapItem(i),
-              onHover: () => _hoverSelect(i),
+              isSelected: _isSelected(frame, i),
+              onTap: () => _tapItem(frame, i),
+              onHover: () => _hoverSelect(frame, i),
             ),
           );
         },
@@ -631,7 +694,7 @@ class _PluginViewState extends State<PluginView> {
     return NotificationListener<ScrollNotification>(
       onNotification: _onScrollNotification,
       child: WindowsScrollView(
-        controller: _scrollController,
+        controller: controller ?? _scrollController,
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: Column(
@@ -650,7 +713,7 @@ class _PluginViewState extends State<PluginView> {
     );
   }
 
-  Widget _buildTable(PluginRenderFrame frame) {
+  Widget _buildTable(PluginRenderFrame frame, {ScrollController? controller}) {
     final List<PluginTableColumn> columns = frame.columns.isEmpty
         ? const <PluginTableColumn>[
             PluginTableColumn(id: 'title', label: 'Name'),
@@ -674,7 +737,7 @@ class _PluginViewState extends State<PluginView> {
     }
 
     return WindowsScrollView(
-      controller: _scrollController,
+      controller: controller ?? _scrollController,
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
@@ -695,13 +758,13 @@ class _PluginViewState extends State<PluginView> {
           ),
           for (int i = 0; i < frame.items.length; i++)
             KeyedSubtree(
-                key: _keyFor(i),
+                key: _keyFor(frame, i),
                 child: _PluginStructuredRow(
-                  selected: i == widget.activeIndex,
+                  selected: _isSelected(frame, i),
                   marked: widget.selectedIds.contains(frame.items[i].id),
                   multiSelect: frame.multiSelect,
-                  onTap: () => _tapItem(i),
-                  onHover: () => _hoverSelect(i),
+                  onTap: () => _tapItem(frame, i),
+                  onHover: () => _hoverSelect(frame, i),
                   onToggle: () => widget.onToggleSelection(frame.items[i].id),
                   child: Row(children: <Widget>[
                     for (final PluginTableColumn column in columns) Expanded(child: cell(frame.items[i], column))
@@ -713,20 +776,20 @@ class _PluginViewState extends State<PluginView> {
     );
   }
 
-  Widget _buildTree(PluginRenderFrame frame) => WindowsScrollView(
-        controller: _scrollController,
+  Widget _buildTree(PluginRenderFrame frame, {ScrollController? controller}) => WindowsScrollView(
+        controller: controller ?? _scrollController,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(children: <Widget>[
             for (int i = 0; i < frame.items.length; i++)
               KeyedSubtree(
-                  key: _keyFor(i),
+                  key: _keyFor(frame, i),
                   child: _PluginStructuredRow(
-                    selected: i == widget.activeIndex,
+                    selected: _isSelected(frame, i),
                     marked: widget.selectedIds.contains(frame.items[i].id),
                     multiSelect: frame.multiSelect,
-                    onTap: () => _tapItem(i),
-                    onHover: () => _hoverSelect(i),
+                    onTap: () => _tapItem(frame, i),
+                    onHover: () => _hoverSelect(frame, i),
                     onToggle: () => widget.onToggleSelection(frame.items[i].id),
                     child: Row(children: <Widget>[
                       SizedBox(width: frame.items[i].depth * 18.0),
@@ -752,19 +815,19 @@ class _PluginViewState extends State<PluginView> {
         ),
       );
 
-  Widget _buildTimeline(PluginRenderFrame frame) => WindowsScrollView(
-        controller: _scrollController,
+  Widget _buildTimeline(PluginRenderFrame frame, {ScrollController? controller}) => WindowsScrollView(
+        controller: controller ?? _scrollController,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           child: Column(children: <Widget>[
             for (int i = 0; i < frame.items.length; i++)
               _PluginTimelineRow(
                 item: frame.items[i],
-                selected: i == widget.activeIndex,
+                selected: _isSelected(frame, i),
                 marked: widget.selectedIds.contains(frame.items[i].id),
                 multiSelect: frame.multiSelect,
-                onTap: () => _tapItem(i),
-                onHover: () => _hoverSelect(i),
+                onTap: () => _tapItem(frame, i),
+                onHover: () => _hoverSelect(frame, i),
                 onToggle: () => widget.onToggleSelection(frame.items[i].id),
               ),
             if (frame.hasMore) _loadMoreFooter(),
@@ -778,11 +841,11 @@ class _PluginViewState extends State<PluginView> {
         onSelect: widget.onChartSelect,
       );
 
-  Widget _buildDetail(String markdown, List<PluginMetadataEntry> metadata) {
+  Widget _buildDetail(String markdown, List<PluginMetadataEntry> metadata, {ScrollController? controller}) {
     final bool hasMarkdown = markdown.trim().isNotEmpty;
     final String renderedMarkdown = _normalizeLocalMarkdownImageUris(markdown);
     return WindowsScrollView(
-      controller: widget.detailScrollController,
+      controller: controller ?? widget.detailScrollController,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
         child: !hasMarkdown && metadata.isEmpty

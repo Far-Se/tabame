@@ -1988,6 +1988,37 @@ class WinUtils {
     ShowWindow(hwnd, SW_MINIMIZE);
   }
 
+  static void setWindowFullyTransparent(int hwnd) {
+    final int currentExStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+
+    if ((currentExStyle & WS_EX_LAYERED) == 0) {
+      SetWindowLongPtr(
+        hwnd,
+        GWL_EXSTYLE,
+        currentExStyle | WS_EX_LAYERED,
+      );
+    }
+
+    // alpha = 0 -> fully transparent, still "visible"/on-screen per Windows,
+    // just invisible to the user.
+    SetLayeredWindowAttributes(hwnd, 0, 0, LWA_ALPHA);
+  }
+
+  static void setWindowFullyOpaque(int hwnd, {bool removeLayeredStyle = false}) {
+    SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
+
+    if (removeLayeredStyle) {
+      final int currentExStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+      if ((currentExStyle & WS_EX_LAYERED) != 0) {
+        SetWindowLongPtr(
+          hwnd,
+          GWL_EXSTYLE,
+          currentExStyle & ~WS_EX_LAYERED,
+        );
+      }
+    }
+  }
+
   /// Maximizes the window if not maximized,
   /// otherwise restores it.
   static void maximizeOrRestoreWindow(int hwnd) {

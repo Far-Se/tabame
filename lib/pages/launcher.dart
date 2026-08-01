@@ -874,7 +874,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final PluginRenderFrame? frame = _pluginFrame;
     if (frame == null || frame.items.isEmpty) return;
     final int idx = _activeIndexNotifier.value.clamp(0, frame.items.length - 1);
-    final PluginItem item = frame.items[idx];
+    _submitPluginItemAction(frame.items[idx]);
+  }
+
+  void _submitPluginItemAction(PluginItem item) {
     // Enter fires "default"; when the item *lists* a default action with a
     // confirm/destructive gate, honor it.
     PluginAction? declared;
@@ -1149,11 +1152,22 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                 frame: frame,
                 activeIndex: activeIndex,
                 isRepeating: isRepeating,
-                onTapItem: (int i) {
-                  _setPluginSelection(i);
-                  _submitPluginItem();
+                onTapItem: (PluginRenderFrame sourceFrame, int i) {
+                  final PluginItem item = sourceFrame.items[i];
+                  if (identical(sourceFrame, frame)) {
+                    _setPluginSelection(i);
+                    _submitPluginItem();
+                  } else {
+                    _submitPluginItemAction(item);
+                  }
                 },
-                onHoverItem: _setPluginSelection,
+                onHoverItem: (PluginRenderFrame sourceFrame, int i) {
+                  if (identical(sourceFrame, frame)) {
+                    _setPluginSelection(i);
+                  } else {
+                    _pluginHost.sendSelect(sourceFrame.items[i].id);
+                  }
+                },
                 onFormSubmit: _onPluginFormSubmit,
                 onFormCancel: _onPluginFormCancel,
                 onFormChange: _onPluginFormChange,

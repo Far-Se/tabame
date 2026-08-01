@@ -410,6 +410,9 @@ class QuickMenuState extends State<QuickMenu>
       } else if (mounted) {
         setState(() {});
       }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        WinUtils.setWindowFullyOpaque(Win32.hWnd);
+      });
     } else {
       PaintingBinding.instance.imageCache.clear(); // <- this
       PaintingBinding.instance.imageCache.clearLiveImages(); // <- this
