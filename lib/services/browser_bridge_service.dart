@@ -67,7 +67,7 @@ class _PendingBrowserRequest {
   final Timer timer;
 }
 
-/// App-owned bridge between the Chromium extension and launcher plugins.
+/// App-owned bridge between browser extensions and launcher plugins.
 ///
 /// The bridge is opt-in and lives for the lifetime of Tabame's QuickMenu
 /// process. Plugins use the `browserBridge` host command instead of binding
@@ -244,7 +244,10 @@ class BrowserBridgeService {
     }
 
     final String origin = request.headers.value('origin') ?? '';
-    if (!RegExp(r'^chrome-extension://[a-p]{32}/?$').hasMatch(origin)) {
+    final bool validExtensionOrigin = RegExp(
+      r'^(?:chrome-extension://[a-p]{32}|moz-extension://[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/?$',
+    ).hasMatch(origin);
+    if (!validExtensionOrigin) {
       request.response.statusCode = HttpStatus.forbidden;
       await request.response.close();
       return;

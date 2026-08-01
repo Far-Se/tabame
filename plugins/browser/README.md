@@ -1,13 +1,16 @@
 # Browser — Tabame launcher plugin
 
-Control Chromium through the companion **Tabame Connector** extension.
+Control Chromium or Firefox through the companion **Tabame Connector** extension.
 
 ## Install
 
 1. Copy this folder to `%localappdata%\Tabame\plugins\browser\`.
 2. Make sure Node.js is on `PATH`.
-3. Load `tabame-extension` as an unpacked Chromium extension and enable
-   **Allow User Scripts** on its details page when Chromium shows that toggle.
+3. Load `tabame-extension` as an unpacked Chromium extension, or load
+   `tabame-extension/firefox/manifest.json` from Firefox's
+   `about:debugging` page. Enable **Allow User Scripts** in Chromium when
+   that toggle is shown; Firefox requests its optional permission in the
+   extension popup.
 4. Open **Launcher Plugins** and enable **Persistent browser connector**.
 5. Reopen the Tabame launcher and type **`browser`**.
 6. Open **Connection & pairing**, copy the token, and paste it into the
@@ -19,7 +22,7 @@ for an extension reconnect.
 
 Tabame stores its random pairing token in
 `%localappdata%\Tabame\browser-bridge.json`. Browser-capable launcher plugins
-such as `browser` and `bwt` use the app-owned bridge, so the Chromium extension
+such as `browser` and `bwt` use the app-owned bridge, so the browser extension
 is paired once per Windows account/browser profile. Existing
 `plugins\browser\bridge-config.json` credentials migrate automatically.
 
@@ -40,7 +43,7 @@ pin/unpin, reload, duplicate, and copy URL.
 - WebSocket: `ws://127.0.0.1:17373/tabame`
 - Protocol: JSON request/response frames, version 1
 - Authentication: generated 256-bit token
-- Origin policy: `chrome-extension://` origins only
+- Origin policy: `chrome-extension://` and `moz-extension://` origins only
 - Lifetime: the server stays active while Tabame is running and the optional
   **Persistent browser connector** setting is enabled
 - Site-specific tasks live in plugins; the extension exposes the generic

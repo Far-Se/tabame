@@ -8,16 +8,59 @@ const config = { token: "", port: 17373 };
 const CODEX_USAGE_SCRIPT = `
 const deadline = Date.now() + Math.max(1000, Number(input?.timeoutMs) || 20000);
 let snapshot = null;
+
+function parseResetDate(bodyText) {
+  const match = bodyText.match(
+    /Resets?\\s+([A-Z][a-z]{2}\\s+\\d{1,2},\\s+\\d{4}\\s+\\d{1,2}:\\d{2}\\s+[AP]M)/i,
+  );
+
+  if (!match) return null;
+
+  // Parsed in the browser's local timezone.
+  const date = new Date(match[1]);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const remainingMs = Math.max(0, date.getTime() - Date.now());
+  const totalMinutes = Math.ceil(remainingMs / 60000);
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+
+  const parts = [];
+  if (days > 0) parts.push(\`\${days} day\${days === 1 ? "" : "s"}\`);
+  if (hours > 0) parts.push(\`\${hours} hour\${hours === 1 ? "" : "s"}\`);
+  if (minutes > 0 || parts.length === 0) {
+    parts.push(\`\${minutes} minute\${minutes === 1 ? "" : "s"}\`);
+  }
+
+  return {
+    resetDateText: match[1],
+    resetDate: date.toISOString(),
+    remainingMs,
+    remainingDays: days,
+    remainingHours: hours,
+    remainingMinutes: minutes,
+    remainingText: remainingMs > 0 ? parts.join(", ") : "Now",
+    hasReset: remainingMs <= 0,
+  };
+}
+
 while (Date.now() < deadline) {
   const bodyText = document.body ? document.body.innerText : "";
-  const match =
+
+  const usageMatch =
     bodyText.match(/(\\d+)%\\Wremaining/i) ||
     bodyText.match(/(\\d+)%\\W+remaining/i);
+
+  const reset = parseResetDate(bodyText);
+
   snapshot = {
-    remainingPercent: match ? Number(match[1]) : null,
+    remainingPercent: usageMatch ? Number(usageMatch[1]) : null,
     pageTitle: document.title,
     pageUrl: location.href,
+    ...reset,
   };
+
   if (Number.isFinite(snapshot.remainingPercent)) {
     return {
       ...snapshot,
@@ -25,16 +68,18 @@ while (Date.now() < deadline) {
       fetchedAt: new Date().toISOString(),
     };
   }
+
   await new Promise((resolve) => setTimeout(resolve, 500));
 }
+
 if (snapshot && !snapshot.pageUrl.startsWith("https://chatgpt.com/")) {
   throw new Error("ChatGPT redirected away from the analytics page");
 }
+
 throw new Error(
   "Codex usage was not found. Make sure this browser profile is signed in to ChatGPT and has Codex access.",
 );
 `;
-
 function send(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
 }
@@ -85,7 +130,10 @@ class BrowserBridge {
       clearTimeout(request.timer);
       this.pending.delete(requestId);
       if (message.ok) request.resolve(message.result);
-      else request.reject(new Error(message.error || "Browser bridge request failed"));
+      else
+        request.reject(
+          new Error(message.error || "Browser bridge request failed"),
+        );
       return;
     }
 
@@ -103,7 +151,8 @@ class BrowserBridge {
     this.enabled = Boolean(status.enabled);
     this.running = Boolean(status.running);
     this.connected = Boolean(status.connected);
-    if (Number.isInteger(Number(status.port))) this.config.port = Number(status.port);
+    if (Number.isInteger(Number(status.port)))
+      this.config.port = Number(status.port);
     if (typeof status.token === "string") this.config.token = status.token;
     this.clientInfo = {
       extensionVersion: String(status.extensionVersion || "unknown"),
@@ -235,7 +284,9 @@ function rootItems(text) {
       },
     },
   ];
-  const needle = String(text || "").trim().toLowerCase();
+  const needle = String(text || "")
+    .trim()
+    .toLowerCase();
   return needle
     ? items.filter(
         (item) =>
@@ -330,7 +381,9 @@ function tabItem(tab, section) {
     lines: 1,
     accessories: [
       ...(groupTag ? [groupTag] : []),
-      ...(tab.audible ? [{ text: "Playing", color: "#3D9B72", icon: "music" }] : []),
+      ...(tab.audible
+        ? [{ text: "Playing", color: "#3D9B72", icon: "music" }]
+        : []),
       ...(tab.muted ? [{ text: "Muted", icon: "close" }] : []),
       ...(tab.pinned ? [{ text: "Pinned", icon: "bookmark" }] : []),
       ...(tab.active ? [{ text: "Active", color: "#A46293" }] : []),
@@ -372,13 +425,21 @@ function tabItem(tab, section) {
 }
 
 function filterTabs(tabs, text) {
-  const needle = String(text || "").trim().toLowerCase();
+  const needle = String(text || "")
+    .trim()
+    .toLowerCase();
   if (!needle) return tabs;
   return tabs.filter(
     (tab) =>
-      String(tab.title || "").toLowerCase().includes(needle) ||
-      String(tab.url || "").toLowerCase().includes(needle) ||
-      String(tab.group?.title || "").toLowerCase().includes(needle),
+      String(tab.title || "")
+        .toLowerCase()
+        .includes(needle) ||
+      String(tab.url || "")
+        .toLowerCase()
+        .includes(needle) ||
+      String(tab.group?.title || "")
+        .toLowerCase()
+        .includes(needle),
   );
 }
 
@@ -400,7 +461,12 @@ async function renderTabs(rev, text, quiet = false) {
     });
     render(rev, "list", {
       items: tabs.map((tab) =>
-        tabItem(tab, tab.active ? `Window ${tab.windowId} · active` : `Window ${tab.windowId}`),
+        tabItem(
+          tab,
+          tab.active
+            ? `Window ${tab.windowId} · active`
+            : `Window ${tab.windowId}`,
+        ),
       ),
       preview: { enabled: true },
       canGoBack: true,
@@ -408,7 +474,9 @@ async function renderTabs(rev, text, quiet = false) {
       empty: {
         icon: "search",
         title: "No matching tabs",
-        hint: text ? "Try a broader title or domain" : "Chromium returned no tabs",
+        hint: text
+          ? "Try a broader title or domain"
+          : "Chromium returned no tabs",
       },
       actions: [
         {
@@ -471,7 +539,9 @@ async function waitForTabReady(tabId, timeoutMs = 20_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const snapshot = await bridge.request("tabs.list");
-    const tab = (snapshot.tabs || []).find((candidate) => candidate.id === tabId);
+    const tab = (snapshot.tabs || []).find(
+      (candidate) => candidate.id === tabId,
+    );
     if (!tab) throw new Error("The temporary analytics tab was closed");
     if (tab.status === "complete") return tab;
     await delay(250);
@@ -546,8 +616,7 @@ async function renderUsage(rev) {
             { id: "copy", title: "Copy remaining percentage", icon: "copy" },
           ],
           preview: {
-            markdown:
-              `## Codex allowance\n\n**${remaining}% remains** for the current ChatGPT usage window.`,
+            markdown: `## Codex allowance\n\n**${remaining}% remains** for the current ChatGPT usage window.`,
             metadata: [
               {
                 label: "Remaining",
@@ -555,8 +624,26 @@ async function renderUsage(rev) {
                 color: remaining >= 25 ? "#3D9B72" : "#D18B47",
               },
               { label: "Used", text: `${result.usedPercent}%` },
-              { label: "Checked", text: formatTime(result.fetchedAt), icon: "clock" },
-              { label: "Source", text: "ChatGPT Codex analytics", url: ANALYTICS_URL },
+              {
+                label: "Checked",
+                text: formatTime(result.fetchedAt),
+                icon: "clock",
+              },
+              {
+                label: "Resets At",
+                text: result.resetDateText,
+                icon: "clock",
+              },
+              {
+                label: "Resets In",
+                text: result.remainingText,
+                icon: "clock",
+              },
+              {
+                label: "Source",
+                text: "ChatGPT Codex analytics",
+                url: ANALYTICS_URL,
+              },
             ],
           },
         },
@@ -588,28 +675,28 @@ function renderConnection(rev) {
         "The bridge is optional and remains completely stopped while this setting is off.",
       ].join("\n")
     : connected
-    ? [
-        "# Browser connector is online",
-        "",
-        "Tabame can now exchange allowlisted requests with this Chromium profile.",
-        "",
-        "Use **Escape** to return to browser commands.",
-      ].join("\n")
-    : [
-        "# Pair the Chromium extension",
-        "",
-        "1. Load `tabame-extension` from `chrome://extensions`.",
-        "2. Enable **Allow User Scripts** on the extension details page if shown.",
-        "3. Click the **Tabame Connector** toolbar icon.",
-        "4. Paste the token below and keep the default port.",
-        "5. Click **Save & connect**.",
-        "",
-        "### Pairing token",
-        "",
-        `\`${tokenDisplay}\``,
-        "",
-        "> The token is shared by Tabame browser plugins on this Windows account. Do not publish `browser-bridge.json`.",
-      ].join("\n");
+      ? [
+          "# Browser connector is online",
+          "",
+          "Tabame can now exchange allowlisted requests with this Chromium profile.",
+          "",
+          "Use **Escape** to return to browser commands.",
+        ].join("\n")
+      : [
+          "# Pair the Chromium extension",
+          "",
+          "1. Load `tabame-extension` from `chrome://extensions`.",
+          "2. Enable **Allow User Scripts** on the extension details page if shown.",
+          "3. Click the **Tabame Connector** toolbar icon.",
+          "4. Paste the token below and keep the default port.",
+          "5. Click **Save & connect**.",
+          "",
+          "### Pairing token",
+          "",
+          `\`${tokenDisplay}\``,
+          "",
+          "> The token is shared by Tabame browser plugins on this Windows account. Do not publish `browser-bridge.json`.",
+        ].join("\n");
 
   render(rev, "detail", {
     canGoBack: true,
@@ -618,8 +705,16 @@ function renderConnection(rev) {
       metadata: [
         {
           label: "Status",
-          text: !bridge.enabled ? "Disabled" : connected ? "Connected" : "Waiting for extension",
-          color: !bridge.enabled ? "#8A7F88" : connected ? "#3D9B72" : "#D18B47",
+          text: !bridge.enabled
+            ? "Disabled"
+            : connected
+              ? "Connected"
+              : "Waiting for extension",
+          color: !bridge.enabled
+            ? "#8A7F88"
+            : connected
+              ? "#3D9B72"
+              : "#D18B47",
         },
         { label: "Address", text: `127.0.0.1:${config.port}`, icon: "server" },
         ...(connected
@@ -637,7 +732,13 @@ function renderConnection(rev) {
             ]
           : []),
         ...(bridge.startError
-          ? [{ label: "Bridge error", text: bridge.startError, color: "#C86464" }]
+          ? [
+              {
+                label: "Bridge error",
+                text: bridge.startError,
+                color: "#C86464",
+              },
+            ]
           : []),
       ],
     },

@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Tabame Connector for Firefox",
+  "version": "0.3.0",
+  "description": "A secure local bridge between Firefox and the Tabame launcher.",
+  "permissions": [
+    "alarms",
+    "storage",
+    "tabGroups",
+    "tabs"
+  ],
+  "optional_permissions": [
+    "userScripts"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ],
+    "persistent": false
+  },
+  "action": {
+    "default_title": "Tabame Connector",
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "16": "icons/tabame.png",
+    "32": "icons/tabame.png",
+    "48": "icons/tabame.png",
+    "128": "icons/tabame.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "connector@tabame.app",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' ws://127.0.0.1:*"
+  }
+}

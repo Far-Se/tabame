@@ -19,6 +19,9 @@ browser connector is enabled.
 7. Type `browser` and open **Connection & pairing**.
 8. Copy the token, click the extension icon, paste the token, and save.
 
+For Firefox, use the browser-specific package in [`firefox/`](firefox/) and
+follow its `about:debugging` installation steps.
+
 The bridge remains available while Tabame is running, independently of whether
 a browser launcher plugin is open. Turning the setting off closes the loopback
 server and disconnects the extension.
