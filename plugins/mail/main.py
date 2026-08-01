@@ -177,11 +177,39 @@ def bucket_label(date_hdr):
     return "Older"
 
 
-def md_code_block(text):
-    fence = "```"
-    while fence in text:
-        fence += "`"
-    return f"{fence}\n{text}\n{fence}"
+def normalize_email_text(text, keep_blank_lines=True):
+    """Remove MIME/HTML layout whitespace without changing visible line breaks."""
+    text = (text or "").replace("\r\n", "\n").replace("\r", "\n")
+    text = text.replace("\u00a0", " ").replace("\u200b", "")
+    lines = []
+    blank = True
+    for raw_line in text.split("\n"):
+        line = re.sub(r"[\t\f\v ]+", " ", raw_line).strip()
+        if not line:
+            if keep_blank_lines and not blank:
+                lines.append("")
+            blank = True
+            continue
+        lines.append(line)
+        blank = False
+    while lines and not lines[-1]:
+        lines.pop()
+    return "\n".join(lines)
+
+
+def md_safe_body(text):
+    """Render email text as prose without letting it become Markdown blocks."""
+    rendered = []
+    for line in normalize_email_text(text).split("\n"):
+        if not line:
+            rendered.append("")
+            continue
+        line = re.sub(r"([\\`*_\[\]<>|~])", r"\\\1", line)
+        line = re.sub(r"^(\d+)([.)])(\s)", r"\1\\\2\3", line)
+        if re.match(r"^(?:#{1,6}\s|>\s?|[-+]\s)", line) or re.fullmatch(r"[-=]{3,}", line):
+            line = "\\" + line
+        rendered.append(line + "  ")
+    return "\n".join(rendered).rstrip()
 
 
 def reply_subject(subject):
@@ -206,13 +234,33 @@ class _TextExtractor(HTMLParser):
     def __init__(self):
         super().__init__()
         self.parts = []
+        self.ignored_depth = 0
 
     def handle_data(self, data):
-        self.parts.append(data)
+        if not self.ignored_depth:
+            self.parts.append(data)
 
     def handle_starttag(self, tag, attrs):
-        if tag in ("br", "p", "div", "tr", "li"):
+        if tag in ("head", "script", "style"):
+            self.ignored_depth += 1
+            return
+        if self.ignored_depth:
+            return
+        if tag in ("br", "p", "div", "tr", "li", "blockquote", "section", "article"):
             self.parts.append("\n")
+        elif tag in ("td", "th"):
+            self.parts.append(" ")
+
+    def handle_endtag(self, tag):
+        if tag in ("head", "script", "style"):
+            self.ignored_depth = max(0, self.ignored_depth - 1)
+            return
+        if self.ignored_depth:
+            return
+        if tag in ("p", "div", "tr", "li", "blockquote", "section", "article"):
+            self.parts.append("\n")
+        elif tag in ("td", "th"):
+            self.parts.append(" ")
 
 
 def html_to_text(html_str):
@@ -221,8 +269,7 @@ def html_to_text(html_str):
         p.feed(html_str)
     except Exception:
         return html_str
-    text = "".join(p.parts)
-    return re.sub(r"\n{3,}", "\n\n", text).strip()
+    return normalize_email_text("".join(p.parts), keep_blank_lines=False)
 
 
 def extract_body(msg):
@@ -488,7 +535,7 @@ def render_email(rev):
         return
     body = e["body"]
     truncated = len(body) > 20000
-    md = f"# {e['subject']}\n\n" + md_code_block(body[:20000])
+    md = f"# {e['subject']}\n\n" + md_safe_body(body[:20000])
     if truncated:
         md += "\n\n*(message truncated)*"
     metadata = [

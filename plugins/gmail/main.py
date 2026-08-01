@@ -327,15 +327,60 @@ def find_part(payload, mime):
 
 
 def strip_html(raw_html):
-    text = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", raw_html, flags=re.S | re.I)
+    text = re.sub(r"<!--.*?-->", "", raw_html, flags=re.S)
+    text = re.sub(r"<(head|script|style)[^>]*>.*?</\1>", "", text, flags=re.S | re.I)
     text = re.sub(r"<br\s*/?>", "\n", text, flags=re.I)
-    text = re.sub(r"</p>", "\n\n", text, flags=re.I)
+    text = re.sub(
+        r"</?(?:address|article|blockquote|div|h[1-6]|li|p|section|table|tr)[^>]*>",
+        "\n",
+        text,
+        flags=re.I,
+    )
+    text = re.sub(r"</?(?:td|th)[^>]*>", " ", text, flags=re.I)
     text = re.sub(r"<[^>]+>", "", text)
-    return htmlmod.unescape(text).strip()
+    return normalize_email_text(htmlmod.unescape(text), keep_blank_lines=False)
 
 
-def md_safe_body(text):
-    return "  \n".join(text.split("\n"))
+def normalize_email_text(text, keep_blank_lines=True):
+    """Remove MIME/HTML layout whitespace without changing visible line breaks."""
+    text = (text or "").replace("\r\n", "\n").replace("\r", "\n")
+    text = text.replace("\u00a0", " ").replace("\u200b", "")
+    lines = []
+    blank = True
+    for raw_line in text.split("\n"):
+        line = re.sub(r"[\t\f\v ]+", " ", raw_line).strip()
+        if not line:
+            if keep_blank_lines and not blank:
+                lines.append("")
+            blank = True
+            continue
+        lines.append(line)
+        blank = False
+    while lines and not lines[-1]:
+        lines.pop()
+    return "\n".join(lines)
+
+
+def md_safe_body(text, preserve_images=False):
+    """Render email text as prose without letting it become Markdown blocks."""
+    image_line = re.compile(r"!\[[^\]\r\n]*\]\([^\)\r\n]+\)")
+    rendered = []
+    for line in normalize_email_text(text).split("\n"):
+        if not line:
+            rendered.append("")
+            continue
+        if preserve_images and image_line.fullmatch(line):
+            if rendered and rendered[-1] != "":
+                rendered.append("")
+            rendered.append(line)
+            rendered.append("")
+            continue
+        line = re.sub(r"([\\`*_\[\]<>|~])", r"\\\1", line)
+        line = re.sub(r"^(\d+)([.)])(\s)", r"\1\\\2\3", line)
+        if re.match(r"^(?:#{1,6}\s|>\s?|[-+]\s)", line) or re.fullmatch(r"[-=]{3,}", line):
+            line = "\\" + line
+        rendered.append(line + "  ")
+    return "\n".join(rendered).rstrip()
 
 
 # ---------------------------------------------------------------------------
@@ -467,7 +512,7 @@ def html_to_markdown(raw_html, cid_map):
         return f"\n\n![{alt}]({url})\n\n"
 
     html_with_images = re.sub(r"<img\b[^>]*>", repl, raw_html, flags=re.I)
-    return strip_html(html_with_images), used
+    return md_safe_body(strip_html(html_with_images), preserve_images=True), used
 
 
 def build_detail_body(service, message_id, payload):

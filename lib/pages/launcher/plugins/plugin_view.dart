@@ -160,8 +160,21 @@ class _PluginViewState extends State<PluginView> {
     if (widget.frame.view != PluginViewType.detail) return;
     final String previous = oldWidget.frame.detailMarkdown ?? '';
     final String next = widget.frame.detailMarkdown ?? '';
-    if (next.length <= previous.length || !next.startsWith(previous)) return;
+    if (next.isEmpty) return;
     final ScrollController? controller = widget.detailScrollController;
+
+    // An empty loading frame followed by the real document is a replacement,
+    // not a stream append. Start it at the top; otherwise the empty frame looks
+    // "at bottom" and the follow logic jumps a newly opened email to its end.
+    if (oldWidget.frame.view != PluginViewType.detail || previous.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || controller == null || !controller.hasClients) return;
+        controller.jumpTo(0);
+      });
+      return;
+    }
+
+    if (next.length <= previous.length || !next.startsWith(previous)) return;
     if (controller == null || !controller.hasClients) return;
     final ScrollPosition position = controller.position;
     // Measured before this frame's content lands, so this is "was at bottom".

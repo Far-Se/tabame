@@ -91,3 +91,4 @@ client_secret.json
 **/package-lock*
 **/.tabame-store.json
 **/client_secret.json
+**/__pycache__/

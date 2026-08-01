@@ -612,6 +612,129 @@
         "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/mail/main.py",
         "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/mail/README.md"
       }
+    },
+    {
+      "id": "winget",
+      "name": "WinGet",
+      "keyword": "winget",
+      "description": "Search, install, update and uninstall apps via winget",
+      "icon": "download",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/winget",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/winget/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/winget/main.py"
+      }
+    },
+    {
+      "id": "rss-read-later",
+      "name": "RSS & Read Later",
+      "keyword": "rss",
+      "description": "Follow RSS/Atom feeds, browse new articles, organize nested categories, and save stories for later.",
+      "icon": "book",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/rss",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/rss/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/rss/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/rss/README.md"
+      }
+    },
+    {
+      "id": "tabame-browser",
+      "name": "Browser",
+      "keyword": "browser",
+      "description": "Control Chromium tabs and run plugin-owned browser tasks through the Tabame Connector",
+      "icon": "globe",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/browser",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/browser/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/browser/main.js",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/browser/README.md"
+      }
+    },
+    {
+      "id": "browser-window-tabs",
+      "name": "Browser Tabs",
+      "keyword": "bwt",
+      "description": "List and control Chromium tabs through the globally paired Tabame Connector",
+      "icon": "window",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/bwt",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/bwt/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/bwt/main.js",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/bwt/README.md"
+      }
+    },
+    {
+      "id": "clipboard-history",
+      "name": "Clipboard History",
+      "keyword": "cb",
+      "description": "Browse and copy Tabame clipboard history",
+      "icon": "clipboard",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/clipboard-history",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/clipboard-history/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/clipboard-history/main.py"
+      }
+    },
+    {
+      "id": "csv",
+      "name": "CSV Analyzer",
+      "keyword": "csv",
+      "description": "Paste CSV data to instantly view column stats and filter rows.",
+      "icon": "table",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/csv",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/csv/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/csv/main.py"
+      }
+    },
+    {
+      "id": "image",
+      "name": "Image Converter",
+      "keyword": "img",
+      "description": "Convert, resize, compress, and transform images. Supports 20+ formats.",
+      "icon": "image",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/image",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/image/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/image/main.py"
+      }
+    },
+    {
+      "id": "kaomoji",
+      "name": "Kaomoji Search",
+      "keyword": "kao",
+      "description": "Search kaomoji library",
+      "icon": "emoji",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/kaomoji",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/main.js"
+      }
     }
   ]
 }
