@@ -19,8 +19,7 @@
   "background": {
     "scripts": [
       "background.js"
-    ],
-    "persistent": false
+    ]
   },
   "action": {
     "default_title": "Tabame Connector",
