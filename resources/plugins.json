@@ -767,6 +767,55 @@
         "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/xprice/main.py",
         "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/xprice/README.md"
       }
+    },
+    {
+      "id": "background-remover",
+      "name": "Background Remover",
+      "keyword": "bgremove",
+      "description": "Remove image backgrounds locally with BiRefNet or BRIA RMBG 2.0",
+      "icon": "image",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/background-remover",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/background-remover/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/background-remover/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/background-remover/README.md"
+      }
+    },
+    {
+      "id": "browser-scripts",
+      "name": "Browser Scripts",
+      "keyword": "browser-scripts",
+      "description": "AI-friendly examples of plugin-owned JavaScript through Tabame's browser bridge",
+      "icon": "code",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/browser-scripts",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/browser-scripts/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/browser-scripts/main.js",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/browser-scripts/README.md"
+      }
+    },
+    {
+      "id": "qbittorrent",
+      "name": "qBittorrent",
+      "keyword": "qbit",
+      "description": "Browse qBittorrent torrents and open their download folders",
+      "icon": "download",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/qbittorrent",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/qbittorrent/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/qbittorrent/main.js",
+        "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/qbittorrent/config.example.json",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/qbittorrent/README.md"
+      }
     }
   ]
 }

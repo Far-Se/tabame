@@ -5,6 +5,7 @@
   "description": "Browse qBittorrent torrents and open their download folders",
   "icon": "download",
   "runtime": "node",
+  "version": "1.0.0",
   "entry": "main.js",
   "args": [],
   "dev": false

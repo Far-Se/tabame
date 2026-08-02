@@ -33,6 +33,41 @@ const String _submitPluginUrl = 'https://github.com/Far-Se/tabame/issues/new?tem
 
 enum _PanelMode { installed, gallery, makeYourOwn }
 
+PluginManifest? _findInstalledPlugin(String id) {
+  final String lowerId = id.toLowerCase();
+  for (final PluginManifest manifest in PluginRegistry.manifests) {
+    if (manifest.id.toLowerCase() == lowerId) return manifest;
+  }
+  return null;
+}
+
+bool _isRemoteVersionGreater(String remoteVersion, String installedVersion) {
+  final List<int>? remoteParts = _parsePluginVersion(remoteVersion);
+  final List<int>? installedParts = _parsePluginVersion(installedVersion);
+  if (remoteParts == null || installedParts == null) return false;
+
+  final int length = remoteParts.length > installedParts.length ? remoteParts.length : installedParts.length;
+  for (int index = 0; index < length; index++) {
+    final int remotePart = index < remoteParts.length ? remoteParts[index] : 0;
+    final int installedPart = index < installedParts.length ? installedParts[index] : 0;
+    if (remotePart != installedPart) return remotePart > installedPart;
+  }
+  return false;
+}
+
+List<int>? _parsePluginVersion(String version) {
+  final String normalized = version.trim().replaceFirst(RegExp(r'^[vV]'), '');
+  if (normalized.isEmpty) return null;
+
+  final List<int> parts = <int>[];
+  for (final String part in normalized.split('.')) {
+    final int? number = int.tryParse(part);
+    if (number == null || number < 0) return null;
+    parts.add(number);
+  }
+  return parts;
+}
+
 /// Three-mode panel for installed plugins, the community gallery, and authoring
 /// guidance for local plugins.
 class PluginManagerPanel extends StatefulWidget {
@@ -437,7 +472,7 @@ Build a plugin with your favorite AI coding assistant:
             for (final PluginGalleryEntry entry in entries) ...<Widget>[
               _GalleryCard(
                 entry: entry,
-                installed: PluginGallery.isInstalled(entry.id),
+                installedManifest: _findInstalledPlugin(entry.id),
                 installing: _installingId == entry.id,
                 onInstall: () => _install(entry),
                 onOpenHomepage: entry.homepage.isEmpty ? null : () => WinUtils.open(entry.homepage),
@@ -973,14 +1008,14 @@ class _PluginKeywordDialogState extends State<_PluginKeywordDialog> {
 class _GalleryCard extends StatelessWidget {
   const _GalleryCard({
     required this.entry,
-    required this.installed,
+    required this.installedManifest,
     required this.installing,
     required this.onInstall,
     this.onOpenHomepage,
   });
 
   final PluginGalleryEntry entry;
-  final bool installed;
+  final PluginManifest? installedManifest;
   final bool installing;
   final VoidCallback onInstall;
   final VoidCallback? onOpenHomepage;
@@ -989,6 +1024,8 @@ class _GalleryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color accent = Design.accent;
     final Color text = Design.text;
+    final PluginManifest? manifest = installedManifest;
+    final bool updateAvailable = manifest != null && _isRemoteVersionGreater(entry.version, manifest.version);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
@@ -1074,7 +1111,7 @@ class _GalleryCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: <Widget>[
-              _buildInstallAction(accent, text),
+              _buildInstallAction(accent, text, updateAvailable),
               const SizedBox(height: 3),
               if (entry.keyword.isNotEmpty) ...<Widget>[
                 _pill(entry.keyword, accent.withAlpha(22), accent),
@@ -1090,7 +1127,7 @@ class _GalleryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInstallAction(Color accent, Color text) {
+  Widget _buildInstallAction(Color accent, Color text, bool updateAvailable) {
     if (installing) {
       return Padding(
         padding: const EdgeInsets.all(6),
@@ -1101,7 +1138,34 @@ class _GalleryCard extends StatelessWidget {
         ),
       );
     }
-    if (installed) {
+    if (updateAvailable) {
+      return Tooltip(
+        message: 'Update plugin',
+        waitDuration: const Duration(milliseconds: 400),
+        child: InkWell(
+          onTap: entry.installable ? onInstall : null,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: accent.withAlpha(28),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: accent.withAlpha(80)),
+            ),
+            child: Text(
+              'UPDATE',
+              style: TextStyle(
+                fontSize: Design.baseFontSize - 0.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+                color: accent,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    if (installedManifest != null) {
       return Tooltip(
         message: 'Installed — tap to reinstall/update',
         waitDuration: const Duration(milliseconds: 400),

@@ -173,7 +173,9 @@ class BrowserBridge {
       if (message.ok) {
         pending.resolve(message.result);
       } else {
-        pending.reject(new Error(message.error || "Browser bridge request failed"));
+        pending.reject(
+          new Error(message.error || "Browser bridge request failed"),
+        );
       }
       return;
     }
@@ -263,7 +265,9 @@ function filterLabel(filter) {
 }
 
 function filterItems(items, query) {
-  const needle = String(query || "").trim().toLowerCase();
+  const needle = String(query || "")
+    .trim()
+    .toLowerCase();
   if (!needle) return items;
   return items.filter((item) => {
     const haystack = `${item.title} ${item.subtitle}`.toLowerCase();
@@ -287,7 +291,8 @@ function renderConfig(rev, values = null, error = "", errorField = "url") {
           placeholder: "http://localhost:8080/",
           value: current.url || "",
           required: true,
-          description: "The qBittorrent WebUI address, including any reverse-proxy path.",
+          description:
+            "The qBittorrent WebUI address, including any reverse-proxy path.",
           ...(error && errorField === "url" ? { error } : {}),
         },
         {
@@ -343,7 +348,8 @@ function rootItems() {
       accessories: [status],
       actions: [{ id: "default", title: "Browse downloads", icon: "open" }],
       preview: {
-        markdown: "## Downloading\n\nSee progress, ETA, peers, and current download speed.",
+        markdown:
+          "## Downloading\n\nSee progress, ETA, peers, and current download speed.",
       },
     },
     {
@@ -354,7 +360,8 @@ function rootItems() {
       accessories: [status],
       actions: [{ id: "default", title: "Browse seeding", icon: "open" }],
       preview: {
-        markdown: "## Seeding\n\nSee upload speed, ratio, connected peers, and seeding time.",
+        markdown:
+          "## Seeding\n\nSee upload speed, ratio, connected peers, and seeding time.",
       },
     },
     {
@@ -386,7 +393,9 @@ function rootItems() {
     {
       id: "settings",
       title: "Connection settings",
-      subtitle: settings.proxy ? "URL and proxy are configured" : "Configure URL and optional proxy",
+      subtitle: settings.proxy
+        ? "URL and proxy are configured"
+        : "Configure URL and optional proxy",
       icon: "settings",
       actions: [{ id: "default", title: "Edit settings", icon: "edit" }],
       preview: {
@@ -404,7 +413,12 @@ function renderRoot(rev, query) {
     emptyText: "No qBittorrent command matches that search",
     items: filterItems(rootItems(), query),
     actions: [
-      { id: "refresh", title: "Refresh connection", icon: "refresh", shortcut: "ctrl+r" },
+      {
+        id: "refresh",
+        title: "Refresh connection",
+        icon: "refresh",
+        shortcut: "ctrl+r",
+      },
       { id: "settings", title: "Connection settings", icon: "settings" },
       { id: "open_webui", title: "Open qBittorrent WebUI", icon: "open" },
     ],
@@ -442,10 +456,13 @@ function isPaused(torrent) {
 
 function torrentIcon(torrent) {
   const stateValue = String(torrent.state || "").toLowerCase();
-  if (stateValue.includes("error") || stateValue.includes("missing")) return "error";
+  if (stateValue.includes("error") || stateValue.includes("missing"))
+    return "error";
   if (stateValue.includes("checking") || stateValue === "moving") return "sync";
-  if (stateValue.includes("up") || stateValue.includes("seeding")) return "upload";
-  if (stateValue.includes("down") || stateValue.includes("download")) return "download";
+  if (stateValue.includes("up") || stateValue.includes("seeding"))
+    return "upload";
+  if (stateValue.includes("down") || stateValue.includes("download"))
+    return "download";
   return "file";
 }
 
@@ -466,7 +483,9 @@ function formatBytes(value) {
 
 function formatRate(value) {
   const amount = Number(value);
-  return Number.isFinite(amount) && amount > 0 ? `${formatBytes(amount)}/s` : "0 B/s";
+  return Number.isFinite(amount) && amount > 0
+    ? `${formatBytes(amount)}/s`
+    : "0 B/s";
 }
 
 function formatNumber(value, digits = 2) {
@@ -476,7 +495,8 @@ function formatNumber(value, digits = 2) {
 
 function formatEta(value) {
   const seconds = Number(value);
-  if (!Number.isFinite(seconds) || seconds < 0 || seconds >= 8_640_000) return "∞";
+  if (!Number.isFinite(seconds) || seconds < 0 || seconds >= 8_640_000)
+    return "∞";
   if (seconds < 60) return `${Math.round(seconds)}s`;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m`;
@@ -509,8 +529,16 @@ function torrentPreview(torrent) {
     ].join("\n"),
     metadata: [
       { label: "Size", text: formatBytes(torrent.size), icon: "database" },
-      { label: "Downloaded", text: formatBytes(torrent.downloaded), icon: "download" },
-      { label: "Uploaded", text: formatBytes(torrent.uploaded), icon: "upload" },
+      {
+        label: "Downloaded",
+        text: formatBytes(torrent.downloaded),
+        icon: "download",
+      },
+      {
+        label: "Uploaded",
+        text: formatBytes(torrent.uploaded),
+        icon: "upload",
+      },
       { label: "Ratio", text: formatNumber(torrent.ratio), icon: "chart" },
       { label: "Seeds", text: text(torrent.num_seeds, "0"), icon: "people" },
       { label: "Peers", text: text(torrent.num_leechs, "0"), icon: "person" },
@@ -521,11 +549,17 @@ function torrentPreview(torrent) {
         icon: "folder",
         ...(savePath
           ? {
-              actions: [{ id: "open_folder", title: "Open folder", icon: "folder" }],
+              actions: [
+                { id: "open_folder", title: "Open folder", icon: "folder" },
+              ],
             }
           : {}),
       },
-      { label: "Category", text: torrent.category || "Uncategorized", icon: "tag" },
+      {
+        label: "Category",
+        text: torrent.category || "Uncategorized",
+        icon: "tag",
+      },
       { label: "Added", text: formatDate(torrent.added_on), icon: "calendar" },
     ],
   };
@@ -553,15 +587,23 @@ function torrentItem(torrent) {
   const progress = Math.max(0, Math.min(1, Number(torrent.progress) || 0));
   const item = {
     id,
-    title: escapeMarkdown(torrent.name || hash),
+    title: torrent.name || hash,
+    // title: escapeMarkdown(torrent.name || hash),
     subtitle: `${torrentStatus(torrent)} · ${formatBytes(torrent.size)} · ↓ ${formatRate(torrent.dlspeed)} · ↑ ${formatRate(torrent.upspeed)}`,
     icon: torrentIcon(torrent),
     progress,
     lines: 2,
     accessories: [
-      { text: `${Math.round(progress * 100)}%`, color: progress >= 1 ? "#3D9B72" : "#63A0EA" },
-      ...(torrent.eta != null && progress < 1 ? [{ text: `ETA ${formatEta(torrent.eta)}`, icon: "clock" }] : []),
-      ...(torrent.category ? [{ text: String(torrent.category), icon: "tag" }] : []),
+      {
+        text: `${Math.round(progress * 100)}%`,
+        color: progress >= 1 ? "#3D9B72" : "#63A0EA",
+      },
+      ...(torrent.eta != null && progress < 1
+        ? [{ text: `ETA ${formatEta(torrent.eta)}`, icon: "clock" }]
+        : []),
+      ...(torrent.category
+        ? [{ text: String(torrent.category), icon: "tag" }]
+        : []),
     ],
     actions: torrentActions(torrent),
     preview: torrentPreview(torrent),
@@ -572,7 +614,12 @@ function torrentItem(torrent) {
 
 function torrentFrameActions() {
   return [
-    { id: "refresh", title: "Refresh torrents", icon: "refresh", shortcut: "ctrl+r" },
+    {
+      id: "refresh",
+      title: "Refresh torrents",
+      icon: "refresh",
+      shortcut: "ctrl+r",
+    },
     { id: "filter:all", title: "Show all torrents", icon: "list" },
     { id: "filter:active", title: "Show active torrents", icon: "bolt" },
     { id: "filter:downloading", title: "Show downloading", icon: "download" },
@@ -586,7 +633,9 @@ function torrentFrameActions() {
 function renderTorrentsFrame(rev, query) {
   const items = state.torrents
     .filter((torrent) => {
-      const needle = String(query || "").trim().toLowerCase();
+      const needle = String(query || "")
+        .trim()
+        .toLowerCase();
       if (!needle) return true;
       return `${torrent.name || ""} ${torrent.hash || ""} ${torrent.category || ""} ${torrent.tags || ""}`
         .toLowerCase()
@@ -599,8 +648,12 @@ function renderTorrentsFrame(rev, query) {
     placeholder: `Search ${filterLabel(state.filter).toLowerCase()} torrents…`,
     empty: {
       icon: "search",
-      title: query ? "No matching torrents" : `No ${filterLabel(state.filter).toLowerCase()} torrents`,
-      hint: query ? "Try a name, category, tag, or hash" : "qBittorrent returned an empty list",
+      title: query
+        ? "No matching torrents"
+        : `No ${filterLabel(state.filter).toLowerCase()} torrents`,
+      hint: query
+        ? "Try a name, category, tag, or hash"
+        : "qBittorrent returned an empty list",
     },
     hasMore: state.hasMore,
     items,
@@ -622,7 +675,10 @@ function renderWaiting(rev, canGoBack = false) {
       : [
           "# Waiting for the browser connector",
           "",
-          escapeMarkdown(bridge.startError || "Pair the tabame-extension browser extension, then try again."),
+          escapeMarkdown(
+            bridge.startError ||
+              "Pair the tabame-extension browser extension, then try again.",
+          ),
           "",
           "Use **Connection settings** to verify the WebUI URL.",
         ].join("\n");
@@ -662,7 +718,8 @@ function renderError(rev, error, canGoBack = true) {
 function apiPath(endpoint, params = {}) {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== "") query.set(key, String(value));
+    if (value !== undefined && value !== null && value !== "")
+      query.set(key, String(value));
   }
   const suffix = query.toString();
   return `api/v2/${endpoint}${suffix ? `?${suffix}` : ""}`;
@@ -731,7 +788,8 @@ async function directApiRequest(requestPath, options = {}) {
 }
 
 async function apiRequest(requestPath, options = {}, tabId = null) {
-  if (Number.isInteger(tabId)) return pageApiRequest(tabId, requestPath, options);
+  if (Number.isInteger(tabId))
+    return pageApiRequest(tabId, requestPath, options);
   if (bridge.connected) {
     const tab = await ensureQbitTab(false);
     return pageApiRequest(tab.id, requestPath, options);
@@ -744,7 +802,9 @@ function assertApiSuccess(response) {
     const status = response && response.status ? ` (${response.status})` : "";
     const detail = text(response && response.text, "No response body");
     if (response && (response.status === 401 || response.status === 403)) {
-      throw new Error(`qBittorrent rejected the request${status}. Sign in to the WebUI tab first.`);
+      throw new Error(
+        `qBittorrent rejected the request${status}. Sign in to the WebUI tab first.`,
+      );
     }
     throw new Error(`qBittorrent API error${status}: ${detail}`);
   }
@@ -758,7 +818,9 @@ function tabMatchesConfiguredUrl(tab) {
     if (candidate.origin !== base.origin) return false;
     const basePath = base.pathname.replace(/\/+$/, "") || "/";
     const prefix = basePath === "/" ? "/" : `${basePath}/`;
-    return candidate.pathname === basePath || candidate.pathname.startsWith(prefix);
+    return (
+      candidate.pathname === basePath || candidate.pathname.startsWith(prefix)
+    );
   } catch {
     return false;
   }
@@ -768,7 +830,9 @@ async function waitForTabReady(tabId) {
   const deadline = Date.now() + READY_TIMEOUT_MS;
   while (Date.now() < deadline) {
     const snapshot = await bridge.request("tabs.list", {}, 10_000);
-    const tab = (snapshot.tabs || []).find((candidate) => candidate.id === tabId);
+    const tab = (snapshot.tabs || []).find(
+      (candidate) => candidate.id === tabId,
+    );
     if (!tab) throw new Error("The qBittorrent WebUI tab was closed");
     if (tab.status === "complete") return tab;
     await new Promise((resolve) => setTimeout(resolve, 250));
@@ -783,10 +847,13 @@ async function ensureQbitTab(active) {
 
   let snapshot = await bridge.request("tabs.list");
   let tab = (snapshot.tabs || []).find(
-    (candidate) => candidate.id === state.qbitTabId && tabMatchesConfiguredUrl(candidate),
+    (candidate) =>
+      candidate.id === state.qbitTabId && tabMatchesConfiguredUrl(candidate),
   );
   if (!tab) {
-    tab = (snapshot.tabs || []).find((candidate) => tabMatchesConfiguredUrl(candidate));
+    tab = (snapshot.tabs || []).find((candidate) =>
+      tabMatchesConfiguredUrl(candidate),
+    );
   }
   if (!tab) {
     tab = await bridge.request("tabs.open", {
@@ -826,7 +893,8 @@ async function openWebUi() {
 
 function scheduleRefresh() {
   clearTimeout(state.refreshTimer);
-  if (state.screen !== "torrents" || !state.initialized || state.shuttingDown) return;
+  if (state.screen !== "torrents" || !state.initialized || state.shuttingDown)
+    return;
   state.refreshTimer = setTimeout(async () => {
     if (state.screen !== "torrents" || state.refreshBusy) {
       scheduleRefresh();
@@ -878,8 +946,10 @@ async function loadTorrents(rev, query, options = {}) {
       }),
     );
     const page = assertApiSuccess(response);
-    if (!Array.isArray(page)) throw new Error("qBittorrent returned an invalid torrent list");
-    if (generation !== state.loadGeneration || state.screen !== "torrents") return;
+    if (!Array.isArray(page))
+      throw new Error("qBittorrent returned an invalid torrent list");
+    if (generation !== state.loadGeneration || state.screen !== "torrents")
+      return;
 
     state.torrents = append ? state.torrents.concat(page) : page;
     state.offset += page.length;
@@ -887,7 +957,8 @@ async function loadTorrents(rev, query, options = {}) {
     renderTorrentsFrame(rev, state.query);
     scheduleRefresh();
   } catch (error) {
-    if (generation !== state.loadGeneration || state.screen !== "torrents") return;
+    if (generation !== state.loadGeneration || state.screen !== "torrents")
+      return;
     if (quiet) {
       log("qBittorrent refresh failed:", error.message);
       return;
@@ -900,7 +971,11 @@ function detailActions(torrent) {
   const paused = isPaused(torrent);
   return [
     { id: "open_folder", title: "Open download folder", icon: "folder" },
-    { id: paused ? "resume" : "pause", title: paused ? "Resume torrent" : "Pause torrent", icon: paused ? "play" : "clock" },
+    {
+      id: paused ? "resume" : "pause",
+      title: paused ? "Resume torrent" : "Pause torrent",
+      icon: paused ? "play" : "clock",
+    },
     { id: "recheck", title: "Force recheck", icon: "sync" },
     { id: "open_webui", title: "Open WebUI tab", icon: "open" },
     { id: "copy_hash", title: "Copy torrent hash", icon: "copy" },
@@ -909,34 +984,79 @@ function detailActions(torrent) {
 }
 
 function detailMetadata(torrent, properties) {
-  const property = (key, fallback = null) => properties && properties[key] != null ? properties[key] : fallback;
-  const savePath = property("save_path", torrent.save_path || torrent.content_path);
+  const property = (key, fallback = null) =>
+    properties && properties[key] != null ? properties[key] : fallback;
+  const savePath = property(
+    "save_path",
+    torrent.save_path || torrent.content_path,
+  );
   return [
-    { label: "State", text: torrentStatus(torrent), color: torrent.state && String(torrent.state).includes("error") ? "#C86464" : "#3D9B72" },
-    { label: "Progress", text: `${Math.round((Number(torrent.progress) || 0) * 100)}%`, icon: "chart" },
-    { label: "Size", text: formatBytes(torrent.size || property("total_size")), icon: "database" },
-    { label: "Download speed", text: formatRate(torrent.dlspeed), icon: "download" },
-    { label: "Upload speed", text: formatRate(torrent.upspeed), icon: "upload" },
+    {
+      label: "State",
+      text: torrentStatus(torrent),
+      color:
+        torrent.state && String(torrent.state).includes("error")
+          ? "#C86464"
+          : "#3D9B72",
+    },
+    {
+      label: "Progress",
+      text: `${Math.round((Number(torrent.progress) || 0) * 100)}%`,
+      icon: "chart",
+    },
+    {
+      label: "Size",
+      text: formatBytes(torrent.size || property("total_size")),
+      icon: "database",
+    },
+    {
+      label: "Download speed",
+      text: formatRate(torrent.dlspeed),
+      icon: "download",
+    },
+    {
+      label: "Upload speed",
+      text: formatRate(torrent.upspeed),
+      icon: "upload",
+    },
     { label: "ETA", text: formatEta(torrent.eta), icon: "clock" },
-    { label: "Seeds / peers", text: `${text(torrent.num_seeds, "0")} / ${text(torrent.num_leechs, "0")}`, icon: "people" },
+    {
+      label: "Seeds / peers",
+      text: `${text(torrent.num_seeds, "0")} / ${text(torrent.num_leechs, "0")}`,
+      icon: "people",
+    },
     { label: "Share ratio", text: formatNumber(torrent.ratio), icon: "chart" },
-    { label: "Added", text: formatDate(torrent.added_on || property("addition_date")), icon: "calendar" },
-    { label: "Completed", text: formatDate(torrent.completion_on), icon: "check" },
+    {
+      label: "Added",
+      text: formatDate(torrent.added_on || property("addition_date")),
+      icon: "calendar",
+    },
+    {
+      label: "Completed",
+      text: formatDate(torrent.completion_on),
+      icon: "check",
+    },
     { separator: true },
     { label: "Save path", text: savePath || "Unavailable", icon: "folder" },
-    { label: "Category", text: torrent.category || "Uncategorized", icon: "tag" },
+    {
+      label: "Category",
+      text: torrent.category || "Uncategorized",
+      icon: "tag",
+    },
     { label: "Hash", text: torrent.hash || "Unavailable", icon: "key" },
   ];
 }
 
 function filesMarkdown(files) {
-  if (!Array.isArray(files) || files.length === 0) return "No file list was returned by qBittorrent.";
+  if (!Array.isArray(files) || files.length === 0)
+    return "No file list was returned by qBittorrent.";
   const visible = files.slice(0, 80);
   const lines = visible.map((file) => {
     const progress = Math.round((Number(file.progress) || 0) * 100);
     return `- ${escapeMarkdown(file.name || "Unnamed file")} — ${formatBytes(file.size)} · ${progress}%`;
   });
-  if (files.length > visible.length) lines.push(`\n_Only the first ${visible.length} files are shown._`);
+  if (files.length > visible.length)
+    lines.push(`\n_Only the first ${visible.length} files are shown._`);
   return lines.join("\n");
 }
 
@@ -947,14 +1067,20 @@ async function showTorrentDetail(rev, torrent) {
     canGoBack: true,
     loading: true,
     loadingText: "Reading torrent properties and files…",
-    detail: { markdown: `# ${escapeMarkdown(torrent.name || torrent.hash || "Torrent")}\n\nLoading qBittorrent stats…` },
+    detail: {
+      markdown: `# ${escapeMarkdown(torrent.name || torrent.hash || "Torrent")}\n\nLoading qBittorrent stats…`,
+    },
   });
 
   try {
     let tabId = null;
     if (bridge.connected) tabId = (await ensureQbitTab(false)).id;
     const [propertiesResponse, filesResponse] = await Promise.all([
-      apiRequest(apiPath("torrents/properties", { hash: torrent.hash }), {}, tabId),
+      apiRequest(
+        apiPath("torrents/properties", { hash: torrent.hash }),
+        {},
+        tabId,
+      ),
       apiRequest(apiPath("torrents/files", { hash: torrent.hash }), {}, tabId),
     ]);
     const properties = assertApiSuccess(propertiesResponse) || {};
@@ -991,7 +1117,10 @@ function folderPath(torrent) {
 function openTorrentFolder(torrent) {
   const target = folderPath(torrent);
   if (!target) {
-    command("toast", { text: "qBittorrent did not report a download folder", style: "error" });
+    command("toast", {
+      text: "qBittorrent did not report a download folder",
+      style: "error",
+    });
     return;
   }
   command("open", { path: target });
@@ -1003,17 +1132,24 @@ function postBody(values) {
 
 async function mutateTorrent(torrent, action) {
   const hash = String(torrent.hash || "");
-  const endpoint = action === "pause" ? "torrents/pause" : action === "resume" ? "torrents/resume" : "torrents/recheck";
-  const response = await apiRequest(
-    apiPath(endpoint),
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: postBody({ hashes: hash }),
-    },
-  );
+  const endpoint =
+    action === "pause"
+      ? "torrents/pause"
+      : action === "resume"
+        ? "torrents/resume"
+        : "torrents/recheck";
+  const response = await apiRequest(apiPath(endpoint), {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: postBody({ hashes: hash }),
+  });
   assertApiSuccess(response);
-  const label = action === "pause" ? "Torrent paused" : action === "resume" ? "Torrent resumed" : "Torrent recheck started";
+  const label =
+    action === "pause"
+      ? "Torrent paused"
+      : action === "resume"
+        ? "Torrent resumed"
+        : "Torrent recheck started";
   command("toast", { text: label, style: "success" });
 }
 
@@ -1129,7 +1265,11 @@ async function handleAction(message) {
       return;
     }
 
-    const requestedFilter = action.startsWith("filter:") ? action.slice("filter:".length) : id.startsWith("filter:") ? id.slice("filter:".length) : "";
+    const requestedFilter = action.startsWith("filter:")
+      ? action.slice("filter:".length)
+      : id.startsWith("filter:")
+        ? id.slice("filter:".length)
+        : "";
     if (requestedFilter) {
       enterTorrents(requestedFilter);
       return;
@@ -1153,7 +1293,10 @@ function handleBack() {
     void loadTorrents(0, state.query, { quiet: true });
     return;
   }
-  if (state.screen === "torrents" || (state.screen === "config" && configured())) {
+  if (
+    state.screen === "torrents" ||
+    (state.screen === "config" && configured())
+  ) {
     enterRoot();
   }
 }
@@ -1218,19 +1361,23 @@ async function handleLine(line) {
       await handleAction(message);
       break;
     case "submit":
-      if (state.screen === "config") await handleConfigSubmit(message.values || {});
+      if (state.screen === "config")
+        await handleConfigSubmit(message.values || {});
       break;
     case "back":
       handleBack();
       break;
     case "loadMore":
       if (state.screen === "torrents" && state.hasMore) {
-        await loadTorrents(Number(message.rev) || 0, state.query, { append: true });
+        await loadTorrents(Number(message.rev) || 0, state.query, {
+          append: true,
+        });
       }
       break;
     case "tab": {
       const torrent = currentTorrentForId(String(message.id || ""));
-      if (torrent && torrent.name) command("setQuery", { text: String(torrent.name) });
+      if (torrent && torrent.name)
+        command("setQuery", { text: String(torrent.name) });
       break;
     }
     case "select":

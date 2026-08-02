@@ -59,7 +59,7 @@ function writeRegistry(registry) {
   fs.writeFileSync(registryPath, JSON.stringify(registry, null, 2), "utf8");
 }
 
-function validateManifest(manifest) {
+function validateManifest(manifest, pluginFolder) {
   if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
     fail("plugin.json must contain a JSON object.");
   }
@@ -75,7 +75,7 @@ function validateManifest(manifest) {
   ]) {
     const value = manifest[field];
     if (value === undefined || value === null || String(value).trim() === "") {
-      fail(`plugin.json must contain a '${field}' value.`);
+      fail(`plugin.json must contain a '${field}' value. ${pluginFolder}`);
     }
   }
 }
@@ -95,7 +95,7 @@ function buildPluginRegistration(pluginFolder) {
     manifestRaw,
     `plugins/${pluginFolder}/plugin.json`,
   );
-  validateManifest(manifest);
+  validateManifest(manifest, pluginFolder);
 
   const pluginId = manifest.id || pluginFolder;
   const githubPath = `https://github.com/Far-Se/tabame/tree/${branch}/plugins/${pluginFolder}`;

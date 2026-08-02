@@ -19,6 +19,7 @@ class PluginManifest {
     required this.directory,
     this.enabled = true,
     this.dev = false,
+    this.version = '',
     this.pip = const <String>[],
     this.env = const <String, String>{},
   });
@@ -33,6 +34,9 @@ class PluginManifest {
   final String keyword;
 
   final String description;
+
+  /// Plugin version from `plugin.json`, when supplied.
+  final String version;
 
   /// Material icon name (see `plugin_icons.dart`), or `file://` / `https://`.
   final String icon;
@@ -127,6 +131,7 @@ class PluginManifest {
       entry: str('entry'),
       args: args,
       directory: directory,
+      version: str('version'),
       // Absent or non-boolean `enabled` means the plugin is on by default.
       enabled: rawEnabled is bool ? rawEnabled : true,
       dev: rawDev == true,
