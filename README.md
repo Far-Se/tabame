@@ -587,6 +587,7 @@ A bunch of file and folder tools. You can add them to the Windows right-click me
 - **Folder Size Scan** - scan recursively to see what's eating your disk, and delete folders right there.
 - **Context Menu Cleaner** - review the apps that added themselves to your right-click menu and disable the ones you don't want.
 - **Wallpaper Scheduler** - per-monitor wallpaper rotation on a schedule, from a gallery you choose.
+- **Image Tools** - Center Images in Bulk and Split image based on a grid.
 - **Hosts Editor** - edit your system `hosts` file from inside Tabame (needs admin rights).
 
 ---

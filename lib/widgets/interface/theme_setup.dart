@@ -895,7 +895,8 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
     });
   }
 
-  Widget _settingsCard({required String title, required String subtitle, required Widget child, Widget? trailing}) {
+  Widget _settingsCard(
+      {required String title, required String subtitle, required Widget child, Widget? leading, Widget? trailing}) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return Container(
       width: double.infinity,
@@ -910,6 +911,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
         children: <Widget>[
           Row(
             children: <Widget>[
+              if (leading != null) ...[leading, const SizedBox(width: 10)],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1101,6 +1103,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
     return Column(
       children: <Widget>[
         _settingsCard(
+          leading: const Icon(Icons.warning),
           title: "To see live preview use QuickMenu Design Button",
           subtitle:
               "You can see the preview from QuickMenu Design button from QuickMenu QuickActions.\nThis page does not contains all the Design Settings.",

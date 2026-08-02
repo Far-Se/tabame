@@ -7,6 +7,7 @@ import '../../models/util/app_opacity.dart';
 import '../../models/win32/mixed.dart';
 import '../itzy/interface/quickmenu_bottom_bar.dart';
 import 'grid_settings.dart';
+import 'keystrokes_settings.dart';
 import 'quickmenu/appaudio_settings.dart';
 import 'quickmenu/apps_settings.dart';
 import 'quickmenu/audio_settings.dart';
@@ -156,6 +157,12 @@ class QMSettingsState extends State<QMSettings> {
       icon: Icons.dashboard_customize_rounded,
       builder: () => const WorkspacesSettingsPage(),
       stats: () => "${Boxes.workspaces.length} Spaces",
+    ),
+    _SettingsPage(
+      title: "Keystrokes",
+      subtitle: "Overlay & Click Visualizer",
+      icon: Icons.keyboard_alt_outlined,
+      builder: () => const KeystrokesSettingsPage(),
     ),
   ];
 

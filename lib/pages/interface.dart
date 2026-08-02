@@ -25,7 +25,6 @@ import '../widgets/interface/home.dart';
 import '../widgets/interface/hotkeys_interface.dart';
 import '../widgets/interface/interface_faq.dart';
 import '../widgets/interface/interface_quickmenu.dart';
-import '../widgets/interface/keystrokes_settings.dart';
 import '../widgets/interface/interface_settings.dart';
 import '../widgets/interface/theme_setup.dart';
 import '../widgets/interface/trktivity.dart';
@@ -97,13 +96,13 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   final Sponsorship sponsor = Sponsorship();
   final List<PageClass> pages = <PageClass>[
     PageClass(title: 'Home', icon: Icons.home, widget: const Home()),
-    PageClass(title: 'Settings', icon: Icons.settings, widget: const SettingsPage()),
+    PageClass(title: 'Config', icon: Icons.settings, widget: const SettingsPage()),
+    PageClass(title: 'Settings', icon: Icons.apps, widget: const QMSettings()),
     PageClass(title: 'Theme', icon: Icons.theater_comedy, widget: const ThemeSetup()),
-    PageClass(title: 'QuickMenu', icon: Icons.apps, widget: const QMSettings()),
     // PageClass(title: 'QuickRun', icon: Icons.drag_handle, widget: const RunSettings()),
     PageClass(title: 'Hotkeys', icon: Icons.keyboard, widget: const HotkeysInterface()),
     PageClass(title: 'Trktivity', icon: Icons.scatter_plot, widget: const TrktivityPage()),
-    PageClass(title: 'Keystrokes', icon: Icons.keyboard_alt_outlined, widget: const KeystrokesSettingsPage()),
+    // PageClass(title: 'Keystrokes', icon: Icons.keyboard_alt_outlined, widget: const KeystrokesSettingsPage()),
     PageClass(title: 'Fancyshot', icon: Icons.center_focus_strong_rounded, widget: const Fancyshot()),
     PageClass(title: 'Wizardly', icon: Icons.auto_fix_high, widget: const Wizardly()),
     PageClass(title: 'F.A.Q', icon: Icons.contact_support, widget: const FaqPage()),
@@ -115,7 +114,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
     "Wizardly",
     "Fancyshot",
     "FirstRun",
-    "QuickMenu",
+    "Settings",
     "Hotkeys",
   ];
   final Future<int> interfaceWindow = interfaceWindowSetup();

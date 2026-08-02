@@ -43,7 +43,11 @@ function readRegistry() {
   const registryRaw = fs.readFileSync(registryPath, "utf8");
   const registry = parseJson(registryRaw, "resources/plugins.json");
 
-  if (!registry || typeof registry !== "object" || !Array.isArray(registry.plugins)) {
+  if (
+    !registry ||
+    typeof registry !== "object" ||
+    !Array.isArray(registry.plugins)
+  ) {
     fail('resources/plugins.json is missing a "plugins" array.');
   }
 
@@ -67,6 +71,7 @@ function validateManifest(manifest) {
     "icon",
     "runtime",
     "entry",
+    "version",
   ]) {
     const value = manifest[field];
     if (value === undefined || value === null || String(value).trim() === "") {
@@ -86,7 +91,10 @@ function buildPluginRegistration(pluginFolder) {
   // Always read as UTF-8 explicitly. This avoids the mangled special
   // character issue from the old PowerShell version.
   const manifestRaw = fs.readFileSync(manifestPath, "utf8");
-  const manifest = parseJson(manifestRaw, `plugins/${pluginFolder}/plugin.json`);
+  const manifest = parseJson(
+    manifestRaw,
+    `plugins/${pluginFolder}/plugin.json`,
+  );
   validateManifest(manifest);
 
   const pluginId = manifest.id || pluginFolder;
@@ -144,7 +152,7 @@ function buildPluginRegistration(pluginFolder) {
       icon: manifest.icon,
       runtime: manifest.runtime,
       author: "Far-Se",
-      version: "1.0.0",
+      version: manifest.version ?? "1.0.0",
       homepage: githubPath,
       files,
     },
@@ -173,7 +181,9 @@ function addMissingPlugins() {
 
   const registeredIds = new Set(
     registry.plugins
-      .filter((plugin) => plugin && plugin.id !== undefined && plugin.id !== null)
+      .filter(
+        (plugin) => plugin && plugin.id !== undefined && plugin.id !== null,
+      )
       .map((plugin) => String(plugin.id)),
   );
   const additions = [];
@@ -207,14 +217,18 @@ function addMissingPlugins() {
   }
   writeRegistry(registry);
 
-  console.log(`Added ${additions.length} missing plugin(s) to resources/plugins.json:`);
+  console.log(
+    `Added ${additions.length} missing plugin(s) to resources/plugins.json:`,
+  );
   for (const addition of additions) {
     console.log(`- ${addition.pluginId} (plugins/${addition.folder})`);
   }
 }
 
 function normalizeIdentity(value) {
-  return String(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+  return String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 }
 
 function addIdentityFromUrl(identities, value) {
@@ -259,7 +273,10 @@ function readLocalPluginInfo(pluginPath, folder) {
     );
     return {
       id:
-        manifest && manifest.id !== undefined && manifest.id !== null && String(manifest.id).trim() !== ""
+        manifest &&
+        manifest.id !== undefined &&
+        manifest.id !== null &&
+        String(manifest.id).trim() !== ""
           ? String(manifest.id)
           : folder,
     };
@@ -275,7 +292,10 @@ function checkLocalPlugins() {
   }
 
   const localPluginsPath = path.join(localAppData, "Tabame", "plugins");
-  if (!fs.existsSync(localPluginsPath) || !fs.statSync(localPluginsPath).isDirectory()) {
+  if (
+    !fs.existsSync(localPluginsPath) ||
+    !fs.statSync(localPluginsPath).isDirectory()
+  ) {
     console.log(`Local plugins folder not found: ${localPluginsPath}`);
     return;
   }
@@ -287,7 +307,10 @@ function checkLocalPlugins() {
     .filter((entry) => entry.isDirectory())
     .sort((left, right) => left.name.localeCompare(right.name))
     .map((entry) => {
-      const info = readLocalPluginInfo(path.join(localPluginsPath, entry.name), entry.name);
+      const info = readLocalPluginInfo(
+        path.join(localPluginsPath, entry.name),
+        entry.name,
+      );
       return {
         folder: entry.name,
         id: info.id,
@@ -308,7 +331,9 @@ function checkLocalPlugins() {
   console.log("Local plugins not registered in resources/plugins.json:");
   for (const plugin of missing) {
     const details = plugin.id !== plugin.folder ? ` (id: ${plugin.id})` : "";
-    const manifestWarning = plugin.invalidManifest ? " [invalid plugin.json]" : "";
+    const manifestWarning = plugin.invalidManifest
+      ? " [invalid plugin.json]"
+      : "";
     console.log(`- ${plugin.folder}${details}${manifestWarning}`);
   }
 }

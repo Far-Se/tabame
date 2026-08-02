@@ -16,6 +16,11 @@ class InterfaceQMGeneralSettingsPage extends StatefulWidget {
 }
 
 class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSettingsPage> {
+  static final List<String> _logoLibrary = List<String>.generate(
+    39,
+    (int index) => 'resources/logos/logo_$index.png',
+  );
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -139,13 +144,9 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
             setState(() {});
           },
         ),
-        _buildImageSetting(
-          title: "Primary Logo",
-          subtitle: "Replace the default QuickMenu icon",
-          imagePath: user.customLogo,
-          defaultAsset: user.logo,
-          onChanged: _pickLogoImage,
-        ),
+        _buildSectionTitle(context, "Logo Library"),
+        const SizedBox(height: 8),
+        _buildLogoLibrary(),
         const SizedBox(height: 4),
         _buildImageSetting(
           title: "Splash Header",
@@ -155,6 +156,126 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
         ),
       ],
     );
+  }
+
+  Widget _buildLogoLibrary() {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final int crossAxisCount = constraints.maxWidth >= 600
+            ? 9
+            : constraints.maxWidth >= 420
+                ? 7
+                : 5;
+
+        return GridView.builder(
+          padding: EdgeInsets.zero,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: 1.15,
+          ),
+          itemCount: _logoLibrary.length + 2,
+          itemBuilder: (BuildContext context, int index) {
+            if (index == 0) {
+              return _buildLogoTile(
+                title: "Default logo",
+                isSelected: user.customLogo.isEmpty,
+                preview: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Image.asset(user.logo, fit: BoxFit.contain),
+                ),
+                onTap: () => _selectLogo(""),
+              );
+            }
+
+            if (index == 1) {
+              final bool hasCustomFile = user.customLogo.isNotEmpty && !_isLogoLibraryAsset(user.customLogo);
+
+              return _buildLogoTile(
+                title: "Pick your own Logo",
+                isSelected: hasCustomFile,
+                preview: hasCustomFile
+                    ? _buildLogoImage(user.customLogo)
+                    : Icon(Icons.add_photo_alternate_outlined, size: 28, color: Theme.of(context).hintColor),
+                onTap: _pickLogoImage,
+              );
+            }
+
+            final String asset = _logoLibrary[index - 2];
+            return _buildLogoTile(
+              title: "Logo ${index - 2}",
+              isSelected: user.customLogo == asset,
+              preview: Image.asset(asset, fit: BoxFit.contain),
+              onTap: () => _selectLogo(asset),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildLogoTile({
+    required String title,
+    required bool isSelected,
+    required Widget preview,
+    required VoidCallback onTap,
+  }) {
+    final ThemeData theme = Theme.of(context);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color:
+              isSelected ? theme.colorScheme.primary.withValues(alpha: 0.1) : theme.cardColor.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? theme.colorScheme.primary : theme.dividerColor.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Stack(
+          children: <Widget>[
+            Column(
+              children: <Widget>[
+                Expanded(child: Center(child: preview)),
+                const SizedBox(height: 4),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize + 1,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? theme.colorScheme.primary : theme.textTheme.bodyMedium?.color,
+                  ),
+                ),
+              ],
+            ),
+            if (isSelected)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Icon(Icons.check_circle_rounded, size: 16, color: theme.colorScheme.primary),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoImage(String imagePath) {
+    return _isLogoLibraryAsset(imagePath)
+        ? Image.asset(imagePath, fit: BoxFit.contain)
+        : Image.file(File(imagePath), fit: BoxFit.contain);
+  }
+
+  bool _isLogoLibraryAsset(String imagePath) {
+    return imagePath.replaceAll('\\', '/').startsWith('resources/logos/');
   }
 
   // ignore: unused_element
@@ -393,15 +514,16 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
     );
   }
 
-  Future<void> _pickLogoImage(bool enabled) async {
-    if (!enabled) {
-      user.customLogo = "";
-    } else {
-      final File? result = _pickPngFile();
-      if (result == null) return;
-      user.customLogo = result.path;
-    }
+  Future<void> _pickLogoImage() async {
+    final File? result = _pickPngFile();
+    if (result == null) return;
+    await _selectLogo(result.path);
+  }
+
+  Future<void> _selectLogo(String imagePath) async {
+    user.customLogo = imagePath;
     await Boxes.updateSettings("customLogo", user.customLogo);
+    if (!mounted) return;
     setState(() {});
   }
 

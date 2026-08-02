@@ -4406,14 +4406,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       surface: theme.colorScheme.surface,
       accent: accent,
       onSurface: onSurface,
-      dragHandle: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onPanStart: (_) => windowManager.startDragging(),
-        child: Icon(
-          // Token-driven: no inline ternary on _design.
-          launcherTheme.searchIcon,
-          size: launcherTheme.searchIconSize,
-          color: launcherTheme.searchIconUsesOnSurface ? onSurface.withAlpha(160) : accent,
+      dragHandle: MouseRegion(
+        cursor: SystemMouseCursors.move,
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onPanStart: (_) => windowManager.startDragging(),
+          child: Icon(
+            // Token-driven: no inline ternary on _design.
+            launcherTheme.searchIcon,
+            size: launcherTheme.searchIconSize,
+            color: launcherTheme.searchIconUsesOnSurface ? onSurface.withAlpha(160) : accent,
+          ),
         ),
       ),
       textField: TextField(

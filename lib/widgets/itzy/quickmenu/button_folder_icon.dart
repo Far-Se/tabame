@@ -427,14 +427,12 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
                                         child: TextField(
                                           controller: _apiKeyController,
                                           obscureText: true,
-                                          style: TextStyle(
-                                              fontSize: Design.baseFontSize + 2, color: onSurface),
+                                          style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface),
                                           decoration: InputDecoration(
                                             isDense: true,
                                             hintText: 'Paste your remove.bg API key…',
                                             hintStyle: TextStyle(
-                                                fontSize: Design.baseFontSize + 2,
-                                                color: onSurface.withAlpha(100)),
+                                                fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(100)),
                                             filled: true,
                                             fillColor: accent.withAlpha(10),
                                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -507,10 +505,8 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
                           const SizedBox(height: 6),
                           Text(
                             'Run "Remove Background" before applying, or disable the toggle to use the original image.',
-                            style: TextStyle(
-                                fontSize: Design.baseFontSize,
-                                color: onSurface.withAlpha(140),
-                                height: 1.4),
+                            style:
+                                TextStyle(fontSize: Design.baseFontSize, color: onSurface.withAlpha(140), height: 1.4),
                           ),
                         ],
                       ],
@@ -624,9 +620,6 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
                         'Design a Folder Icon for Desktop with flat white background:\nColor: Dark Gray\nText: Settings\nIcon: Settings Gear\n'
                         'Design: Modern with just a few details, folder slighly opened to the left, text below the icon inside the folder, folder color has a slighly gradient, square aspect ratio',
                         selectable: true),
-                    const SizedBox(height: 6),
-                    infoButton(
-                        'ChatGPT Image Generator has transparent Background, others do not support, so specify white background for non ChatGPT'),
                   ],
                 ),
               ),
@@ -834,18 +827,12 @@ class _StepCard extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   '$step',
-                  style: TextStyle(
-                      fontSize: Design.baseFontSize + 1,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
+                  style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ),
               const SizedBox(width: 8),
               Text(label,
-                  style: TextStyle(
-                      fontSize: Design.baseFontSize + 2,
-                      fontWeight: FontWeight.w600,
-                      color: onSurface)),
+                  style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600, color: onSurface)),
             ],
           ),
           const SizedBox(height: 10),
@@ -895,8 +882,7 @@ class _PickerRow extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    fontSize: Design.baseFontSize + 2,
-                    color: value != null ? onSurface : onSurface.withAlpha(100)),
+                    fontSize: Design.baseFontSize + 2, color: value != null ? onSurface : onSurface.withAlpha(100)),
               ),
             ),
             const SizedBox(width: 6),

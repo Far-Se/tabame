@@ -421,7 +421,19 @@ class FileNameWidgetState extends State<FileNameWidget> {
 
   Widget _buildResultsSection(Color accent, Color onSurface, Color background) {
     totalMatched = 0;
-    final List<_RenamePreview> previews = loadedFiles.reversed.map(_previewForFile).toList();
+    final Set<String> previewNames = <String>{};
+    final Map<String, int> nextIncrementByName = <String, int>{};
+    final List<_RenamePreview> previews = loadedFiles.reversed.map((String loadedFile) {
+      final _RenamePreview originalPreview = _previewForFile(loadedFile);
+      final String uniqueName = _uniquePreviewName(originalPreview.newName, previewNames, nextIncrementByName);
+      previewNames.add(uniqueName.toLowerCase());
+      return _RenamePreview(
+        fullPath: originalPreview.fullPath,
+        oldName: originalPreview.oldName,
+        newName: uniqueName,
+        isSelected: originalPreview.isSelected,
+      );
+    }).toList();
     final int changedCount = previews.where((_RenamePreview preview) => preview.oldName != preview.newName).length;
     final int selectedCount =
         previews.where((_RenamePreview preview) => preview.isSelected && preview.oldName != preview.newName).length;
@@ -663,6 +675,30 @@ class FileNameWidgetState extends State<FileNameWidget> {
       newName: newFile,
       isSelected: !excludedFiles.contains(loadedFile),
     );
+  }
+
+  String _uniquePreviewName(String name, Set<String> previewNames, Map<String, int> nextIncrementByName) {
+    final String normalizedName = name.toLowerCase();
+    if (!previewNames.contains(normalizedName)) {
+      nextIncrementByName[normalizedName] = 1;
+      return name;
+    }
+
+    int increment = nextIncrementByName[normalizedName] ?? 1;
+    String uniqueName = _nameWithIncrement(name, increment);
+    while (previewNames.contains(uniqueName.toLowerCase())) {
+      increment++;
+      uniqueName = _nameWithIncrement(name, increment);
+    }
+    nextIncrementByName[normalizedName] = increment + 1;
+    return uniqueName;
+  }
+
+  String _nameWithIncrement(String name, int increment) {
+    final int extensionIndex = name.lastIndexOf('.');
+    if (extensionIndex <= 0) return "$name ($increment)";
+
+    return "${name.substring(0, extensionIndex)} ($increment)${name.substring(extensionIndex)}";
   }
 
   void renameFile(String fullPathFile, String newName) {

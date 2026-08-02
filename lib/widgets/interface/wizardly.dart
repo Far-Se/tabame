@@ -8,6 +8,7 @@ import '../wizardly/context_menu_cleaner.dart';
 import '../wizardly/find_text.dart';
 import '../wizardly/folder_size_scan.dart';
 import '../wizardly/hosts_editor.dart';
+import '../wizardly/image_tools.dart';
 import '../wizardly/project_overview.dart';
 import '../wizardly/rename_files.dart';
 import '../wizardly/wallpaper_scheduler.dart';
@@ -92,6 +93,12 @@ class WizardlyState extends State<Wizardly> {
         icon: Icons.schedule_rounded,
         isFullPage: true,
         tooltip: "Automate wallpapers per monitor"),
+    WizardPage(
+        title: "Image Tools",
+        widget: () => const ImageTools(),
+        icon: Icons.auto_awesome_mosaic_rounded,
+        isFullPage: true,
+        tooltip: "Center and normalize transparent PNG images"),
   ];
   int currentPage = 0;
   @override

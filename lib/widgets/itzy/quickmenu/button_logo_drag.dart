@@ -44,10 +44,13 @@ class LogoDragButtonState extends State<LogoDragButton> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0).copyWith(right: 2, top: 1),
                   child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: user.customLogo == ""
-                          ? Image.asset(user.logo, width: 15)
-                          : Image.file(File(user.customLogo), width: 15)),
+                    alignment: Alignment.centerLeft,
+                    child: user.customLogo.isEmpty
+                        ? Image.asset(user.logo, width: 15)
+                        : user.customLogo.replaceAll('\\', '/').startsWith('resources/logos/')
+                            ? Image.asset(user.customLogo.replaceAll('\\', '/'), width: 15)
+                            : Image.file(File(user.customLogo), width: 15),
+                  ),
                 ),
                 if (!user.hideTabameOnUnfocus)
                   Positioned(

@@ -69,6 +69,7 @@ class AppStartup {
   static Future<void> registerServices() async {
     if (Globals.isStandaloneLauncher) {
       await Boxes.registerBoxes(justLoad: true);
+      await BrowserBridgeService.instance.initialize(asLauncherClient: true);
       Debug.add("Registered: Standalone launcher settings");
       return;
     }

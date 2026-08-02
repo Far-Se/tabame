@@ -71,6 +71,7 @@ void main() {
               'text': 'Poster Name',
               'image': 'https://example.com/poster.webp',
               'width': 180,
+              'height': 240,
               'actions': <Object?>[
                 <String, Object?>{'id': 'open', 'title': 'Open', 'icon': 'open'}
               ],
@@ -94,6 +95,7 @@ void main() {
       expect(item.previewMetadata[3].sparkline, <double>[1, 2, 3]);
       expect(item.previewMetadata[4].image, 'https://example.com/poster.webp');
       expect(item.previewMetadata[4].imageWidth, 180);
+      expect(item.previewMetadata[4].height, 240);
       expect(item.previewMetadata[4].actions.single.id, 'open');
       expect(item.previewMetadata[5].image, isNull);
     });

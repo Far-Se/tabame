@@ -2065,7 +2065,7 @@ class _PluginMetadataPane extends StatelessWidget {
                 child: Image.network(
                   entry.image!,
                   width: entry.imageWidth ?? 132,
-                  height: 176,
+                  height: entry.height ?? 176,
                   fit: BoxFit.cover,
                   errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => const SizedBox.shrink(),
                 ),

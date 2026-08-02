@@ -490,7 +490,7 @@ class FancyshotState extends State<Fancyshot> {
         return MediaQuery(
           data: const MediaQueryData(),
           child: Material(
-            color: Colors.transparent,
+            color: Colors.white, //bgcolor transparent
             child: _FancyShotFrameSurface(
               captureImage: subject,
               captureBytesForBackground: capture,
@@ -611,7 +611,7 @@ class FancyshotState extends State<Fancyshot> {
             Expanded(
               child: ColoredBox(
                 // color: const Color(0xFF1A1A1A),
-                color: Colors.white,
+                color: Design.background, //bgcolor White
                 child: Center(
                   child: _buildCanvasEditor(),
                 ),

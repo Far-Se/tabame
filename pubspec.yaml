@@ -81,6 +81,7 @@ flutter:
     - resources/wizzard3.png
     - resources/wizzard4.png
     - resources/gradient/
+    - resources/logos/
     - resources/devtools.png
     - resources/beep.mp3
     - resources/pop.mp3

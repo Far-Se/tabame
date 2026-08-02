@@ -111,6 +111,7 @@ class PluginMetadataEntry {
     this.icon,
     this.image,
     this.imageWidth,
+    this.height,
     this.url,
     this.separator = false,
     this.sparkline,
@@ -132,6 +133,9 @@ class PluginMetadataEntry {
 
   /// Display width of [image], in logical pixels.
   final double? imageWidth;
+
+  /// Display height of [image], in logical pixels.
+  final double? height;
 
   /// When set, the value renders as a link and opens this on click.
   final String? url;
@@ -160,6 +164,7 @@ class PluginMetadataEntry {
     final Object? icon = json['icon'];
     final Object? image = json['image'];
     final Object? imageWidth = json['width'];
+    final Object? imageHeight = json['height'];
     final Object? url = json['url'];
     final String? imageUrl = image is String && _isHttpUrl(image) ? image.trim() : null;
     return PluginMetadataEntry(
@@ -169,6 +174,7 @@ class PluginMetadataEntry {
       icon: icon is String ? icon : null,
       image: imageUrl,
       imageWidth: imageUrl != null && imageWidth is num ? imageWidth.toDouble().clamp(48.0, 280.0) : null,
+      height: imageUrl != null && imageHeight is num ? imageHeight.toDouble().clamp(48.0, 420.0) : null,
       url: url is String ? url : null,
       sparkline: sparkline,
       actions: PluginAction.listFromJson(json['actions']),
