@@ -2,6 +2,7 @@
   "name": "System Monitor",
   "keyword": "sys",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "chart",
   "description": "Live CPU, RAM, disk, and uptime",

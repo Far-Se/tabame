@@ -3,6 +3,7 @@
   "id": "weather-widget",
   "keyword": "wr",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "weather",
   "description": "Wide weather + 7-day forecast image, background shifts with the hour",

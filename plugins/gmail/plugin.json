@@ -3,6 +3,7 @@
   "id": "gmail",
   "keyword": "gmail",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "mail",
   "description": "Search, read, compose, reply and triage Gmail",

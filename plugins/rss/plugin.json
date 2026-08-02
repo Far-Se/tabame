@@ -3,6 +3,7 @@
   "name": "RSS & Read Later",
   "keyword": "rss",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "book",
   "description": "Follow RSS/Atom feeds, browse new articles, organize nested categories, and save stories for later.",

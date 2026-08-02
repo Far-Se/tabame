@@ -2,6 +2,7 @@
   "name": "Symbols & Characters",
   "keyword": "sym",
   "runtime": "node",
+  "version": "1.0.0",
   "entry": "main.js",
   "icon": "tag",
   "description": "Search and copy special characters, math symbols, punctuation, and language characters.",

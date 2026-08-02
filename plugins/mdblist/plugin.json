@@ -2,6 +2,7 @@
   "name": "MDBList",
   "keyword": "mdb",
   "runtime": "node",
+  "version": "1.0.0",
   "entry": "main.js",
   "description": "Search movies & shows, browse lists, and manage your watchlist via mdblist.com",
   "icon": "star",

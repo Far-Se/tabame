@@ -5,6 +5,7 @@
   "description": "Search caniuse.com for web-platform feature browser compatibility",
   "icon": "globe",
   "runtime": "node",
+  "version": "1.0.0",
   "entry": "main.js",
   "args": []
 }

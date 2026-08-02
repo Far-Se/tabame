@@ -3,6 +3,7 @@
   "id": "pricy",
   "keyword": "pricy",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "description": "Compare a product's current prices and 365-day price history",
   "icon": "money",

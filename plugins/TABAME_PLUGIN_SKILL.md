@@ -48,6 +48,7 @@ that echoes the query as a single-item list:
   "name": "Hello",
   "keyword": "hi",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py"
 }
 ```
@@ -103,6 +104,7 @@ Each plugin lives in its own folder under:
 | ------------- | -------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `keyword`     | **yes**  | —             | What the user types to launch the plugin, e.g. `"weather"`. Keep it short and unique.                                                            |
 | `runtime`     | **yes**  | —             | Command resolved on the system `PATH`: `"python"`, `"node"`, or `"bun"`.                                                                         |
+| `version`     | **yes**  | —             | Current version, use "1.0.0" for start.                                                                                                          |
 | `entry`       | **yes**  | —             | Script filename, relative to the plugin folder, e.g. `"main.py"` / `"main.js"`.                                                                  |
 | `id`          | no       | folder name   | Stable identifier.                                                                                                                               |
 | `name`        | no       | folder name   | Human title shown in the launcher's discovery hint.                                                                                              |
@@ -561,6 +563,7 @@ key-value row:
 | `icon`      | Icon name (§11) shown before the value.                                                                                                                                                                        |
 | `image`     | HTTP(S) URL of a raster image (PNG, JPG, or WebP), shown above the value. Invalid URLs or failed loads leave the text visible.                                                                                 |
 | `width`     | Image width in px (48–280); used with `image`. Default 132.                                                                                                                                                    |
+| `height`    | Image height in px (48–280); used with `image`. Default 176.                                                                                                                                                   |
 | `actions`   | Buttons below the value. Same shape and behavior as Ctrl+K actions: `{id, title, icon?, destructive?, confirm?}`. Clicking one sends an `action` message for the selected item (or `id: ""` in a detail view). |
 | `url`       | Makes the value a clickable link (opens in the default browser).                                                                                                                                               |
 | `sparkline` | Array of ≥2 numbers, drawn as a small axis-free line chart before the value text.                                                                                                                              |

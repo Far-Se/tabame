@@ -2,6 +2,7 @@
   "name": "Google Translate",
   "keyword": "gt",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "translate",
   "description": "Translate text with Google Translate (free, no API key)",

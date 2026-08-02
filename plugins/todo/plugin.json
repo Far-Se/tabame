@@ -4,6 +4,7 @@
   "description": "Quick-add and manage to-dos with due dates, priorities, and tags right from the launcher.",
   "keyword": "todo",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "check",
   "dev": false

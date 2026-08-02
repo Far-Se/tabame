@@ -5,6 +5,7 @@
   "description": "Load any website in headless Chrome and list every font it actually renders, ranked by usage.",
   "icon": "language",
   "runtime": "node",
+  "version": "1.0.0",
   "entry": "main.js",
   "args": []
 }

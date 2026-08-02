@@ -4,6 +4,7 @@
   "description": "Today's weather and 7-day forecast",
   "keyword": "weather",
   "runtime": "node",
+  "version": "1.0.0",
   "entry": "main.js",
   "icon": "weather"
 }

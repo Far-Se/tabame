@@ -2,6 +2,7 @@
   "name": "Notes",
   "keyword": "note",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "note",
   "description": "Quick-capture notes with tags, pinning, search, and a full editor"

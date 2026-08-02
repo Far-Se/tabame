@@ -5,6 +5,7 @@
   "description": "Search and manage GitHub — pull requests, issues, repos, branches, Actions runs, notifications, discussions, projects and repo downloads.",
   "icon": "code",
   "runtime": "node",
+  "version": "1.0.0",
   "entry": "main.js",
   "args": []
 }

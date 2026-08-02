@@ -5,6 +5,7 @@
   "description": "Create, search and manage Linear issues, projects, docs and notifications",
   "icon": "list",
   "runtime": "node",
+  "version": "1.0.0",
   "entry": "main.js",
   "args": []
 }

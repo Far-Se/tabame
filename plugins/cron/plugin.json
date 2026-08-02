@@ -2,6 +2,7 @@
   "name": "Cron",
   "keyword": "cron",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "description": "Parse cron expressions, preview next run times, and generate cron from natural language",
   "icon": "clock",

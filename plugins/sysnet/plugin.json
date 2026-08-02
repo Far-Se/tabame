@@ -2,6 +2,7 @@
   "name": "SysNet",
   "keyword": "sysnet",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "server",
   "description": "System & network toolbox: ports, processes, WiFi, adapters, ping, public IP, DNS flush.",

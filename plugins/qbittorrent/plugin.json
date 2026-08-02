@@ -1,0 +1,11 @@
+{
+  "id": "qbittorrent",
+  "name": "qBittorrent",
+  "keyword": "qbit",
+  "description": "Browse qBittorrent torrents and open their download folders",
+  "icon": "download",
+  "runtime": "node",
+  "entry": "main.js",
+  "args": [],
+  "dev": false
+}

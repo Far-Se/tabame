@@ -5,6 +5,7 @@
   "description": "AI-friendly examples of plugin-owned JavaScript through Tabame's browser bridge",
   "icon": "code",
   "runtime": "node",
+  "version": "1.0.0",
   "entry": "main.js",
   "dev": false
 }

@@ -4,6 +4,7 @@
   "description": "Upload text or files to paste.rs, with local link history.",
   "keyword": "paste",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "upload"
 }

@@ -2,6 +2,7 @@
   "name": "Spell Check & Dictionary",
   "keyword": "spell",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "edit",
   "description": "Spell-checks what you type and suggests corrections, with a personal custom dictionary",

@@ -2,6 +2,7 @@
   "name": "Kaomoji Search",
   "keyword": "kao",
   "runtime": "node",
+  "version": "1.0.0",
   "entry": "main.js",
   "icon": "emoji",
   "description": "Search kaomoji library"

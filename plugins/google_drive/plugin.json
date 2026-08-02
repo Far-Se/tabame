@@ -2,6 +2,7 @@
   "name": "Google Drive",
   "keyword": "gdrive",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "cloud",
   "description": "Search your Google Drive and open, copy links, or download files",

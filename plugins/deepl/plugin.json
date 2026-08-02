@@ -2,6 +2,7 @@
   "name": "DeepL Translate",
   "keyword": "deepl",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "translate",
   "description": "Translate text via DeepL - predefined target languages, plus quick 'to es' / 'from en to es' overrides",

@@ -5,6 +5,7 @@
   "description": "Protocol v7 showcase: selections, structured views, charts, operations, action forms, and OAuth",
   "icon": "extension",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "args": []
 }

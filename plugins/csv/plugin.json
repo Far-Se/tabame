@@ -3,6 +3,7 @@
   "keyword": "csv",
   "description": "Paste CSV data to instantly view column stats and filter rows.",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "table"
 }

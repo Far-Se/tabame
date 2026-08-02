@@ -2,6 +2,7 @@
   "name": "Image Converter",
   "keyword": "img",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "description": "Convert, resize, compress, and transform images. Supports 20+ formats.",
   "icon": "image",

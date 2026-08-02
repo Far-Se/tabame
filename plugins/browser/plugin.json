@@ -5,6 +5,7 @@
   "description": "Control Chromium tabs and run plugin-owned browser tasks through the Tabame Connector",
   "icon": "globe",
   "runtime": "node",
+  "version": "1.0.0",
   "entry": "main.js",
   "args": [],
   "dev": false

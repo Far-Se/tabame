@@ -3,6 +3,7 @@
   "name": "Background Remover",
   "keyword": "bgremove",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "description": "Remove image backgrounds locally with BiRefNet or BRIA RMBG 2.0",
   "icon": "image",

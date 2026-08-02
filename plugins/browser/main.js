@@ -588,6 +588,7 @@ async function renderUsage(rev) {
     loading: true,
     loadingText: "Opening ChatGPT analytics in the background…",
     items: [],
+    wide: true,
     canGoBack: true,
   });
   try {

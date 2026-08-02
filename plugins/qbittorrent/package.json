@@ -1,0 +1,8 @@
+{
+  "name": "tabame-qbittorrent",
+  "private": true,
+  "description": "qBittorrent launcher plugin for Tabame",
+  "dependencies": {
+    "undici": "^6.19.8"
+  }
+}

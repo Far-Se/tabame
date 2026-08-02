@@ -3,13 +3,10 @@
   "id": "gcal",
   "keyword": "cal",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "calendar",
   "description": "Search, browse, quick-add and manage Google Calendar events",
-  "pip": [
-    "google-auth",
-    "google-auth-oauthlib",
-    "google-api-python-client"
-  ],
+  "pip": ["google-auth", "google-auth-oauthlib", "google-api-python-client"],
   "dev": false
 }

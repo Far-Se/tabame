@@ -4,6 +4,7 @@
   "description": "Geolocate IP addresses and look up domain WHOIS/DNS info",
   "keyword": "ip",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "globe",
   "pip": ["requests", "python-whois"]

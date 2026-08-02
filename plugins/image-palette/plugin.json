@@ -2,6 +2,7 @@
   "name": "Image Palette",
   "keyword": "imgpal",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "palette",
   "description": "Extract dominant colors from an image",

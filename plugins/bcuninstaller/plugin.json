@@ -2,6 +2,7 @@
   "name": "BC Uninstaller",
   "keyword": "uninstall",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "trash",
   "description": "Search installed apps, queue several, and batch-uninstall them via BC Uninstaller."

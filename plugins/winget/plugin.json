@@ -2,6 +2,7 @@
   "name": "WinGet",
   "keyword": "winget",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "icon": "download",
   "description": "Search, install, update and uninstall apps via winget",
