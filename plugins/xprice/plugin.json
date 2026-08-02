@@ -1,0 +1,11 @@
+{
+  "name": "xPrice Lookup",
+  "keyword": "xprice",
+  "runtime": "python",
+  "entry": "main.py",
+  "id": "xprice",
+  "description": "Paste a product link to get its xPrice history, image, and cheapest alternatives as a generated price card",
+  "icon": "chart",
+  "pip": ["Pillow"],
+  "dev": false
+}

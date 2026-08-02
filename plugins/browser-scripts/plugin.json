@@ -1,0 +1,10 @@
+{
+  "id": "browser-scripts",
+  "name": "Browser Scripts",
+  "keyword": "browser-scripts",
+  "description": "AI-friendly examples of plugin-owned JavaScript through Tabame's browser bridge",
+  "icon": "code",
+  "runtime": "node",
+  "entry": "main.js",
+  "dev": false
+}
