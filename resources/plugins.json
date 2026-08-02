@@ -735,6 +735,38 @@
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/plugin.json",
         "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/main.js"
       }
+    },
+    {
+      "id": "pricy",
+      "name": "Pricy",
+      "keyword": "pricy",
+      "description": "Compare a product's current prices and 365-day price history",
+      "icon": "money",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/pricy",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/pricy/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/pricy/main.py",
+        "pricy_render.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/pricy/pricy_render.py"
+      }
+    },
+    {
+      "id": "xprice",
+      "name": "xPrice Lookup",
+      "keyword": "xprice",
+      "description": "Paste a product link to get its xPrice history, image, and cheapest alternatives as a generated price card",
+      "icon": "chart",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/xprice",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/xprice/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/xprice/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/xprice/README.md"
+      }
     }
   ]
 }

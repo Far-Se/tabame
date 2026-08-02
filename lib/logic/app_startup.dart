@@ -130,7 +130,7 @@ class AppStartup {
         backgroundColor: Colors.transparent,
         skipTaskbar: false,
         alwaysOnTop: false,
-        title: "Tabame - Launcher - ${user.launcherSearchText.lastChars(9)}",
+        title: "Tabame - Launcher - ${user.launcherSearchText.addDots(9)}",
       );
     } else if (user.args.contains("-interface") || Boxes.remap.isEmpty) {
       late String title;

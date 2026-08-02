@@ -92,3 +92,4 @@ client_secret.json
 **/.tabame-store.json
 **/client_secret.json
 **/__pycache__/
+**/.cache/

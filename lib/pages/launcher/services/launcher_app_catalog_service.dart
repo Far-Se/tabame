@@ -126,6 +126,28 @@ class LauncherAppCatalogService {
     }
   }
 
+  Future<void> reloadIcon({
+    required String appUserModelId,
+    required String parsingName,
+  }) async {
+    final Directory iconCacheDirectory = await _ensureIconCacheDirectory();
+    final File iconFile = File(p.join(iconCacheDirectory.path, _iconFileName(appUserModelId)));
+
+    try {
+      if (await iconFile.exists()) await iconFile.delete();
+    } catch (error, stackTrace) {
+      debugPrint('Launcher: Failed to remove cached icon for $appUserModelId: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return;
+    }
+
+    await _cacheIconData(
+      appUserModelId: appUserModelId,
+      parsingName: parsingName,
+      iconFile: iconFile,
+    );
+  }
+
   List<native.AppInfo> _dedupe(List<native.AppInfo> apps) {
     final Map<String, native.AppInfo> byAumid = <String, native.AppInfo>{};
 
@@ -190,10 +212,22 @@ class LauncherAppCatalogService {
   }
 
   Future<void> _cacheIcon(native.AppInfo app, File iconFile) async {
-    if (app.parsingName.trim().isEmpty) return;
+    await _cacheIconData(
+      appUserModelId: app.appUserModelId,
+      parsingName: app.parsingName,
+      iconFile: iconFile,
+    );
+  }
+
+  Future<void> _cacheIconData({
+    required String appUserModelId,
+    required String parsingName,
+    required File iconFile,
+  }) async {
+    if (parsingName.trim().isEmpty) return;
 
     try {
-      final native.AppIconData? icon = await native.AppEnumeration.getAppIcon(app.parsingName, size: 128);
+      final native.AppIconData? icon = await native.AppEnumeration.getAppIcon(parsingName, size: 128);
       if (icon == null || icon.width <= 0 || icon.height <= 0 || icon.pixels.isEmpty) return;
 
       final ByteData? pngBytes = await _convertIconToPng(icon);
@@ -201,7 +235,7 @@ class LauncherAppCatalogService {
 
       await iconFile.writeAsBytes(pngBytes.buffer.asUint8List(), flush: true);
     } catch (error, stackTrace) {
-      debugPrint('Launcher: Failed to cache icon for ${app.appUserModelId}: $error');
+      debugPrint('Launcher: Failed to cache icon for $appUserModelId: $error');
       debugPrintStack(stackTrace: stackTrace);
     }
   }

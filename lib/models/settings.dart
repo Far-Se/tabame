@@ -1537,6 +1537,7 @@ extension IntegerExtension on int {
 
 extension StringExtension on String {
   String truncate(int max, {String suffix = ''}) => length < max ? this : replaceRange(max, null, suffix);
+  String addDots(int max, {String suffix = '...'}) => length < max ? this : replaceRange(max, null, suffix);
   String toUpperCaseFirst() {
     if (length < 2) return toUpperCase();
     return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";

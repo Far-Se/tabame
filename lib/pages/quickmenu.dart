@@ -49,7 +49,7 @@ Future<int> windowsSetupQuickMenu() async {
     await WindowManager.instance.setSkipTaskbar(false);
     await WindowManager.instance.setResizable(true);
     await WindowManager.instance.setAlwaysOnTop(false);
-    await WindowManager.instance.setTitle("Tabame - Launcher  - ${user.launcherSearchText.lastChars(9)}");
+    await WindowManager.instance.setTitle("Tabame - Launcher  - ${user.launcherSearchText.addDots(9)}");
     await windowManager.center();
     Globals.currentPage = Pages.quickmenu;
     Debug.add("Standalone launcher: window setup");

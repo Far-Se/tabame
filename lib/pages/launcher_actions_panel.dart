@@ -26,6 +26,7 @@ import 'launcher/launcher_design_builder.dart';
 import 'launcher/launcher_modal_theme.dart';
 import 'launcher/result/result_item_bookmark.dart';
 import 'launcher/result/result_row.dart';
+import 'launcher/services/launcher_app_catalog_service.dart';
 import 'launcher_search_models.dart';
 
 part 'launcher/services/launcher_actions_service.dart';
@@ -119,6 +120,7 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
       _loading = false;
     });
   }
+
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;

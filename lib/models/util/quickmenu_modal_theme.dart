@@ -694,6 +694,7 @@ class QuickMenuModalFrame extends StatelessWidget {
             CustomPaint(
               painter: Outrun2GridPainter(
                 color: accent.withValues(alpha: isDark ? 0.20 : 0.15),
+                showHorizon: false,
               ),
               size: Size.infinite,
             ),

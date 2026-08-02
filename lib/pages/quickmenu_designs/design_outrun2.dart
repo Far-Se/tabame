@@ -404,9 +404,10 @@ class _OutrunChevronPainter extends CustomPainter {
 /// Perspective highway grid: vertical lines converge to a vanishing point near
 /// the top-center horizon; horizontal lines get exponentially tighter upward.
 class Outrun2GridPainter extends CustomPainter {
-  const Outrun2GridPainter({required this.color});
+  const Outrun2GridPainter({required this.color, this.showHorizon = true});
 
   final Color color;
+  final bool showHorizon;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -430,7 +431,7 @@ class Outrun2GridPainter extends CustomPainter {
     }
 
     // Horizontal road segments — exponential perspective spacing
-    for (int i = 0; i < 18; i++) {
+    for (int i = showHorizon ? 0 : 1; i < 18; i++) {
       final double t = i / 18.0;
       final double y = size.height - (size.height - horizonY) * (1 - pow(t, 3).toDouble());
       canvas.drawLine(
@@ -442,7 +443,8 @@ class Outrun2GridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant Outrun2GridPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant Outrun2GridPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.showHorizon != showHorizon;
 }
 
 /// Stylized palm-tree silhouette — curved trunk and spiky fronds.

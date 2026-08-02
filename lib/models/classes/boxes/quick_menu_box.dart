@@ -146,7 +146,7 @@ class QuickMenuFunctions {
         // await Future<void>.delayed(const Duration(milliseconds: 110));
         final Size value = await windowManager.getSize();
         await windowManager.setSize(Size(value.width + 2, value.height + 2));
-        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 30));
         await windowManager.setSize(Size(value.width, value.height));
         Win32.setWindowInvisible(false);
         // ShowWindow(Win32.hWnd, SW_SHOW);

@@ -276,6 +276,15 @@ class LauncherActionsBuilder {
         },
       ),
       LauncherAction(
+        label: 'Reload Icon',
+        icon: Icons.refresh_rounded,
+        subtitle: 'Delete and recreate the cached icon',
+        onExecute: (_) => LauncherAppCatalogService.instance.reloadIcon(
+          appUserModelId: app.appUserModelId,
+          parsingName: app.parsingName,
+        ),
+      ),
+      LauncherAction(
         label: 'Copy App ID',
         icon: Icons.content_copy_rounded,
         subtitle: app.appUserModelId,
