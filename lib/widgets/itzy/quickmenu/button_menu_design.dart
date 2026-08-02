@@ -1600,21 +1600,24 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     foreground: onSurface.withAlpha(185),
                   ),
                   const SizedBox(height: 5),
-                  InkWell(
-                    onTap: () => _openCustomColorPicker(index),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: accent.withAlpha(14),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        "Pick",
-                        style: TextStyle(
-                          fontSize: Design.baseFontSize + 0.5,
-                          fontWeight: FontWeight.w700,
-                          color: accent.withAlpha(220),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: InkWell(
+                      onTap: () => _openCustomColorPicker(index),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: accent.withAlpha(14),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          "Pick",
+                          style: TextStyle(
+                            fontSize: Design.baseFontSize + 0.5,
+                            fontWeight: FontWeight.w700,
+                            color: accent.withAlpha(220),
+                          ),
                         ),
                       ),
                     ),

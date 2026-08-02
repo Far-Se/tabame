@@ -95,6 +95,10 @@ class QuickMenuFunctions {
   }
 
   static Future<void> hideQuickMenu({bool launcherActivateLastWin = true}) async {
+    if (Globals.isStandaloneLauncher) {
+      await windowManager.close();
+      return;
+    }
     if (launcherActivateLastWin && Globals.quickMenuPage == QuickMenuPage.launcher) {
       Future<void>.delayed(const Duration(milliseconds: 50), () => Win32.activateWindow(Globals.lastFocusedWinHWND));
     }

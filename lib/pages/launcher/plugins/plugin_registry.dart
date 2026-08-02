@@ -140,6 +140,36 @@ abstract final class PluginRegistry {
     return true;
   }
 
+  /// Persists a plugin's keyword in its `plugin.json`, preserving every other
+  /// field, then rescans so launcher matching uses the new keyword. Returns
+  /// null on success, or a short human-readable error.
+  static Future<String?> setKeyword(PluginManifest manifest, String keyword) async {
+    final String trimmedKeyword = keyword.trim();
+    if (trimmedKeyword.isEmpty) return 'Plugin keyword cannot be empty.';
+
+    final bool alreadyUsed = _manifests.any(
+      (PluginManifest other) =>
+          other.directory != manifest.directory && other.keywordLower == trimmedKeyword.toLowerCase(),
+    );
+    if (alreadyUsed) return 'That keyword is already used by another plugin.';
+
+    try {
+      final File manifestFile = File('${manifest.directory}\\plugin.json');
+      if (!manifestFile.existsSync()) return 'Plugin manifest not found.';
+      final Object? decoded = jsonDecode(await manifestFile.readAsString());
+      if (decoded is! Map) return 'Plugin manifest is invalid.';
+      final Map<String, dynamic> json = decoded.cast<String, dynamic>();
+      json['keyword'] = trimmedKeyword;
+      const JsonEncoder encoder = JsonEncoder.withIndent('  ');
+      await manifestFile.writeAsString(encoder.convert(json));
+    } catch (error, stack) {
+      unawaited(ErrorLogger.log('PluginRegistry', 'Failed to update keyword for ${manifest.id}: $error', stack));
+      return 'Could not save the plugin keyword.';
+    }
+    await load();
+    return null;
+  }
+
   /// Returns the plugin whose keyword the raw launcher [query] activates, or
   /// null. Matches when the query equals the keyword or starts with
   /// `keyword + ' '` (so `weather` and `weather rome` both match, but

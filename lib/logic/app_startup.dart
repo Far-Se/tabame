@@ -50,6 +50,12 @@ class AppStartup {
       if (arguments[0].endsWith('"') && !arguments[0].startsWith('"')) arguments[0] = '"${arguments[0]}';
       String argString = arguments.join(" ");
       user.args = <String>[...arguments];
+      final int launcherIndex = arguments.indexOf("-launcher");
+      if (launcherIndex != -1) {
+        Globals.isStandaloneLauncher = true;
+        Globals.quickMenuPage = QuickMenuPage.launcher;
+        user.launcherSearchText = launcherIndex + 1 < arguments.length ? arguments[launcherIndex + 1] : '';
+      }
       if (argString.contains("interface")) {
         user.page = TPage.interface;
         // This process is the Interface: bump the reload marker on settings writes so the
@@ -61,6 +67,11 @@ class AppStartup {
   }
 
   static Future<void> registerServices() async {
+    if (Globals.isStandaloneLauncher) {
+      await Boxes.registerBoxes(justLoad: true);
+      Debug.add("Registered: Standalone launcher settings");
+      return;
+    }
     await registerAll();
     if (user.page == TPage.quickmenu) {
       await BrowserBridgeService.instance.initialize();
@@ -73,6 +84,7 @@ class AppStartup {
   }
 
   static Future<bool> checkAdminAndRestart() async {
+    if (Globals.isStandaloneLauncher) return false;
     if (kReleaseMode &&
         user.runAsAdministrator &&
         !WinUtils.isAdministrator() &&
@@ -96,6 +108,7 @@ class AppStartup {
   }
 
   static void registerHooks() {
+    if (Globals.isStandaloneLauncher) return;
     if (Globals.debugHooks || kReleaseMode) {
       Debug.add("Registering Hooks");
       if (user.args.contains("-interface") && Boxes.remap.isEmpty) {
@@ -108,7 +121,18 @@ class AppStartup {
 
   static Future<void> setupWindow(List<String> arguments) async {
     late WindowOptions windowOptions;
-    if (user.args.contains("-interface") || Boxes.remap.isEmpty) {
+    if (Globals.isStandaloneLauncher) {
+      windowOptions = WindowOptions(
+        size: Size(Boxes.launcherSizeWidth, Globals.launcherSize.height),
+        minimumSize: Size(Globals.quickMenuSize.width, 200),
+        maximumSize: const Size(32000, 32000),
+        center: true,
+        backgroundColor: Colors.transparent,
+        skipTaskbar: false,
+        alwaysOnTop: false,
+        title: "Tabame - Launcher - ${user.launcherSearchText.lastChars(9)}",
+      );
+    } else if (user.args.contains("-interface") || Boxes.remap.isEmpty) {
       late String title;
       if (user.args.contains("-wizardly")) {
         title = "Wizardly";
@@ -146,7 +170,7 @@ class AppStartup {
       await windowManager.setAsFrameless();
       await windowManager.setHasShadow(false);
       await Win32.fetchMainWindowHandle();
-      await ClipboardHooks.start();
+      if (!Globals.isStandaloneLauncher) await ClipboardHooks.start();
       Globals.fullLoaded.value = true;
       Debug.add("Set windowOptions");
     });
@@ -155,6 +179,10 @@ class AppStartup {
   static Future<void> finalizeStartup() async {
     Debug.add("Setting transparency");
     await setWindowAsTransparent();
+    if (Globals.isStandaloneLauncher) {
+      Debug.add("Set transparency");
+      return;
+    }
     if (user.quickClickEnabled) {
       await QuickClick.registerQuickClick(user.quickClickConfig);
       await QuickClick.disableQuickClick();

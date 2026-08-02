@@ -46,6 +46,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   _PanelMode _mode = _PanelMode.installed;
   bool _reloading = false;
   String? _busyId;
+  String _keywordError = '';
 
   List<PluginGalleryEntry>? _galleryEntries;
   bool _galleryLoading = false;
@@ -72,6 +73,32 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
     await PluginRegistry.setEnabled(manifest, enabled);
     if (!mounted) return;
     setState(() => _busyId = null);
+  }
+
+  Future<void> _editKeyword(PluginManifest manifest) async {
+    final Set<String> occupiedKeywords = PluginRegistry.manifests
+        .where((PluginManifest other) => other.directory != manifest.directory)
+        .map((PluginManifest other) => other.keywordLower)
+        .toSet();
+    final String? keyword = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) => _PluginKeywordDialog(
+        initialKeyword: manifest.keyword,
+        occupiedKeywords: occupiedKeywords,
+      ),
+    );
+    if (!mounted || keyword == null) return;
+
+    setState(() {
+      _busyId = manifest.id;
+      _keywordError = '';
+    });
+    final String? error = await PluginRegistry.setKeyword(manifest, keyword);
+    if (!mounted) return;
+    setState(() {
+      _busyId = null;
+      _keywordError = error ?? '';
+    });
   }
 
   Future<void> _loadGallery({bool force = false}) async {
@@ -290,6 +317,10 @@ Build a plugin with your favorite AI coding assistant:
               icon: Icons.extension_rounded,
             ),
             const SizedBox(height: 8),
+            if (_keywordError.isNotEmpty) ...<Widget>[
+              _buildStatusStrip(_keywordError, error: true),
+              const SizedBox(height: 8),
+            ],
             if (plugins.isEmpty)
               _buildInstalledEmpty()
             else
@@ -298,6 +329,7 @@ Build a plugin with your favorite AI coding assistant:
                   manifest: m,
                   busy: _busyId == m.id,
                   onToggle: (bool value) => _toggle(m, value),
+                  onEditKeyword: _busyId == m.id ? null : () => _editKeyword(m),
                 ),
                 const SizedBox(height: 8),
               ],
@@ -631,7 +663,7 @@ class _BrowserBridgeCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Keeps the extension paired while Tabame is running, so browser plugins open instantly.',
+                      'Keeps the extension paired while Tabame is running, so browser plugins open instantly. Run `browser` plugin to setup connection.',
                       style: TextStyle(
                         fontSize: Design.baseFontSize - 0.5,
                         height: 1.25,
@@ -690,19 +722,29 @@ class _BrowserBridgeCard extends StatelessWidget {
 }
 
 /// One row in the plugin list: icon, name + keyword, description, on/off switch.
-class _PluginCard extends StatelessWidget {
+class _PluginCard extends StatefulWidget {
   const _PluginCard({
     required this.manifest,
     required this.busy,
     required this.onToggle,
+    required this.onEditKeyword,
   });
 
   final PluginManifest manifest;
   final bool busy;
   final ValueChanged<bool> onToggle;
+  final VoidCallback? onEditKeyword;
+
+  @override
+  State<_PluginCard> createState() => _PluginCardState();
+}
+
+class _PluginCardState extends State<_PluginCard> {
+  bool _keywordHovered = false;
 
   @override
   Widget build(BuildContext context) {
+    final PluginManifest manifest = widget.manifest;
     final bool enabled = manifest.enabled;
     final Color accent = Design.accent;
     final Color text = Design.text;
@@ -749,22 +791,7 @@ class _PluginCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: accent.withAlpha(enabled ? 22 : 12),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        manifest.keyword,
-                        style: TextStyle(
-                          fontSize: Design.baseFontSize - 1,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3,
-                          color: accent.withAlpha(enabled ? 255 : 150),
-                        ),
-                      ),
-                    ),
+                    _buildKeywordBadge(manifest.keyword, enabled, accent),
                   ],
                 ),
                 if (manifest.description.trim().isNotEmpty) ...<Widget>[
@@ -788,7 +815,7 @@ class _PluginCard extends StatelessWidget {
             width: 40,
             height: 30,
             child: Center(
-              child: busy
+              child: widget.busy
                   ? SizedBox(
                       width: 16,
                       height: 16,
@@ -799,13 +826,144 @@ class _PluginCard extends StatelessWidget {
                       child: Switch(
                         value: enabled,
                         activeThumbColor: accent,
-                        onChanged: onToggle,
+                        onChanged: widget.onToggle,
                       ),
                     ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildKeywordBadge(String keyword, bool enabled, Color accent) {
+    final bool editable = widget.onEditKeyword != null;
+    final bool showEdit = editable && _keywordHovered;
+    final Color foreground = accent.withAlpha(enabled || showEdit ? 255 : 150);
+    final Widget badge = AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: showEdit ? accent.withAlpha(38) : accent.withAlpha(enabled ? 22 : 12),
+        borderRadius: BorderRadius.circular(999),
+        border: showEdit ? Border.all(color: accent.withAlpha(80)) : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (showEdit) ...<Widget>[
+            Icon(Icons.edit_rounded, size: 11, color: foreground),
+            const SizedBox(width: 3),
+          ],
+          Text(
+            keyword,
+            style: TextStyle(
+              fontSize: Design.baseFontSize - 1,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+              color: foreground,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return MouseRegion(
+      cursor: editable ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      onEnter: editable ? (_) => setState(() => _keywordHovered = true) : null,
+      onExit: editable ? (_) => setState(() => _keywordHovered = false) : null,
+      child: editable
+          ? Tooltip(
+              message: 'Edit keyword',
+              waitDuration: const Duration(milliseconds: 400),
+              child: InkWell(
+                onTap: widget.onEditKeyword,
+                borderRadius: BorderRadius.circular(999),
+                child: badge,
+              ),
+            )
+          : badge,
+    );
+  }
+}
+
+class _PluginKeywordDialog extends StatefulWidget {
+  const _PluginKeywordDialog({
+    required this.initialKeyword,
+    required this.occupiedKeywords,
+  });
+
+  final String initialKeyword;
+  final Set<String> occupiedKeywords;
+
+  @override
+  State<_PluginKeywordDialog> createState() => _PluginKeywordDialogState();
+}
+
+class _PluginKeywordDialogState extends State<_PluginKeywordDialog> {
+  late final TextEditingController _controller;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialKeyword);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final String keyword = _controller.text.trim();
+    if (keyword.isEmpty) {
+      setState(() => _error = 'Enter a keyword.');
+      return;
+    }
+    if (widget.occupiedKeywords.contains(keyword.toLowerCase())) {
+      setState(() => _error = 'That keyword is already used by another plugin.');
+      return;
+    }
+    Navigator.of(context).pop(keyword);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      title: Row(
+        children: <Widget>[
+          Icon(Icons.edit_rounded, size: 18, color: Design.accent),
+          const SizedBox(width: 8),
+          const Text('Edit plugin keyword'),
+        ],
+      ),
+      content: SizedBox(
+        width: 340,
+        child: TextField(
+          controller: _controller,
+          autofocus: true,
+          selectAllOnFocus: true,
+          textInputAction: TextInputAction.done,
+          decoration: InputDecoration(
+            labelText: 'Keyword',
+            hintText: 'e.g. weather',
+            helperText: 'Type this keyword to start the plugin in the launcher.',
+            errorText: _error,
+          ),
+          onChanged: (_) {
+            if (_error != null) setState(() => _error = null);
+          },
+          onSubmitted: (_) => _save(),
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(onPressed: _save, child: const Text('Save')),
+      ],
     );
   }
 }

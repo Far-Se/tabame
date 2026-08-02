@@ -42,6 +42,19 @@ class QuickMenu extends StatefulWidget {
 }
 
 Future<int> windowsSetupQuickMenu() async {
+  if (Globals.isStandaloneLauncher) {
+    await WindowManager.instance.setMinimumSize(Size(Globals.quickMenuSize.width, 200));
+    await WindowManager.instance.setSize(Size(Boxes.launcherSizeWidth, Globals.launcherSize.height));
+    await windowManager.setMaximumSize(const Size(32767, 32767));
+    await WindowManager.instance.setSkipTaskbar(false);
+    await WindowManager.instance.setResizable(true);
+    await WindowManager.instance.setAlwaysOnTop(false);
+    await WindowManager.instance.setTitle("Tabame - Launcher  - ${user.launcherSearchText.lastChars(9)}");
+    await windowManager.center();
+    Globals.currentPage = Pages.quickmenu;
+    Debug.add("Standalone launcher: window setup");
+    return 1;
+  }
   if (Globals.lastPage != Pages.quickmenu) {
     await WindowManager.instance.setMinimumSize(Size(Globals.quickMenuSize.width, 200));
     await WindowManager.instance.setSize(Size(Globals.quickMenuSize.width, Globals.quickMenuSize.height));
@@ -185,6 +198,17 @@ class QuickMenuState extends State<QuickMenu>
   // Private Implementations
   // --------------------------------------------------------------------------
   void _initState() {
+    if (Globals.isStandaloneLauncher) {
+      QuickMenuFunctions.isQuickMenuVisible = true;
+      Globals.quickMenuPage = QuickMenuPage.launcher;
+      QuickMenuFunctions.addListener(this);
+      WindowManager.instance.addListener(this);
+      QuickMenuFunctions.syncSelectedBackdrop();
+      Globals.changingPages = false;
+      _initializeWindowSize();
+      Debug.add("Standalone launcher: init");
+      return;
+    }
     NativeHooks.unHook();
     NativeHooks.addListener(this);
     ClipboardHooks.addListener(this);
@@ -285,6 +309,14 @@ class QuickMenuState extends State<QuickMenu>
       await Future<void>.delayed(const Duration(milliseconds: 100));
       // WidgetsBinding.instance.reassembleApplication(); // <- This
       await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+      if (Globals.isStandaloneLauncher) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await windowManager.setAsFrameless();
+        await windowManager.setHasShadow(false);
+        await windowManager.setAsFrameless();
+        Win32.setCenter(useMouse: true);
+        Win32.setWindowInvisible(false);
+      }
       if (!mounted) return;
       await windowManager.setAsFrameless();
     });

@@ -24,6 +24,8 @@ class PluginActionsPanel extends StatefulWidget {
     required this.item,
     required this.frameActions,
     required this.onSelected,
+    required this.launcherWindowAction,
+    required this.onLauncherWindowSelected,
     this.readmeAction,
     this.onReadmeSelected,
   });
@@ -35,6 +37,10 @@ class PluginActionsPanel extends StatefulWidget {
   final List<PluginAction> frameActions;
 
   final void Function(PluginAction action, {required bool isFrameAction}) onSelected;
+
+  /// Launcher-owned window action, shown after all plugin-provided actions.
+  final PluginAction launcherWindowAction;
+  final VoidCallback onLauncherWindowSelected;
 
   /// A launcher-owned documentation action, always shown after plugin actions.
   final PluginAction? readmeAction;
@@ -70,6 +76,7 @@ class _PluginActionsPanelState extends State<PluginActionsPanel> {
         ..._itemActions,
         ...widget.frameActions,
         if (widget.readmeAction != null) widget.readmeAction!,
+        widget.launcherWindowAction,
       ];
 
   GlobalKey _keyFor(int index) => _actionKeys.putIfAbsent(index, () => GlobalKey());
@@ -96,9 +103,15 @@ class _PluginActionsPanelState extends State<PluginActionsPanel> {
   void _execute(int index) {
     final List<PluginAction> actions = _actions;
     if (index < 0 || index >= actions.length) return;
-    final bool isReadme = widget.readmeAction != null && index == actions.length - 1;
+    final int pluginActionCount = _itemActions.length + widget.frameActions.length;
+    final bool isReadme = widget.readmeAction != null && index == pluginActionCount;
+    final bool isLauncherWindowAction = index == actions.length - 1;
     final bool isFrame = index >= _itemActions.length;
     Navigator.of(context).pop();
+    if (isLauncherWindowAction) {
+      widget.onLauncherWindowSelected();
+      return;
+    }
     if (isReadme) {
       widget.onReadmeSelected?.call();
       return;
@@ -141,7 +154,11 @@ class _PluginActionsPanelState extends State<PluginActionsPanel> {
   Widget build(BuildContext context) {
     final LauncherModalTokens tokens = LauncherModalTokens.of(context);
     final List<PluginAction> actions = _actions;
-    final int dividerAfter = _itemActions.isNotEmpty && widget.frameActions.isNotEmpty ? _itemActions.length : -1;
+    final int pluginActionCount = _itemActions.length + widget.frameActions.length;
+    final Set<int> dividersBefore = <int>{
+      if (_itemActions.isNotEmpty && widget.frameActions.isNotEmpty) _itemActions.length,
+      if (pluginActionCount > 0) pluginActionCount,
+    };
 
     return Material(
       type: MaterialType.transparency,
@@ -186,7 +203,7 @@ class _PluginActionsPanelState extends State<PluginActionsPanel> {
                               mainAxisSize: MainAxisSize.min,
                               children: <Widget>[
                                 for (int i = 0; i < actions.length; i++) ...<Widget>[
-                                  if (i == dividerAfter)
+                                  if (dividersBefore.contains(i))
                                     Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                       child: Container(height: 1, color: tokens.onSurface.withAlpha(18)),

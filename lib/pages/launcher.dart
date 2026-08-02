@@ -169,7 +169,7 @@ class Launcher extends StatefulWidget {
 
 class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTickerProviderStateMixin {
   static const double _minResultsHeight = 300;
-  static const double _maxResultsHeight = 405;
+  static const double _maxResultsHeight = 460;
 
   final LauncherSearchToken _searchToken = LauncherSearchToken();
 
@@ -215,6 +215,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   PluginRenderFrame? _pluginFrame;
   final Set<String> _pluginSelectedIds = <String>{};
   Timer? _pluginQueryDebounce;
+
+  PluginAction get _launcherWindowAction => PluginAction(
+        id: '__launcher_window__',
+        title: Globals.isStandaloneLauncher ? 'Close current Window' : 'Open In External Window',
+        icon: Globals.isStandaloneLauncher ? 'close' : 'open',
+        shortcut: 'ctrl+shift+e',
+      );
 
   /// Set when Enter is pressed while a query is still waiting out its debounce:
   /// the visible frame predates what the user typed, so the submit is deferred
@@ -761,15 +768,22 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
   /// Hides the native resize behind a short fade so the launcher changes modes
   /// without the window's edges visibly stretching across the screen.
+  bool _launcherAnimatedOnce = false;
   Future<void> _animatePluginWindowWidth(double targetWidth) async {
     final int transitionVersion = ++_pluginWindowTransitionVersion;
     final bool reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     _pluginWindowTransitionController.stop();
 
-    if (reduceMotion) {
+    if (reduceMotion || (!_launcherAnimatedOnce && Globals.isStandaloneLauncher)) {
       _pluginWindowOpacity = 1;
       await WindowManager.instance.setOpacity(1);
       await _setPluginWindowWidth(targetWidth, finalize: true);
+      if (Globals.isStandaloneLauncher) {
+        _launcherAnimatedOnce = true;
+        WinUtils.fixDrawBug();
+        Win32.setCenter(useMouse: true);
+        Win32.setWindowInvisible(false);
+      }
       return;
     }
 
@@ -946,7 +960,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         frame.view != PluginViewType.form) {
       item = frame.items[_activeIndexNotifier.value.clamp(0, frame.items.length - 1)];
     }
-    if ((item?.actions.isEmpty ?? true) && frame.frameActions.isEmpty && !hasReadme) return;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -955,6 +968,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       builder: (_) => PluginActionsPanel(
         item: item,
         frameActions: frame.frameActions,
+        launcherWindowAction: _launcherWindowAction,
+        onLauncherWindowSelected: _handleLauncherWindowAction,
         onSelected: (PluginAction action, {required bool isFrameAction}) =>
             _firePluginAction(isFrameAction ? '' : (item?.id ?? ''), action),
         readmeAction:
@@ -985,6 +1000,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   bool _handlePluginShortcut(KeyEvent event) {
     final PluginRenderFrame? frame = _pluginFrame;
     if (frame == null) return false;
+    final PluginShortcut? launcherWindowShortcut = PluginShortcut.parse(_launcherWindowAction.shortcut);
+    if (launcherWindowShortcut != null && launcherWindowShortcut.matches(event)) {
+      unawaited(_handleLauncherWindowAction());
+      return true;
+    }
     PluginItem? item;
     if (frame.items.isNotEmpty) {
       item = frame.items[_activeIndexNotifier.value.clamp(0, frame.items.length - 1)];
@@ -1004,6 +1024,24 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       }
     }
     return false;
+  }
+
+  Future<void> _handleLauncherWindowAction() async {
+    if (Globals.isStandaloneLauncher) {
+      await windowManager.close();
+      return;
+    }
+    try {
+      await Process.start(
+        Platform.resolvedExecutable,
+        <String>['-launcher', _controller.text],
+        mode: ProcessStartMode.detached,
+        runInShell: false,
+      );
+      QuickMenuFunctions.hideQuickMenu();
+    } catch (_) {
+      _showPluginToast('Could not open external launcher', style: 'error');
+    }
   }
 
   /// Handles key events while a plugin owns the launcher. Returns
@@ -1550,7 +1588,14 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       if (!mounted || _activePlugin != null) return;
       if (PluginRegistry.matchKeyword(_controller.text) != null) _onSearchChanged(_controller.text);
     }));
+    // if (Globals.isStandaloneLauncher == true) {
+    //   Future<void>.delayed(const Duration(milliseconds: 300), () {
+    //     _controller.text = user.launcherSearchText;
+    //     setState(() {});
+    //   });
+    // } else {
     _controller.text = user.launcherSearchText;
+    // }
     // _controller.selection = TextSelection.fromPosition(TextPosition(offset: _controller.text.length));
     _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
     Globals.quickMenuSearchInputVersion.addListener(_consumePendingQuickMenuSearchInput);
@@ -4932,7 +4977,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                     Text(
                       shortcut.opensPluginManager
                           ? 'Install, enable, or disable launcher plugins'
-                          : 'Press ${!shortcut.label.startsWith('>') && shortcut.label.length > 1 ? "'${shortcut.label}'" : shortcut.label} to search',
+                          : 'Press ${!shortcut.label.startsWith('>') && shortcut.label.length > 1 ? "'${shortcut.label}'" : shortcut.label} to open',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: onSurface.withAlpha(140),
                       ),

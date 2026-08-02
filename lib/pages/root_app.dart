@@ -91,6 +91,7 @@ class _TabameState extends State<Tabame> {
                           physics: const NeverScrollableScrollPhysics(),
                           itemBuilder: (BuildContext context, int index) {
                             Debug.add("Tabame: $index ${user.args.join(':')}");
+                            if (Globals.isStandaloneLauncher) return const QuickMenu();
                             if (user.args.contains("-interface") || Boxes.remap.isEmpty) {
                               return const Interface();
                             }
@@ -100,9 +101,11 @@ class _TabameState extends State<Tabame> {
                             return const QuickMenu();
                           },
                         )
-                      : (user.args.contains("-interface") || Boxes.remap.isEmpty)
-                          ? const Interface()
-                          : const QuickMenu());
+                      : Globals.isStandaloneLauncher
+                          ? const QuickMenu()
+                          : (user.args.contains("-interface") || Boxes.remap.isEmpty)
+                              ? const Interface()
+                              : const QuickMenu());
             },
           );
         });
