@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../../models/settings.dart';
 import '../../../widgets/widgets/windows_scroll.dart';
@@ -63,6 +65,7 @@ class _PluginFormViewState extends State<PluginFormView> {
   final Map<String, String> _localErrors = <String, String>{};
 
   final FocusNode _firstFieldFocus = FocusNode();
+  bool _pathPickerWasAlwaysOnTop = true;
 
   @override
   void initState() {
@@ -90,8 +93,7 @@ class _PluginFormViewState extends State<PluginFormView> {
 
   /// Identity of the form's field set — id+type pairs. When it changes the
   /// plugin is showing a different form, so typed state is discarded.
-  String _signature(PluginForm form) =>
-      form.fields.map((PluginFormField f) => '${f.id}:${f.type}').join('|');
+  String _signature(PluginForm form) => form.fields.map((PluginFormField f) => '${f.id}:${f.type}').join('|');
 
   bool _isNumber(PluginFormField field) => field.type == 'number';
   bool _isPath(PluginFormField field) => field.type == 'filepicker' || field.type == 'folderpicker';
@@ -266,7 +268,8 @@ class _PluginFormViewState extends State<PluginFormView> {
             Padding(
               padding: const EdgeInsets.only(left: 3),
               child: Text('*',
-                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: const Color(0xFFE5534B).withAlpha(200))),
+                  style: TextStyle(
+                      fontSize: 10.5, fontWeight: FontWeight.w700, color: const Color(0xFFE5534B).withAlpha(200))),
             ),
         ],
       ),
@@ -280,19 +283,22 @@ class _PluginFormViewState extends State<PluginFormView> {
       if (error != null)
         Padding(
           padding: const EdgeInsets.only(top: 3),
-          child: Text(error, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFFE5534B))),
+          child: Text(error,
+              style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFFE5534B))),
         ),
       if (field.description.isNotEmpty)
         Padding(
           padding: const EdgeInsets.only(top: 3),
-          child: Text(field.description, style: TextStyle(fontSize: 10.5, color: Design.text.withAlpha(100), height: 1.35)),
+          child: Text(field.description,
+              style: TextStyle(fontSize: 10.5, color: Design.text.withAlpha(100), height: 1.35)),
         ),
     ];
   }
 
   /// A read-only "value + trailing button" shell shared by date/file/folder
   /// pickers, styled like the text fields.
-  Widget _pickerShell(PluginFormField field, {required String value, required IconData icon, required VoidCallback onPick}) {
+  Widget _pickerShell(PluginFormField field,
+      {required String value, required IconData icon, required VoidCallback onPick}) {
     final bool hasError = _errorFor(field) != null;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -303,8 +309,7 @@ class _PluginFormViewState extends State<PluginFormView> {
           decoration: BoxDecoration(
             color: Design.text.withAlpha(10),
             borderRadius: BorderRadius.circular(7),
-            border: Border.all(
-                color: hasError ? const Color(0xFFE5534B).withAlpha(150) : Design.text.withAlpha(24)),
+            border: Border.all(color: hasError ? const Color(0xFFE5534B).withAlpha(150) : Design.text.withAlpha(24)),
           ),
           child: Row(
             children: <Widget>[
@@ -344,15 +349,28 @@ class _PluginFormViewState extends State<PluginFormView> {
     _fieldChanged(field);
   }
 
-  void _pickPath(PluginFormField field) {
+  // @override
+  // void onWindowFocus() {
+  //   if (_pathPickerOpen) {
+  //     unawaited(WindowManager.instance.setAlwaysOnTop(_pathPickerWasAlwaysOnTop));
+  //   }
+  // }
+
+  Future<void> _pickPath(PluginFormField field) async {
     String? result;
-    if (field.type == 'folderpicker') {
-      final DirectoryPicker picker = DirectoryPicker()..title = field.label;
-      result = picker.getDirectory()?.path;
-    } else {
-      final OpenFilePicker picker = OpenFilePicker()..title = field.label;
-      final File? file = picker.getFile();
-      result = file?.path;
+    try {
+      _pathPickerWasAlwaysOnTop = await WindowManager.instance.isAlwaysOnTop();
+      await WindowManager.instance.setAlwaysOnTop(false);
+      if (field.type == 'folderpicker') {
+        final DirectoryPicker picker = DirectoryPicker()..title = field.label;
+        result = picker.getDirectory()?.path;
+      } else {
+        final OpenFilePicker picker = OpenFilePicker()..title = field.label;
+        final File? file = picker.getFile();
+        result = file?.path;
+      }
+    } finally {
+      await WindowManager.instance.setAlwaysOnTop(_pathPickerWasAlwaysOnTop);
     }
     if (result == null) return;
     setState(() => _pathValues[field.id] = result!);
@@ -370,9 +388,8 @@ class _PluginFormViewState extends State<PluginFormView> {
         obscureText: field.type == 'password',
         maxLines: field.type == 'textarea' ? 4 : 1,
         keyboardType: _isNumber(field) ? const TextInputType.numberWithOptions(decimal: true, signed: true) : null,
-        inputFormatters: _isNumber(field)
-            ? <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'[0-9eE+\-.]'))]
-            : null,
+        inputFormatters:
+            _isNumber(field) ? <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'[0-9eE+\-.]'))] : null,
         style: valueStyle,
         decoration: _decoration(field),
         onChanged: (_) => _fieldChanged(field),

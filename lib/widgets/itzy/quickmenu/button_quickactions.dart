@@ -346,8 +346,9 @@ List<QuickActionMenuEntry> _buildStandardQuickActionEntries({
     final QuickAction? action = widgets[widgetName];
     if (action == null) continue;
 
-    final String displayName =
+    final String defaultDisplayName =
         widgetName.replaceAll("Button", "").replaceAllMapped(RegExp(r"([A-Z])"), (Match m) => " ${m.group(1)}").trim();
+    final String displayName = action.name ?? defaultDisplayName;
     entries.add(
       QuickActionMenuEntry(
         id: "standard-$widgetName",
@@ -636,7 +637,7 @@ class _ShowStandardQuickActionsState extends State<ShowStandardQuickActions> {
     for (String widgetName in showWidgetsNames) {
       if (forbiddenButtons.contains(widgetName)) continue;
       if (widgets.containsKey(widgetName)) {
-        widgets[widgetName]!.name = widgetName;
+        widgets[widgetName]!.name ??= widgetName;
         activeActions.add(widgets[widgetName]!);
       }
     }

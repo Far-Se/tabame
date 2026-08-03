@@ -84,6 +84,8 @@ class ClaudeUsageService {
     _tick();
   }
 
+  Future<void> refresh() => _tick(force: true);
+
   void _stop() {
     _timer?.cancel();
     _timer = null;
@@ -95,11 +97,11 @@ class ClaudeUsageService {
     }
   }
 
-  Future<void> _tick() async {
+  Future<void> _tick({bool force = false}) async {
     if (_fetching) return;
 
     // If in-memory cache is fresh, just notify UI without hitting the API.
-    if (_record != null && DateTime.now().difference(_record!.fetchedAt) < _apiCacheTtl) {
+    if (!force && _record != null && DateTime.now().difference(_record!.fetchedAt) < _apiCacheTtl) {
       _notify();
       return;
     }
@@ -112,7 +114,7 @@ class ClaudeUsageService {
         if (disk != null) {
           _record = disk;
           _notify();
-          if (DateTime.now().difference(disk.fetchedAt) < _apiCacheTtl) {
+          if (!force && DateTime.now().difference(disk.fetchedAt) < _apiCacheTtl) {
             return;
           }
         }
@@ -139,15 +141,13 @@ class ClaudeUsageService {
       final Map<String, dynamic> creds = jsonDecode(credFile.readAsStringSync()) as Map<String, dynamic>;
       final String token = (creds['claudeAiOauth'] as Map<String, dynamic>)['accessToken'] as String;
 
-      final http.Response response = await http
-          .get(
-            Uri.parse(_usageUrl),
-            headers: <String, String>{
-              'Authorization': 'Bearer $token',
-              'anthropic-beta': _oauthBeta,
-            },
-          )
-          .timeout(const Duration(seconds: 10));
+      final http.Response response = await http.get(
+        Uri.parse(_usageUrl),
+        headers: <String, String>{
+          'Authorization': 'Bearer $token',
+          'anthropic-beta': _oauthBeta,
+        },
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         return ClaudeUsageRecord.fromApi(jsonDecode(response.body) as Map<String, dynamic>);

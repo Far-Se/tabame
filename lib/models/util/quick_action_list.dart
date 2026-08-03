@@ -126,6 +126,7 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     widget: () => const SubscriptionPanelButton(),
   ),
   "ClaudeUsageButton": QuickAction(
+    name: "AI Usage Stats",
     icon: Icons.bar_chart_rounded,
     widget: () => const ClaudeUsageButton(),
   ),

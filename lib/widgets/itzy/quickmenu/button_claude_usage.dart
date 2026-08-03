@@ -4,8 +4,10 @@ import 'package:just_audio/just_audio.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../services/claude_usage_service.dart';
+import '../../../services/codex_usage_service.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
+import '../../widgets/windows_scroll.dart';
 
 class ClaudeUsageButton extends StatelessWidget {
   const ClaudeUsageButton({super.key});
@@ -16,7 +18,7 @@ class ClaudeUsageButton extends StatelessWidget {
     // here guarantees a restored (post-restart) type-3 timer can beep.
     ClaudeUsageAlarm.ensureRegistered();
     return ModalButton(
-      actionName: "Claude Usage",
+      actionName: 'AI Usage Stats',
       icon: const Icon(Icons.bar_chart_rounded),
       child: () => const ClaudeUsagePanel(),
     );
@@ -25,7 +27,7 @@ class ClaudeUsageButton extends StatelessWidget {
 
 /// Owns the "alert when the 5-hour window resets" alarm. The alarm is a
 /// persistent quick timer (type 3) so it survives app restarts; when it fires,
-/// [Boxes] opens the Claude Usage panel and calls back into [_playBeep] here.
+/// [Boxes] opens the usage panel and calls back into [_playBeep] here.
 class ClaudeUsageAlarm {
   ClaudeUsageAlarm._();
 
@@ -43,7 +45,7 @@ class ClaudeUsageAlarm {
   }
 
   /// Whether a reset alarm is currently armed.
-  static bool get isArmed => Boxes.quickTimers.any((QuickTimer t) => t.type == timerType);
+  static bool get isArmed => Boxes.quickTimers.any((QuickTimer timer) => timer.type == timerType);
 
   /// Arm an alarm that fires at [resetIso] (an ISO-8601 timestamp). Returns
   /// false if the time is unparseable or already in the past.
@@ -62,9 +64,9 @@ class ClaudeUsageAlarm {
 
   /// Disarm any pending reset alarm.
   static void cancel() {
-    Boxes.quickTimers.removeWhere((QuickTimer t) {
-      if (t.type == timerType) {
-        t.timer?.cancel();
+    Boxes.quickTimers.removeWhere((QuickTimer timer) {
+      if (timer.type == timerType) {
+        timer.timer?.cancel();
         return true;
       }
       return false;
@@ -94,17 +96,58 @@ class ClaudeUsagePanel extends StatefulWidget {
 }
 
 class _ClaudeUsagePanelState extends State<ClaudeUsagePanel> {
-  ClaudeUsageRecord? _record;
-
-  void _onUsage(ClaudeUsageRecord? record) {
-    if (mounted) setState(() => _record = record);
-  }
+  ClaudeUsageRecord? _claudeRecord;
+  CodexUsageRecord? _codexRecord;
+  bool _claudeLoading = true;
+  bool _codexLoading = true;
+  bool _refreshing = false;
 
   @override
   void initState() {
     super.initState();
     ClaudeUsageAlarm.ensureRegistered();
-    ClaudeUsageService.instance.addListener(_onUsage);
+
+    _claudeRecord = ClaudeUsageService.instance.latest;
+    _codexRecord = CodexUsageService.instance.latest;
+    _claudeLoading = _claudeRecord == null;
+    _codexLoading = _codexRecord == null;
+
+    ClaudeUsageService.instance.addListener(_onClaudeUsage);
+    CodexUsageService.instance.addListener(_onCodexUsage);
+  }
+
+  void _onClaudeUsage(ClaudeUsageRecord? record) {
+    if (!mounted) return;
+    setState(() {
+      _claudeRecord = record;
+      _claudeLoading = false;
+    });
+  }
+
+  void _onCodexUsage(CodexUsageRecord? record) {
+    if (!mounted) return;
+    setState(() {
+      _codexRecord = record;
+      _codexLoading = false;
+    });
+  }
+
+  Future<void> _refreshUsage() async {
+    if (_refreshing) return;
+    setState(() {
+      _refreshing = true;
+      if (_claudeRecord == null) _claudeLoading = true;
+      if (_codexRecord == null) _codexLoading = true;
+    });
+
+    try {
+      await Future.wait<void>(<Future<void>>[
+        ClaudeUsageService.instance.refresh(),
+        CodexUsageService.instance.refresh(force: true),
+      ]);
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
   }
 
   void _toggleAlarm(String resetAt) {
@@ -118,13 +161,23 @@ class _ClaudeUsagePanelState extends State<ClaudeUsagePanel> {
 
   @override
   void dispose() {
-    ClaudeUsageService.instance.removeListener(_onUsage);
+    ClaudeUsageService.instance.removeListener(_onClaudeUsage);
+    CodexUsageService.instance.removeListener(_onCodexUsage);
     super.dispose();
   }
 
-  String _timeAgo(DateTime dt) {
-    final Duration diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'just now';
+  DateTime? get _lastUpdatedAt {
+    final List<DateTime> dates = <DateTime>[
+      if (_claudeRecord != null) _claudeRecord!.fetchedAt,
+      if (_codexRecord != null) _codexRecord!.fetchedAt,
+    ];
+    if (dates.isEmpty) return null;
+    return dates.reduce((DateTime first, DateTime second) => first.isAfter(second) ? first : second);
+  }
+
+  String _timeAgo(DateTime dateTime) {
+    final Duration diff = DateTime.now().difference(dateTime);
+    if (diff.isNegative || diff.inMinutes < 1) return 'just now';
     if (diff.inMinutes == 1) return '1 min ago';
     if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
     return '${diff.inHours}h ago';
@@ -132,101 +185,277 @@ class _ClaudeUsagePanelState extends State<ClaudeUsagePanel> {
 
   @override
   Widget build(BuildContext context) {
-    final ClaudeUsageRecord? r = _record;
-    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    final DateTime? lastUpdatedAt = _lastUpdatedAt;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: C.start,
       children: <Widget>[
-        const PanelHeader(icon: Icons.bar_chart_rounded, title: "Claude Usage"),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-          child: r == null
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6),
-                  child: Text('Fetching…', style: TextStyle(fontSize: 12)),
-                )
-              : Column(
+        PanelHeader(
+          icon: Icons.bar_chart_rounded,
+          title: 'AI Usage Stats',
+          buttonPressed: _refreshUsage,
+          buttonIcon: _refreshing ? Icons.sync_rounded : Icons.refresh_rounded,
+          buttonTooltip: 'Refresh usage',
+        ),
+        Flexible(
+          child: Material(
+            type: MaterialType.transparency,
+            child: WindowsScrollView(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: C.start,
                   children: <Widget>[
-                    _UsageCard(label: '5-hour window', value: r.fiveHour, resetAt: r.fiveResetAt, onSurface: onSurface),
-                    if (r.fiveResetAt != null) ...<Widget>[
-                      const SizedBox(height: 6),
-                      _ResetAlarmButton(
-                        armed: ClaudeUsageAlarm.isArmed,
-                        onSurface: onSurface,
-                        onTap: () => _toggleAlarm(r.fiveResetAt!),
+                    _buildClaudeSection(),
+                    const SizedBox(height: 10),
+                    _buildCodexSection(),
+                    if (lastUpdatedAt != null) ...<Widget>[
+                      const SizedBox(height: 10),
+                      Text(
+                        'Updated ${_timeAgo(lastUpdatedAt)}',
+                        style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(150)),
                       ),
                     ],
-                    const SizedBox(height: 8),
-                    _UsageCard(label: '7-day window', value: r.sevenDay, resetAt: r.sevenResetAt, onSurface: onSurface),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 2),
                     Text(
-                      'Updated ${_timeAgo(r.fetchedAt)}',
-                      style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withAlpha(150)),
-                    ),
-                    Text(
-                      'Works only with Claude Code CLI',
-                      style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withAlpha(150)),
+                      'Claude Code API · Codex CLI/cache',
+                      style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(125)),
                     ),
                   ],
                 ),
+              ),
+            ),
+          ),
         ),
       ],
     );
   }
+
+  Widget _buildClaudeSection() {
+    final ClaudeUsageRecord? record = _claudeRecord;
+    return Column(
+      crossAxisAlignment: C.start,
+      children: <Widget>[
+        _buildSectionLabel(title: 'Claude Code', icon: Icons.auto_awesome_rounded, badges: const <String>['USED']),
+        const SizedBox(height: 6),
+        if (record == null)
+          _buildUnavailableCard(
+            loading: _claudeLoading,
+            icon: Icons.auto_awesome_rounded,
+            title: _claudeLoading ? 'Fetching Claude Code usage' : 'Claude Code data unavailable',
+            message: _claudeLoading
+                ? 'Checking the local Claude Code sign-in.'
+                : 'Sign in to Claude Code, then refresh this panel.',
+          )
+        else ...<Widget>[
+          _UsageCard(
+            label: '5h',
+            value: record.fiveHour,
+            resetAt: record.fiveResetAt,
+            direction: _UsageDirection.used,
+          ),
+          if (record.fiveResetAt != null) ...<Widget>[
+            const SizedBox(height: 6),
+            _ResetAlarmButton(
+              armed: ClaudeUsageAlarm.isArmed,
+              onTap: () => _toggleAlarm(record.fiveResetAt!),
+            ),
+          ],
+          const SizedBox(height: 8),
+          _UsageCard(
+            label: 'Weekly',
+            value: record.sevenDay,
+            resetAt: record.sevenResetAt,
+            direction: _UsageDirection.used,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCodexSection() {
+    final CodexUsageRecord? record = _codexRecord;
+    final List<String> badges = <String>['REMAINING'];
+    if (record != null && record.plan.isNotEmpty) badges.insert(0, record.plan);
+
+    return Column(
+      crossAxisAlignment: C.start,
+      children: <Widget>[
+        _buildSectionLabel(title: 'Codex', icon: Icons.code_rounded, badges: badges),
+        const SizedBox(height: 6),
+        if (record == null)
+          _buildUnavailableCard(
+            loading: _codexLoading,
+            icon: Icons.code_rounded,
+            title: _codexLoading ? 'Fetching Codex usage' : 'Codex data unavailable',
+            message: _codexLoading
+                ? 'Reading codex-cli-usage or the local cache.'
+                : 'Install codex-cli-usage or run it once, then refresh.',
+          )
+        else ...<Widget>[
+          _UsageCard(
+            label: '5h',
+            value: record.fiveHourRemaining,
+            resetAt: record.fiveHourResetAt,
+            direction: _UsageDirection.remaining,
+          ),
+          const SizedBox(height: 8),
+          _UsageCard(
+            label: 'Weekly',
+            value: record.weeklyRemaining,
+            resetAt: record.weeklyResetAt,
+            direction: _UsageDirection.remaining,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSectionLabel({required String title, required IconData icon, required List<String> badges}) {
+    return Row(
+      children: <Widget>[
+        Icon(icon, size: 14, color: Design.accent),
+        const SizedBox(width: 6),
+        Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            fontSize: Design.baseFontSize + 1,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+            color: Design.text,
+          ),
+        ),
+        const SizedBox(width: 6),
+        ...badges.map(_buildMetaChip),
+        const SizedBox(width: 8),
+        Expanded(child: Divider(height: 1, color: Design.text.withAlpha(20))),
+      ],
+    );
+  }
+
+  Widget _buildMetaChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Design.accent.withAlpha(24),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: Design.baseFontSize - 0.5,
+          fontWeight: FontWeight.w700,
+          color: Design.accent,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnavailableCard({
+    required bool loading,
+    required IconData icon,
+    required String title,
+    required String message,
+  }) {
+    final Color tint = loading ? Design.accent : Design.text;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
+      decoration: BoxDecoration(
+        color: Design.text.withAlpha(7),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Design.text.withAlpha(16)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(loading ? Icons.sync_rounded : icon, size: 16, color: tint),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: C.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize + 1,
+                    fontWeight: FontWeight.w700,
+                    color: Design.text,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  message,
+                  style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(150)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
+enum _UsageDirection { used, remaining }
+
 class _UsageCard extends StatelessWidget {
-  const _UsageCard({required this.label, required this.value, required this.onSurface, this.resetAt});
+  const _UsageCard({
+    required this.label,
+    required this.value,
+    required this.resetAt,
+    required this.direction,
+  });
 
   final String label;
-  final double value;
+  final double? value;
   final String? resetAt;
-  final Color onSurface;
+  final _UsageDirection direction;
 
-  Color _barColor() {
-    if (value >= 80) return Colors.redAccent;
-    if (value >= 50) return Colors.orange;
+  Color _barColor(double percent) {
+    final double pressure = direction == _UsageDirection.used ? percent : 100 - percent;
+    if (pressure >= 80) return Colors.redAccent;
+    if (pressure >= 50) return Colors.orange;
     return Colors.greenAccent.shade400;
   }
 
-  String _formatTime(DateTime dt) {
-    final String h = dt.hour.toString().padLeft(2, '0');
-    final String m = dt.minute.toString().padLeft(2, '0');
-    return '$h:$m';
+  String _formatPercent(double percent) {
+    return percent == percent.roundToDouble() ? percent.toStringAsFixed(0) : percent.toStringAsFixed(1);
   }
 
-  String _resetLabel(String iso) {
+  String? _resetLabel(String? value) {
+    if (value == null || value.isEmpty || value == '--') return null;
+
     try {
-      final DateTime target = DateTime.parse(iso).toLocal();
+      final DateTime target = DateTime.parse(value).toLocal();
       final Duration diff = target.difference(DateTime.now());
+      final int hour = target.hour % 12 == 0 ? 12 : target.hour % 12;
+      final String minute = target.minute.toString().padLeft(2, '0');
+      final String time = '$hour:$minute ${target.hour >= 12 ? 'PM' : 'AM'}';
 
-      final String timeStr = _formatTime(target);
-
-      if (diff.isNegative) {
-        return 'resetting soon at $timeStr';
-      }
-      if (diff.inHours > 0) {
-        return 'resets in ${diff.inHours}h ${diff.inMinutes % 60}m at $timeStr';
-      }
-      return 'resets in ${diff.inMinutes}m at $timeStr';
-    } catch (_) {
-      return '';
+      if (diff.isNegative) return 'resetting soon at $time';
+      if (diff.inHours > 0) return 'resets in ${diff.inHours}h ${diff.inMinutes % 60}m at $time';
+      return 'resets in ${diff.inMinutes}m at $time';
+    } on FormatException {
+      final String lower = value.toLowerCase();
+      if (lower.startsWith('resets ') || lower.startsWith('reset ') || lower.startsWith('resetting ')) return value;
+      return 'resets $value';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color barColor = _barColor();
+    final double percent = (value ?? 0).clamp(0.0, 100.0).toDouble();
+    final Color barColor = _barColor(percent);
+    final String valueLabel = value == null ? '--' : '${_formatPercent(percent)}%';
+    final String modeLabel = direction == _UsageDirection.used ? 'used' : 'remaining';
 
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
       decoration: BoxDecoration(
-        color: onSurface.withAlpha(7),
+        color: Design.text.withAlpha(7),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: onSurface.withAlpha(16)),
+        border: Border.all(color: Design.text.withAlpha(16)),
       ),
       child: Column(
         crossAxisAlignment: C.start,
@@ -236,16 +465,32 @@ class _UsageCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: TextStyle(fontSize: Design.baseFontSize + 2.5, fontWeight: FontWeight.w700, color: onSurface),
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize + 2.5,
+                    fontWeight: FontWeight.w700,
+                    color: Design.text,
+                  ),
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(color: barColor.withAlpha(30), borderRadius: BorderRadius.circular(999)),
-                child: Text(
-                  '${value.toStringAsFixed(1)}%',
-                  style: TextStyle(fontSize: Design.baseFontSize + 0.5, fontWeight: FontWeight.w700, color: barColor),
+                decoration: BoxDecoration(
+                  color: barColor.withAlpha(30),
+                  borderRadius: BorderRadius.circular(999),
                 ),
+                child: Text(
+                  valueLabel,
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize + 0.5,
+                    fontWeight: FontWeight.w700,
+                    color: barColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                modeLabel,
+                style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(145)),
               ),
             ],
           ),
@@ -253,17 +498,17 @@ class _UsageCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
-              value: (value / 100).clamp(0.0, 1.0),
+              value: value == null ? null : percent / 100,
               minHeight: 5,
-              backgroundColor: onSurface.withAlpha(16),
+              backgroundColor: Design.text.withAlpha(16),
               valueColor: AlwaysStoppedAnimation<Color>(barColor),
             ),
           ),
-          if (resetAt != null) ...<Widget>[
+          if (_resetLabel(resetAt) case final String resetLabel) ...<Widget>[
             const SizedBox(height: 4),
             Text(
-              _resetLabel(resetAt!),
-              style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: onSurface.withAlpha(150)),
+              resetLabel,
+              style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: Design.text.withAlpha(150)),
             ),
           ],
         ],
@@ -273,16 +518,14 @@ class _UsageCard extends StatelessWidget {
 }
 
 class _ResetAlarmButton extends StatelessWidget {
-  const _ResetAlarmButton({required this.armed, required this.onSurface, required this.onTap});
+  const _ResetAlarmButton({required this.armed, required this.onTap});
 
   final bool armed;
-  final Color onSurface;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = Design.accent;
-    final Color tint = armed ? accent : onSurface;
+    final Color tint = armed ? Design.accent : Design.text;
 
     return Material(
       color: Colors.transparent,
@@ -303,11 +546,11 @@ class _ResetAlarmButton extends StatelessWidget {
               const SizedBox(width: 7),
               Expanded(
                 child: Text(
-                  armed ? 'Alarm set for reset — tap to cancel' : 'Alert when 5-hour window resets',
+                  armed ? 'Reset alert armed — tap to cancel' : 'Alert when 5h usage resets',
                   style: TextStyle(
                     fontSize: Design.baseFontSize + 0.5,
                     fontWeight: FontWeight.w600,
-                    color: armed ? tint : onSurface.withAlpha(200),
+                    color: armed ? tint : Design.text.withAlpha(200),
                   ),
                 ),
               ),
