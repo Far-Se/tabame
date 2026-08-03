@@ -567,10 +567,10 @@ class QuickMenuModalFrame extends StatelessWidget {
             border: Border.all(color: text, width: 2.2),
           ),
           underlays: <Widget>[
-            CustomPaint(painter: _HalftonePainter(text.withValues(alpha: isDark ? 0.06 : 0.05))),
+            CustomPaint(painter: _HalftonePainter(text.withValues(alpha: isDark ? 0.04 : 0.02))),
           ],
           overlays: <Widget>[
-            CustomPaint(painter: _MangaBurstLinesPainter(accent.withValues(alpha: isDark ? 0.22 : 0.16))),
+            CustomPaint(painter: _MangaBurstLinesPainter(accent.withValues(alpha: isDark ? 0.10 : 0.07))),
             CustomPaint(painter: _MangaCornerTicksPainter(text)),
           ],
         ),

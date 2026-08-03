@@ -179,7 +179,7 @@ final List<Map<String, dynamic>> mainHotkeyData = <Map<String, dynamic>>[
         "boundToRegion": false,
         "region": <String, Object>{"x1": 0, "y1": 0, "x2": 0, "y2": 0, "asPercentage": false, "anchorType": 0},
         "triggerType": 3,
-        "triggerInfo": <int>[110, 1000, 0],
+        "triggerInfo": <int>[200, 1000, 0],
         "actions": <Map<String, Object>>[
           <String, Object>{"type": 2, "value": "ShowLastWindowUnderCursor"}
         ],

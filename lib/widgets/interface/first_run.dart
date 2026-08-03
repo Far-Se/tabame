@@ -74,6 +74,7 @@ class FirstRunState extends State<FirstRun> {
     _syncQuickClickEnabled();
     _calculateSourceSize();
     WinUtils.fixDrawBug();
+    WinUtils.disableClickThrough(Win32.hWnd);
   }
 
   @override
@@ -211,17 +212,27 @@ class FirstRunState extends State<FirstRun> {
 
   /// Finds the remap entry for every feature, lazily creating any that are
   /// missing so all hotkeys are registered (and persisted) from the start.
+  /// A rich hotkey such as QuickMenu can contain actions for other features;
+  /// reserve each matched index so two wizard rows never edit the same entry.
   void _resolveFeatureIndices() {
     bool seeded = false;
+    final Set<int> reservedIndices = <int>{};
     for (final _Feature feature in _Feature.values) {
       final String matchValue = _matchValue(feature);
-      int index = remap.indexWhere((Hotkeys hotkey) => _entryHasFunction(hotkey, matchValue));
+      int index = -1;
+      for (int candidate = 0; candidate < remap.length; candidate++) {
+        if (!reservedIndices.contains(candidate) && _entryHasFunction(remap[candidate], matchValue)) {
+          index = candidate;
+          break;
+        }
+      }
       if (index == -1) {
         remap.add(_defaultFor(feature));
         index = remap.length - 1;
         seeded = true;
       }
       _featureIndex[feature] = index;
+      reservedIndices.add(index);
     }
     if (seeded) Boxes.updateSettings("remap", jsonEncode(remap));
   }
@@ -642,6 +653,23 @@ class FirstRunState extends State<FirstRun> {
           const SizedBox(height: 16),
 
           // ── QuickMenu ──
+          _buildHotkeyInfo(
+            theme,
+            accent,
+            storageKey: "first_run_quick_menu_info",
+            title: "QuickMenu setup tips",
+            introduction: "QuickMenu works best with mouse interaction. Try one of these shortcuts:",
+            tips: const <String>[
+              "A side mouse button — most mice have one, and it is the quickest way to summon the menu.",
+              "Any extra mouse button — in your mouse software, bind it to a combination such as "
+                  "Ctrl+Alt+Shift+F9, then assign the same combination in Tabame.",
+              "No spare mouse button? Choose an easy keyboard shortcut, such as Win+Shift+Z or Win+Shift+A.",
+              "As a last resort, open QuickMenu separately through the Mouse Control QuickAction — for example, "
+                  "press the middle mouse button and move right. A dedicated QuickMenu hotkey is better because "
+                  "one hotkey can expose several functions through movement and hold triggers.",
+            ],
+          ),
+          const SizedBox(height: 8),
           _buildFeatureRow(
             theme,
             accent,
@@ -653,6 +681,19 @@ class FirstRunState extends State<FirstRun> {
           const SizedBox(height: 10),
 
           // ── Launcher ──
+          _buildHotkeyInfo(
+            theme,
+            accent,
+            storageKey: "first_run_launcher_info",
+            title: "Launcher setup tips",
+            introduction: "Launcher works best from the keyboard. Choose a shortcut that is easy to reach:",
+            tips: const <String>[
+              "Try Win+Shift+A, Win+Space, a double press of Alt, or Right Alt.",
+              "To browse open windows without opening QuickMenu, create another hotkey such as Win+Shift+D. "
+                  "Add the Start Launcher with Prefix action and set its prefix to a period (.).",
+            ],
+          ),
+          const SizedBox(height: 8),
           _buildFeatureRow(
             theme,
             accent,
@@ -664,6 +705,17 @@ class FirstRunState extends State<FirstRun> {
           const SizedBox(height: 10),
 
           // ── QuickClick ──
+          _buildHotkeyInfo(
+            theme,
+            accent,
+            storageKey: "first_run_quick_click_info",
+            title: "QuickClick setup tips",
+            introduction: "Choose a keyboard shortcut that is easy to reach:",
+            tips: const <String>[
+              "Try Right Alt or Alt+Comma.",
+            ],
+          ),
+          const SizedBox(height: 8),
           _buildFeatureRow(
             theme,
             accent,
@@ -692,6 +744,17 @@ class FirstRunState extends State<FirstRun> {
           const SizedBox(height: 10),
 
           // ── Fancyshot ──
+          _buildHotkeyInfo(
+            theme,
+            accent,
+            storageKey: "first_run_fancyshot_info",
+            title: "FancyShot setup tips",
+            introduction: "FancyShot works best with mouse interaction:",
+            tips: const <String>[
+              "Set up a hotkey and then trigger it with mouse movement:.",
+            ],
+          ),
+          const SizedBox(height: 8),
           _buildFeatureRow(
             theme,
             accent,
@@ -723,6 +786,79 @@ class FirstRunState extends State<FirstRun> {
             subtitle: "Pick any color from your screen.",
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHotkeyInfo(
+    ThemeData theme,
+    Color accent, {
+    required String storageKey,
+    required String title,
+    required String introduction,
+    required List<String> tips,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withValues(alpha: 0.28),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.10)),
+      ),
+      child: Theme(
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          key: PageStorageKey<String>(storageKey),
+          maintainState: true,
+          dense: true,
+          visualDensity: VisualDensity.compact,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          leading: Icon(Icons.info_outline_rounded, color: accent, size: 17),
+          iconColor: accent,
+          collapsedIconColor: theme.hintColor,
+          title: Text(
+            title,
+            style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          children: <Widget>[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                introduction,
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor, height: 1.4),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...tips.map(
+              (String tip) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 7),
+                      child: Container(
+                        width: 4,
+                        height: 4,
+                        decoration: BoxDecoration(color: accent.withValues(alpha: 0.75), shape: BoxShape.circle),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        tip,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.78),
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

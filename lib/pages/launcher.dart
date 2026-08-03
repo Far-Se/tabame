@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -169,7 +170,7 @@ class Launcher extends StatefulWidget {
 
 class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTickerProviderStateMixin {
   static const double _minResultsHeight = 300;
-  static const double _maxResultsHeight = 460;
+  static const double _maxResultsHeight = 454;
 
   final LauncherSearchToken _searchToken = LauncherSearchToken();
 
@@ -1295,7 +1296,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final List<PluginManifest> enabledPlugins =
         PluginRegistry.manifests.where((PluginManifest manifest) => manifest.enabled).toList(growable: false);
     if (enabledPlugins.isEmpty) return _launcherShortcuts;
-
+    enabledPlugins.sort((PluginManifest a, PluginManifest b) => a.name.compareTo(b.name));
     return <LauncherSearchResultItem>[
       ..._launcherShortcuts,
       for (final (int index, PluginManifest plugin) in enabledPlugins.indexed)
@@ -4407,7 +4408,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       accent: accent,
       onSurface: onSurface,
       dragHandle: MouseRegion(
-        cursor: Globals.customCursor ?? SystemMouseCursors.move,
+        cursor: user.useCustomCursor ? Globals.customCursor ?? SystemMouseCursors.move : SystemMouseCursors.basic,
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onPanStart: (_) => windowManager.startDragging(),
@@ -4447,14 +4448,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       trailingBadge: _buildTrailingBadge(accent, onSurface),
       isSearching: _isSearching,
     );
-
+    final ({int height, int width}) size = Win32.getSize();
     final Widget resultsContent = Focus(
       focusNode: _resultsFocusNode,
       skipTraversal: true,
       child: Material(
         type: MaterialType.transparency,
         child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: 260, maxHeight: _resultsMaxHeight),
+          constraints:
+              BoxConstraints(minHeight: 260, maxHeight: math.min(_resultsMaxHeight - 27, size.height.toDouble() - 27)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -4807,8 +4809,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
           unawaited(Boxes.updateSettings('launcherResultsHeight', _resultsMaxHeight));
         },
         onVerticalDragUpdate: (DragUpdateDetails details) {
+          // final Size size = await windowManager.getSize();
+          final ({int height, int width}) size = Win32.getSize();
           final double nextHeight =
-              (_resultsMaxHeight + details.delta.dy).clamp(_minResultsHeight, _maxResultsHeight).toDouble();
+              (_resultsMaxHeight + details.delta.dy).clamp(_minResultsHeight, size.height - 150).toDouble();
+
           if (nextHeight == _resultsMaxHeight) return;
 
           setState(() => _resultsMaxHeight = nextHeight);

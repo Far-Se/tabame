@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -56,8 +57,8 @@ class Boxes {
     // First-run defaults
     if (pref.getString("language") == null) {
       await pref.setBool("DEBUGGING", false);
-      await pref.setInt("quickMenuDesign", QuickMenuDesigns.modern.index);
-      await pref.setInt("launcherDesign", LauncherDesign.classic.index);
+      await pref.setInt("quickMenuDesign", Random().nextInt(QuickMenuDesigns.values.length));
+      await pref.setInt("launcherDesign", Random().nextInt(LauncherDesign.values.length));
       await pref.setInt("taskBarAppsStyle", TaskBarAppsStyle.activeMonitorFirst.index);
       await pref.setInt("volumeOSDStyle", VolumeOSDStyle.normal.index);
       await pref.setInt("themeType", ThemeType.system.index);
@@ -161,6 +162,7 @@ class Boxes {
       ..trktivityEnabled = pref.getBool("trktivityEnabled") ?? user.trktivityEnabled
       ..autoCheckForUpdates = pref.getBool("autoUpdate") ?? user.autoCheckForUpdates
       ..wallpapersFolder = pref.getString("wallpapersFolder") ?? user.wallpapersFolder
+      ..useCustomCursor = pref.getBool("useCustomCursor") ?? user.useCustomCursor
       ..fancyshotFolder = pref.getString("fancyshotFolder") ?? user.fancyshotFolder
       ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? user.runAsAdministrator
       ..launcherFullPopups = pref.getBool("launcherFullPopups") ?? user.launcherFullPopups

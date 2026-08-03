@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
+import '../../../models/theme.dart';
 
 class LogoDragButton extends StatefulWidget {
   const LogoDragButton({super.key});
@@ -18,54 +19,61 @@ class LogoDragButtonState extends State<LogoDragButton> {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
       valueListenable: Globals.themeChangeNotifier,
-      builder: (_, bool refreshed, __) => GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onPanStart: (DragStartDetails details) {
-          windowManager.startDragging();
-        },
-        onSecondaryTapDown: (TapDownDetails e) async {
-          final Size value = await windowManager.getSize();
-          await windowManager.setSize(Size(value.width + 2, value.height + 2));
-          await Future<void>.delayed(const Duration(milliseconds: 100));
-          await windowManager.setSize(Size(value.width, value.height));
-          QuickMenuFunctions.refreshQuickMenu();
-        },
-        child: RepaintBoundary(
-          child: InkWell(
-            borderRadius: BorderRadius.circular(10),
-            focusColor: Colors.transparent,
-            hoverColor: Colors.transparent,
-            splashColor: Colors.transparent,
-            onTap: () {
-              user.hideTabameOnUnfocus = !user.hideTabameOnUnfocus;
-            },
-            child: Stack(
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0).copyWith(right: 2, top: 1),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: user.customLogo.isEmpty
-                        ? Image.asset(user.logo, width: 15)
-                        : user.customLogo.replaceAll('\\', '/').startsWith('resources/logos/')
-                            ? Image.asset(user.customLogo.replaceAll('\\', '/'), width: 15)
-                            : Image.file(File(user.customLogo), width: 15),
-                  ),
-                ),
-                if (!user.hideTabameOnUnfocus)
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: CustomPaint(
-                      size: const Size(6, 6),
-                      painter: TrianglePainter(Design.accent.withValues(alpha: 0.5)),
+      builder: (_, bool refreshed, __) {
+        AppTheme.loadDragCursor(context);
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onPanStart: (DragStartDetails details) {
+            windowManager.startDragging();
+          },
+          onSecondaryTapDown: (TapDownDetails e) async {
+            final Size value = await windowManager.getSize();
+            await windowManager.setSize(Size(value.width + 2, value.height + 2));
+            await Future<void>.delayed(const Duration(milliseconds: 100));
+            await windowManager.setSize(Size(value.width, value.height));
+            QuickMenuFunctions.refreshQuickMenu();
+          },
+          child: RepaintBoundary(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              focusColor: Colors.transparent,
+              hoverColor: Colors.transparent,
+              splashColor: Colors.transparent,
+              onTap: () {
+                user.hideTabameOnUnfocus = !user.hideTabameOnUnfocus;
+              },
+              child: MouseRegion(
+                cursor:
+                    user.useCustomCursor ? Globals.customCursor ?? SystemMouseCursors.move : SystemMouseCursors.basic,
+                child: Stack(
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0).copyWith(right: 2, top: 1),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: user.customLogo.isEmpty
+                            ? Image.asset(user.logo, width: 15)
+                            : user.customLogo.replaceAll('\\', '/').startsWith('resources/logos/')
+                                ? Image.asset(user.customLogo.replaceAll('\\', '/'), width: 15)
+                                : Image.file(File(user.customLogo), width: 15),
+                      ),
                     ),
-                  ),
-              ],
+                    if (!user.hideTabameOnUnfocus)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: CustomPaint(
+                          size: const Size(6, 6),
+                          painter: TrianglePainter(Design.accent.withValues(alpha: 0.5)),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -76,7 +84,7 @@ class TrianglePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()..color = color.withValues(alpha: 0.1);
+    final Paint paint = Paint()..color = color.withValues(alpha: 0.13);
     // final Path path = Path();
     // path.moveTo(0, 0);
     // path.lineTo(size.width, 0);

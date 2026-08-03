@@ -406,7 +406,7 @@ def category_options() -> list[dict[str, str]]:
     return [
         {
             "value": safe_text(category.get("id")),
-            "label": safe_text(category.get("title")),
+            "label": f"{safe_text(category.get('title'))} - {safe_text(category.get('pageSubtitle'))}",
         }
         for category in CATEGORIES
         if safe_text(category.get("id")) and safe_text(category.get("title"))

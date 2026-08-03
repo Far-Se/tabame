@@ -628,8 +628,12 @@ class PluginActionParametersPanel extends StatelessWidget {
     return Material(
       type: MaterialType.transparency,
       child: Center(
-        child: ConstrainedBox(
+        child: Container(
           constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
+          decoration: BoxDecoration(
+            color: user.launcherThemeColors.background,
+            borderRadius: BorderRadius.circular(10),
+          ),
           child: Material(
             color: Colors.transparent,
             child: PluginFormView(

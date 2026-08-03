@@ -51,7 +51,7 @@ class Globals {
   static bool isLauncherPluginActive = false;
   static bool isStandaloneLauncher = false;
   static ({double width, double height}) quickMenuSize = (width: 355, height: 580);
-  static ({double width, double height}) launcherSize = (width: 715, height: 620);
+  static ({double width, double height}) launcherSize = (width: 715, height: 630);
   static QuickMenuPage quickMenuPage = QuickMenuPage.quickMenu;
   static bool debugHooks = true;
   static bool debugHotkeys = true;

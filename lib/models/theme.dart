@@ -294,12 +294,10 @@ class AppTheme {
         size: 21,
         hotX: 9,
         hotY: 3,
-        color: user.themeType == ThemeType.dark ? Design.text : Design.background,
+        color: user.isDark(context) ? Design.text : Design.background,
         shadows: <Shadow>[
           Shadow(
-              offset: const Offset(0, 0),
-              blurRadius: 2,
-              color: user.themeType == ThemeType.dark ? Design.background : Design.text)
+              offset: const Offset(0, 0), blurRadius: 2, color: user.isDark(context) ? Design.background : Design.text)
         ]);
   }
 

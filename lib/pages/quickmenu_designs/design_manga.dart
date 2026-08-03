@@ -7,6 +7,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
+import '../../widgets/quickmenu/info_bar.dart';
 import '../../widgets/quickmenu/libre_stats.dart';
 import '../../widgets/quickmenu/task_bar.dart';
 import '../../widgets/quickmenu/taskbar_stats.dart';
@@ -154,10 +155,7 @@ class MainMenuMangaWidget extends StatelessWidget {
                       const PinnedAndTrayList(),
                     DragToMoveArea(child: _PanelLabel(text: 'WINDOWS', m: m)),
                     const TaskBar(),
-                    if (!user.bottomBarOnTop) ...<Widget>[
-                      // _PanelLabel(text: 'PINNED', m: m),
-                      const PinnedAndTrayList(),
-                    ],
+                    if (!user.bottomBarOnTop) const PinnedAndTrayList(),
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                     if (user.libreStats) const LibreStats(withTopDivider: false),
                     _CaptionFooter(m: m),
@@ -403,7 +401,7 @@ class _CaptionFooter extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(0, 3, 0, 0),
       decoration: BoxDecoration(border: Border.all(color: m.gutter, width: 1.4)),
       padding: const EdgeInsets.fromLTRB(4, 1, 4, 1),
-      child: const PinnedAndTrayList(),
+      child: const BottomBar(),
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
+import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../../models/tray_watcher.dart';
 import '../../../models/util/quick_action_list.dart';
@@ -216,6 +217,19 @@ class _BehaviorTabState extends State<_BehaviorTab> {
               onChanged: (bool v) async {
                 user.dragPopupsByIconOnly = v;
                 await Boxes.updateSettings("dragPopupsByIconOnly", v);
+                if (!mounted) return;
+                setState(() {});
+              },
+            ),
+            _toggle(
+              context: context,
+              title: "Custom Mouse For Dragging",
+              subtitle: "Mark Draggable Areas with custom Pointer",
+              value: user.useCustomCursor,
+              onChanged: (bool v) async {
+                user.useCustomCursor = v;
+                await Boxes.updateSettings("useCustomCursor", v);
+                Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
                 if (!mounted) return;
                 setState(() {});
               },

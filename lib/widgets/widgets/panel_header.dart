@@ -63,7 +63,8 @@ class PanelHeader extends StatelessWidget {
           child: Row(
             children: <Widget>[
               MouseRegion(
-                cursor: Globals.customCursor ?? SystemMouseCursors.move,
+                cursor:
+                    user.useCustomCursor ? Globals.customCursor ?? SystemMouseCursors.move : SystemMouseCursors.basic,
                 child: GestureDetector(
                   behavior: HitTestBehavior.translucent,
                   onPanStart: (DragStartDetails details) {
