@@ -51,6 +51,7 @@ Future<void> showQuickMenuModal({
               : AppTheme.getLightThemeData(context);
           final Animation<double>? animation = ModalRoute.of(context)?.animation;
           final double frameWidth = maxWidth!;
+          AppTheme.loadDragCursor(context);
 
           final Widget modalChild = Focus(
             autofocus: true,

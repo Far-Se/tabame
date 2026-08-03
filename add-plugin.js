@@ -330,6 +330,7 @@ function checkLocalPlugins() {
 
   console.log("Local plugins not registered in resources/plugins.json:");
   for (const plugin of missing) {
+    if (["atm"].includes(plugin.folder)) continue;
     const details = plugin.id !== plugin.folder ? ` (id: ${plugin.id})` : "";
     const manifestWarning = plugin.invalidManifest
       ? " [invalid plugin.json]"

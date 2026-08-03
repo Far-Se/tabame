@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tabamewin32/tabamewin32.dart';
 
+import '../widgets/widgets/custom_cursor.dart';
 import 'countdown_manager.dart';
 
 void printWarning(String text) {
@@ -57,6 +58,7 @@ class Globals {
   static String version = "v2.0";
   static WinRect? focusedRect;
   static int virtualDesktop = 0;
+  static CustomMouseCursor? customCursor;
 
   static const int totalGradients = 12;
   static bool changingPages = false;

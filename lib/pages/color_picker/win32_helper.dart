@@ -185,7 +185,7 @@ class Win32Helper {
     final AudioPlayer player = AudioPlayer();
     await player.setAsset('resources/pop.mp3');
     await player.seek(Duration.zero);
-    await player.setVolume(0.2);
+    await player.setVolume(0.1);
     await player.play();
     await Future<void>.delayed(const Duration(milliseconds: 500));
     await player.dispose();

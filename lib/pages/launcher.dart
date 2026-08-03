@@ -4407,7 +4407,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       accent: accent,
       onSurface: onSurface,
       dragHandle: MouseRegion(
-        cursor: SystemMouseCursors.move,
+        cursor: Globals.customCursor ?? SystemMouseCursors.move,
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onPanStart: (_) => windowManager.startDragging(),

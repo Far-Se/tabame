@@ -1188,7 +1188,8 @@ class _PluginViewState extends State<PluginView> {
       }
       final image.Image? decoded = image.decodeImage(Uint8List.fromList(bytes));
       if (decoded == null) throw const FormatException('Unsupported image format');
-      await ClipboardExtended.copyImage(Uint8List.fromList(image.encodeBmp(decoded)));
+      // await ClipboardExtended.copyImage(Uint8List.fromList(image.encodeBmp(decoded)));
+      await ClipboardExtended.copyImage(Uint8List.fromList(bytes));
     } catch (_) {
       // Preserve a useful result when an image cannot be decoded or fetched.
       await Clipboard.setData(ClipboardData(text: url));

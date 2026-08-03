@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../widgets/widgets/custom_cursor.dart';
 import 'classes/boxes.dart';
 import 'classes/saved_maps.dart';
+import 'globals.dart';
 import 'settings.dart';
 
 class AppTheme {
@@ -285,6 +287,20 @@ class AppTheme {
         collapsedShape: const Border(),
       ),
     );
+  }
+
+  static Future<void> loadDragCursor(BuildContext context) async {
+    Globals.customCursor = await CustomMouseCursor.icon(Icons.swipe,
+        size: 21,
+        hotX: 9,
+        hotY: 3,
+        color: user.themeType == ThemeType.dark ? Design.text : Design.background,
+        shadows: <Shadow>[
+          Shadow(
+              offset: const Offset(0, 0),
+              blurRadius: 2,
+              color: user.themeType == ThemeType.dark ? Design.background : Design.text)
+        ]);
   }
 
   static FontWeight getFontWeight(int value) {

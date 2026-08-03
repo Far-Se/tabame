@@ -48,25 +48,26 @@ class NotionLauncherSearchBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 9, 12, 6),
-            child: Row(
-              children: <Widget>[
-                _NotionLauncherMark(isDark: isDark, size: 22),
-                const SizedBox(width: 8),
-                Text(
-                  'Search in Tabame',
-                  style: NotionTokens.ui(
-                    fontSize: Design.baseFontSize + 1,
-                    fontWeight: FontWeight.w600,
-                    color: onSurface,
+          DragToMoveArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 9, 12, 6),
+              child: Row(
+                children: <Widget>[
+                  _NotionLauncherMark(isDark: isDark, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    'QuickLaunch',
+                    style: NotionTokens.ui(
+                      fontSize: Design.baseFontSize + 1,
+                      fontWeight: FontWeight.w600,
+                      color: onSurface,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                const _NotionKeycap(label: 'Ctrl'),
-                const SizedBox(width: 3),
-                const _NotionKeycap(label: 'P'),
-              ],
+                  const Spacer(),
+                  const SizedBox(width: 3),
+                  _NotionKeycap(label: WinUtils.shellUser()),
+                ],
+              ),
             ),
           ),
           Padding(
@@ -268,7 +269,7 @@ class _NotionLauncherMark extends StatelessWidget {
         border: Border.all(color: NotionTokens.foreground(isDark).withAlpha(190)),
       ),
       child: Text(
-        'N',
+        'T',
         style: TextStyle(
           fontFamily: 'Georgia',
           fontSize: size * 0.64,

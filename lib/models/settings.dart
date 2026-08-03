@@ -219,7 +219,7 @@ class Settings {
   bool runAsAdministrator = false;
   bool _hideTabameOnUnfocus = true;
   bool quickActionsAtBottom = false;
-  bool dragPopupsByIconOnly = false;
+  bool dragPopupsByIconOnly = true;
   LauncherDesign launcherDesign = LauncherDesign.classic;
   QuickClickConfig quickClickConfig = QuickClickConfig();
   bool get hideTabameOnUnfocus => _hideTabameOnUnfocus;

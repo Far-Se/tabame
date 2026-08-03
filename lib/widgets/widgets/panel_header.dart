@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../models/globals.dart';
 import '../../models/settings.dart';
 import 'custom_tooltip.dart';
 import 'mix_widgets.dart';
@@ -61,18 +62,21 @@ class PanelHeader extends StatelessWidget {
           ),
           child: Row(
             children: <Widget>[
-              GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onPanStart: (DragStartDetails details) {
-                  windowManager.startDragging();
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: (accent ?? Design.accent).withAlpha(30),
-                    borderRadius: BorderRadius.circular(8),
+              MouseRegion(
+                cursor: Globals.customCursor ?? SystemMouseCursors.move,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onPanStart: (DragStartDetails details) {
+                    windowManager.startDragging();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: (accent ?? Design.accent).withAlpha(30),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(icon, size: 14, color: (accent ?? Design.accent)),
                   ),
-                  child: Icon(icon, size: 14, color: (accent ?? Design.accent)),
                 ),
               ),
               const SizedBox(width: 10),

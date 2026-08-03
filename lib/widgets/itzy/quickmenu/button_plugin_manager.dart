@@ -217,28 +217,31 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   }
 
   Widget _buildModeRail() {
-    return Row(
-      children: <Widget>[
-        _modeChip(
-          label: 'Installed',
-          icon: Icons.extension_rounded,
-          count: PluginRegistry.manifests.length,
-          mode: _PanelMode.installed,
-        ),
-        const SizedBox(width: 6),
-        _modeChip(
-          label: 'Gallery',
-          icon: Icons.storefront_rounded,
-          count: _galleryEntries?.length,
-          mode: _PanelMode.gallery,
-        ),
-        const SizedBox(width: 6),
-        _modeChip(
-          label: 'Make Your Own',
-          icon: Icons.construction_rounded,
-          mode: _PanelMode.makeYourOwn,
-        ),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: <Widget>[
+          _modeChip(
+            label: 'Installed',
+            icon: Icons.extension_rounded,
+            count: PluginRegistry.manifests.length,
+            mode: _PanelMode.installed,
+          ),
+          const SizedBox(width: 6),
+          _modeChip(
+            label: 'Gallery',
+            icon: Icons.storefront_rounded,
+            count: _galleryEntries?.length,
+            mode: _PanelMode.gallery,
+          ),
+          const SizedBox(width: 6),
+          _modeChip(
+            label: 'Make Your Own',
+            icon: Icons.construction_rounded,
+            mode: _PanelMode.makeYourOwn,
+          ),
+        ],
+      ),
     );
   }
 

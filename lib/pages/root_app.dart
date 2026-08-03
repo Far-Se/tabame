@@ -76,7 +76,7 @@ class _TabameState extends State<Tabame> {
               }
               ThemeMode themeMode =
                   <ThemeMode>[ThemeMode.system, ThemeMode.light, ThemeMode.dark, scheduled][themeType.index];
-
+              AppTheme.loadDragCursor(context);
               return MaterialApp(
                   scrollBehavior: MyCustomScrollBehavior(),
                   debugShowCheckedModeBanner: false,
