@@ -589,10 +589,35 @@ public:
         }
       } catch (...) {
       }
-      frameArrivedToken_ = framePool_.FrameArrived([this](auto &&, auto &&) {
-        if (frameEvent_)
-          SetEvent(frameEvent_.get());
-      });
+      // Acquire frames inside FrameArrived. With a free-threaded frame pool,
+      // deferring TryGetNextFrame() until after the callback returns can race
+      // the pool and repeatedly produce null frames. Keep only the newest
+      // frame and wake the encoder thread to process it.
+      frameArrivedToken_ = framePool_.FrameArrived(
+          [this](const Direct3D11CaptureFramePool &sender, auto &&) {
+            std::lock_guard<std::mutex> callbackLock(frameCallbackMutex_);
+            if (stopRequested_)
+              return;
+            try {
+              Direct3D11CaptureFrame latestFrame{nullptr};
+              Direct3D11CaptureFrame frame = sender.TryGetNextFrame();
+              while (frame) {
+                latestFrame = std::move(frame);
+                frame = sender.TryGetNextFrame();
+              }
+              if (!latestFrame)
+                return;
+
+              {
+                std::lock_guard<std::mutex> frameLock(pendingFrameMutex_);
+                pendingFrame_ = std::move(latestFrame);
+              }
+              if (frameEvent_)
+                SetEvent(frameEvent_.get());
+            } catch (...) {
+              ++droppedFrames_;
+            }
+          });
       session_.StartCapture();
       frameThread_ = std::thread([this]() { FrameLoop(); });
     } catch (...) {
@@ -1405,10 +1430,6 @@ private:
     // Timestamp of the last frame we actually encoded, in microseconds
     // since the recording start.
     int64_t nextFrameDeadlineUs = 0;
-    // Size the frame pool was created with; when the captured window resizes,
-    // the pool must be recreated or WGC keeps delivering stale-sized textures.
-    auto poolSize = item_.Size();
-
     while (!stopRequested_) {
       if (targetWindow_ != nullptr && !IsWindow(targetWindow_)) {
         targetLost_ = true;
@@ -1420,33 +1441,17 @@ private:
       if (waitResult != WAIT_OBJECT_0)
         continue;
 
-      // Drain all pending frames but only encode the most recent one
-      // that falls on or after the next scheduled deadline.
+      // FrameArrived has already drained the WGC pool. Take the newest frame
+      // it handed off, replacing any older frame the encoder did not reach.
       try {
         Direct3D11CaptureFrame latestFrame{nullptr};
-        Direct3D11CaptureFrame frame = framePool_.TryGetNextFrame();
-        while (frame) {
-          latestFrame = std::move(frame);
-          frame = framePool_.TryGetNextFrame();
+        {
+          std::lock_guard<std::mutex> frameLock(pendingFrameMutex_);
+          latestFrame = std::move(pendingFrame_);
+          pendingFrame_ = nullptr;
         }
         if (!latestFrame)
           continue;
-
-        // Recreate the pool when the captured content changes size (window
-        // resized), otherwise subsequent frames keep the old dimensions and
-        // the new content arrives cropped or with stale borders. The output
-        // stream size is fixed for the whole recording, so ProcessFrame still
-        // crops/pads the new content to the original dimensions.
-        const auto contentSize = latestFrame.ContentSize();
-        if ((contentSize.Width != poolSize.Width ||
-             contentSize.Height != poolSize.Height) &&
-            contentSize.Width > 0 && contentSize.Height > 0) {
-          framePool_.Recreate(winrtDevice_,
-                              DirectXPixelFormat::B8G8R8A8UIntNormalized, 2,
-                              contentSize);
-          poolSize = contentSize;
-          continue; // the next frame arrives at the new size
-        }
 
         // Drop frames while paused (we still drained the pool above so it
         // doesn't back up). Timestamps subtract the accumulated paused span,
@@ -1480,15 +1485,21 @@ private:
         framePool_.FrameArrived(frameArrivedToken_);
     } catch (...) {
     }
-    try {
-      if (session_)
-        session_.Close();
-    } catch (...) {
-    }
-    try {
-      if (framePool_)
-        framePool_.Close();
-    } catch (...) {
+    // Wait for an in-flight FrameArrived callback before closing the pool it
+    // reads from. A callback already queued after unsubscription observes
+    // stopRequested_ and returns without touching the pool or event handle.
+    {
+      std::lock_guard<std::mutex> callbackLock(frameCallbackMutex_);
+      try {
+        if (session_)
+          session_.Close();
+      } catch (...) {
+      }
+      try {
+        if (framePool_)
+          framePool_.Close();
+      } catch (...) {
+      }
     }
   }
 
@@ -1642,6 +1653,10 @@ private:
     audioSources_.clear();
     audioErrorCode_.clear();
     audioErrorMessage_.clear();
+    {
+      std::lock_guard<std::mutex> frameLock(pendingFrameMutex_);
+      pendingFrame_ = nullptr;
+    }
     try {
       if (framePool_)
         framePool_.Close();
@@ -1666,6 +1681,8 @@ private:
 
   std::mutex mutex_;
   std::mutex sinkWriterMutex_;
+  std::mutex frameCallbackMutex_;
+  std::mutex pendingFrameMutex_;
   bool isRecording_ = false;
   // True while Start() is blocked waiting for audio init with mutex_ released;
   // Finish() must not tear the session down during that window.
@@ -1715,6 +1732,7 @@ private:
   GraphicsCaptureItem item_{nullptr};
   Direct3D11CaptureFramePool framePool_{nullptr};
   GraphicsCaptureSession session_{nullptr};
+  Direct3D11CaptureFrame pendingFrame_{nullptr};
   winrt::event_token frameArrivedToken_{};
   winrt::com_ptr<IMFSinkWriter> sinkWriter_;
 };
