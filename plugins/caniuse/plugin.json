@@ -7,5 +7,6 @@
   "runtime": "node",
   "version": "1.0.0",
   "entry": "main.js",
-  "args": []
+  "args": [],
+  "enabled": true
 }

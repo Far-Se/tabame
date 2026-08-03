@@ -373,7 +373,7 @@ def make_item(idx, label, target_tz, base, src_line, has_seconds):
         "icon": "clock",
         "accessories": accessories,
         "actions": [{"id": "copy", "title": "Copy time", "icon": "copy"}],
-        "preview": {"markdown": preview},
+        "preview": {"markdown": preview, "wide": False},
     }
     return item, copy_str
 

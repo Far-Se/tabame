@@ -10,6 +10,87 @@ function send(frame) {
 }
 
 const cache = new Map();
+const LAST_SEARCH_STORAGE_KEY = "last_search";
+const LAST_SEARCH_REQUEST_ID = "weather_last_search";
+
+let currentQuery = "";
+let lastSearch = null;
+let lastSearchLoaded = false;
+let restorePending = false;
+
+function storageCommand(op, fields = {}) {
+  send({ type: "command", command: "storage", op, ...fields });
+}
+
+function saveLastSearch(city, isFahrenheit) {
+  lastSearch = { city: city.trim(), fahrenheit: isFahrenheit };
+  storageCommand("set", {
+    key: LAST_SEARCH_STORAGE_KEY,
+    value: lastSearch,
+  });
+}
+
+function parseLastSearch(value) {
+  let stored = value;
+
+  if (typeof stored === "string") {
+    try {
+      stored = JSON.parse(stored);
+    } catch {
+      const trimmed = stored.trim();
+      if (!trimmed) return null;
+      return {
+        city: trimmed.replace(/[\s]+f$/i, "").trim(),
+        fahrenheit: /[\s]+f$/i.test(trimmed),
+      };
+    }
+  }
+
+  if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
+    return null;
+  }
+
+  const city = typeof stored.city === "string" ? stored.city.trim() : "";
+  if (!city) return null;
+
+  return {
+    city,
+    fahrenheit:
+      stored.fahrenheit === true ||
+      stored.unit === "f" ||
+      stored.unit === "fahrenheit",
+  };
+}
+
+function restoredQuery() {
+  if (!lastSearch) return "";
+  return `${lastSearch.city}${lastSearch.fahrenheit ? " f" : ""}`;
+}
+
+function handleQuery(rev, query) {
+  currentQuery = query;
+  const trimmed = query.trim();
+
+  if (trimmed) restorePending = false;
+
+  if (!trimmed && lastSearchLoaded && restorePending) {
+    restorePending = false;
+    const queryToRestore = restoredQuery();
+    if (queryToRestore) {
+      send({ type: "command", command: "setQuery", text: queryToRestore });
+      return;
+    }
+  }
+
+  render(rev, query);
+}
+
+function requestLastSearch() {
+  storageCommand("get", {
+    key: LAST_SEARCH_STORAGE_KEY,
+    requestId: LAST_SEARCH_REQUEST_ID,
+  });
+}
 
 // Forecast graphs are written as SVG files into the OS temp dir and referenced
 // from the detail markdown via file:// URLs. Unique names per write dodge the
@@ -277,6 +358,10 @@ async function render(rev, query) {
     }
 
     const { place, forecast, graphUrl } = entry;
+    if (query === currentQuery) {
+      saveLastSearch(cleanQuery, isFahrenheit);
+    }
+
     const cur = forecast.current;
     const daily = forecast.daily;
     const hourly = forecast.hourly;
@@ -329,7 +414,7 @@ async function render(rev, query) {
 
     // Header & Divider lines
     tableRows.push(
-      `| Hour | Temp | Condition | | Day | Condition | High | Low | Rain |`,
+      `| Hour | Temp | Condition | \\*\\*\\*\\*\\*\\* | Day | Condition | High | Low | Rain |`,
     );
     tableRows.push(
       `| :--- | :--- | :--- | :---: | :--- | :--- | :--- | :--- | :--- |`,
@@ -350,7 +435,9 @@ async function render(rev, query) {
       }
 
       // Build left side (Hourly) data or blanks
-      const leftSide = h ? `| ${h.hour} | ${h.temp} | ${h.cond} |` : `| | | |`;
+      const leftSide = h
+        ? `| ${h.hour} | ${h.temp} | ${h.cond} | \\*\\*\\*\\*\\*\\*`
+        : `| | | | \\*\\*\\*\\*\\*\\*`;
 
       // Build right side (Daily) data or blanks
       const rightSide = d
@@ -410,9 +497,36 @@ process.stdin.on("data", (chunk) => {
     switch (msg.type) {
       case "close":
         process.exit(0);
-      case "init":
+      case "init": {
+        const initialQuery = msg.query ?? "";
+        currentQuery = initialQuery;
+        restorePending = !initialQuery.trim();
+        lastSearchLoaded = false;
+        lastSearch = null;
+        requestLastSearch();
+        handleQuery(msg.rev ?? 0, initialQuery);
+        break;
+      }
       case "query":
-        render(msg.rev || 0, msg.text ?? msg.query ?? "");
+        handleQuery(msg.rev ?? 0, msg.text ?? msg.query ?? "");
+        break;
+      case "storage":
+        if (msg.requestId === LAST_SEARCH_REQUEST_ID) {
+          lastSearch = parseLastSearch(msg.value);
+          lastSearchLoaded = true;
+
+          if (restorePending && !currentQuery.trim()) {
+            restorePending = false;
+            const queryToRestore = restoredQuery();
+            if (queryToRestore) {
+              send({
+                type: "command",
+                command: "setQuery",
+                text: queryToRestore,
+              });
+            }
+          }
+        }
         break;
     }
   }

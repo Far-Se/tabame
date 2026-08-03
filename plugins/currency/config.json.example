@@ -1,0 +1,6 @@
+{
+  "defaultFrom": "USD",
+  "defaultTo": "EUR",
+  "defaultAmount": 1,
+  "defaultPeriod": "1m"
+}

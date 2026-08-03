@@ -1,6 +1,6 @@
 {
   "id": "weather",
-  "name": "Weather",
+  "name": "Weather Stats",
   "description": "Today's weather and 7-day forecast",
   "keyword": "weather",
   "runtime": "node",

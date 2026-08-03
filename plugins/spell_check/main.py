@@ -550,7 +550,7 @@ def render_dict_add():
                         "id": "words",
                         "type": "text",
                         "label": "Word(s)",
-                        "placeholder": "e.g. tabame, kubectl, iasi",
+                        "placeholder": "e.g. tabame, kubectl, expermentla",
                         "required": True,
                         "description": "Separate multiple words with commas or spaces",
                     },

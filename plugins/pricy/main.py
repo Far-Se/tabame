@@ -62,7 +62,9 @@ STATE: dict[str, Any] = {
 
 def send(frame: dict[str, Any]) -> None:
     """Write exactly one protocol frame/command to stdout."""
-    sys.stdout.write(json.dumps(frame, ensure_ascii=False, separators=(",", ":")) + "\n")
+    sys.stdout.write(
+        json.dumps(frame, ensure_ascii=False, separators=(",", ":")) + "\n"
+    )
     sys.stdout.flush()
 
 
@@ -82,7 +84,9 @@ def _image_url() -> str | None:
         except OSError as exc:
             log("image server failed:", exc)
             return None
-    return f"http://127.0.0.1:{server.server_address[1]}/{IMAGE_NAME}?t={time.time_ns()}"
+    return (
+        f"http://127.0.0.1:{server.server_address[1]}/{IMAGE_NAME}?t={time.time_ns()}"
+    )
 
 
 def _stop_image_server() -> None:
@@ -203,7 +207,10 @@ def _fetch_payloads(product_url: str) -> tuple[dict[str, Any], list[str]]:
     payloads: dict[str, Any] = {}
     errors: dict[str, str] = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-        futures = {executor.submit(_request_json, name, product_url): name for name in ENDPOINTS}
+        futures = {
+            executor.submit(_request_json, name, product_url): name
+            for name in ENDPOINTS
+        }
         for future in concurrent.futures.as_completed(futures):
             name = futures[future]
             try:
@@ -214,7 +221,10 @@ def _fetch_payloads(product_url: str) -> tuple[dict[str, Any], list[str]]:
 
     if "lowest" in errors and "alternatives" in errors:
         raise PricyError("Pricy could not return the current price or alternatives.")
-    warnings = [f"{name.capitalize()} unavailable: {message}" for name, message in errors.items()]
+    warnings = [
+        f"{name.capitalize()} unavailable: {message}"
+        for name, message in errors.items()
+    ]
     return payloads, warnings
 
 
@@ -341,9 +351,7 @@ def _redirect_url(record: dict[str, Any]) -> str:
             return absolute
     url_id = record.get("urlId")
     if url_id:
-        return (
-            f"{PRICY_BASE}/r/{urllib.parse.quote(str(url_id), safe='')}?source=AlternativeProducts"
-        )
+        return f"{PRICY_BASE}/r/{urllib.parse.quote(str(url_id), safe='')}?source=AlternativeProducts"
     return ""
 
 
@@ -376,7 +384,9 @@ def _fetch_logos(records: list[dict[str, Any]]) -> dict[str, Any]:
     if not domains:
         return {}
     result: dict[str, Any] = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=min(8, len(domains))) as executor:
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=min(8, len(domains))
+    ) as executor:
         futures = {executor.submit(_fetch_logo, domain): domain for domain in domains}
         for future in concurrent.futures.as_completed(futures):
             domain = futures[future]
@@ -417,16 +427,24 @@ def _result_frame(rev: int, data: dict[str, Any]) -> None:
 
     metadata: list[dict[str, Any]] = [
         _metadata_row("Lowest price", lowest, _redirect_url(lowest)),
-        {"label": "Store", "text": lowest.get("store", "Unknown store"), "icon": "shop"},
+        {
+            "label": "Store",
+            "text": lowest.get("store", "Unknown store"),
+            "icon": "shop",
+        },
         {"separator": True},
     ]
     for index, alternative in enumerate(data["top_alternatives"], start=1):
         metadata.append(
-            _metadata_row(f"Alternative #{index}", alternative, _redirect_url(alternative))
+            _metadata_row(
+                f"Alternative #{index}", alternative, _redirect_url(alternative)
+            )
         )
     if data["warnings"]:
         metadata.append({"separator": True})
-        metadata.append({"label": "Note", "text": "; ".join(data["warnings"]), "icon": "info"})
+        metadata.append(
+            {"label": "Note", "text": "; ".join(data["warnings"]), "icon": "info"}
+        )
 
     send(
         {
@@ -443,7 +461,11 @@ def _result_frame(rev: int, data: dict[str, Any]) -> None:
                     "icon": "refresh",
                     "shortcut": "ctrl+r",
                 },
-                {"id": "open-lowest", "title": "Open lowest-price store", "icon": "open"},
+                {
+                    "id": "open-lowest",
+                    "title": "Open lowest-price store",
+                    "icon": "open",
+                },
                 {"id": "copy-url", "title": "Copy product URL", "icon": "copy"},
             ],
         }
@@ -461,7 +483,9 @@ def _process(rev: int, text: Any) -> None:
     if lowest is None and alternatives:
         lowest = dict(alternatives[0])
     if lowest is None:
-        raise PricyError("Pricy did not return a current lowest price for this product.")
+        raise PricyError(
+            "Pricy did not return a current lowest price for this product."
+        )
     if not alternatives:
         alternatives = [dict(lowest)]
     elif not any(item.get("domain") == lowest.get("domain") for item in alternatives):

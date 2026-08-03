@@ -20,6 +20,7 @@ import sys
 import threading
 import time
 import uuid
+from datetime import datetime, timezone
 
 try:
     import requests
@@ -29,6 +30,9 @@ except ImportError:
 API_BASE = "https://discord.com/api/v10"
 MESSAGE_LIMIT = 30
 EMOJI_ALIAS_RE = re.compile(r"(?<!<):([A-Za-z0-9_]{2,32}):(?![0-9]+>)")
+IMAGE_URL_RE = re.compile(
+    r"https?://\S+\.(?:png|jpe?g|gif|webp)(?:\?\S*)?", re.IGNORECASE
+)
 
 _out_lock = threading.Lock()
 _message_refresh_stop = threading.Event()
@@ -110,6 +114,22 @@ def api_post(path, payload, expect_json=True):
 
 
 # ---------------------------------------------------------------- render helpers
+
+
+def local_timestamp(timestamp):
+    """Convert a Discord UTC timestamp (e.g. '2026-07-25T12:01:23.456000+00:00')
+    to the local machine's time. Returns (date_str, time_str), each "" on
+    failure/empty input."""
+    if not timestamp:
+        return "", ""
+    try:
+        dt = datetime.fromisoformat(timestamp)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        local = dt.astimezone()
+    except ValueError:
+        return "", ""
+    return local.strftime("%Y-%m-%d"), local.strftime("%H:%M")
 
 
 def render_error(rev, title, err, can_go_back=True, back_screen=None):
@@ -229,17 +249,94 @@ def render_channels(rev, filter_text=""):
     )
 
 
+def embed_text_lines(embed):
+    """Pull the human-readable text out of a Discord embed. Bots commonly send
+    an empty `content` and put everything - title, description, fields - in
+    an embed instead, which is why plain content-only rendering was showing
+    '[no text content]' for them."""
+    lines = []
+    author_name = (embed.get("author") or {}).get("name")
+    if author_name:
+        lines.append(f"**{author_name}**")
+    title = embed.get("title")
+    if title:
+        lines.append(f"**{title}**")
+    description = embed.get("description")
+    if description:
+        lines.append(description)
+    for field in embed.get("fields") or []:
+        name = (field.get("name") or "").strip()
+        value = (field.get("value") or "").strip()
+        if name and value:
+            lines.append(f"**{name}**: {value}")
+        elif value:
+            lines.append(value)
+    footer_text = (embed.get("footer") or {}).get("text")
+    if footer_text:
+        lines.append(f"_{footer_text}_")
+    return lines
+
+
+def embed_image_urls(embed):
+    urls = []
+    image_url = (embed.get("image") or {}).get("url")
+    if image_url:
+        urls.append(image_url)
+    thumb_url = (embed.get("thumbnail") or {}).get("url")
+    if thumb_url and thumb_url != image_url:
+        urls.append(thumb_url)
+    return urls
+
+
+def message_display(message):
+    """Combine a message's raw content, embeds, attachments, and any bare
+    image link typed in the text into (text, image_urls, file_names)."""
+    content = message.get("content") or ""
+    text_parts = [content] if content else []
+    image_urls = []
+
+    for embed in message.get("embeds") or []:
+        text_parts.extend(embed_text_lines(embed))
+        image_urls.extend(embed_image_urls(embed))
+
+    file_names = []
+    for attachment in message.get("attachments") or []:
+        content_type = attachment.get("content_type") or ""
+        filename = attachment.get("filename", "attachment")
+        is_image = content_type.startswith("image/") or filename.lower().endswith(
+            (".png", ".jpg", ".jpeg", ".gif", ".webp")
+        )
+        if is_image and attachment.get("url"):
+            image_urls.append(attachment["url"])
+        else:
+            file_names.append(filename)
+
+    if content:
+        image_urls.extend(IMAGE_URL_RE.findall(content))
+
+    image_urls = list(dict.fromkeys(image_urls))  # dedupe, preserve order
+    text = "\n".join(part for part in text_parts if part).strip()
+    return text, image_urls, file_names
+
+
 def format_messages_markdown():
     if not state["messages"]:
         return f"# #{state['channel_name']}\n\n_No messages yet._"
     lines = [f"# #{state['channel_name']}", ""]
     for m in reversed(state["messages"]):  # API returns newest first
         author = m.get("author", {}).get("username", "unknown")
-        content = m.get("content") or "*[no text content]*"
-        ts = (m.get("timestamp") or "")[:16].replace("T", " ")
-        content = content.replace("\n", "\n> ")
+        text, image_urls, file_names = message_display(m)
+        date_part, time_part = local_timestamp(m.get("timestamp") or "")
+        ts = f"{date_part} {time_part}".strip()
         lines.append(f"**{author}** · _{ts}_")
-        lines.append(f"> {content}")
+        if text:
+            lines.append(f"> {text.replace(chr(10), chr(10) + '> ')}")
+        for url in image_urls:
+            lines.append(f"> ![]({url})")
+        if file_names:
+            lines.append(f"> attachment: {', '.join(file_names)}")
+        if not text and not image_urls and not file_names:
+            lines.append("> _[no text content]_")
         lines.append("")
     return "\n".join(lines)
 
@@ -256,39 +353,25 @@ def message_items():
     items = []
     for message in reversed(state["messages"]):  # API returns newest first
         author = message.get("author", {})
-        content = message.get("content") or "[no text content]"
-        attachments = message.get("attachments") or []
-        image_urls = []
-        file_names = []
-        for attachment in attachments:
-            content_type = attachment.get("content_type") or ""
-            filename = attachment.get("filename", "attachment")
-            is_image = content_type.startswith("image/") or filename.lower().endswith(
-                (".png", ".jpg", ".jpeg", ".gif", ".webp")
-            )
-            if is_image and attachment.get("url"):
-                image_urls.append(attachment["url"])
-            else:
-                file_names.append(filename)
+        text, image_urls, file_names = message_display(message)
+        subtitle_parts = []
+        if text:
+            subtitle_parts.append(text)
         if file_names:
-            label = ", ".join(file_names)
-            content = (
-                f"{content}\nattachment: {label}"
-                if message.get("content")
-                else f"attachment: {label}"
-            )
+            subtitle_parts.append(f"attachment: {', '.join(file_names)}")
+        if not subtitle_parts and not image_urls:
+            subtitle_parts.append("[no text content]")
         timestamp = message.get("timestamp") or ""
+        local_date, local_time = local_timestamp(timestamp)
         items.append(
             {
                 "id": f"message:{message['id']}",
                 "title": author.get("global_name") or author.get("username", "unknown"),
-                "subtitle": content,
+                "subtitle": "\n".join(subtitle_parts),
                 "icon": message_avatar(author),
                 "images": image_urls,
-                "section": timestamp[:10],
-                "accessories": [{"text": timestamp[11:16]}]
-                if len(timestamp) >= 16
-                else [],
+                "section": local_date,
+                "accessories": [{"text": local_time}] if local_time else [],
             }
         )
     return items
@@ -422,7 +505,9 @@ def load_messages_async(rev, channel_id, channel_name):
         except ApiError as e:
             if "Missing Access" in str(e):
                 forget_saved_channel(channel_id)
-            render_error(rev, f"Couldn't load #{channel_name}", e, back_screen="channels")
+            render_error(
+                rev, f"Couldn't load #{channel_name}", e, back_screen="channels"
+            )
 
     threading.Thread(target=work, daemon=True).start()
 
@@ -573,9 +658,15 @@ def matching_slash_commands(commands, name):
 
 
 def search_application_commands(path, queries):
-    """Collect command candidates from Discord's tokenized search endpoint."""
+    """Collect command candidates from Discord's tokenized search endpoint.
+
+    Returns (commands, errors). errors holds one entry per failed query so
+    callers can tell "we looked and found nothing" apart from "the lookup
+    itself failed" instead of treating both the same way.
+    """
     commands = []
     seen_ids = set()
+    errors = []
     for query in queries:
         try:
             result = api_get(
@@ -589,24 +680,38 @@ def search_application_commands(path, queries):
             )
         except ApiError as e:
             log("slash command search failed:", e)
+            errors.append(str(e))
             continue
         for command in command_candidates(result):
             command_id = command.get("id") if isinstance(command, dict) else None
             if command_id and command_id not in seen_ids:
                 seen_ids.add(command_id)
                 commands.append(command)
-    return commands
+    return commands, errors
 
 
 def find_slash_command(name, channel_id):
     """Find a command even when Discord splits its name into search tokens."""
     queries = list(dict.fromkeys((name, name[:2], "")))
     channel_path = f"/channels/{channel_id}/application-commands/search"
-    matches = matching_slash_commands(search_application_commands(channel_path, queries), name)
+    channel_commands, channel_errors = search_application_commands(
+        channel_path, queries
+    )
+    matches = matching_slash_commands(channel_commands, name)
+
+    guild_errors = []
     if not matches and state["guild_id"]:
         guild_path = f"/guilds/{state['guild_id']}/application-commands/search"
-        matches = matching_slash_commands(search_application_commands(guild_path, queries), name)
+        guild_commands, guild_errors = search_application_commands(guild_path, queries)
+        matches = matching_slash_commands(guild_commands, name)
+
     if not matches:
+        all_errors = channel_errors + guild_errors
+        attempted = len(queries) * (2 if state["guild_id"] else 1)
+        if all_errors and len(all_errors) == attempted:
+            # Every single search call failed - the lookup itself is broken
+            # (bad token, rate limit, etc), not "command doesn't exist".
+            raise ApiError(f"Couldn't look up /{name}: {all_errors[0]}")
         raise ApiError(f"No /{name} command is available in this channel.")
     if len(matches) > 1:
         names = ", ".join(f"/{command.get('name', '?')}" for command in matches[:5])
@@ -631,13 +736,18 @@ def form_field_for_option(option):
     elif option.get("choices"):
         field["type"] = "dropdown"
         field["options"] = [
-            {"value": str(choice["value"]), "label": choice.get("name", str(choice["value"]))}
+            {
+                "value": str(choice["value"]),
+                "label": choice.get("name", str(choice["value"])),
+            }
             for choice in option["choices"]
         ]
     else:
         field["type"] = "text"
         if option_type in (6, 7, 8, 9, 11):
-            field["description"] = (field.get("description", "") + " Enter its Discord ID.").strip()
+            field["description"] = (
+                field.get("description", "") + " Enter its Discord ID."
+            ).strip()
     return field
 
 
@@ -653,7 +763,10 @@ def render_slash_command_form(command):
             "form": {
                 "title": f"/{command['name']}",
                 "submitLabel": "Run command",
-                "fields": [form_field_for_option(option) for option in command.get("options") or []],
+                "fields": [
+                    form_field_for_option(option)
+                    for option in command.get("options") or []
+                ],
             },
         }
     )
@@ -662,7 +775,11 @@ def render_slash_command_form(command):
 def execute_slash_command_async(command, option_values, channel_id, channel_name):
     def work():
         try:
-            api_post("/interactions", slash_command_payload(command, option_values, channel_id), expect_json=False)
+            api_post(
+                "/interactions",
+                slash_command_payload(command, option_values, channel_id),
+                expect_json=False,
+            )
             state["messages"] = api_get(
                 f"/channels/{channel_id}/messages", params={"limit": MESSAGE_LIMIT}
             )
@@ -725,7 +842,9 @@ def send_message_async(text):
             )
             render_messages(0)
         except (ApiError, ValueError) as e:
-            render_error(0, f"Couldn't send to #{channel_name}", e, back_screen="messages")
+            render_error(
+                0, f"Couldn't send to #{channel_name}", e, back_screen="messages"
+            )
 
     threading.Thread(target=work, daemon=True).start()
 
@@ -861,6 +980,7 @@ def handle_action(msg):
         gid = item_id.split(":", 1)[1]
         guild = next((g for g in state["guilds"] if g["id"] == gid), None)
         load_channels_async(0, gid, guild.get("name", "server") if guild else "server")
+        send({"type": "command", "command": "setQuery", "text": ""})
         return
 
     if state["screen"] == "channels" and item_id.startswith("channel:"):
@@ -884,6 +1004,7 @@ def handle_action(msg):
             }
         )
         load_messages_async(0, cid, channel_name)
+        send({"type": "command", "command": "setQuery", "text": ""})
         return
 
 

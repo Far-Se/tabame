@@ -106,10 +106,10 @@ Each plugin lives in its own folder under:
 | `runtime`     | **yes**  | —             | Command resolved on the system `PATH`: `"python"`, `"node"`, or `"bun"`.                                                                         |
 | `version`     | **yes**  | —             | Current version, use "1.0.0" for start.                                                                                                          |
 | `entry`       | **yes**  | —             | Script filename, relative to the plugin folder, e.g. `"main.py"` / `"main.js"`.                                                                  |
-| `id`          | no       | folder name   | Stable identifier.                                                                                                                               |
-| `name`        | no       | folder name   | Human title shown in the launcher's discovery hint.                                                                                              |
-| `description` | no       | `""`          | One-line description.                                                                                                                            |
-| `icon`        | no       | `"extension"` | Icon for the discovery hint (see §11).                                                                                                           |
+| `id`          | **yes**  | folder name   | Stable identifier.                                                                                                                               |
+| `name`        | **yes**  | folder name   | Human title shown in the launcher's discovery hint.                                                                                              |
+| `description` | **yes**  | `""`          | One-line description.                                                                                                                            |
+| `icon`        | **yes**  | `"extension"` | Icon for the discovery hint (see §11).                                                                                                           |
 | `args`        | no       | `[]`          | Extra command-line arguments inserted **before** `entry`.                                                                                        |
 | `pip`         | no       | `[]`          | **Python only.** Packages to auto-install into the plugin's own `.pluginlibs` folder on first run (see §4.1). e.g. `["requests", "pillow>=10"]`. |
 | `env`         | no       | `{}`          | Extra environment variables handed to the process, e.g. `{"API_BASE": "https://…"}`. Merged on top of Tabame's defaults.                         |
@@ -181,6 +181,7 @@ array in `plugin.json`, and/or drop a `requirements.txt` next to your script:
 {
   "keyword": "img",
   "runtime": "python",
+  "version": "1.0.0",
   "entry": "main.py",
   "pip": ["requests", "pillow>=10"]
 }

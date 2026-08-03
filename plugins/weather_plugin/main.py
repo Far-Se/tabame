@@ -258,7 +258,7 @@ def weather_frame(rev, city_label, period, img_filename, metadata):
             "view": "detail",
             "inputMode": "submit",
             "placeholder": "city name, then optionally 'weekly'",
-            "wide": True,
+            "wide": False,
             "detail": {
                 "markdown": md,
                 "metadata": metadata,

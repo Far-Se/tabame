@@ -4,11 +4,12 @@ Tabame launcher plugin: WinGet dashboard.
 Search, install, update and uninstall Windows apps through winget,
 with a confirm dialog before every change.
 """
-import sys
+
 import json
 import re
 import shutil
 import subprocess
+import sys
 import threading
 
 # ---------------------------------------------------------------------------
@@ -81,7 +82,7 @@ def parse_winget_table(output):
         return []
 
     rows = []
-    for line in lines[header_idx + 1:]:
+    for line in lines[header_idx + 1 :]:
         if not line.strip():
             break
         if set(line.strip()) <= {"-"}:
@@ -108,9 +109,7 @@ def fetch_updates():
 
 
 def search_packages(query):
-    ok, out = run_winget(
-        ["search", query, "--accept-source-agreements"], timeout=45
-    )
+    ok, out = run_winget(["search", query, "--accept-source-agreements"], timeout=45)
     if not ok:
         return None
     return parse_winget_table(out)
@@ -121,9 +120,9 @@ def search_packages(query):
 # ---------------------------------------------------------------------------
 
 state = {
-    "screen": "root",       # root | installed | updates
-    "installed": None,      # cached list or None
-    "updates": None,        # cached list or None
+    "screen": "root",  # root | installed | updates
+    "installed": None,  # cached list or None
+    "updates": None,  # cached list or None
     "installed_loading": False,
     "updates_loading": False,
     "latest_rev": 0,
@@ -141,6 +140,7 @@ def invalidate_cache():
 # ---------------------------------------------------------------------------
 # rendering
 # ---------------------------------------------------------------------------
+
 
 def confirm(title, message, label):
     return {"title": title, "message": message, "confirmLabel": label}
@@ -168,22 +168,32 @@ def render_dashboard(rev):
         {
             "id": "stat-installed",
             "title": "Installed apps",
-            "subtitle": "via winget" if installed_count is None else f"{installed_count} package(s)",
+            "subtitle": "via winget"
+            if installed_count is None
+            else f"{installed_count} package(s)",
             "icon": "app",
-            "accessories": [{"text": "…" if installed_count is None else str(installed_count)}],
-            "actions": [{"id": "default", "title": "View installed apps", "icon": "list"}],
+            "accessories": [
+                {"text": "…" if installed_count is None else str(installed_count)}
+            ],
+            "actions": [
+                {"id": "default", "title": "View installed apps", "icon": "list"}
+            ],
         },
         {
             "id": "stat-updates",
             "title": "Updates available",
-            "subtitle": "checking…" if updates_count is None else (
+            "subtitle": "checking…"
+            if updates_count is None
+            else (
                 "Everything is up to date" if updates_count == 0 else "Ready to install"
             ),
             "icon": "refresh",
-            "accessories": [{
-                "text": "…" if updates_count is None else str(updates_count),
-                "color": None if updates_count in (None, 0) else "#F59E0B",
-            }],
+            "accessories": [
+                {
+                    "text": "…" if updates_count is None else str(updates_count),
+                    "color": None if updates_count in (None, 0) else "#F59E0B",
+                }
+            ],
             "actions": [{"id": "default", "title": "View updates", "icon": "list"}],
         },
     ]
@@ -191,7 +201,7 @@ def render_dashboard(rev):
     panel_stats = {
         "id": "stats",
         "title": "Overview",
-        "height": 160,
+        "height": 130,
         "view": "list",
         "loading": loading_installed or loading_updates,
         "loadingText": "Checking winget…",
@@ -201,22 +211,26 @@ def render_dashboard(rev):
     update_items = []
     if updates:
         for pkg in updates[:6]:
-            update_items.append({
-                "id": f"upd:{pkg['Id']}",
-                "title": pkg["Name"],
-                "subtitle": f"{pkg['Id']} • {pkg.get('Version', '?')} → {pkg.get('Available', '?')}",
-                "icon": "download",
-                "actions": [{
-                    "id": "default",
-                    "title": "Update",
+            update_items.append(
+                {
+                    "id": f"upd:{pkg['Id']}",
+                    "title": pkg["Name"],
+                    "subtitle": f"{pkg['Id']} • {pkg.get('Version', '?')} → {pkg.get('Available', '?')}",
                     "icon": "download",
-                    "confirm": confirm(
-                        f"Update {pkg['Name']}?",
-                        f"Runs winget upgrade for {pkg['Id']}.",
-                        "Update",
-                    ),
-                }],
-            })
+                    "actions": [
+                        {
+                            "id": "default",
+                            "title": "Update",
+                            "icon": "download",
+                            "confirm": confirm(
+                                f"Update {pkg['Name']}?",
+                                f"Runs winget upgrade for {pkg['Id']}.",
+                                "Update",
+                            ),
+                        }
+                    ],
+                }
+            )
 
     panel_updates = {
         "id": "updates-panel",
@@ -228,33 +242,59 @@ def render_dashboard(rev):
         "emptyText": "Everything is up to date" if updates is not None else "Checking…",
         "items": update_items,
         "actions": (
-            [{
-                "id": "update-all",
-                "title": "Update all",
-                "icon": "download",
-                "confirm": confirm(
-                    "Update all apps?",
-                    f"Runs winget upgrade --all for {len(updates)} package(s).",
-                    "Update all",
-                ),
-            }]
+            [
+                {
+                    "id": "update-all",
+                    "title": "Update all",
+                    "icon": "download",
+                    "confirm": confirm(
+                        "Update all apps?",
+                        f"Runs winget upgrade --all for {len(updates)} package(s).",
+                        "Update all",
+                    ),
+                }
+            ]
             if updates
             else []
         ),
     }
 
     quick_tiles = [
-        {"id": "qa:search", "title": "Search apps", "subtitle": "Type a name above", "icon": "search", "tileColor": "#3B82F6"},
-        {"id": "qa:installed", "title": "Installed", "subtitle": "Browse & uninstall", "icon": "list", "tileColor": "#8B5CF6"},
-        {"id": "qa:updates", "title": "Updates", "subtitle": "Review & apply", "icon": "refresh", "tileColor": "#F59E0B"},
-        {"id": "qa:refresh", "title": "Refresh", "subtitle": "Re-scan packages", "icon": "sync", "tileColor": "#10B981"},
+        {
+            "id": "qa:search",
+            "title": "Search apps",
+            "subtitle": "Type a name above",
+            "icon": "search",
+            "tileColor": "#1E427B",
+        },
+        {
+            "id": "qa:installed",
+            "title": "Installed",
+            "subtitle": "Browse & uninstall",
+            "icon": "list",
+            "tileColor": "#1E427B",
+        },
+        {
+            "id": "qa:updates",
+            "title": "Updates",
+            "subtitle": "Review & apply",
+            "icon": "refresh",
+            "tileColor": "#1E427B",
+        },
+        {
+            "id": "qa:refresh",
+            "title": "Refresh",
+            "subtitle": "Re-scan packages",
+            "icon": "sync",
+            "tileColor": "#1E427B",
+        },
     ]
     panel_quick = {
         "id": "quick",
         "title": "Quick actions",
-        "height": 170,
+        "height": 150,
         "view": "grid",
-        "grid": {"columns": 4, "aspectRatio": 1.0},
+        "grid": {"columns": 6, "aspectRatio": 1.0},
         "items": quick_tiles,
     }
 
@@ -263,7 +303,10 @@ def render_dashboard(rev):
         "rev": rev,
         "view": "dashboard",
         "placeholder": "Type an app name to search winget…",
-        "dashboard": {"layout": "stack", "panels": [panel_stats, panel_updates, panel_quick]},
+        "dashboard": {
+            "layout": "stack",
+            "panels": [panel_stats, panel_updates, panel_quick],
+        },
     }
     if not WINGET:
         frame = {
@@ -272,22 +315,24 @@ def render_dashboard(rev):
             "view": "detail",
             "detail": {
                 "markdown": "# winget not found\n\nThe `winget` command wasn't found on PATH. "
-                            "Install App Installer from the Microsoft Store, then reopen this plugin."
+                "Install App Installer from the Microsoft Store, then reopen this plugin."
             },
         }
     send(frame)
 
 
 def render_search(rev, query):
-    send({
-        "type": "render",
-        "rev": rev,
-        "view": "list",
-        "loading": True,
-        "loadingText": f'Searching winget for "{query}"…',
-        "placeholder": "Type an app name to search winget…",
-        "items": [],
-    })
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "list",
+            "loading": True,
+            "loadingText": f'Searching winget for "{query}"…',
+            "placeholder": "Type an app name to search winget…",
+            "items": [],
+        }
+    )
 
     def work():
         results = search_packages(query)
@@ -295,39 +340,49 @@ def render_search(rev, query):
             if rev < state["latest_rev"]:
                 return  # a newer query has already superseded this one
         if results is None:
-            send({
-                "type": "render",
-                "rev": rev,
-                "view": "detail",
-                "detail": {"markdown": f"# Search failed\n\nCould not search winget for `{query}`."},
-            })
+            send(
+                {
+                    "type": "render",
+                    "rev": rev,
+                    "view": "detail",
+                    "detail": {
+                        "markdown": f"# Search failed\n\nCould not search winget for `{query}`."
+                    },
+                }
+            )
             return
         items = []
         for pkg in results[:40]:
-            items.append({
-                "id": f"pkg:{pkg['Id']}",
-                "title": pkg["Name"],
-                "subtitle": f"{pkg['Id']} • {pkg.get('Version', '')} • {pkg.get('Source', '')}",
-                "icon": "download",
-                "actions": [{
-                    "id": "default",
-                    "title": "Install",
+            items.append(
+                {
+                    "id": f"pkg:{pkg['Id']}",
+                    "title": pkg["Name"],
+                    "subtitle": f"{pkg['Id']} • {pkg.get('Version', '')} • {pkg.get('Source', '')}",
                     "icon": "download",
-                    "confirm": confirm(
-                        f"Install {pkg['Name']}?",
-                        f"Runs winget install for {pkg['Id']}.",
-                        "Install",
-                    ),
-                }],
-            })
-        send({
-            "type": "render",
-            "rev": rev,
-            "view": "list",
-            "placeholder": "Type an app name to search winget…",
-            "emptyText": f'No results for "{query}"',
-            "items": items,
-        })
+                    "actions": [
+                        {
+                            "id": "default",
+                            "title": "Install",
+                            "icon": "download",
+                            "confirm": confirm(
+                                f"Install {pkg['Name']}?",
+                                f"Runs winget install for {pkg['Id']}.",
+                                "Install",
+                            ),
+                        }
+                    ],
+                }
+            )
+        send(
+            {
+                "type": "render",
+                "rev": rev,
+                "view": "list",
+                "placeholder": "Type an app name to search winget…",
+                "emptyText": f'No results for "{query}"',
+                "items": items,
+            }
+        )
 
     threading.Thread(target=work, daemon=True).start()
 
@@ -338,16 +393,18 @@ def render_installed(rev, filter_text=""):
         loading = state["installed_loading"]
 
     if installed is None:
-        send({
-            "type": "render",
-            "rev": rev,
-            "view": "list",
-            "canGoBack": True,
-            "placeholder": "Filter installed apps…",
-            "loading": True,
-            "loadingText": "Reading installed apps…",
-            "items": [],
-        })
+        send(
+            {
+                "type": "render",
+                "rev": rev,
+                "view": "list",
+                "canGoBack": True,
+                "placeholder": "Filter installed apps…",
+                "loading": True,
+                "loadingText": "Reading installed apps…",
+                "items": [],
+            }
+        )
         if not loading:
             start_fetch_installed()
         return
@@ -361,47 +418,58 @@ def render_installed(rev, filter_text=""):
         if ft and ft not in pkg["Name"].lower() and ft not in pkg["Id"].lower():
             continue
         has_update = pkg["Id"] in update_ids
-        actions = [{
-            "id": "uninstall" if has_update else "default",
-            "title": "Uninstall",
-            "icon": "trash",
-            "destructive": True,
-            "confirm": confirm(
-                f"Uninstall {pkg['Name']}?",
-                f"Runs winget uninstall for {pkg['Id']}. This cannot be undone.",
-                "Uninstall",
-            ),
-        }]
-        if has_update:
-            actions.insert(0, {
-                "id": "default",
-                "title": "Update",
-                "icon": "download",
+        actions = [
+            {
+                "id": "uninstall" if has_update else "default",
+                "title": "Uninstall",
+                "icon": "trash",
+                "destructive": True,
                 "confirm": confirm(
-                    f"Update {pkg['Name']}?",
-                    f"Runs winget upgrade for {pkg['Id']}.",
-                    "Update",
+                    f"Uninstall {pkg['Name']}?",
+                    f"Runs winget uninstall for {pkg['Id']}. This cannot be undone.",
+                    "Uninstall",
                 ),
-            })
-        items.append({
-            "id": f"inst:{pkg['Id']}",
-            "title": pkg["Name"],
-            "subtitle": f"{pkg['Id']} • {pkg.get('Version', '')}",
-            "icon": "app",
-            "accessories": [{"text": "Update available", "color": "#F59E0B"}] if has_update else [],
-            "actions": actions,
-        })
+            }
+        ]
+        if has_update:
+            actions.insert(
+                0,
+                {
+                    "id": "default",
+                    "title": "Update",
+                    "icon": "download",
+                    "confirm": confirm(
+                        f"Update {pkg['Name']}?",
+                        f"Runs winget upgrade for {pkg['Id']}.",
+                        "Update",
+                    ),
+                },
+            )
+        items.append(
+            {
+                "id": f"inst:{pkg['Id']}",
+                "title": pkg["Name"],
+                "subtitle": f"{pkg['Id']} • {pkg.get('Version', '')}",
+                "icon": "app",
+                "accessories": [{"text": "Update available", "color": "#F59E0B"}]
+                if has_update
+                else [],
+                "actions": actions,
+            }
+        )
 
-    send({
-        "type": "render",
-        "rev": rev,
-        "view": "list",
-        "canGoBack": True,
-        "placeholder": "Filter installed apps…",
-        "emptyText": "No matching apps" if ft else "No apps found",
-        "items": items,
-        "actions": [{"id": "refresh", "title": "Refresh list", "icon": "sync"}],
-    })
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "list",
+            "canGoBack": True,
+            "placeholder": "Filter installed apps…",
+            "emptyText": "No matching apps" if ft else "No apps found",
+            "items": items,
+            "actions": [{"id": "refresh", "title": "Refresh list", "icon": "sync"}],
+        }
+    )
 
 
 def render_updates(rev, filter_text=""):
@@ -410,16 +478,18 @@ def render_updates(rev, filter_text=""):
         loading = state["updates_loading"]
 
     if updates is None:
-        send({
-            "type": "render",
-            "rev": rev,
-            "view": "list",
-            "canGoBack": True,
-            "placeholder": "Filter updates…",
-            "loading": True,
-            "loadingText": "Checking for updates…",
-            "items": [],
-        })
+        send(
+            {
+                "type": "render",
+                "rev": rev,
+                "view": "list",
+                "canGoBack": True,
+                "placeholder": "Filter updates…",
+                "loading": True,
+                "loadingText": "Checking for updates…",
+                "items": [],
+            }
+        )
         if not loading:
             start_fetch_updates()
         return
@@ -429,48 +499,62 @@ def render_updates(rev, filter_text=""):
     for pkg in updates:
         if ft and ft not in pkg["Name"].lower() and ft not in pkg["Id"].lower():
             continue
-        items.append({
-            "id": f"upd:{pkg['Id']}",
-            "title": pkg["Name"],
-            "subtitle": f"{pkg['Id']} • {pkg.get('Version', '?')} → {pkg.get('Available', '?')}",
-            "icon": "download",
-            "actions": [{
-                "id": "default",
-                "title": "Update",
+        items.append(
+            {
+                "id": f"upd:{pkg['Id']}",
+                "title": pkg["Name"],
+                "subtitle": f"{pkg['Id']} • {pkg.get('Version', '?')} → {pkg.get('Available', '?')}",
                 "icon": "download",
-                "confirm": confirm(
-                    f"Update {pkg['Name']}?",
-                    f"Runs winget upgrade for {pkg['Id']}.",
-                    "Update",
-                ),
-            }],
-        })
+                "actions": [
+                    {
+                        "id": "default",
+                        "title": "Update",
+                        "icon": "download",
+                        "confirm": confirm(
+                            f"Update {pkg['Name']}?",
+                            f"Runs winget upgrade for {pkg['Id']}.",
+                            "Update",
+                        ),
+                    }
+                ],
+            }
+        )
 
     frame_actions = []
     if updates:
-        frame_actions.append({
-            "id": "update-all",
-            "title": "Update all",
-            "icon": "download",
-            "confirm": confirm(
-                "Update all apps?",
-                f"Runs winget upgrade --all for {len(updates)} package(s).",
-                "Update all",
-            ),
-        })
+        frame_actions.append(
+            {
+                "id": "update-all",
+                "title": "Update all",
+                "icon": "download",
+                "confirm": confirm(
+                    "Update all apps?",
+                    f"Runs winget upgrade --all for {len(updates)} package(s).",
+                    "Update all",
+                ),
+            }
+        )
     frame_actions.append({"id": "refresh", "title": "Refresh list", "icon": "sync"})
 
-    send({
-        "type": "render",
-        "rev": rev,
-        "view": "list",
-        "canGoBack": True,
-        "placeholder": "Filter updates…",
-        "empty": {"icon": "check", "title": "Up to date", "hint": "No pending updates"} if not ft else None,
-        "emptyText": "No matching updates" if ft else "Everything is up to date",
-        "items": items,
-        "actions": frame_actions,
-    })
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "list",
+            "canGoBack": True,
+            "placeholder": "Filter updates…",
+            "empty": {
+                "icon": "check",
+                "title": "Up to date",
+                "hint": "No pending updates",
+            }
+            if not ft
+            else None,
+            "emptyText": "No matching updates" if ft else "Everything is up to date",
+            "items": items,
+            "actions": frame_actions,
+        }
+    )
 
 
 def render_current(rev, text):
@@ -486,6 +570,7 @@ def render_current(rev, text):
 # ---------------------------------------------------------------------------
 # background fetchers
 # ---------------------------------------------------------------------------
+
 
 def start_fetch_installed():
     with state_lock:
@@ -537,21 +622,61 @@ def refresh_all():
 # mutating operations (install / uninstall / update)
 # ---------------------------------------------------------------------------
 
-def run_change(kind, args, name):
-    verb = {"install": "Installing", "uninstall": "Uninstalling", "update": "Updating"}[kind]
-    past = {"install": "Installed", "uninstall": "Uninstalled", "update": "Updated"}[kind]
 
-    send({"type": "command", "command": "toast", "text": f"{verb} {name}…", "style": "progress"})
+def run_change(kind, args, name):
+    verb = {"install": "Installing", "uninstall": "Uninstalling", "update": "Updating"}[
+        kind
+    ]
+    past = {"install": "Installed", "uninstall": "Uninstalled", "update": "Updated"}[
+        kind
+    ]
+
+    send(
+        {
+            "type": "command",
+            "command": "toast",
+            "text": f"{verb} {name}…",
+            "style": "progress",
+        }
+    )
 
     def work():
         ok, out = run_winget(args, timeout=300)
         if ok:
-            send({"type": "command", "command": "toast", "text": f"{past} {name}", "style": "success"})
-            send({"type": "command", "command": "notify", "title": "WinGet", "text": f"{past} {name}"})
+            send(
+                {
+                    "type": "command",
+                    "command": "toast",
+                    "text": f"{past} {name}",
+                    "style": "success",
+                }
+            )
+            send(
+                {
+                    "type": "command",
+                    "command": "notify",
+                    "title": "WinGet",
+                    "text": f"{past} {name}",
+                }
+            )
         else:
             snippet = out.strip().splitlines()[-1] if out.strip() else "Unknown error"
-            send({"type": "command", "command": "toast", "text": f"Failed: {name}", "style": "error"})
-            send({"type": "command", "command": "notify", "title": "WinGet", "text": f"{name} failed: {snippet}"})
+            send(
+                {
+                    "type": "command",
+                    "command": "toast",
+                    "text": f"Failed: {name}",
+                    "style": "error",
+                }
+            )
+            send(
+                {
+                    "type": "command",
+                    "command": "notify",
+                    "title": "WinGet",
+                    "text": f"{name} failed: {snippet}",
+                }
+            )
         invalidate_cache()
         with state_lock:
             screen = state["screen"]
@@ -570,34 +695,100 @@ def run_change(kind, args, name):
 
 
 def do_install(pkg_id, name):
-    run_change("install", ["install", "--id", pkg_id, "-e", "--silent",
-                            "--accept-package-agreements", "--accept-source-agreements"], name)
+    run_change(
+        "install",
+        [
+            "install",
+            "--id",
+            pkg_id,
+            "-e",
+            "--silent",
+            "--accept-package-agreements",
+            "--accept-source-agreements",
+        ],
+        name,
+    )
 
 
 def do_uninstall(pkg_id, name):
-    run_change("uninstall", ["uninstall", "--id", pkg_id, "-e", "--silent",
-                              "--accept-source-agreements"], name)
+    run_change(
+        "uninstall",
+        ["uninstall", "--id", pkg_id, "-e", "--silent", "--accept-source-agreements"],
+        name,
+    )
 
 
 def do_update(pkg_id, name):
-    run_change("update", ["upgrade", "--id", pkg_id, "-e", "--silent",
-                           "--accept-package-agreements", "--accept-source-agreements"], name)
+    run_change(
+        "update",
+        [
+            "upgrade",
+            "--id",
+            pkg_id,
+            "-e",
+            "--silent",
+            "--accept-package-agreements",
+            "--accept-source-agreements",
+        ],
+        name,
+    )
 
 
 def do_update_all():
-    send({"type": "command", "command": "toast", "text": "Updating all apps…", "style": "progress"})
+    send(
+        {
+            "type": "command",
+            "command": "toast",
+            "text": "Updating all apps…",
+            "style": "progress",
+        }
+    )
 
     def work():
         ok, out = run_winget(
-            ["upgrade", "--all", "--silent", "--accept-package-agreements", "--accept-source-agreements"],
+            [
+                "upgrade",
+                "--all",
+                "--silent",
+                "--accept-package-agreements",
+                "--accept-source-agreements",
+            ],
             timeout=600,
         )
         if ok:
-            send({"type": "command", "command": "toast", "text": "All apps updated", "style": "success"})
-            send({"type": "command", "command": "notify", "title": "WinGet", "text": "All apps updated"})
+            send(
+                {
+                    "type": "command",
+                    "command": "toast",
+                    "text": "All apps updated",
+                    "style": "success",
+                }
+            )
+            send(
+                {
+                    "type": "command",
+                    "command": "notify",
+                    "title": "WinGet",
+                    "text": "All apps updated",
+                }
+            )
         else:
-            send({"type": "command", "command": "toast", "text": "Some updates failed", "style": "error"})
-            send({"type": "command", "command": "notify", "title": "WinGet", "text": "Some updates failed"})
+            send(
+                {
+                    "type": "command",
+                    "command": "toast",
+                    "text": "Some updates failed",
+                    "style": "error",
+                }
+            )
+            send(
+                {
+                    "type": "command",
+                    "command": "notify",
+                    "title": "WinGet",
+                    "text": "Some updates failed",
+                }
+            )
         invalidate_cache()
         with state_lock:
             screen = state["screen"]
@@ -617,6 +808,7 @@ def do_update_all():
 # name lookups for confirm() dialogs / action handling
 # ---------------------------------------------------------------------------
 
+
 def find_pkg(pkg_id, pools):
     for pool in pools:
         if not pool:
@@ -630,6 +822,7 @@ def find_pkg(pkg_id, pools):
 # ---------------------------------------------------------------------------
 # action handling
 # ---------------------------------------------------------------------------
+
 
 def handle_action(item_id, action):
     screen = state["screen"]
@@ -648,7 +841,14 @@ def handle_action(item_id, action):
             return
         if item_id == "qa:search":
             send({"type": "command", "command": "setQuery", "text": ""})
-            send({"type": "command", "command": "toast", "text": "Start typing an app name to search", "style": "info"})
+            send(
+                {
+                    "type": "command",
+                    "command": "toast",
+                    "text": "Start typing an app name to search",
+                    "style": "info",
+                }
+            )
             return
         if item_id == "qa:refresh":
             refresh_all()
@@ -715,6 +915,7 @@ def handle_back():
 # ---------------------------------------------------------------------------
 # main loop
 # ---------------------------------------------------------------------------
+
 
 def main():
     for line in sys.stdin:

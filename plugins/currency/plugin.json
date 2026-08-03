@@ -1,0 +1,10 @@
+{
+  "name": "Currency",
+  "keyword": "curr",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "icon": "currency",
+  "description": "Convert currencies and chart exchange rates (Frankfurter/ECB, no API key)",
+  "pip": ["pillow"]
+}

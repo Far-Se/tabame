@@ -1,0 +1,10 @@
+{
+  "name": "JSON Compress/Decompress",
+  "keyword": "jsonconv",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "icon": "compress",
+  "description": "Minify or pretty‑print JSON from file or clipboard, and save.",
+  "dev": false
+}

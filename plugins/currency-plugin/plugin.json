@@ -1,0 +1,11 @@
+{
+  "name": "Currency Converter",
+  "keyword": "fx",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "icon": "currency",
+  "description": "Convert currencies and view a live rate chart card",
+  "pip": ["pillow"],
+  "dev": true
+}

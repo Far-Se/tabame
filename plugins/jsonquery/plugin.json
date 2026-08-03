@@ -1,0 +1,9 @@
+{
+  "name": "JSON Query",
+  "keyword": "json",
+  "runtime": "python",
+  "entry": "main.py",
+  "icon": "code",
+  "version": "1.0.0",
+  "description": "Load a JSON file/clipboard, filter & project keys, export results"
+}

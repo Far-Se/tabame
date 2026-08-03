@@ -816,6 +816,113 @@
         "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/qbittorrent/config.example.json",
         "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/qbittorrent/README.md"
       }
+    },
+    {
+      "id": "currency",
+      "name": "Currency",
+      "keyword": "curr",
+      "description": "Convert currencies and chart exchange rates (Frankfurter/ECB, no API key)",
+      "icon": "currency",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/currency",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/currency/plugin.json",
+        "currency_render.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/currency/currency_render.py",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/currency/main.py"
+      }
+    },
+    {
+      "id": "currency-plugin",
+      "name": "Currency Converter",
+      "keyword": "fx",
+      "description": "Convert currencies and view a live rate chart card",
+      "icon": "currency",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/currency-plugin",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/currency-plugin/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/currency-plugin/main.py"
+      }
+    },
+    {
+      "id": "jsonquery",
+      "name": "JSON Query",
+      "keyword": "json",
+      "description": "Load a JSON file/clipboard, filter & project keys, export results",
+      "icon": "code",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/jsonquery",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/jsonquery/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/jsonquery/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/jsonquery/README.md"
+      }
+    },
+    {
+      "id": "compare-folder",
+      "name": "Compare Folder Files",
+      "keyword": "comparefolder",
+      "description": "Compare files between two folders (1 level deep) using MD5 to check if they are in sync.",
+      "icon": "sync",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/compare-folder",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/compare-folder/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/compare-folder/main.py"
+      }
+    },
+    {
+      "id": "fancy-text",
+      "name": "Fancy Fonts",
+      "keyword": "fancy",
+      "description": "Choose a text category, transform your query, then copy the result",
+      "icon": "palette",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/fancy-text",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/fancy-text/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/fancy-text/main.py"
+      }
+    },
+    {
+      "id": "json-converter",
+      "name": "JSON Compress/Decompress",
+      "keyword": "jsonconv",
+      "description": "Minify or pretty‑print JSON from file or clipboard, and save.",
+      "icon": "compress",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/json-converter",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/json-converter/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/json-converter/main.py"
+      }
+    },
+    {
+      "id": "pc-specs",
+      "name": "PC Specs",
+      "keyword": "specs",
+      "description": "Live system overview: CPU, GPU, RAM, storage, network, temps, fans, PSU",
+      "icon": "server",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/pc-specs",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/pc-specs/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/pc-specs/main.py"
+      }
     }
   ]
 }

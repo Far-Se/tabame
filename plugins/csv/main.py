@@ -1,6 +1,7 @@
 import csv
 import io
 import json
+import re
 import sys
 from collections import Counter
 
@@ -76,11 +77,128 @@ def form_screen(error=None):
     }
 
 
+_TOKEN_RE = re.compile(
+    r'^(?:"(?P<qcol>[^"]+)"|(?P<col>[^":\s]+)):'
+    r'(?:"(?P<qval>[^"]*)"|(?P<op><=|>=|!=|=|<|>)?(?P<val>.+))$'
+)
+
+
+def _tokenize(query):
+    """Split a query into space-separated tokens, respecting "quoted phrases"."""
+    tokens = []
+    cur = []
+    in_quotes = False
+    for ch in query:
+        if ch == '"':
+            in_quotes = not in_quotes
+            cur.append(ch)
+        elif ch.isspace() and not in_quotes:
+            if cur:
+                tokens.append("".join(cur))
+                cur = []
+        else:
+            cur.append(ch)
+    if cur:
+        tokens.append("".join(cur))
+    return tokens
+
+
+def _find_header(name):
+    name_l = name.lower()
+    for h in headers:
+        if h.lower() == name_l:
+            return h
+    return None
+
+
+def _to_float(s):
+    try:
+        return float(str(s).replace(",", "").strip())
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_conditions(query):
+    """Turn a filter string into a list of conditions.
+
+    Supported token shapes:
+      word                     -> free text, must appear in some column
+      "col":"text"             -> substring match (case-insensitive) in col
+      col:text                 -> same, without quotes
+      "col":>100  col:>=100    -> numeric compare (< > <= >= = !=) on col
+    Tokens that don't reference a real column fall back to free text.
+    """
+    conditions = []
+    for tok in _tokenize(query):
+        m = _TOKEN_RE.match(tok)
+        col_name = None
+        if m:
+            col_name = m.group("qcol") or m.group("col")
+        header = _find_header(col_name) if col_name else None
+        if not header:
+            # Not a recognized "column:value" filter -> plain free-text term.
+            conditions.append(("text", tok.strip('"')))
+            continue
+        op = m.group("op")
+        if op:
+            num = _to_float(m.group("val"))
+            if num is None:
+                # Can't parse as a number -> condition that matches nothing.
+                conditions.append(("nomatch",))
+            else:
+                conditions.append(("col_num", header, op, num))
+        else:
+            val = m.group("qval") if m.group("qval") is not None else m.group("val")
+            conditions.append(("col_text", header, val.lower()))
+    return conditions
+
+
+def _row_matches(row, conditions):
+    for cond in conditions:
+        kind = cond[0]
+        if kind == "text":
+            term = cond[1].lower()
+            if not term:
+                continue
+            if not any(term in str(v).lower() for v in row.values()):
+                return False
+        elif kind == "col_text":
+            _, col, term = cond
+            if term not in str(row.get(col, "")).lower():
+                return False
+        elif kind == "col_num":
+            _, col, op, num = cond
+            val = _to_float(row.get(col, ""))
+            if val is None:
+                return False
+            if op in (None, "="):
+                ok = val == num
+            elif op == "!=":
+                ok = val != num
+            elif op == "<":
+                ok = val < num
+            elif op == ">":
+                ok = val > num
+            elif op == "<=":
+                ok = val <= num
+            elif op == ">=":
+                ok = val >= num
+            else:
+                ok = True
+            if not ok:
+                return False
+        elif kind == "nomatch":
+            return False
+    return True
+
+
 def filtered():
-    if not cur_filter:
+    if not cur_filter.strip():
         return rows
-    q = cur_filter.lower()
-    return [r for r in rows if any(q in str(v).lower() for v in r.values())]
+    conditions = _parse_conditions(cur_filter)
+    if not conditions:
+        return rows
+    return [r for r in rows if _row_matches(r, conditions)]
 
 
 def list_screen(query, rev):
@@ -113,7 +231,7 @@ def list_screen(query, rev):
         "type": "render",
         "rev": rev,
         "view": "list",
-        "placeholder": "Filter rows…",
+        "placeholder": 'Filter… e.g. "money":>1000 "User Name":"Trevor"',
         "preview": {"enabled": True},
         "items": items,
         "canGoBack": True,

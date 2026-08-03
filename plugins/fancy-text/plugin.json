@@ -1,0 +1,11 @@
+{
+  "id": "fancy-text",
+  "name": "Fancy Fonts",
+  "keyword": "fancy",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "icon": "palette",
+  "description": "Choose a text category, transform your query, then copy the result",
+  "args": []
+}

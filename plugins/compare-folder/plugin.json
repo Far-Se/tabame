@@ -1,0 +1,9 @@
+{
+  "name": "Compare Folder Files",
+  "keyword": "comparefolder",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "icon": "sync",
+  "description": "Compare files between two folders (1 level deep) using MD5 to check if they are in sync."
+}

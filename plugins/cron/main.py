@@ -436,7 +436,7 @@ def render_root(rev: int, text: str):
             "type": "render",
             "rev": rev,
             "view": "list",
-            "preview": {"enabled": True},
+            "preview": {"enabled": False},
             "items": items,
         }
     )

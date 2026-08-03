@@ -15,10 +15,10 @@ import os
 import re
 import sys
 import threading
+import time
 import traceback
 from pathlib import Path
 from urllib.parse import unquote, urlparse
-
 
 PLUGIN_DIR = Path(__file__).resolve().parent
 MODEL_HOME = PLUGIN_DIR / "models"
@@ -343,9 +343,7 @@ def render_root(rev=0, query=""):
             "title": "Choose an image",
             "subtitle": "Open a PNG, JPEG, WebP, BMP or TIFF file",
             "icon": "folder",
-            "actions": [
-                {"id": "default", "title": "Choose image", "icon": "file"}
-            ],
+            "actions": [{"id": "default", "title": "Choose image", "icon": "file"}],
         }
     ]
 
@@ -363,7 +361,11 @@ def render_root(rev=0, query=""):
                         "title": "Choose model and remove background",
                         "icon": "play",
                     },
-                    {"id": "change", "title": "Choose another image", "icon": "refresh"},
+                    {
+                        "id": "change",
+                        "title": "Choose another image",
+                        "icon": "refresh",
+                    },
                     {"id": "copy_path", "title": "Copy image path", "icon": "copy"},
                 ],
                 "preview": {
@@ -419,7 +421,9 @@ def render_root(rev=0, query=""):
             "type": "render",
             "rev": rev,
             "view": "list",
-            "selectId": "input" if input_path and os.path.isfile(input_path) else "pick",
+            "selectId": "input"
+            if input_path and os.path.isfile(input_path)
+            else "pick",
             "placeholder": "Type or paste an image path, or choose an action",
             "emptyText": "Choose an image to begin",
             "preview": {"enabled": True},
@@ -515,7 +519,11 @@ def render_model_info(key):
                     f"[Open the model card]({definition['card']})"
                 ),
                 "metadata": [
-                    {"label": "Download status", "text": model_status(key), "icon": "download"},
+                    {
+                        "label": "Download status",
+                        "text": model_status(key),
+                        "icon": "download",
+                    },
                     {"label": "Session", "text": definition["session"], "icon": "code"},
                 ],
             },
@@ -808,7 +816,9 @@ def render_error(title, error, kind="process"):
     hint = ""
     lowered = str(error).lower()
     if "onnxruntime" in lowered or "no onnxruntime" in lowered:
-        hint = "\n\nInstall or repair the plugin dependencies, then reopen the launcher."
+        hint = (
+            "\n\nInstall or repair the plugin dependencies, then reopen the launcher."
+        )
     elif "cuda" in lowered:
         hint = "\n\nChoose Auto or CPU, or install a compatible onnxruntime-gpu build."
     elif "permission" in lowered or "access is denied" in lowered:
@@ -818,11 +828,19 @@ def render_error(title, error, kind="process"):
     markdown = f"# {title}\n\n```text\n{sanitise_markdown_error(error)}\n```{hint}"
     actions = [{"id": "back_root", "title": "Back to start", "icon": "home"}]
     if kind == "model":
-        actions.insert(0, {"id": "retry_model", "title": "Try model again", "icon": "refresh"})
-        actions.insert(1, {"id": "models", "title": "Choose another model", "icon": "image"})
+        actions.insert(
+            0, {"id": "retry_model", "title": "Try model again", "icon": "refresh"}
+        )
+        actions.insert(
+            1, {"id": "models", "title": "Choose another model", "icon": "image"}
+        )
     elif kind == "process":
-        actions.insert(0, {"id": "retry_process", "title": "Try again", "icon": "refresh"})
-        actions.insert(1, {"id": "settings", "title": "Change settings", "icon": "settings"})
+        actions.insert(
+            0, {"id": "retry_process", "title": "Try again", "icon": "refresh"}
+        )
+        actions.insert(
+            1, {"id": "settings", "title": "Change settings", "icon": "settings"}
+        )
     send(
         {
             "type": "render",
@@ -864,7 +882,10 @@ def validate_settings(settings):
         and settings["output_format"] == "jpg"
         and settings["bg_mode"] == "transparent"
     ):
-        return "bg_mode", "JPEG needs a solid background; choose White, Black or Custom."
+        return (
+            "bg_mode",
+            "JPEG needs a solid background; choose White, Black or Custom.",
+        )
     if settings["bg_mode"] == "custom":
         try:
             parse_color(settings["bg_color"])
@@ -897,7 +918,9 @@ def output_path_for(source_path, settings):
     source = Path(source_path)
     output_dir = resolve_path(settings["output_dir"])
     directory = Path(output_dir) if output_dir else source.parent
-    extension = {"png": ".png", "webp": ".webp", "jpg": ".jpg"}[settings["output_format"]]
+    extension = {"png": ".png", "webp": ".webp", "jpg": ".jpg"}[
+        settings["output_format"]
+    ]
     candidate = directory / f"{source.stem}{safe_suffix(settings['suffix'])}{extension}"
     if not settings["overwrite"]:
         return unique_path(candidate)
@@ -954,15 +977,62 @@ def ensure_session(model_key, settings):
             return SESSION["value"]
 
         configure_model_home()
+        import onnxruntime as ort
         from rembg import new_session
 
+        # Diagnostics: was the weight file already on disk, or does this
+        # call have to download it? A first-time BiRefNet/BRIA download is
+        # ~900MB-1GB and is network-bound, so CPU legitimately sits idle
+        # during that phase - it is not something thread tuning can fix.
+        target = model_file(model_key)
+        pre_exists = target.exists()
+        pre_size = target.stat().st_size if pre_exists else 0
+        log(
+            f"[ensure_session] model={model_key} provider={provider} "
+            f"file_present_before={pre_exists} size_before={human_size(pre_size)}"
+        )
+
+        # Explicit thread config: leaving these at 0 lets onnxruntime guess,
+        # which is usually fine, but pinning intra-op threads to the core
+        # count guarantees CPUExecutionProvider actually fans out across
+        # every core during inference instead of relying on autodetection.
+        sess_opts = ort.SessionOptions()
+        sess_opts.intra_op_num_threads = os.cpu_count() or 4
+        sess_opts.inter_op_num_threads = 1
+        sess_opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+
         providers = provider_argument(provider)
-        log("Loading model", model_key, "with provider", provider)
+        started = time.perf_counter()
         if providers is None:
-            loaded = new_session(MODEL_DEFINITIONS[model_key]["session"])
+            loaded = new_session(
+                MODEL_DEFINITIONS[model_key]["session"], sess_opts=sess_opts
+            )
         else:
             loaded = new_session(
-                MODEL_DEFINITIONS[model_key]["session"], providers=providers
+                MODEL_DEFINITIONS[model_key]["session"],
+                sess_opts=sess_opts,
+                providers=providers,
+            )
+        elapsed = time.perf_counter() - started
+
+        post_size = target.stat().st_size if target.exists() else 0
+        downloaded = not pre_exists or pre_size != post_size
+        log(
+            f"[ensure_session] done in {elapsed:.1f}s "
+            f"(weights_downloaded_this_call={downloaded}, "
+            f"final_size={human_size(post_size)})"
+        )
+        if downloaded and elapsed > 20:
+            log(
+                "[ensure_session] most of that time was almost certainly the "
+                "network download, not CPU work - low CPU usage during it is expected."
+            )
+        elif not downloaded and elapsed > 20:
+            log(
+                "[ensure_session] weights were already cached on disk but the "
+                "session still took a while to build - check for antivirus "
+                "real-time scanning on the models/ folder, slow disk I/O, or "
+                "try excluding the plugin's models directory from Defender."
             )
 
         old = SESSION["value"]
@@ -1098,7 +1168,9 @@ def process_image(source_path, model_key, settings):
             saved_mask.save(mask_destination, format="PNG", compress_level=6)
 
         actual_providers = session_providers(session)
-        provider_text = ", ".join(actual_providers) if actual_providers else settings["provider"]
+        provider_text = (
+            ", ".join(actual_providers) if actual_providers else settings["provider"]
+        )
         return {
             "source": str(source_path),
             "output": str(destination),
@@ -1134,9 +1206,7 @@ def start_model_load(model_key):
     STATE["busy"] = True
     operation_id = next_operation()
     definition = MODEL_DEFINITIONS[model_key]
-    render_loading(
-        f"Loading {definition['name']} — downloading the model if needed…"
-    )
+    render_loading(f"Loading {definition['name']} — downloading the model if needed…")
     settings = copy.deepcopy(STATE["settings"])
 
     def worker():
@@ -1167,7 +1237,9 @@ def start_processing(settings):
     source_path = STATE["input_path"]
     model_key = STATE["selected_model"]
     if not source_path or not os.path.isfile(source_path):
-        render_error("No image selected", "Choose an image before removing its background.")
+        render_error(
+            "No image selected", "Choose an image before removing its background."
+        )
         return
 
     STATE["settings"] = normalise_settings(settings)
@@ -1213,7 +1285,11 @@ def render_result(result):
             "text": f"{source_width}×{source_height} → {output_width}×{output_height}",
             "icon": "image",
         },
-        {"label": "Output size", "text": human_size(result["output_bytes"]), "icon": "download"},
+        {
+            "label": "Output size",
+            "text": human_size(result["output_bytes"]),
+            "icon": "download",
+        },
         {"label": "Output path", "text": result["output"], "icon": "file"},
     ]
     if mask_path:
@@ -1418,7 +1494,9 @@ def handle_form_submit(values):
     settings = normalise_settings(values, STATE["settings"])
     validation = validate_settings(settings)
     if validation:
-        render_settings_form(0, screen=screen, error_field=validation[0], error=validation[1])
+        render_settings_form(
+            0, screen=screen, error_field=validation[0], error=validation[1]
+        )
         return
 
     STATE["settings"] = settings
@@ -1437,7 +1515,15 @@ def handle_back():
         next_operation()
         STATE["busy"] = False
     screen = STATE["screen"]
-    if screen in {"file", "models", "model_info", "settings", "help", "result", "error"}:
+    if screen in {
+        "file",
+        "models",
+        "model_info",
+        "settings",
+        "help",
+        "result",
+        "error",
+    }:
         open_root()
     elif screen == "options":
         open_models()

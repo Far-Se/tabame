@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 PAGE_SIZE = 30
-PREVIEW_LIMIT = 2500
+PREVIEW_LIMIT = 2000
 state = {"query": "", "rev": 0, "entries": [], "has_more": False}
 
 

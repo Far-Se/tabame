@@ -1,0 +1,11 @@
+{
+  "name": "PC Specs",
+  "keyword": "specs",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "icon": "server",
+  "description": "Live system overview: CPU, GPU, RAM, storage, network, temps, fans, PSU",
+  "pip": ["psutil", "wmi", "pywin32"],
+  "dev": true
+}

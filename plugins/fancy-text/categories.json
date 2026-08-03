@@ -1,0 +1,3745 @@
+[
+  {
+    "title": "Instagram Fonts",
+    "pageSubtitle": "Ιηѕтαgяαм Ƒσηтѕ",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "art-greco",
+          "title": "Art Greco",
+          "type": "Static"
+        },
+        {
+          "slug": "dark-bubbles",
+          "title": "Dark Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "bubbles",
+          "title": "Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "mono",
+          "title": "Mono",
+          "type": "Static"
+        },
+        {
+          "slug": "chroma",
+          "title": "Chroma",
+          "type": "Static"
+        },
+        {
+          "slug": "hooky",
+          "title": "Hooky",
+          "type": "Static"
+        },
+        {
+          "slug": "classic",
+          "title": "Classic",
+          "type": "Static"
+        },
+        {
+          "slug": "dapper",
+          "title": "Dapper",
+          "type": "Static"
+        },
+        {
+          "slug": "vintage",
+          "title": "Vintage",
+          "type": "Static"
+        },
+        {
+          "slug": "modern",
+          "title": "Modern",
+          "type": "Static"
+        },
+        {
+          "slug": "chic",
+          "title": "Chic",
+          "type": "Static"
+        },
+        {
+          "slug": "swanky",
+          "title": "Swanky",
+          "type": "Static"
+        },
+        {
+          "slug": "lil-caps-lock",
+          "title": "Lil Caps Lock",
+          "type": "Static"
+        },
+        {
+          "slug": "up-top",
+          "title": "Up Top",
+          "type": "Static"
+        },
+        {
+          "slug": "watch-out",
+          "title": "Watch Out",
+          "type": "Static"
+        },
+        {
+          "slug": "silicon",
+          "title": "Silicon",
+          "type": "Static"
+        },
+        {
+          "slug": "aesthetic",
+          "title": "Aesthetic",
+          "type": "Static"
+        },
+        {
+          "slug": "medieval-times",
+          "title": "Medieval Times",
+          "type": "Static"
+        },
+        {
+          "slug": "the-north",
+          "title": "The North",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy",
+          "title": "Fancy",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy-and-loud",
+          "title": "Fancy and Loud",
+          "type": "Static"
+        },
+        {
+          "slug": "manga",
+          "title": "Manga",
+          "type": "Static"
+        },
+        {
+          "slug": "frizzle",
+          "title": "Frizzle",
+          "type": "Static"
+        },
+        {
+          "slug": "sous-cheffe",
+          "title": "Sous Cheffe",
+          "type": "Static"
+        },
+        {
+          "slug": "joker-boy",
+          "title": "Joker Boy",
+          "type": "Static"
+        },
+        {
+          "slug": "flip-flop",
+          "title": "Flip Flop",
+          "type": "Static"
+        },
+        {
+          "slug": "cream",
+          "title": "C.R.E.A.M.",
+          "type": "Static"
+        },
+        {
+          "slug": "palmistry",
+          "title": "Palmistry",
+          "type": "Static"
+        },
+        {
+          "slug": "underhill",
+          "title": "Underhill",
+          "type": "Derivative"
+        },
+        {
+          "slug": "strike",
+          "title": "Strike",
+          "type": "Derivative"
+        },
+        {
+          "slug": "slashes",
+          "title": "Slashes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "modern-whacks",
+          "title": "Modern Whacks",
+          "type": "Derivative"
+        },
+        {
+          "slug": "tuxedo",
+          "title": "Tuxedo",
+          "type": "Alternating"
+        },
+        {
+          "slug": "kurukuru",
+          "title": "Kurukuru",
+          "type": "Alternating"
+        },
+        {
+          "slug": "circle-back",
+          "title": "Circle Back",
+          "type": "Alternating"
+        },
+        {
+          "slug": "yajirushi",
+          "title": "Yajirushi",
+          "type": "Alternating"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Glitch Text",
+    "pageSubtitle": "₲Ⱡł₮₵Ⱨ ₮ɆӾ₮",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "cream",
+          "title": "C.R.E.A.M.",
+          "type": "Static"
+        },
+        {
+          "slug": "zalgo-level-twelve",
+          "title": "Zalgo Level Twelve",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "diy-asterisks",
+          "title": "DIY Asterisks",
+          "type": "Derivative"
+        },
+        {
+          "slug": "behind-bars",
+          "title": "Behind Bars",
+          "type": "Derivative"
+        },
+        {
+          "slug": "shuriken",
+          "title": "Shuriken",
+          "type": "Static"
+        },
+        {
+          "slug": "across-the-board",
+          "title": "Across the Board",
+          "type": "Derivative"
+        },
+        {
+          "slug": "haiku",
+          "title": "Haiku",
+          "type": "Static"
+        },
+        {
+          "slug": "icy",
+          "title": "Icy",
+          "type": "Static"
+        },
+        {
+          "slug": "electric",
+          "title": "Electric",
+          "type": "Derivative"
+        },
+        {
+          "slug": "the-upside-down",
+          "title": "The Upside Down",
+          "type": "Static"
+        },
+        {
+          "slug": "joker-boy",
+          "title": "Joker Boy",
+          "type": "Static"
+        },
+        {
+          "slug": "every-bubble",
+          "title": "Every Bubble",
+          "type": "Derivative"
+        },
+        {
+          "slug": "mini-me",
+          "title": "Mini Me",
+          "type": "Static"
+        },
+        {
+          "slug": "reverse-curse",
+          "title": "Reverse Curse",
+          "type": "Derivative"
+        },
+        {
+          "slug": "bricks",
+          "title": "Bricks",
+          "type": "Derivative"
+        },
+        {
+          "slug": "ramen",
+          "title": "Ramen",
+          "type": "Static"
+        },
+        {
+          "slug": "quick-maths",
+          "title": "Quick Maths",
+          "type": "Static"
+        },
+        {
+          "slug": "glitchy-circuits",
+          "title": "Glitchy Circuits",
+          "type": "Derivative"
+        },
+        {
+          "slug": "lonely-mountain",
+          "title": "Lonely Mountain",
+          "type": "Static"
+        },
+        {
+          "slug": "chopstix",
+          "title": "Chopstix",
+          "type": "Alternating"
+        },
+        {
+          "slug": "big-brother",
+          "title": "Big Brother",
+          "type": "Static"
+        },
+        {
+          "slug": "weeeee",
+          "title": "Weeeee",
+          "type": "Alternating"
+        },
+        {
+          "slug": "flip-flop",
+          "title": "Flip Flop",
+          "type": "Static"
+        },
+        {
+          "slug": "all-ways",
+          "title": "All Ways",
+          "type": "Derivative"
+        },
+        {
+          "slug": "circuits",
+          "title": "Circuits",
+          "type": "Derivative"
+        },
+        {
+          "slug": "yeet",
+          "title": "Yeet",
+          "type": "Static"
+        },
+        {
+          "slug": "i-see-ew",
+          "title": "I See Ew",
+          "type": "Alternating"
+        },
+        {
+          "slug": "whoopsie",
+          "title": "Whoopsie",
+          "type": "Static"
+        },
+        {
+          "slug": "counter-curse",
+          "title": "Counter Curse",
+          "type": "Derivative"
+        },
+        {
+          "slug": "rosetta-stone",
+          "title": "Rosetta Stone",
+          "type": "Alternating"
+        },
+        {
+          "slug": "inu-san",
+          "title": "Inu San",
+          "type": "Static"
+        },
+        {
+          "slug": "ransom",
+          "title": "Ransom",
+          "type": "Static"
+        },
+        {
+          "slug": "kurukuru",
+          "title": "Kurukuru",
+          "type": "Alternating"
+        },
+        {
+          "slug": "manga",
+          "title": "Manga",
+          "type": "Static"
+        },
+        {
+          "slug": "sous-cheffe",
+          "title": "Sous Cheffe",
+          "type": "Static"
+        },
+        {
+          "slug": "cliffs",
+          "title": "Cliffs",
+          "type": "Alternating"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Fancy Text",
+    "pageSubtitle": "𝐹𝛼𝜂𝜍𝜓 𝛵𝜀𝜒𝜏",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "deluxe-scholar",
+          "title": "Deluxe Scholar",
+          "type": "Static"
+        },
+        {
+          "slug": "two-fancy",
+          "title": "Two Fancy",
+          "type": "Alternating"
+        },
+        {
+          "slug": "fancy",
+          "title": "Fancy",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy-and-loud",
+          "title": "Fancy and Loud",
+          "type": "Static"
+        },
+        {
+          "slug": "medieval-times",
+          "title": "Medieval Times",
+          "type": "Static"
+        },
+        {
+          "slug": "the-north",
+          "title": "The North",
+          "type": "Static"
+        },
+        {
+          "slug": "swanky",
+          "title": "Swanky",
+          "type": "Static"
+        },
+        {
+          "slug": "vintage",
+          "title": "Vintage",
+          "type": "Static"
+        },
+        {
+          "slug": "milli-cyrilli",
+          "title": "Milli Cyrilli",
+          "type": "Alternating"
+        },
+        {
+          "slug": "sines",
+          "title": "Sines",
+          "type": "Derivative"
+        },
+        {
+          "slug": "pig-tails",
+          "title": "Pig Tails",
+          "type": "Static"
+        },
+        {
+          "slug": "aesthetic",
+          "title": "Aesthetic",
+          "type": "Static"
+        },
+        {
+          "slug": "tolstoy",
+          "title": "Tolstoy",
+          "type": "Static"
+        },
+        {
+          "slug": "hooky",
+          "title": "Hooky",
+          "type": "Static"
+        },
+        {
+          "slug": "rosetta-stone",
+          "title": "Rosetta Stone",
+          "type": "Alternating"
+        },
+        {
+          "slug": "lil-caps-lock",
+          "title": "Lil Caps Lock",
+          "type": "Static"
+        },
+        {
+          "slug": "bode",
+          "title": "Bode",
+          "type": "Static"
+        },
+        {
+          "slug": "starry-night",
+          "title": "Starry Night",
+          "type": "Derivative"
+        },
+        {
+          "slug": "cream",
+          "title": "C.R.E.A.M.",
+          "type": "Static"
+        },
+        {
+          "slug": "icy",
+          "title": "Icy",
+          "type": "Static"
+        },
+        {
+          "slug": "robin-hood",
+          "title": "Robin Hood",
+          "type": "Derivative"
+        },
+        {
+          "slug": "galactic",
+          "title": "Galactic",
+          "type": "Static"
+        },
+        {
+          "slug": "xtra-fancy",
+          "title": "Xtra Fancy",
+          "type": "Derivative"
+        },
+        {
+          "slug": "heart-king",
+          "title": "Heart King",
+          "type": "Derivative"
+        },
+        {
+          "slug": "radagast",
+          "title": "Radagast",
+          "type": "Static"
+        },
+        {
+          "slug": "curls",
+          "title": "Curls",
+          "type": "Static"
+        },
+        {
+          "slug": "kurukuru",
+          "title": "Kurukuru",
+          "type": "Alternating"
+        },
+        {
+          "slug": "french-fry",
+          "title": "French Fry",
+          "type": "Static"
+        },
+        {
+          "slug": "sous-cheffe",
+          "title": "Sous Cheffe",
+          "type": "Static"
+        },
+        {
+          "slug": "carriage-return",
+          "title": "Carriage Return",
+          "type": "Alternating"
+        },
+        {
+          "slug": "wakka-wakka",
+          "title": "Wakka Wakka",
+          "type": "Static"
+        },
+        {
+          "slug": "half-sequoyah",
+          "title": "Half Sequoyah",
+          "type": "Static"
+        },
+        {
+          "slug": "stylin",
+          "title": "Stylin'",
+          "type": "Static"
+        },
+        {
+          "slug": "palmistry",
+          "title": "Palmistry",
+          "type": "Static"
+        },
+        {
+          "slug": "frizzle",
+          "title": "Frizzle",
+          "type": "Static"
+        },
+        {
+          "slug": "yeet",
+          "title": "Yeet",
+          "type": "Static"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Discord Fonts",
+    "pageSubtitle": "𐌃𐌉𐌔𐌂Ꝋ𐌐𐌃 𐌅Ꝋ𐌍𐌕𐌔",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "lonely-mountain",
+          "title": "Lonely Mountain",
+          "type": "Static"
+        },
+        {
+          "slug": "dark-bubbles",
+          "title": "Dark Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "bubbles",
+          "title": "Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "classic",
+          "title": "Classic",
+          "type": "Static"
+        },
+        {
+          "slug": "dapper",
+          "title": "Dapper",
+          "type": "Static"
+        },
+        {
+          "slug": "vintage",
+          "title": "Vintage",
+          "type": "Static"
+        },
+        {
+          "slug": "mono",
+          "title": "Mono",
+          "type": "Static"
+        },
+        {
+          "slug": "chroma",
+          "title": "Chroma",
+          "type": "Static"
+        },
+        {
+          "slug": "modern",
+          "title": "Modern",
+          "type": "Static"
+        },
+        {
+          "slug": "chic",
+          "title": "Chic",
+          "type": "Static"
+        },
+        {
+          "slug": "swanky",
+          "title": "Swanky",
+          "type": "Static"
+        },
+        {
+          "slug": "medieval-times",
+          "title": "Medieval Times",
+          "type": "Static"
+        },
+        {
+          "slug": "the-north",
+          "title": "The North",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy",
+          "title": "Fancy",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy-and-loud",
+          "title": "Fancy and Loud",
+          "type": "Static"
+        },
+        {
+          "slug": "lil-caps-lock",
+          "title": "Lil Caps Lock",
+          "type": "Static"
+        },
+        {
+          "slug": "up-top",
+          "title": "Up Top",
+          "type": "Static"
+        },
+        {
+          "slug": "watch-out",
+          "title": "Watch Out",
+          "type": "Static"
+        },
+        {
+          "slug": "hooky",
+          "title": "Hooky",
+          "type": "Static"
+        },
+        {
+          "slug": "silicon",
+          "title": "Silicon",
+          "type": "Static"
+        },
+        {
+          "slug": "aesthetic",
+          "title": "Aesthetic",
+          "type": "Static"
+        },
+        {
+          "slug": "palmistry",
+          "title": "Palmistry",
+          "type": "Static"
+        },
+        {
+          "slug": "flip-flop",
+          "title": "Flip Flop",
+          "type": "Static"
+        },
+        {
+          "slug": "cream",
+          "title": "C.R.E.A.M.",
+          "type": "Static"
+        },
+        {
+          "slug": "black-tie",
+          "title": "Black Tie",
+          "type": "Alternating"
+        },
+        {
+          "slug": "modern-whacks",
+          "title": "Modern Whacks",
+          "type": "Derivative"
+        },
+        {
+          "slug": "sous-cheffe",
+          "title": "Sous Cheffe",
+          "type": "Static"
+        },
+        {
+          "slug": "art-greco",
+          "title": "Art Greco",
+          "type": "Static"
+        },
+        {
+          "slug": "underhill",
+          "title": "Underhill",
+          "type": "Derivative"
+        },
+        {
+          "slug": "slashes",
+          "title": "Slashes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "night-sky",
+          "title": "Night Sky",
+          "type": "Alternating"
+        },
+        {
+          "slug": "manga",
+          "title": "Manga",
+          "type": "Static"
+        },
+        {
+          "slug": "frizzle",
+          "title": "Frizzle",
+          "type": "Static"
+        },
+        {
+          "slug": "carriage-return",
+          "title": "Carriage Return",
+          "type": "Alternating"
+        },
+        {
+          "slug": "strike",
+          "title": "Strike",
+          "type": "Derivative"
+        },
+        {
+          "slug": "milli-cyrilli",
+          "title": "Milli Cyrilli",
+          "type": "Alternating"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Zalgo Text",
+    "pageSubtitle": "Z̺͐̐a̵͉̅͋̇l̝̙̎́g̬͖̣͉͛ͫͧͅoͣͦͮ͢͠ T̯̳̻̹͈̼͛̒͘͜͜e̴͎͟xͫͪ̓t̷̵̡̰͈̗͂ͣ͒",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "zalgo-level-one",
+          "title": "Zalgo Level One",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "zalgo-level-two",
+          "title": "Zalgo Level Two",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "zalgo-level-three",
+          "title": "Zalgo Level Three",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "zalgo-level-four",
+          "title": "Zalgo Level Four",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "zalgo-level-five",
+          "title": "Zalgo Level Five",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "zalgo-level-six",
+          "title": "Zalgo Level Six",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "zalgo-level-seven",
+          "title": "Zalgo Level Seven",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "zalgo-level-eight",
+          "title": "Zalgo Level Eight",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "zalgo-level-nine",
+          "title": "Zalgo Level Nine",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "zalgo-level-ten",
+          "title": "Zalgo Level Ten",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "zalgo-level-eleven",
+          "title": "Zalgo Level Eleven",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "zalgo-level-twelve",
+          "title": "Zalgo Level Twelve",
+          "type": "Zalgo"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Stylish Text",
+    "pageSubtitle": "ꕷꞆ𐒦ԸĬꕷዛ Ꞇꗛ𐠷Ꞇ",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "stylin",
+          "title": "Stylin'",
+          "type": "Static"
+        },
+        {
+          "slug": "bubbles",
+          "title": "Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "swanky",
+          "title": "Swanky",
+          "type": "Static"
+        },
+        {
+          "slug": "vintage",
+          "title": "Vintage",
+          "type": "Static"
+        },
+        {
+          "slug": "palmistry",
+          "title": "Palmistry",
+          "type": "Static"
+        },
+        {
+          "slug": "aesthetic",
+          "title": "Aesthetic",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy-and-loud",
+          "title": "Fancy and Loud",
+          "type": "Static"
+        },
+        {
+          "slug": "the-north",
+          "title": "The North",
+          "type": "Static"
+        },
+        {
+          "slug": "silicon",
+          "title": "Silicon",
+          "type": "Static"
+        },
+        {
+          "slug": "choo-choo",
+          "title": "Choo Choo",
+          "type": "Derivative"
+        },
+        {
+          "slug": "mono",
+          "title": "Mono",
+          "type": "Static"
+        },
+        {
+          "slug": "shhhhhh",
+          "title": "Shhhhhh",
+          "type": "Static"
+        },
+        {
+          "slug": "samson",
+          "title": "Samson",
+          "type": "Derivative"
+        },
+        {
+          "slug": "straightjacket",
+          "title": "Straightjacket",
+          "type": "Static"
+        },
+        {
+          "slug": "dark-bubbles",
+          "title": "Dark Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "chroma",
+          "title": "Chroma",
+          "type": "Static"
+        },
+        {
+          "slug": "big-brother",
+          "title": "Big Brother",
+          "type": "Static"
+        },
+        {
+          "slug": "behind-bars",
+          "title": "Behind Bars",
+          "type": "Derivative"
+        },
+        {
+          "slug": "frizzle",
+          "title": "Frizzle",
+          "type": "Static"
+        },
+        {
+          "slug": "doric",
+          "title": "Doric",
+          "type": "Derivative"
+        },
+        {
+          "slug": "click-clack",
+          "title": "Click Clack",
+          "type": "Derivative"
+        },
+        {
+          "slug": "tac-tics",
+          "title": "Tac Tics",
+          "type": "Derivative"
+        },
+        {
+          "slug": "kodak",
+          "title": "Kodak",
+          "type": "Derivative"
+        },
+        {
+          "slug": "smelly",
+          "title": "Smelly",
+          "type": "Derivative"
+        },
+        {
+          "slug": "yeet",
+          "title": "Yeet",
+          "type": "Static"
+        },
+        {
+          "slug": "dicey",
+          "title": "Dicey",
+          "type": "Derivative"
+        },
+        {
+          "slug": "tolstoy",
+          "title": "Tolstoy",
+          "type": "Static"
+        },
+        {
+          "slug": "flash-mob",
+          "title": "Flash Mob",
+          "type": "Derivative"
+        },
+        {
+          "slug": "this-or-that",
+          "title": "This or That",
+          "type": "Derivative"
+        },
+        {
+          "slug": "ransom",
+          "title": "Ransom",
+          "type": "Static"
+        },
+        {
+          "slug": "kurukuru",
+          "title": "Kurukuru",
+          "type": "Alternating"
+        },
+        {
+          "slug": "i-see-ew",
+          "title": "I See Ew",
+          "type": "Alternating"
+        },
+        {
+          "slug": "white-tie",
+          "title": "White Tie",
+          "type": "Alternating"
+        },
+        {
+          "slug": "night-sky",
+          "title": "Night Sky",
+          "type": "Alternating"
+        },
+        {
+          "slug": "black-tie",
+          "title": "Black Tie",
+          "type": "Alternating"
+        },
+        {
+          "slug": "chopstix",
+          "title": "Chopstix",
+          "type": "Alternating"
+        }
+      ]
+    }
+  },
+  {
+    "curatedFonts": {
+      "items": []
+    }
+  },
+  {
+    "title": "Cool Text",
+    "pageSubtitle": "匚ㄖㄖㄥ ㄒ乇乂ㄒ",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "manga",
+          "title": "Manga",
+          "type": "Static"
+        },
+        {
+          "slug": "olive-you",
+          "title": "Olive You",
+          "type": "Static"
+        },
+        {
+          "slug": "circle-back",
+          "title": "Circle Back",
+          "type": "Alternating"
+        },
+        {
+          "slug": "thorns",
+          "title": "Thorns",
+          "type": "Derivative"
+        },
+        {
+          "slug": "starry-night",
+          "title": "Starry Night",
+          "type": "Derivative"
+        },
+        {
+          "slug": "glitchy-circuits",
+          "title": "Glitchy Circuits",
+          "type": "Derivative"
+        },
+        {
+          "slug": "sous-cheffe",
+          "title": "Sous Cheffe",
+          "type": "Static"
+        },
+        {
+          "slug": "icy",
+          "title": "Icy",
+          "type": "Static"
+        },
+        {
+          "slug": "zalgo-level-twelve",
+          "title": "Zalgo Level Twelve",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "cream",
+          "title": "C.R.E.A.M.",
+          "type": "Static"
+        },
+        {
+          "slug": "crosshairs",
+          "title": "Crosshairs",
+          "type": "Derivative"
+        },
+        {
+          "slug": "sines",
+          "title": "Sines",
+          "type": "Derivative"
+        },
+        {
+          "slug": "heracles",
+          "title": "Heracles",
+          "type": "Static"
+        },
+        {
+          "slug": "up-top",
+          "title": "Up Top",
+          "type": "Static"
+        },
+        {
+          "slug": "cop-out",
+          "title": "Cop Out",
+          "type": "Static"
+        },
+        {
+          "slug": "crossroads",
+          "title": "Crossroads",
+          "type": "Derivative"
+        },
+        {
+          "slug": "all-boxes",
+          "title": "All Boxes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "vogue",
+          "title": "Vogue",
+          "type": "Derivative"
+        },
+        {
+          "slug": "invisible-ink",
+          "title": "Invisible Ink",
+          "type": "Derivative"
+        },
+        {
+          "slug": "haiku",
+          "title": "Haiku",
+          "type": "Static"
+        },
+        {
+          "slug": "all-circles",
+          "title": "All Circles",
+          "type": "Derivative"
+        },
+        {
+          "slug": "every-bubble",
+          "title": "Every Bubble",
+          "type": "Derivative"
+        },
+        {
+          "slug": "tilded",
+          "title": "Tilded",
+          "type": "Derivative"
+        },
+        {
+          "slug": "hokusai",
+          "title": "Hokusai",
+          "type": "Derivative"
+        },
+        {
+          "slug": "click-clack",
+          "title": "Click Clack",
+          "type": "Derivative"
+        },
+        {
+          "slug": "joker-boy",
+          "title": "Joker Boy",
+          "type": "Static"
+        },
+        {
+          "slug": "evening-dress",
+          "title": "Evening Dress",
+          "type": "Alternating"
+        },
+        {
+          "slug": "pinky-out",
+          "title": "Pinky Out",
+          "type": "Static"
+        },
+        {
+          "slug": "carriage-return",
+          "title": "Carriage Return",
+          "type": "Alternating"
+        },
+        {
+          "slug": "across-the-board",
+          "title": "Across the Board",
+          "type": "Derivative"
+        },
+        {
+          "slug": "shuriken",
+          "title": "Shuriken",
+          "type": "Static"
+        },
+        {
+          "slug": "tuxedo",
+          "title": "Tuxedo",
+          "type": "Alternating"
+        },
+        {
+          "slug": "frizzle",
+          "title": "Frizzle",
+          "type": "Static"
+        },
+        {
+          "slug": "aesthetic",
+          "title": "Aesthetic",
+          "type": "Static"
+        },
+        {
+          "slug": "odd-fellows",
+          "title": "Odd Fellows",
+          "type": "Derivative"
+        },
+        {
+          "slug": "leet-1337",
+          "title": "Leet 1337",
+          "type": "Static"
+        }
+      ]
+    }
+  },
+  {
+    "title": "TikTok Fonts",
+    "pageSubtitle": "ȶɨӄȶօӄ ʄօռȶֆ",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "frizzle",
+          "title": "Frizzle",
+          "type": "Static"
+        },
+        {
+          "slug": "aesthetic",
+          "title": "Aesthetic",
+          "type": "Static"
+        },
+        {
+          "slug": "silicon",
+          "title": "Silicon",
+          "type": "Static"
+        },
+        {
+          "slug": "lil-caps-lock",
+          "title": "Lil Caps Lock",
+          "type": "Static"
+        },
+        {
+          "slug": "up-top",
+          "title": "Up Top",
+          "type": "Static"
+        },
+        {
+          "slug": "watch-out",
+          "title": "Watch Out",
+          "type": "Static"
+        },
+        {
+          "slug": "dark-bubbles",
+          "title": "Dark Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "chroma",
+          "title": "Chroma",
+          "type": "Static"
+        },
+        {
+          "slug": "classic",
+          "title": "Classic",
+          "type": "Static"
+        },
+        {
+          "slug": "dapper",
+          "title": "Dapper",
+          "type": "Static"
+        },
+        {
+          "slug": "vintage",
+          "title": "Vintage",
+          "type": "Static"
+        },
+        {
+          "slug": "bubbles",
+          "title": "Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "mono",
+          "title": "Mono",
+          "type": "Static"
+        },
+        {
+          "slug": "modern",
+          "title": "Modern",
+          "type": "Static"
+        },
+        {
+          "slug": "chic",
+          "title": "Chic",
+          "type": "Static"
+        },
+        {
+          "slug": "swanky",
+          "title": "Swanky",
+          "type": "Static"
+        },
+        {
+          "slug": "hooky",
+          "title": "Hooky",
+          "type": "Static"
+        },
+        {
+          "slug": "medieval-times",
+          "title": "Medieval Times",
+          "type": "Static"
+        },
+        {
+          "slug": "the-north",
+          "title": "The North",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy",
+          "title": "Fancy",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy-and-loud",
+          "title": "Fancy and Loud",
+          "type": "Static"
+        },
+        {
+          "slug": "sous-cheffe",
+          "title": "Sous Cheffe",
+          "type": "Static"
+        },
+        {
+          "slug": "palmistry",
+          "title": "Palmistry",
+          "type": "Static"
+        },
+        {
+          "slug": "i-see-ew",
+          "title": "I See Ew",
+          "type": "Alternating"
+        },
+        {
+          "slug": "white-tie",
+          "title": "White Tie",
+          "type": "Alternating"
+        },
+        {
+          "slug": "night-sky",
+          "title": "Night Sky",
+          "type": "Alternating"
+        },
+        {
+          "slug": "flip-flop",
+          "title": "Flip Flop",
+          "type": "Static"
+        },
+        {
+          "slug": "modern-whacks",
+          "title": "Modern Whacks",
+          "type": "Derivative"
+        },
+        {
+          "slug": "slashes",
+          "title": "Slashes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "manga",
+          "title": "Manga",
+          "type": "Static"
+        },
+        {
+          "slug": "joker-boy",
+          "title": "Joker Boy",
+          "type": "Static"
+        },
+        {
+          "slug": "art-greco",
+          "title": "Art Greco",
+          "type": "Static"
+        },
+        {
+          "slug": "yajirushi",
+          "title": "Yajirushi",
+          "type": "Alternating"
+        },
+        {
+          "slug": "strike",
+          "title": "Strike",
+          "type": "Derivative"
+        },
+        {
+          "slug": "underhill",
+          "title": "Underhill",
+          "type": "Derivative"
+        },
+        {
+          "slug": "cream",
+          "title": "C.R.E.A.M.",
+          "type": "Static"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Upside Down Text",
+    "pageSubtitle": "xʇǝꓕ uʍoꓷ ǝpᴉsdꓵ",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "the-upside-down",
+          "title": "The Upside Down",
+          "type": "Static"
+        },
+        {
+          "slug": "whoopsie",
+          "title": "Whoopsie",
+          "type": "Static"
+        },
+        {
+          "slug": "flip-flop",
+          "title": "Flip Flop",
+          "type": "Static"
+        },
+        {
+          "slug": "slither",
+          "title": "Slither",
+          "type": "Static"
+        },
+        {
+          "slug": "bounce",
+          "title": "Bounce",
+          "type": "Alternating"
+        },
+        {
+          "slug": "inverse-curse",
+          "title": "Inverse Curse",
+          "type": "Derivative"
+        },
+        {
+          "slug": "reverse-curse",
+          "title": "Reverse Curse",
+          "type": "Derivative"
+        },
+        {
+          "slug": "counter-curse",
+          "title": "Counter Curse",
+          "type": "Derivative"
+        },
+        {
+          "slug": "count-underhill",
+          "title": "Count Underhill",
+          "type": "Derivative"
+        },
+        {
+          "slug": "contra-skyline",
+          "title": "Contra Skyline",
+          "type": "Derivative"
+        },
+        {
+          "slug": "counter-dashing",
+          "title": "Counter Dashing",
+          "type": "Derivative"
+        },
+        {
+          "slug": "counter-lanes",
+          "title": "Counter Lanes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "counter-guidance",
+          "title": "Counter Guidance",
+          "type": "Derivative"
+        },
+        {
+          "slug": "purr",
+          "title": "Purr",
+          "type": "Derivative"
+        },
+        {
+          "slug": "underhand-counter",
+          "title": "Underhand Counter",
+          "type": "Derivative"
+        },
+        {
+          "slug": "counter-strikes",
+          "title": "Counter Strikes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "slippy-counters",
+          "title": "Slippy Counters",
+          "type": "Derivative"
+        },
+        {
+          "slug": "counter-slashes",
+          "title": "Counter Slashes",
+          "type": "Derivative"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Weird Text",
+    "pageSubtitle": "⏙ℇ⟟☈⟄ ⍑ℇ🝍⍑",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "quick-maths",
+          "title": "Quick Maths",
+          "type": "Static"
+        },
+        {
+          "slug": "zalgo-level-twelve",
+          "title": "Zalgo Level Twelve",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "slither",
+          "title": "Slither",
+          "type": "Static"
+        },
+        {
+          "slug": "odd-fellows",
+          "title": "Odd Fellows",
+          "type": "Derivative"
+        },
+        {
+          "slug": "rosetta-stone",
+          "title": "Rosetta Stone",
+          "type": "Alternating"
+        },
+        {
+          "slug": "flip-flop",
+          "title": "Flip Flop",
+          "type": "Static"
+        },
+        {
+          "slug": "nut",
+          "title": "Nut",
+          "type": "Static"
+        },
+        {
+          "slug": "all-ways",
+          "title": "All Ways",
+          "type": "Derivative"
+        },
+        {
+          "slug": "the-upside-down",
+          "title": "The Upside Down",
+          "type": "Static"
+        },
+        {
+          "slug": "joker-boy",
+          "title": "Joker Boy",
+          "type": "Static"
+        },
+        {
+          "slug": "dracula",
+          "title": "Dracula",
+          "type": "Derivative"
+        },
+        {
+          "slug": "whoopsie",
+          "title": "Whoopsie",
+          "type": "Static"
+        },
+        {
+          "slug": "cream",
+          "title": "C.R.E.A.M.",
+          "type": "Static"
+        },
+        {
+          "slug": "invisible-ink",
+          "title": "Invisible Ink",
+          "type": "Derivative"
+        },
+        {
+          "slug": "every-bubble",
+          "title": "Every Bubble",
+          "type": "Derivative"
+        },
+        {
+          "slug": "the-operator",
+          "title": "The Operator",
+          "type": "Derivative"
+        },
+        {
+          "slug": "drippy",
+          "title": "Drippy",
+          "type": "Static"
+        },
+        {
+          "slug": "skullies",
+          "title": "Skullies",
+          "type": "Derivative"
+        },
+        {
+          "slug": "behind-bars",
+          "title": "Behind Bars",
+          "type": "Derivative"
+        },
+        {
+          "slug": "weeeee",
+          "title": "Weeeee",
+          "type": "Alternating"
+        },
+        {
+          "slug": "across-the-board",
+          "title": "Across the Board",
+          "type": "Derivative"
+        },
+        {
+          "slug": "sous-cheffe",
+          "title": "Sous Cheffe",
+          "type": "Static"
+        },
+        {
+          "slug": "up-top",
+          "title": "Up Top",
+          "type": "Static"
+        },
+        {
+          "slug": "kurukuru",
+          "title": "Kurukuru",
+          "type": "Alternating"
+        },
+        {
+          "slug": "cop-out",
+          "title": "Cop Out",
+          "type": "Static"
+        },
+        {
+          "slug": "diy-asterisks",
+          "title": "DIY Asterisks",
+          "type": "Derivative"
+        },
+        {
+          "slug": "cliffs",
+          "title": "Cliffs",
+          "type": "Alternating"
+        },
+        {
+          "slug": "cues",
+          "title": "Cues",
+          "type": "Static"
+        },
+        {
+          "slug": "bricks",
+          "title": "Bricks",
+          "type": "Derivative"
+        },
+        {
+          "slug": "lonely-mountain",
+          "title": "Lonely Mountain",
+          "type": "Static"
+        },
+        {
+          "slug": "angular",
+          "title": "Angular",
+          "type": "Static"
+        },
+        {
+          "slug": "morse-code",
+          "title": "Morse Code",
+          "type": "Alternating"
+        },
+        {
+          "slug": "bounce",
+          "title": "Bounce",
+          "type": "Alternating"
+        },
+        {
+          "slug": "milli-cyrilli",
+          "title": "Milli Cyrilli",
+          "type": "Alternating"
+        },
+        {
+          "slug": "i-see-ew",
+          "title": "I See Ew",
+          "type": "Alternating"
+        },
+        {
+          "slug": "red-rum",
+          "title": "Red Rum",
+          "type": "Alternating"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Twitter Fonts",
+    "pageSubtitle": "𝕋𝕨𝕚𝕥𝕥𝕖𝕣 𝔽𝕠𝕟𝕥𝕤",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "hooky",
+          "title": "Hooky",
+          "type": "Static"
+        },
+        {
+          "slug": "mono",
+          "title": "Mono",
+          "type": "Static"
+        },
+        {
+          "slug": "chroma",
+          "title": "Chroma",
+          "type": "Static"
+        },
+        {
+          "slug": "classic",
+          "title": "Classic",
+          "type": "Static"
+        },
+        {
+          "slug": "dapper",
+          "title": "Dapper",
+          "type": "Static"
+        },
+        {
+          "slug": "medieval-times",
+          "title": "Medieval Times",
+          "type": "Static"
+        },
+        {
+          "slug": "the-north",
+          "title": "The North",
+          "type": "Static"
+        },
+        {
+          "slug": "vintage",
+          "title": "Vintage",
+          "type": "Static"
+        },
+        {
+          "slug": "modern",
+          "title": "Modern",
+          "type": "Static"
+        },
+        {
+          "slug": "chic",
+          "title": "Chic",
+          "type": "Static"
+        },
+        {
+          "slug": "swanky",
+          "title": "Swanky",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy",
+          "title": "Fancy",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy-and-loud",
+          "title": "Fancy and Loud",
+          "type": "Static"
+        },
+        {
+          "slug": "lil-caps-lock",
+          "title": "Lil Caps Lock",
+          "type": "Static"
+        },
+        {
+          "slug": "up-top",
+          "title": "Up Top",
+          "type": "Static"
+        },
+        {
+          "slug": "watch-out",
+          "title": "Watch Out",
+          "type": "Static"
+        },
+        {
+          "slug": "silicon",
+          "title": "Silicon",
+          "type": "Static"
+        },
+        {
+          "slug": "aesthetic",
+          "title": "Aesthetic",
+          "type": "Static"
+        },
+        {
+          "slug": "dark-bubbles",
+          "title": "Dark Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "bubbles",
+          "title": "Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "cream",
+          "title": "C.R.E.A.M.",
+          "type": "Static"
+        },
+        {
+          "slug": "white-tie",
+          "title": "White Tie",
+          "type": "Alternating"
+        },
+        {
+          "slug": "underhill",
+          "title": "Underhill",
+          "type": "Derivative"
+        },
+        {
+          "slug": "strike",
+          "title": "Strike",
+          "type": "Derivative"
+        },
+        {
+          "slug": "flip-flop",
+          "title": "Flip Flop",
+          "type": "Static"
+        },
+        {
+          "slug": "palmistry",
+          "title": "Palmistry",
+          "type": "Static"
+        },
+        {
+          "slug": "sous-cheffe",
+          "title": "Sous Cheffe",
+          "type": "Static"
+        },
+        {
+          "slug": "frizzle",
+          "title": "Frizzle",
+          "type": "Static"
+        },
+        {
+          "slug": "i-see-ew",
+          "title": "I See Ew",
+          "type": "Alternating"
+        },
+        {
+          "slug": "slashes",
+          "title": "Slashes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "morse-code",
+          "title": "Morse Code",
+          "type": "Alternating"
+        },
+        {
+          "slug": "art-greco",
+          "title": "Art Greco",
+          "type": "Static"
+        },
+        {
+          "slug": "bounce",
+          "title": "Bounce",
+          "type": "Alternating"
+        },
+        {
+          "slug": "manga",
+          "title": "Manga",
+          "type": "Static"
+        },
+        {
+          "slug": "joker-boy",
+          "title": "Joker Boy",
+          "type": "Static"
+        },
+        {
+          "slug": "modern-whacks",
+          "title": "Modern Whacks",
+          "type": "Derivative"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Underline Text",
+    "pageSubtitle": "U͟n͟d͟e͟r͟l͟i͟n͟e͟ ͟T͟e͟x͟t͟",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "underhill",
+          "title": "Underhill",
+          "type": "Derivative"
+        },
+        {
+          "slug": "count-underhill",
+          "title": "Count Underhill",
+          "type": "Derivative"
+        },
+        {
+          "slug": "dashing",
+          "title": "Dashing",
+          "type": "Derivative"
+        },
+        {
+          "slug": "counter-dashing",
+          "title": "Counter Dashing",
+          "type": "Derivative"
+        },
+        {
+          "slug": "dapper-dashing",
+          "title": "Dapper Dashing",
+          "type": "Derivative"
+        },
+        {
+          "slug": "silicon-dash",
+          "title": "Silicon Dash",
+          "type": "Derivative"
+        },
+        {
+          "slug": "lanes",
+          "title": "Lanes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "chic-lanes",
+          "title": "Chic Lanes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "counter-lanes",
+          "title": "Counter Lanes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "green-shell",
+          "title": "Green Shell",
+          "type": "Derivative"
+        },
+        {
+          "slug": "jaws",
+          "title": "Jaws",
+          "type": "Derivative"
+        },
+        {
+          "slug": "skyline",
+          "title": "Skyline",
+          "type": "Derivative"
+        },
+        {
+          "slug": "contra-skyline",
+          "title": "Contra Skyline",
+          "type": "Derivative"
+        },
+        {
+          "slug": "train-tracks",
+          "title": "Train Tracks",
+          "type": "Derivative"
+        },
+        {
+          "slug": "guidance",
+          "title": "Guidance",
+          "type": "Derivative"
+        },
+        {
+          "slug": "swanky-guidance",
+          "title": "Swanky Guidance",
+          "type": "Derivative"
+        },
+        {
+          "slug": "classic-guidance",
+          "title": "Classic Guidance",
+          "type": "Derivative"
+        },
+        {
+          "slug": "vintage-guidance",
+          "title": "Vintage Guidance",
+          "type": "Derivative"
+        },
+        {
+          "slug": "silicon-guidance",
+          "title": "Silicon Guidance",
+          "type": "Derivative"
+        },
+        {
+          "slug": "vintage-ellipses",
+          "title": "Vintage Ellipses",
+          "type": "Derivative"
+        },
+        {
+          "slug": "swanky-ellipses",
+          "title": "Swanky Ellipses",
+          "type": "Derivative"
+        },
+        {
+          "slug": "silicon-ellipses",
+          "title": "Silicon Ellipses",
+          "type": "Derivative"
+        },
+        {
+          "slug": "underhand",
+          "title": "Underhand",
+          "type": "Derivative"
+        },
+        {
+          "slug": "underhand-chic",
+          "title": "Underhand Chic",
+          "type": "Derivative"
+        },
+        {
+          "slug": "swanky-underhand",
+          "title": "Swanky Underhand",
+          "type": "Derivative"
+        },
+        {
+          "slug": "gulls",
+          "title": "Gulls",
+          "type": "Derivative"
+        },
+        {
+          "slug": "dapper-gulls",
+          "title": "Dapper Gulls",
+          "type": "Derivative"
+        },
+        {
+          "slug": "vintage-gulls",
+          "title": "Vintage Gulls",
+          "type": "Derivative"
+        },
+        {
+          "slug": "swanky-gulls",
+          "title": "Swanky Gulls",
+          "type": "Derivative"
+        },
+        {
+          "slug": "chic-gulls",
+          "title": "Chic Gulls",
+          "type": "Derivative"
+        },
+        {
+          "slug": "silicon-gulls",
+          "title": "Silicon Gulls",
+          "type": "Derivative"
+        },
+        {
+          "slug": "meow",
+          "title": "Meow",
+          "type": "Derivative"
+        },
+        {
+          "slug": "modern-meow",
+          "title": "Modern Meow",
+          "type": "Derivative"
+        },
+        {
+          "slug": "chic-meow",
+          "title": "Chic Meow",
+          "type": "Derivative"
+        },
+        {
+          "slug": "swanky-meow",
+          "title": "Swanky Meow",
+          "type": "Derivative"
+        },
+        {
+          "slug": "silicon-meow",
+          "title": "Silicon Meow",
+          "type": "Derivative"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Small Text",
+    "pageSubtitle": "ꜱᴍᴀʟʟ ᴛᴇxᴛ",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "lil-caps-lock",
+          "title": "Lil Caps Lock",
+          "type": "Static"
+        },
+        {
+          "slug": "up-top",
+          "title": "Up Top",
+          "type": "Static"
+        },
+        {
+          "slug": "watch-out",
+          "title": "Watch Out",
+          "type": "Static"
+        },
+        {
+          "slug": "weeeee",
+          "title": "Weeeee",
+          "type": "Alternating"
+        },
+        {
+          "slug": "dark-bubbles",
+          "title": "Dark Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "bubbles",
+          "title": "Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "mono",
+          "title": "Mono",
+          "type": "Static"
+        },
+        {
+          "slug": "chroma",
+          "title": "Chroma",
+          "type": "Static"
+        },
+        {
+          "slug": "straightjacket",
+          "title": "Straightjacket",
+          "type": "Static"
+        },
+        {
+          "slug": "silicon",
+          "title": "Silicon",
+          "type": "Static"
+        },
+        {
+          "slug": "mini-me",
+          "title": "Mini Me",
+          "type": "Static"
+        },
+        {
+          "slug": "penthouse",
+          "title": "Penthouse",
+          "type": "Static"
+        },
+        {
+          "slug": "across-the-board",
+          "title": "Across the Board",
+          "type": "Derivative"
+        },
+        {
+          "slug": "silicon-strikes",
+          "title": "Silicon Strikes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "silicomments",
+          "title": "Silicomments",
+          "type": "Derivative"
+        },
+        {
+          "slug": "glitchy-circuits",
+          "title": "Glitchy Circuits",
+          "type": "Derivative"
+        },
+        {
+          "slug": "silicon-slashes",
+          "title": "Silicon Slashes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "silicon-dash",
+          "title": "Silicon Dash",
+          "type": "Derivative"
+        },
+        {
+          "slug": "tuxedo",
+          "title": "Tuxedo",
+          "type": "Alternating"
+        },
+        {
+          "slug": "slippy-silicon",
+          "title": "Slippy Silicon",
+          "type": "Derivative"
+        },
+        {
+          "slug": "carriage-return",
+          "title": "Carriage Return",
+          "type": "Alternating"
+        },
+        {
+          "slug": "silicon-lanes",
+          "title": "Silicon Lanes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "french-fry",
+          "title": "French Fry",
+          "type": "Static"
+        },
+        {
+          "slug": "silicon-underbelly",
+          "title": "Silicon Underbelly",
+          "type": "Derivative"
+        },
+        {
+          "slug": "silicon-whacks",
+          "title": "Silicon Whacks",
+          "type": "Derivative"
+        },
+        {
+          "slug": "silicon-quiver",
+          "title": "Silicon Quiver",
+          "type": "Derivative"
+        },
+        {
+          "slug": "black-tie",
+          "title": "Black Tie",
+          "type": "Alternating"
+        },
+        {
+          "slug": "silicon-ellipses",
+          "title": "Silicon Ellipses",
+          "type": "Derivative"
+        },
+        {
+          "slug": "top-down",
+          "title": "Top Down",
+          "type": "Derivative"
+        },
+        {
+          "slug": "evening-dress",
+          "title": "Evening Dress",
+          "type": "Alternating"
+        },
+        {
+          "slug": "down-low",
+          "title": "Down Low",
+          "type": "Derivative"
+        },
+        {
+          "slug": "yajirushi",
+          "title": "Yajirushi",
+          "type": "Alternating"
+        },
+        {
+          "slug": "silicon-gulls",
+          "title": "Silicon Gulls",
+          "type": "Derivative"
+        },
+        {
+          "slug": "white-tie",
+          "title": "White Tie",
+          "type": "Alternating"
+        },
+        {
+          "slug": "bottoms-up",
+          "title": "Bottoms Up",
+          "type": "Derivative"
+        },
+        {
+          "slug": "jumping-jax",
+          "title": "Jumping Jax",
+          "type": "Alternating"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Cursed Text",
+    "pageSubtitle": "ርሁዪነቿጋ ፕቿሸፕ",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "sous-cheffe",
+          "title": "Sous Cheffe",
+          "type": "Static"
+        },
+        {
+          "slug": "zalgo-level-twelve",
+          "title": "Zalgo Level Twelve",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "reverse-curse",
+          "title": "Reverse Curse",
+          "type": "Derivative"
+        },
+        {
+          "slug": "slither",
+          "title": "Slither",
+          "type": "Static"
+        },
+        {
+          "slug": "diy-asterisks",
+          "title": "DIY Asterisks",
+          "type": "Derivative"
+        },
+        {
+          "slug": "milli-cyrilli",
+          "title": "Milli Cyrilli",
+          "type": "Alternating"
+        },
+        {
+          "slug": "lil-cthulu",
+          "title": "Lil Cthulu",
+          "type": "Derivative"
+        },
+        {
+          "slug": "flat-pack",
+          "title": "Flat Pack",
+          "type": "Derivative"
+        },
+        {
+          "slug": "stylin",
+          "title": "Stylin'",
+          "type": "Static"
+        },
+        {
+          "slug": "cream",
+          "title": "C.R.E.A.M.",
+          "type": "Static"
+        },
+        {
+          "slug": "crosshairs",
+          "title": "Crosshairs",
+          "type": "Derivative"
+        },
+        {
+          "slug": "chopstix",
+          "title": "Chopstix",
+          "type": "Alternating"
+        },
+        {
+          "slug": "icy",
+          "title": "Icy",
+          "type": "Static"
+        },
+        {
+          "slug": "ransom",
+          "title": "Ransom",
+          "type": "Static"
+        },
+        {
+          "slug": "flip-flop",
+          "title": "Flip Flop",
+          "type": "Static"
+        },
+        {
+          "slug": "lonely-mountain",
+          "title": "Lonely Mountain",
+          "type": "Static"
+        },
+        {
+          "slug": "radagast",
+          "title": "Radagast",
+          "type": "Static"
+        },
+        {
+          "slug": "kurukuru",
+          "title": "Kurukuru",
+          "type": "Alternating"
+        },
+        {
+          "slug": "xtra-fancy",
+          "title": "Xtra Fancy",
+          "type": "Derivative"
+        },
+        {
+          "slug": "frizzle",
+          "title": "Frizzle",
+          "type": "Static"
+        },
+        {
+          "slug": "weeeee",
+          "title": "Weeeee",
+          "type": "Alternating"
+        },
+        {
+          "slug": "bastille",
+          "title": "Bastille",
+          "type": "Derivative"
+        },
+        {
+          "slug": "quick-maths",
+          "title": "Quick Maths",
+          "type": "Static"
+        },
+        {
+          "slug": "cliffs",
+          "title": "Cliffs",
+          "type": "Alternating"
+        },
+        {
+          "slug": "mini-me",
+          "title": "Mini Me",
+          "type": "Static"
+        },
+        {
+          "slug": "odd-fellows",
+          "title": "Odd Fellows",
+          "type": "Derivative"
+        },
+        {
+          "slug": "ramen",
+          "title": "Ramen",
+          "type": "Static"
+        },
+        {
+          "slug": "yeet",
+          "title": "Yeet",
+          "type": "Static"
+        },
+        {
+          "slug": "olive-you",
+          "title": "Olive You",
+          "type": "Static"
+        },
+        {
+          "slug": "rosetta-stone",
+          "title": "Rosetta Stone",
+          "type": "Alternating"
+        },
+        {
+          "slug": "half-sequoyah",
+          "title": "Half Sequoyah",
+          "type": "Static"
+        },
+        {
+          "slug": "evil-intent",
+          "title": "Evil Intent",
+          "type": "Derivative"
+        },
+        {
+          "slug": "behind-bars",
+          "title": "Behind Bars",
+          "type": "Derivative"
+        },
+        {
+          "slug": "the-operator",
+          "title": "The Operator",
+          "type": "Derivative"
+        },
+        {
+          "slug": "invisible-ink",
+          "title": "Invisible Ink",
+          "type": "Derivative"
+        },
+        {
+          "slug": "bounce",
+          "title": "Bounce",
+          "type": "Alternating"
+        }
+      ]
+    }
+  },
+  {
+    "title": "WhatsApp Fonts",
+    "pageSubtitle": "ꛃꛅꛎ𖢧ꕷꛎꛤꛤ ꘘ𖣠ꛘ𖢧ꕷ",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "joker-boy",
+          "title": "Joker Boy",
+          "type": "Static"
+        },
+        {
+          "slug": "dark-bubbles",
+          "title": "Dark Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "chroma",
+          "title": "Chroma",
+          "type": "Static"
+        },
+        {
+          "slug": "hooky",
+          "title": "Hooky",
+          "type": "Static"
+        },
+        {
+          "slug": "bubbles",
+          "title": "Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "mono",
+          "title": "Mono",
+          "type": "Static"
+        },
+        {
+          "slug": "aesthetic",
+          "title": "Aesthetic",
+          "type": "Static"
+        },
+        {
+          "slug": "medieval-times",
+          "title": "Medieval Times",
+          "type": "Static"
+        },
+        {
+          "slug": "the-north",
+          "title": "The North",
+          "type": "Static"
+        },
+        {
+          "slug": "silicon",
+          "title": "Silicon",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy",
+          "title": "Fancy",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy-and-loud",
+          "title": "Fancy and Loud",
+          "type": "Static"
+        },
+        {
+          "slug": "classic",
+          "title": "Classic",
+          "type": "Static"
+        },
+        {
+          "slug": "dapper",
+          "title": "Dapper",
+          "type": "Static"
+        },
+        {
+          "slug": "vintage",
+          "title": "Vintage",
+          "type": "Static"
+        },
+        {
+          "slug": "lil-caps-lock",
+          "title": "Lil Caps Lock",
+          "type": "Static"
+        },
+        {
+          "slug": "up-top",
+          "title": "Up Top",
+          "type": "Static"
+        },
+        {
+          "slug": "watch-out",
+          "title": "Watch Out",
+          "type": "Static"
+        },
+        {
+          "slug": "modern",
+          "title": "Modern",
+          "type": "Static"
+        },
+        {
+          "slug": "chic",
+          "title": "Chic",
+          "type": "Static"
+        },
+        {
+          "slug": "swanky",
+          "title": "Swanky",
+          "type": "Static"
+        },
+        {
+          "slug": "underhill",
+          "title": "Underhill",
+          "type": "Derivative"
+        },
+        {
+          "slug": "rosetta-stone",
+          "title": "Rosetta Stone",
+          "type": "Alternating"
+        },
+        {
+          "slug": "sous-cheffe",
+          "title": "Sous Cheffe",
+          "type": "Static"
+        },
+        {
+          "slug": "modern-whacks",
+          "title": "Modern Whacks",
+          "type": "Derivative"
+        },
+        {
+          "slug": "manga",
+          "title": "Manga",
+          "type": "Static"
+        },
+        {
+          "slug": "cream",
+          "title": "C.R.E.A.M.",
+          "type": "Static"
+        },
+        {
+          "slug": "carriage-return",
+          "title": "Carriage Return",
+          "type": "Alternating"
+        },
+        {
+          "slug": "frizzle",
+          "title": "Frizzle",
+          "type": "Static"
+        },
+        {
+          "slug": "strike",
+          "title": "Strike",
+          "type": "Derivative"
+        },
+        {
+          "slug": "palmistry",
+          "title": "Palmistry",
+          "type": "Static"
+        },
+        {
+          "slug": "slashes",
+          "title": "Slashes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "flip-flop",
+          "title": "Flip Flop",
+          "type": "Static"
+        },
+        {
+          "slug": "morse-code",
+          "title": "Morse Code",
+          "type": "Alternating"
+        },
+        {
+          "slug": "art-greco",
+          "title": "Art Greco",
+          "type": "Static"
+        },
+        {
+          "slug": "circle-back",
+          "title": "Circle Back",
+          "type": "Alternating"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Big Text",
+    "pageSubtitle": "ᗷᏆǤ 丅ᗴ᙭丅",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "bode",
+          "title": "Bode",
+          "type": "Static"
+        },
+        {
+          "slug": "hit",
+          "title": "Hit",
+          "type": "Static"
+        },
+        {
+          "slug": "manga",
+          "title": "Manga",
+          "type": "Static"
+        },
+        {
+          "slug": "nut",
+          "title": "Nut",
+          "type": "Static"
+        },
+        {
+          "slug": "inu-san",
+          "title": "Inu San",
+          "type": "Static"
+        },
+        {
+          "slug": "this",
+          "title": "This",
+          "type": "Static"
+        },
+        {
+          "slug": "aesthetic",
+          "title": "Aesthetic",
+          "type": "Static"
+        },
+        {
+          "slug": "galactic",
+          "title": "Galactic",
+          "type": "Static"
+        },
+        {
+          "slug": "haiku",
+          "title": "Haiku",
+          "type": "Static"
+        },
+        {
+          "slug": "hooky",
+          "title": "Hooky",
+          "type": "Static"
+        },
+        {
+          "slug": "ramen",
+          "title": "Ramen",
+          "type": "Static"
+        },
+        {
+          "slug": "shhhhhh",
+          "title": "Shhhhhh",
+          "type": "Static"
+        },
+        {
+          "slug": "doric",
+          "title": "Doric",
+          "type": "Derivative"
+        },
+        {
+          "slug": "beach-birds",
+          "title": "Beach Birds",
+          "type": "Derivative"
+        },
+        {
+          "slug": "samson",
+          "title": "Samson",
+          "type": "Derivative"
+        },
+        {
+          "slug": "vogue",
+          "title": "Vogue",
+          "type": "Derivative"
+        },
+        {
+          "slug": "bounce",
+          "title": "Bounce",
+          "type": "Alternating"
+        },
+        {
+          "slug": "electric",
+          "title": "Electric",
+          "type": "Derivative"
+        },
+        {
+          "slug": "choo-choo",
+          "title": "Choo Choo",
+          "type": "Derivative"
+        },
+        {
+          "slug": "extra-lines",
+          "title": "Extra Lines",
+          "type": "Derivative"
+        },
+        {
+          "slug": "double-bubble",
+          "title": "Double Bubble",
+          "type": "Derivative"
+        },
+        {
+          "slug": "odysseus",
+          "title": "Odysseus",
+          "type": "Static"
+        },
+        {
+          "slug": "behind-bars",
+          "title": "Behind Bars",
+          "type": "Derivative"
+        },
+        {
+          "slug": "i-see-ew",
+          "title": "I See Ew",
+          "type": "Alternating"
+        },
+        {
+          "slug": "flash-mob",
+          "title": "Flash Mob",
+          "type": "Derivative"
+        },
+        {
+          "slug": "night-sky",
+          "title": "Night Sky",
+          "type": "Alternating"
+        },
+        {
+          "slug": "starry-night",
+          "title": "Starry Night",
+          "type": "Derivative"
+        },
+        {
+          "slug": "dicey",
+          "title": "Dicey",
+          "type": "Derivative"
+        },
+        {
+          "slug": "zalgo-level-twelve",
+          "title": "Zalgo Level Twelve",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "rosetta-stone",
+          "title": "Rosetta Stone",
+          "type": "Alternating"
+        },
+        {
+          "slug": "heart-king",
+          "title": "Heart King",
+          "type": "Derivative"
+        },
+        {
+          "slug": "sumptuous-scholar",
+          "title": "Sumptuous Scholar",
+          "type": "Static"
+        },
+        {
+          "slug": "sines",
+          "title": "Sines",
+          "type": "Derivative"
+        },
+        {
+          "slug": "click-clack",
+          "title": "Click Clack",
+          "type": "Derivative"
+        },
+        {
+          "slug": "hokusai",
+          "title": "Hokusai",
+          "type": "Derivative"
+        },
+        {
+          "slug": "big-brother",
+          "title": "Big Brother",
+          "type": "Static"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Cursive Text",
+    "pageSubtitle": "𝒞𝓊𝓇𝓈𝒾𝓋ℯ 𝒯ℯ𝓍𝓉",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "fancy",
+          "title": "Fancy",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy-and-loud",
+          "title": "Fancy and Loud",
+          "type": "Static"
+        },
+        {
+          "slug": "sous-cheffe",
+          "title": "Sous Cheffe",
+          "type": "Static"
+        },
+        {
+          "slug": "medieval-times",
+          "title": "Medieval Times",
+          "type": "Static"
+        },
+        {
+          "slug": "the-north",
+          "title": "The North",
+          "type": "Static"
+        },
+        {
+          "slug": "lonely-mountain",
+          "title": "Lonely Mountain",
+          "type": "Static"
+        },
+        {
+          "slug": "curls",
+          "title": "Curls",
+          "type": "Static"
+        },
+        {
+          "slug": "manga",
+          "title": "Manga",
+          "type": "Static"
+        },
+        {
+          "slug": "cop-out",
+          "title": "Cop Out",
+          "type": "Static"
+        },
+        {
+          "slug": "corkscrew",
+          "title": "Corkscrew",
+          "type": "Static"
+        },
+        {
+          "slug": "haiku",
+          "title": "Haiku",
+          "type": "Static"
+        },
+        {
+          "slug": "half-sequoyah",
+          "title": "Half Sequoyah",
+          "type": "Static"
+        },
+        {
+          "slug": "ringlets",
+          "title": "Ringlets",
+          "type": "Static"
+        },
+        {
+          "slug": "inu-san",
+          "title": "Inu San",
+          "type": "Static"
+        },
+        {
+          "slug": "radagast",
+          "title": "Radagast",
+          "type": "Static"
+        },
+        {
+          "slug": "wavey",
+          "title": "Wavey",
+          "type": "Static"
+        },
+        {
+          "slug": "ramen",
+          "title": "Ramen",
+          "type": "Static"
+        },
+        {
+          "slug": "two-fancy",
+          "title": "Two Fancy",
+          "type": "Alternating"
+        },
+        {
+          "slug": "art-greco",
+          "title": "Art Greco",
+          "type": "Static"
+        },
+        {
+          "slug": "french-fry",
+          "title": "French Fry",
+          "type": "Static"
+        },
+        {
+          "slug": "wakka-wakka",
+          "title": "Wakka Wakka",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy-bubbles",
+          "title": "Fancy Bubbles",
+          "type": "Derivative"
+        },
+        {
+          "slug": "flower-crown",
+          "title": "Flower Crown",
+          "type": "Derivative"
+        },
+        {
+          "slug": "cues",
+          "title": "Cues",
+          "type": "Static"
+        },
+        {
+          "slug": "dippin-dots",
+          "title": "Dippin' Dots",
+          "type": "Derivative"
+        },
+        {
+          "slug": "milli-cyrilli",
+          "title": "Milli Cyrilli",
+          "type": "Alternating"
+        },
+        {
+          "slug": "galactic",
+          "title": "Galactic",
+          "type": "Static"
+        },
+        {
+          "slug": "sumptuous-scholar",
+          "title": "Sumptuous Scholar",
+          "type": "Static"
+        },
+        {
+          "slug": "pig-tails",
+          "title": "Pig Tails",
+          "type": "Static"
+        },
+        {
+          "slug": "bastille",
+          "title": "Bastille",
+          "type": "Derivative"
+        },
+        {
+          "slug": "drippy",
+          "title": "Drippy",
+          "type": "Static"
+        },
+        {
+          "slug": "odd-fellows",
+          "title": "Odd Fellows",
+          "type": "Derivative"
+        },
+        {
+          "slug": "frizzle",
+          "title": "Frizzle",
+          "type": "Static"
+        },
+        {
+          "slug": "medieval-initials",
+          "title": "Medieval Initials",
+          "type": "Derivative"
+        },
+        {
+          "slug": "stylin",
+          "title": "Stylin'",
+          "type": "Static"
+        },
+        {
+          "slug": "xtra-fancy",
+          "title": "Xtra Fancy",
+          "type": "Derivative"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Creepy Text",
+    "pageSubtitle": "🅲ᖇ𝒆𝒆ק𝔂 т𝐄χｔ",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "ransom",
+          "title": "Ransom",
+          "type": "Static"
+        },
+        {
+          "slug": "dracula",
+          "title": "Dracula",
+          "type": "Derivative"
+        },
+        {
+          "slug": "zalgo-level-twelve",
+          "title": "Zalgo Level Twelve",
+          "type": "Zalgo"
+        },
+        {
+          "slug": "skullies",
+          "title": "Skullies",
+          "type": "Derivative"
+        },
+        {
+          "slug": "shuriken",
+          "title": "Shuriken",
+          "type": "Static"
+        },
+        {
+          "slug": "slither",
+          "title": "Slither",
+          "type": "Static"
+        },
+        {
+          "slug": "weeeee",
+          "title": "Weeeee",
+          "type": "Alternating"
+        },
+        {
+          "slug": "the-operator",
+          "title": "The Operator",
+          "type": "Derivative"
+        },
+        {
+          "slug": "pinky-out",
+          "title": "Pinky Out",
+          "type": "Static"
+        },
+        {
+          "slug": "cream",
+          "title": "C.R.E.A.M.",
+          "type": "Static"
+        },
+        {
+          "slug": "odd-fellows",
+          "title": "Odd Fellows",
+          "type": "Derivative"
+        },
+        {
+          "slug": "dapper-comments",
+          "title": "Dapper Comments",
+          "type": "Derivative"
+        },
+        {
+          "slug": "frizzle",
+          "title": "Frizzle",
+          "type": "Static"
+        },
+        {
+          "slug": "bricks",
+          "title": "Bricks",
+          "type": "Derivative"
+        },
+        {
+          "slug": "milli-cyrilli",
+          "title": "Milli Cyrilli",
+          "type": "Alternating"
+        },
+        {
+          "slug": "lonely-mountain",
+          "title": "Lonely Mountain",
+          "type": "Static"
+        },
+        {
+          "slug": "ex-box",
+          "title": "Ex-box",
+          "type": "Derivative"
+        },
+        {
+          "slug": "rosetta-stone",
+          "title": "Rosetta Stone",
+          "type": "Alternating"
+        },
+        {
+          "slug": "yeet",
+          "title": "Yeet",
+          "type": "Static"
+        },
+        {
+          "slug": "classic-whacks",
+          "title": "Classic Whacks",
+          "type": "Derivative"
+        },
+        {
+          "slug": "kurukuru",
+          "title": "Kurukuru",
+          "type": "Alternating"
+        },
+        {
+          "slug": "manga",
+          "title": "Manga",
+          "type": "Static"
+        },
+        {
+          "slug": "lil-cthulu",
+          "title": "Lil Cthulu",
+          "type": "Derivative"
+        },
+        {
+          "slug": "chopstix",
+          "title": "Chopstix",
+          "type": "Alternating"
+        },
+        {
+          "slug": "counter-curse",
+          "title": "Counter Curse",
+          "type": "Derivative"
+        },
+        {
+          "slug": "sous-cheffe",
+          "title": "Sous Cheffe",
+          "type": "Static"
+        },
+        {
+          "slug": "bounce",
+          "title": "Bounce",
+          "type": "Alternating"
+        },
+        {
+          "slug": "crosshairs",
+          "title": "Crosshairs",
+          "type": "Derivative"
+        },
+        {
+          "slug": "joker-boy",
+          "title": "Joker Boy",
+          "type": "Static"
+        },
+        {
+          "slug": "red-rum",
+          "title": "Red Rum",
+          "type": "Alternating"
+        },
+        {
+          "slug": "all-ways",
+          "title": "All Ways",
+          "type": "Derivative"
+        },
+        {
+          "slug": "olive-you",
+          "title": "Olive You",
+          "type": "Static"
+        },
+        {
+          "slug": "cliffs",
+          "title": "Cliffs",
+          "type": "Alternating"
+        },
+        {
+          "slug": "thorns",
+          "title": "Thorns",
+          "type": "Derivative"
+        },
+        {
+          "slug": "behind-bars",
+          "title": "Behind Bars",
+          "type": "Derivative"
+        },
+        {
+          "slug": "two-fancy",
+          "title": "Two Fancy",
+          "type": "Alternating"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Facebook Fonts",
+    "pageSubtitle": "𝙵𝚊𝚌𝚎𝚋𝚘𝚘𝚔 𝙵𝚘𝚗𝚝𝚜",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "silicon",
+          "title": "Silicon",
+          "type": "Static"
+        },
+        {
+          "slug": "aesthetic",
+          "title": "Aesthetic",
+          "type": "Static"
+        },
+        {
+          "slug": "hooky",
+          "title": "Hooky",
+          "type": "Static"
+        },
+        {
+          "slug": "medieval-times",
+          "title": "Medieval Times",
+          "type": "Static"
+        },
+        {
+          "slug": "the-north",
+          "title": "The North",
+          "type": "Static"
+        },
+        {
+          "slug": "dark-bubbles",
+          "title": "Dark Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "bubbles",
+          "title": "Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy",
+          "title": "Fancy",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy-and-loud",
+          "title": "Fancy and Loud",
+          "type": "Static"
+        },
+        {
+          "slug": "mono",
+          "title": "Mono",
+          "type": "Static"
+        },
+        {
+          "slug": "chroma",
+          "title": "Chroma",
+          "type": "Static"
+        },
+        {
+          "slug": "lil-caps-lock",
+          "title": "Lil Caps Lock",
+          "type": "Static"
+        },
+        {
+          "slug": "up-top",
+          "title": "Up Top",
+          "type": "Static"
+        },
+        {
+          "slug": "watch-out",
+          "title": "Watch Out",
+          "type": "Static"
+        },
+        {
+          "slug": "classic",
+          "title": "Classic",
+          "type": "Static"
+        },
+        {
+          "slug": "dapper",
+          "title": "Dapper",
+          "type": "Static"
+        },
+        {
+          "slug": "vintage",
+          "title": "Vintage",
+          "type": "Static"
+        },
+        {
+          "slug": "modern",
+          "title": "Modern",
+          "type": "Static"
+        },
+        {
+          "slug": "chic",
+          "title": "Chic",
+          "type": "Static"
+        },
+        {
+          "slug": "swanky",
+          "title": "Swanky",
+          "type": "Static"
+        },
+        {
+          "slug": "flip-flop",
+          "title": "Flip Flop",
+          "type": "Static"
+        },
+        {
+          "slug": "frizzle",
+          "title": "Frizzle",
+          "type": "Static"
+        },
+        {
+          "slug": "modern-whacks",
+          "title": "Modern Whacks",
+          "type": "Derivative"
+        },
+        {
+          "slug": "jumping-jax",
+          "title": "Jumping Jax",
+          "type": "Alternating"
+        },
+        {
+          "slug": "underhill",
+          "title": "Underhill",
+          "type": "Derivative"
+        },
+        {
+          "slug": "joker-boy",
+          "title": "Joker Boy",
+          "type": "Static"
+        },
+        {
+          "slug": "art-greco",
+          "title": "Art Greco",
+          "type": "Static"
+        },
+        {
+          "slug": "evening-dress",
+          "title": "Evening Dress",
+          "type": "Alternating"
+        },
+        {
+          "slug": "strike",
+          "title": "Strike",
+          "type": "Derivative"
+        },
+        {
+          "slug": "slashes",
+          "title": "Slashes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "sous-cheffe",
+          "title": "Sous Cheffe",
+          "type": "Static"
+        },
+        {
+          "slug": "palmistry",
+          "title": "Palmistry",
+          "type": "Static"
+        },
+        {
+          "slug": "two-fancy",
+          "title": "Two Fancy",
+          "type": "Alternating"
+        },
+        {
+          "slug": "manga",
+          "title": "Manga",
+          "type": "Static"
+        },
+        {
+          "slug": "tuxedo",
+          "title": "Tuxedo",
+          "type": "Alternating"
+        },
+        {
+          "slug": "cream",
+          "title": "C.R.E.A.M.",
+          "type": "Static"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Bold Text",
+    "pageSubtitle": "𝐁𝐨𝐥𝐝 𝐓𝐞𝐱𝐭",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "classic",
+          "title": "Classic",
+          "type": "Static"
+        },
+        {
+          "slug": "vintage",
+          "title": "Vintage",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy-and-loud",
+          "title": "Fancy and Loud",
+          "type": "Static"
+        },
+        {
+          "slug": "modern",
+          "title": "Modern",
+          "type": "Static"
+        },
+        {
+          "slug": "swanky",
+          "title": "Swanky",
+          "type": "Static"
+        },
+        {
+          "slug": "the-north",
+          "title": "The North",
+          "type": "Static"
+        },
+        {
+          "slug": "hooky",
+          "title": "Hooky",
+          "type": "Static"
+        },
+        {
+          "slug": "dark-bubbles",
+          "title": "Dark Bubbles",
+          "type": "Static"
+        },
+        {
+          "slug": "chroma",
+          "title": "Chroma",
+          "type": "Static"
+        },
+        {
+          "slug": "sumptuous-scholar",
+          "title": "Sumptuous Scholar",
+          "type": "Static"
+        },
+        {
+          "slug": "modern-quiver",
+          "title": "Modern Quiver",
+          "type": "Derivative"
+        },
+        {
+          "slug": "gatsby",
+          "title": "Gatsby",
+          "type": "Derivative"
+        },
+        {
+          "slug": "heracles",
+          "title": "Heracles",
+          "type": "Static"
+        },
+        {
+          "slug": "two-fancy",
+          "title": "Two Fancy",
+          "type": "Alternating"
+        },
+        {
+          "slug": "loud-scholar",
+          "title": "Loud Scholar",
+          "type": "Static"
+        },
+        {
+          "slug": "chopstix",
+          "title": "Chopstix",
+          "type": "Alternating"
+        },
+        {
+          "slug": "sleepy",
+          "title": "Sleepy",
+          "type": "Derivative"
+        },
+        {
+          "slug": "odd-fellows",
+          "title": "Odd Fellows",
+          "type": "Derivative"
+        },
+        {
+          "slug": "left-or-right",
+          "title": "Left or Right",
+          "type": "Derivative"
+        },
+        {
+          "slug": "odysseus",
+          "title": "Odysseus",
+          "type": "Static"
+        },
+        {
+          "slug": "no-fancy",
+          "title": "No Fancy",
+          "type": "Derivative"
+        },
+        {
+          "slug": "flower-crown",
+          "title": "Flower Crown",
+          "type": "Derivative"
+        },
+        {
+          "slug": "presents",
+          "title": "Presents",
+          "type": "Derivative"
+        },
+        {
+          "slug": "ex-box",
+          "title": "Ex-box",
+          "type": "Derivative"
+        },
+        {
+          "slug": "blocked-quotes",
+          "title": "Blocked Quotes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "classic-comments",
+          "title": "Classic Comments",
+          "type": "Derivative"
+        },
+        {
+          "slug": "double-bubble",
+          "title": "Double Bubble",
+          "type": "Derivative"
+        },
+        {
+          "slug": "classic-gulls",
+          "title": "Classic Gulls",
+          "type": "Derivative"
+        },
+        {
+          "slug": "vintage-quiver",
+          "title": "Vintage Quiver",
+          "type": "Derivative"
+        },
+        {
+          "slug": "kodak",
+          "title": "Kodak",
+          "type": "Derivative"
+        },
+        {
+          "slug": "bastille",
+          "title": "Bastille",
+          "type": "Derivative"
+        },
+        {
+          "slug": "oh",
+          "title": "Oh",
+          "type": "Derivative"
+        },
+        {
+          "slug": "heart-king",
+          "title": "Heart King",
+          "type": "Derivative"
+        },
+        {
+          "slug": "crosshairs",
+          "title": "Crosshairs",
+          "type": "Derivative"
+        },
+        {
+          "slug": "dippin-dots",
+          "title": "Dippin' Dots",
+          "type": "Derivative"
+        },
+        {
+          "slug": "this-or-that",
+          "title": "This or That",
+          "type": "Derivative"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Italic Text",
+    "pageSubtitle": "𝘐𝘵𝘢𝘭𝘪𝘤 𝘛𝘦𝘹𝘵",
+    "curatedFonts": {
+      "items": [
+        {
+          "slug": "chic",
+          "title": "Chic",
+          "type": "Static"
+        },
+        {
+          "slug": "swanky",
+          "title": "Swanky",
+          "type": "Static"
+        },
+        {
+          "slug": "deluxe-scholar",
+          "title": "Deluxe Scholar",
+          "type": "Static"
+        },
+        {
+          "slug": "dapper",
+          "title": "Dapper",
+          "type": "Static"
+        },
+        {
+          "slug": "vintage",
+          "title": "Vintage",
+          "type": "Static"
+        },
+        {
+          "slug": "cop-out",
+          "title": "Cop Out",
+          "type": "Static"
+        },
+        {
+          "slug": "medieval-times",
+          "title": "Medieval Times",
+          "type": "Static"
+        },
+        {
+          "slug": "the-north",
+          "title": "The North",
+          "type": "Static"
+        },
+        {
+          "slug": "lonely-mountain",
+          "title": "Lonely Mountain",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy",
+          "title": "Fancy",
+          "type": "Static"
+        },
+        {
+          "slug": "fancy-and-loud",
+          "title": "Fancy and Loud",
+          "type": "Static"
+        },
+        {
+          "slug": "sumptuous-scholar",
+          "title": "Sumptuous Scholar",
+          "type": "Static"
+        },
+        {
+          "slug": "chic-comments",
+          "title": "Chic Comments",
+          "type": "Derivative"
+        },
+        {
+          "slug": "chic-meow",
+          "title": "Chic Meow",
+          "type": "Derivative"
+        },
+        {
+          "slug": "well-rounded",
+          "title": "Well Rounded",
+          "type": "Derivative"
+        },
+        {
+          "slug": "evil-intent",
+          "title": "Evil Intent",
+          "type": "Derivative"
+        },
+        {
+          "slug": "dapper-lanes",
+          "title": "Dapper Lanes",
+          "type": "Derivative"
+        },
+        {
+          "slug": "sleepy",
+          "title": "Sleepy",
+          "type": "Derivative"
+        },
+        {
+          "slug": "slippy-dapper",
+          "title": "Slippy Dapper",
+          "type": "Derivative"
+        },
+        {
+          "slug": "every-bubble",
+          "title": "Every Bubble",
+          "type": "Derivative"
+        },
+        {
+          "slug": "extra-bright",
+          "title": "Lightning",
+          "type": "Derivative"
+        },
+        {
+          "slug": "all-ls",
+          "title": "All L’s",
+          "type": "Derivative"
+        },
+        {
+          "slug": "william-tell",
+          "title": "William Tell",
+          "type": "Derivative"
+        },
+        {
+          "slug": "dapper-comments",
+          "title": "Dapper Comments",
+          "type": "Derivative"
+        },
+        {
+          "slug": "odysseus",
+          "title": "Odysseus",
+          "type": "Static"
+        },
+        {
+          "slug": "arrow-box",
+          "title": "Arrow Box",
+          "type": "Derivative"
+        },
+        {
+          "slug": "tilded",
+          "title": "Tilded",
+          "type": "Derivative"
+        },
+        {
+          "slug": "to-a-t",
+          "title": "To a T",
+          "type": "Derivative"
+        },
+        {
+          "slug": "chopstix",
+          "title": "Chopstix",
+          "type": "Alternating"
+        },
+        {
+          "slug": "santa-hat",
+          "title": "Santa Hat",
+          "type": "Derivative"
+        },
+        {
+          "slug": "all-js",
+          "title": "All J’s",
+          "type": "Derivative"
+        },
+        {
+          "slug": "chic-guidance",
+          "title": "Chic Guidance",
+          "type": "Derivative"
+        },
+        {
+          "slug": "dapper-ellipses",
+          "title": "Dapper Ellipses",
+          "type": "Derivative"
+        },
+        {
+          "slug": "mustachioed",
+          "title": "Mustachioed",
+          "type": "Derivative"
+        },
+        {
+          "slug": "oh",
+          "title": "Oh",
+          "type": "Derivative"
+        },
+        {
+          "slug": "dapper-slashes",
+          "title": "Dapper Slashes",
+          "type": "Derivative"
+        }
+      ]
+    }
+  }
+]
