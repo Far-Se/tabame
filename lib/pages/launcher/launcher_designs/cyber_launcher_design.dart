@@ -49,7 +49,7 @@ class CyberLauncherFrame extends StatelessWidget {
                     const Spacer(),
                     Container(width: 5, height: 5, color: accent),
                     const SizedBox(width: 5),
-                    Text('SYNC $resultCount',
+                    Text(Globals.isLauncherPluginActive ? "PLUGIN" : 'SYNC $resultCount',
                         style: TextStyle(
                             color: onSurface.withAlpha(125),
                             fontSize: 9,

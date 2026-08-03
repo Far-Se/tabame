@@ -198,17 +198,16 @@ class _TransitFooter extends StatelessWidget {
               border: Border.all(color: accent, width: 2),
             ),
           ),
-          if (!Globals.isLauncherPluginActive) const SizedBox(width: 6),
-          if (!Globals.isLauncherPluginActive)
-            Text(
-              resultCount == 1 ? '1 STOP' : '$resultCount STOPS',
-              style: TransitTokens.sign(
-                fontSize: Design.baseFontSize - 1,
-                color: TransitTokens.dim(isDark),
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-              ),
+          const SizedBox(width: 6),
+          Text(
+            Globals.isLauncherPluginActive ? "PLUGIN" : (resultCount == 1 ? '1 STOP' : '$resultCount STOPS'),
+            style: TransitTokens.sign(
+              fontSize: Design.baseFontSize - 1,
+              color: TransitTokens.dim(isDark),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
             ),
+          ),
         ],
       ),
     );

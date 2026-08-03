@@ -177,16 +177,15 @@ class _FluentFooter extends StatelessWidget {
           _kbd('→', 'Actions'),
           const SizedBox(width: 12),
           _kbd('Esc', 'Dismiss'),
-          if (!Globals.isLauncherPluginActive) const Spacer(),
-          if (!Globals.isLauncherPluginActive)
-            Text(
-              resultCount == 1 ? '1 result' : '$resultCount results',
-              style: FluentTokens.segoe(
-                fontSize: Design.baseFontSize - 1,
-                color: FluentTokens.dim(isDark),
-                fontWeight: FontWeight.w400,
-              ),
+          const Spacer(),
+          Text(
+            Globals.isLauncherPluginActive ? "PLUGIN" : (resultCount == 1 ? '1 result' : '$resultCount results'),
+            style: FluentTokens.segoe(
+              fontSize: Design.baseFontSize - 1,
+              color: FluentTokens.dim(isDark),
+              fontWeight: FontWeight.w400,
             ),
+          ),
         ],
       ),
     );

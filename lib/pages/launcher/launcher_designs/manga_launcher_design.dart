@@ -93,7 +93,7 @@ class _MangaLauncherMasthead extends StatelessWidget {
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               color: accent,
-              child: Text('CH. ${resultCount.toString().padLeft(2, '0')}',
+              child: Text(Globals.isLauncherPluginActive ? "PLUGIN" : 'CH. ${resultCount.toString().padLeft(2, '0')}',
                   style: TextStyle(
                       color: paper,
                       fontSize: Design.baseFontSize - 3,

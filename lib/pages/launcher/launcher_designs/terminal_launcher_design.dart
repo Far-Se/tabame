@@ -246,7 +246,7 @@ class _TerminalStatusBar extends StatelessWidget {
           Text(' quit', style: label),
           const Spacer(),
           Text(
-            '[ ${resultCount.toString().padLeft(2, '0')} ]',
+            Globals.isLauncherPluginActive ? "PLUGIN" : '[ ${resultCount.toString().padLeft(2, '0')} ]',
             style: TerminalTokens.mono(
               fontSize: Design.baseFontSize - 1.5,
               color: accent.withAlpha(180),

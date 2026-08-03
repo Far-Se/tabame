@@ -245,7 +245,7 @@ class _ManifestoFooter extends StatelessWidget {
           key('ESC', 'CLOSE'),
           const Spacer(),
           Text(
-            '${resultCount.toString().padLeft(2, '0')} ENTRIES',
+            Globals.isLauncherPluginActive ? "PLUGIN" : '${resultCount.toString().padLeft(2, '0')} ENTRIES',
             style: ManifestoTokens.display(
               fontSize: Design.baseFontSize - 0.5,
               fontWeight: FontWeight.w700,

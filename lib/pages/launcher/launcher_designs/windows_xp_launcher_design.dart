@@ -301,15 +301,16 @@ class _WindowsXpFooter extends StatelessWidget {
           _hint('→', 'Actions'),
           const SizedBox(width: 12),
           _hint('Esc', 'Cancel'),
-          if (!Globals.isLauncherPluginActive) const Spacer(),
-          if (!Globals.isLauncherPluginActive)
-            Text(
-              resultCount == 1 ? '1 item found' : '$resultCount items found',
-              style: WindowsXpTokens.tahoma(
-                fontSize: Design.baseFontSize - 1,
-                color: const Color(0xFFDDE9FF),
-              ),
+          const Spacer(),
+          Text(
+            Globals.isLauncherPluginActive
+                ? "PLUGIN"
+                : (resultCount == 1 ? '1 item found' : '$resultCount items found'),
+            style: WindowsXpTokens.tahoma(
+              fontSize: Design.baseFontSize - 1,
+              color: const Color(0xFFDDE9FF),
             ),
+          ),
         ],
       ),
     );

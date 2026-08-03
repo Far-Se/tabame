@@ -59,7 +59,7 @@ class SteamLauncherFrame extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(13, 7, 13, 6),
                   child: Row(children: <Widget>[
-                    Text('STORE',
+                    Text('TABAME',
                         style: TextStyle(
                             color: onSurface.withAlpha(85),
                             fontSize: 9,
@@ -73,19 +73,16 @@ class SteamLauncherFrame extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                             letterSpacing: 1.4)),
                     const SizedBox(width: 14),
-                    Text('COMMUNITY',
+                    Text('QuickLaunch',
                         style: TextStyle(
                             color: onSurface.withAlpha(85),
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 1.4)),
                     const Spacer(),
-                    Text('$resultCount ITEMS',
+                    Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount ITEMS',
                         style: TextStyle(
-                            color: accent.withAlpha(190),
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.1)),
+                            color: accent.withAlpha(190), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.1))
                   ]),
                 ),
               ),

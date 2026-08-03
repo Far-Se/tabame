@@ -368,7 +368,7 @@ class _OrbitTelemetryFooter extends StatelessWidget {
           _hint('ESC', 'ABORT'),
           const Spacer(),
           Text(
-            'TGT ${resultCount.toString().padLeft(2, '0')}',
+            Globals.isLauncherPluginActive ? "PLUGIN" : 'TGT ${resultCount.toString().padLeft(2, '0')}',
             style: OrbitTokens.tele(
               fontSize: Design.baseFontSize - 1,
               color: accent.withAlpha(190),

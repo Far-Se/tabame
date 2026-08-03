@@ -147,7 +147,7 @@ class _ZenFooter extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(bottom: 7),
               child: Text(
-                resultCount == 0 ? 'breathe' : '$resultCount found',
+                Globals.isLauncherPluginActive ? "PLUGIN" : (resultCount == 0 ? 'breathe' : '$resultCount found'),
                 style: ZenTokens.soft(
                   fontSize: Design.baseFontSize - 1,
                   color: onSurface.withAlpha(120),

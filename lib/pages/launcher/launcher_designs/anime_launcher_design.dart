@@ -68,9 +68,9 @@ class AnimeLauncherFrame extends StatelessWidget {
                         const SizedBox(width: 6),
                         Text('ENTER  OPEN   •   ESC  CLOSE',
                             style: TextStyle(fontSize: 10, color: onSurface.withAlpha(150))),
-                        if (!Globals.isLauncherPluginActive) const Spacer(),
-                        if (!Globals.isLauncherPluginActive)
-                          Text('$resultCount MATCHES', style: TextStyle(fontSize: 10, color: onSurface.withAlpha(150))),
+                        const Spacer(),
+                        Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount MATCHES',
+                            style: TextStyle(fontSize: 10, color: onSurface.withAlpha(150))),
                       ],
                     ),
                   ),

@@ -207,15 +207,14 @@ class _NotionLauncherFooter extends StatelessWidget {
           _hint('↵', 'open'),
           const SizedBox(width: 12),
           _hint('esc', 'close'),
-          if (!Globals.isLauncherPluginActive) const Spacer(),
-          if (!Globals.isLauncherPluginActive)
-            Text(
-              resultCount == 1 ? '1 result' : '$resultCount results',
-              style: NotionTokens.ui(
-                fontSize: Design.baseFontSize - 1,
-                color: NotionTokens.dim(isDark),
-              ),
+          const Spacer(),
+          Text(
+            Globals.isLauncherPluginActive ? "PLUGIN" : (resultCount == 1 ? '1 result' : '$resultCount results'),
+            style: NotionTokens.ui(
+              fontSize: Design.baseFontSize - 1,
+              color: NotionTokens.dim(isDark),
             ),
+          ),
         ],
       ),
     );

@@ -92,7 +92,7 @@ class _TechLauncherStatus extends StatelessWidget {
                 style: TextStyle(
                     color: onSurface.withAlpha(140), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.6)),
             const Spacer(),
-            Text('$resultCount OBJECTS',
+            Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount OBJECTS',
                 style: TextStyle(
                     color: accent.withAlpha(175), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.2)),
           ],

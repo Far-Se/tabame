@@ -102,7 +102,7 @@ class Outrun2LauncherFrame extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(child: Container(height: 1, color: accent.withAlpha(110))),
                   const SizedBox(width: 8),
-                  Text('$resultCount // 86',
+                  Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount // 86',
                       style: TextStyle(
                           color: onSurface.withAlpha(145),
                           fontSize: 9,

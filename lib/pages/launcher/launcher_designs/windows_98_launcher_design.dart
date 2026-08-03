@@ -224,7 +224,9 @@ class _Windows98Footer extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(5, 3, 5, 3),
                   child: Text(
-                    resultCount == 1 ? '1 object' : '$resultCount objects',
+                    Globals.isLauncherPluginActive
+                        ? "PLUGIN"
+                        : (resultCount == 1 ? '1 object' : '$resultCount objects'),
                     style: Windows98Tokens.system(
                       fontSize: Design.baseFontSize - 1,
                       color: Windows98Tokens.foreground,
