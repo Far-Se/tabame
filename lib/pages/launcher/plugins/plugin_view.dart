@@ -38,6 +38,7 @@ class PluginView extends StatefulWidget {
     required this.onLoadMore,
     required this.onEmptyAction,
     required this.onMetadataAction,
+    required this.onFloatingAction,
     required this.selectedIdsFor,
     required this.onToggleSelection,
     required this.onToggleTree,
@@ -86,6 +87,9 @@ class PluginView extends StatefulWidget {
   /// A metadata action button was clicked. Preview metadata belongs to its
   /// selected item; detail metadata uses an empty item id.
   final void Function(PluginEventScope scope, String itemId, PluginAction action) onMetadataAction;
+
+  /// A bottom-right `floatingAction` button was pressed.
+  final void Function(PluginEventScope scope, PluginAction action) onFloatingAction;
   final Set<String> Function(PluginEventScope scope) selectedIdsFor;
   final void Function(PluginEventScope scope, String id) onToggleSelection;
   final void Function(PluginEventScope scope, String id, bool expanded) onToggleTree;
@@ -356,7 +360,7 @@ class _PluginViewState extends State<PluginView> {
                 onCancel: () => widget.onCancelOperation(_scopeFor(frame), frame.operation!.id),
               ),
             ]);
-      return _withPageChrome(operation, frame);
+      return _withFloatingActions(_withPageChrome(operation, frame), frame, _scopeFor(frame));
     }
 
     Widget body;
@@ -417,7 +421,41 @@ class _PluginViewState extends State<PluginView> {
         );
       }
     }
-    return _withPageChrome(_withOperation(body, frame.operation, _scopeFor(frame)), frame);
+    final PluginEventScope scope = _scopeFor(frame);
+    return _withFloatingActions(_withPageChrome(_withOperation(body, frame.operation, scope), frame), frame, scope);
+  }
+
+  Widget _withFloatingActions(Widget child, PluginRenderFrame frame, PluginEventScope scope) {
+    if (frame.floatingActions.isEmpty) return child;
+    return Stack(
+      children: <Widget>[
+        Positioned.fill(child: child),
+        Positioned(
+          right: 14,
+          bottom: 12,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.end,
+            children: <Widget>[
+              for (final PluginAction action in frame.floatingActions)
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 38),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    backgroundColor: action.destructive ? const Color(0xFFE5534B) : Design.accent,
+                    foregroundColor: action.destructive ? Colors.white : null,
+                    elevation: 5,
+                  ),
+                  onPressed: () => widget.onFloatingAction(scope, action),
+                  icon: Icon(PluginIcons.resolve(action.icon), size: 17),
+                  label: Text(action.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _withOperation(Widget child, PluginOperation? operation, PluginEventScope scope) {
@@ -608,7 +646,7 @@ class _PluginViewState extends State<PluginView> {
               ],
             ),
           ),
-          Expanded(child: body),
+          Expanded(child: _withFloatingActions(body, frame, scope)),
         ]),
       ),
     );

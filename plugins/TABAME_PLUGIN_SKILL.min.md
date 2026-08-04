@@ -57,7 +57,7 @@ Custom env vars (any runtime): `"env"` object in `plugin.json` → `os.environ`/
 
 | Msg           | When                                                                                                                         | Fields                                                                                                                                                                                                                                                                         |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `init`        | once, at start                                                                                                               | `query` (initial text), `protocol` (int, currently 9), `theme` {accent,text,background,dark}, `locale` (e.g. `"en-US"`). Immediately followed by a `query` with same text — treat both alike (`text` falling back to `query`). Use `theme` for matching generated images/SVGs. |
+| `init`        | once, at start                                                                                                               | `query` (initial text), `protocol` (int, currently 11), `theme` {accent,text,background,dark}, `locale` (e.g. `"en-US"`). Immediately followed by a `query` with same text — treat both alike (`text` falling back to `query`). Use `theme` for matching generated images/SVGs. |
 | `query`       | every keystroke (not in `inputMode:"submit"`)                                                                                | `text`, `rev` (int, increases with typing)                                                                                                                                                                                                                                     |
 | `submitQuery` | Enter, when frame set `inputMode:"submit"`                                                                                   | `text`, `rev`                                                                                                                                                                                                                                                                  |
 | `select`      | highlighted item changed                                                                                                     | `id`, `rev`                                                                                                                                                                                                                                                                    |
@@ -74,11 +74,12 @@ Custom env vars (any runtime): `"env"` object in `plugin.json` → `os.environ`/
 | `back`        | Escape on `canGoBack:true` frame                                                                                             | `rev` — render previous screen                                                                                                                                                                                                                                                 |
 | `navigate`    | page breadcrumb clicked                                                                                                      | `targetPageId`,`rev`, optional `pageId`,`panelId`,`elementId`                                                                                                                                                                                                                  |
 | `kanbanMove`  | kanban card dropped                                                                                                          | `id`,`columnId`,`index`,`rev`, optional scope fields                                                                                                                                                                                                                            |
+| `calendarNavigate` | calendar header navigation                                                                                              | `date` (`yyyy-mm-dd`), `mode` (`month` or `agenda`), `rev`, optional scope fields                                                                                                                                                                                               |
 | `tab`         | Tab pressed                                                                                                                  | `id` (highlighted item, `""` if none), `rev` — typically answer with `setQuery`                                                                                                                                                                                                |
 | `close`       | plugin shutting down                                                                                                         | —                                                                                                                                                                                                                                                                              |
 
 ```json
-{"type":"init","query":"rome","protocol":8,"theme":{"accent":"#63A0EA","text":"#E8E8E8","background":"#1B1D23","dark":true},"locale":"en-US"}
+{"type":"init","query":"rome","protocol":11,"theme":{"accent":"#63A0EA","text":"#E8E8E8","background":"#1B1D23","dark":true},"locale":"en-US"}
 {"type":"query","text":"rome","rev":1}
 {"type":"action","id":"item-2","action":"copy"}
 {"type":"close"}
@@ -129,7 +130,7 @@ keyword typed → process starts → `init` then `query` → typing → `query`s
 ```jsonc
 {
   "type": "render", "rev": 0,
-  "view": "list", // list|grid|detail|chat|form|table|tree|timeline|chart|operation|dashboard|kanban|diff|log
+  "view": "list", // list|grid|detail|chat|form|table|tree|timeline|chart|operation|dashboard|kanban|diff|log|calendar|gallery
   "page": {"id":"issues","title":"Issues","history":"push","preserveState":true,"breadcrumbs":[{"id":"root","label":"Home"}]},
   "elementId": "results", // events echo pageId/panelId/elementId scope
   "loading": false, // bool or {"progress":0.4} determinate
@@ -143,6 +144,7 @@ keyword typed → process starts → `init` then `query` → typing → `query`s
   "preview": {"enabled": true}, // or bare `true`
   "canGoBack": false, // Escape → {"type":"back"} instead of exiting; leave false on root screen; never true on a frame you can't navigate away from
   "actions": [/*frame-level Ctrl+K, §8, fired with id:""*/],
+  "floatingAction": {"id":"run","title":"Run","icon":"play"}, // bottom-right; object or array; action arrives with id:""
   "selectId": "item-3", // move highlight here after a rev:0 re-render
   "hasMore": false, // → loadMore events; answer with full list (old+new pages)
   "inputMode": "submit", // Enter sends whole line as submitQuery; 2nd Enter on unchanged text fires default action
@@ -154,6 +156,8 @@ keyword typed → process starts → `init` then `query` → typing → `query`s
   "kanban": {"columns":[{"id":"todo","title":"To do","color":"#63A0EA","limit":5}]}, // items use column; drop→kanbanMove
   "diff": {"mode":"unified","text":"-old\n+new"}, // or structured lines with type/text/oldLine/newLine
   "log": {"follow":true,"wrap":false,"lines":[{"level":"info","text":"Ready"}]},
+  "calendar": {"mode":"month","date":"2026-08-01","weekStart":"monday","days":30},
+  "gallery": {"columns":4,"aspectRatio":1.15,"fit":"cover","showLabels":true},
   "items": [/*§6.2*/]
 }
 ```
@@ -197,6 +201,8 @@ Aligned key-value rows, preferred over markdown tables:
   "lines": 1, // list: subtitle wrap lines, 1–3
   "progress": 0.6, // list: thin progress bar, 0..1
   "tileColor": "#0EA5E9", // grid: fill tile, label auto-contrasts
+  "start": "2026-08-04T09:30:00", "end": "2026-08-04T10:15:00", // calendar; `date` alias + allDay/color/location supported
+  "media": {"url":"https://example.com/poster.webp","type":"image","thumbnail":"https://example.com/thumb.webp","duration":"02:18","size":2480000,"width":1920,"height":1080}, // gallery
   "accessories": [{ "text": "IT", "color": "#8250DF", "icon": "clock" }], // trailing chips; bare string ok too
   "actions": [{ "id": "copy", "title": "Copy", "icon": "copy" }], // Ctrl+K entries, §8
   "preview": {
@@ -214,6 +220,8 @@ Aligned key-value rows, preferred over markdown tables:
 - **detail**: single scrollable markdown doc (`detail.markdown`) + optional `detail.metadata`. No items. Supports headings/lists/bold/code/blockquotes; links clickable; text selectable; code blocks get copy button; images open in lightbox. ↑/↓ scroll, PageUp/PageDown jump page. `detail.wide:true` widens window. Query keystrokes still send `query` (re-render per query), or use `inputMode:"submit"` + stream via `detail.append` (§9) for chat-style.
 - **chat**: message feed; item = message (`title`=author, `subtitle`=body, `icon`=avatar URL, `accessories`=timestamp, `images`=HTTP(S) attachment URLs). Pair with `inputMode:"submit"`; Enter → `submitQuery`. Auto-follows bottom while reading latest.
 - **form**: see below.
+- **calendar**: month grid or agenda. Frame `calendar:{mode:"month"|"agenda",date:"yyyy-mm-dd",weekStart:"monday"|"sunday",days:1..90}`; items use `start`/`date` plus optional `end`,`allDay`,`color`,`location` (direct or nested in `calendar`). Header controls send `calendarNavigate` with date/mode/rev/scope; re-render the full frame.
+- **gallery**: media tiles configured by `gallery:{columns:2..8,aspectRatio:0.5..2.5,fit:"cover"|"contain",showLabels}`. Items use `media:{url,type:"image"|"video"|"audio"|"file",thumbnail?,duration?,size?,width?,height?}` or an image source string. Sources: HTTP(S), file, data image ≤2 MB. Supports item/bulk actions and paging.
 - **preview pane (split)**: set frame-level `preview.enabled:true` on list/grid — items left, selected item's `preview.markdown`/`metadata` right. The window widens by default; set frame-level `preview.wide:false` to keep normal width. Item-level preview objects contain content only. Ignored for detail/form.
 
 ### Form
@@ -284,7 +292,7 @@ Types (unknown → `text`): `text,password,textarea,dropdown,combobox,checkbox,n
 
 ## 8. Actions & Ctrl+K
 
-Item `actions[]` + frame-level `actions[]` both populate Ctrl+K (item's first, then frame's after a divider; frame actions also work on detail/form). Enter → `action:"default"` always (even if unlisted). Ctrl+K pick → that action's id; frame-level arrives with `id:""`. You decide semantics (open/copy/toggle/delete/navigate). Respond with a command (§5.1) and/or new `rev:0` frame.
+Item `actions[]` + frame-level `actions[]` both populate Ctrl+K (item's first, then frame's after a divider; frame actions also work on detail/form). Enter → `action:"default"` always (even if unlisted). Ctrl+K pick → that action's id; frame-level arrives with `id:""`. `floatingAction` accepts one normal action object or an array and renders bottom-right buttons; clicks are frame-level actions and include bulk-selected `ids`. You decide semantics (open/copy/toggle/delete/navigate). Respond with a command (§5.1) and/or new `rev:0` frame.
 
 ```jsonc
 {

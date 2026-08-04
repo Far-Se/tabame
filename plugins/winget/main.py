@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 
 # ---------------------------------------------------------------------------
 # stdio helpers
@@ -120,13 +121,19 @@ def search_packages(query):
 # ---------------------------------------------------------------------------
 
 state = {
-    "screen": "root",  # root | installed | updates
+    "screen": "root",  # root | installed | updates | update_log
     "installed": None,  # cached list or None
     "updates": None,  # cached list or None
     "installed_loading": False,
     "updates_loading": False,
     "latest_rev": 0,
     "search_gen": 0,
+    "update_running": False,
+    "update_total": 0,
+    "update_completed": 0,
+    "update_current": "",
+    "update_lines": [],
+    "update_run_id": 0,
 }
 state_lock = threading.Lock()
 
@@ -552,7 +559,63 @@ def render_updates(rev, filter_text=""):
             else None,
             "emptyText": "No matching updates" if ft else "Everything is up to date",
             "items": items,
+            "selection": {"enabled": True},
             "actions": frame_actions,
+            "floatingAction": {
+                "id": "update-selected",
+                "title": "Update selected",
+                "icon": "download",
+                "confirm": confirm(
+                    "Update selected apps?",
+                    "Updates every app selected in this list.",
+                    "Update selected",
+                ),
+            }
+            if updates
+            else None,
+        }
+    )
+
+
+def render_update_log(rev=0):
+    with state_lock:
+        running = state["update_running"]
+        total = state["update_total"]
+        completed = state["update_completed"]
+        current = state["update_current"]
+        lines = list(state["update_lines"])
+
+    if running:
+        position = min(completed + 1, total)
+        title = f"Updating {position} of {total}"
+        detail = current
+        progress = completed / total if total else 0
+    else:
+        title = "Update run complete"
+        detail = f"Processed {completed} app(s)"
+        progress = 1
+
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "log",
+            "canGoBack": True,
+            "placeholder": "Updates are shown below…",
+            "operation": {
+                "id": "winget-update-batch",
+                "title": title,
+                "detail": detail,
+                "progress": progress,
+            },
+            "log": {"follow": True, "wrap": True, "lines": lines},
+            "floatingAction": {
+                "id": "back-to-updates",
+                "title": "Back to updates",
+                "icon": "list",
+            }
+            if not running
+            else None,
         }
     )
 
@@ -563,6 +626,8 @@ def render_current(rev, text):
         render_installed(rev, text)
     elif screen == "updates":
         render_updates(rev, text)
+    elif screen == "update_log":
+        render_update_log(rev)
     else:
         render_root(rev, text)
 
@@ -734,74 +799,146 @@ def do_update(pkg_id, name):
     )
 
 
-def do_update_all():
-    send(
-        {
-            "type": "command",
-            "command": "toast",
-            "text": "Updating all apps…",
-            "style": "progress",
-        }
-    )
+def _update_log_line(level, text, source="winget"):
+    with state_lock:
+        run_id = state["update_run_id"]
+        line_id = len(state["update_lines"]) + 1
+        state["update_lines"].append(
+            {
+                "id": f"{run_id}:{line_id}",
+                "timestamp": time.strftime("%H:%M:%S"),
+                "level": level,
+                "source": source,
+                "text": text,
+            }
+        )
+        if len(state["update_lines"]) > 500:
+            state["update_lines"] = state["update_lines"][-500:]
+        show_log = state["screen"] == "update_log"
+    if show_log:
+        render_update_log(0)
+
+
+def do_update_selected(selected_ids):
+    requested_ids = {
+        value.split(":", 1)[1] if ":" in value else value
+        for value in selected_ids
+        if isinstance(value, str) and value
+    }
+    with state_lock:
+        if state["update_running"]:
+            already_running = True
+            packages = []
+        else:
+            already_running = False
+            packages = [
+                pkg
+                for pkg in (state["updates"] or [])
+                if pkg["Id"] in requested_ids
+            ]
+
+    if already_running:
+        send(
+            {
+                "type": "command",
+                "command": "toast",
+                "text": "An update run is already in progress",
+                "style": "info",
+            }
+        )
+        return
+    if not packages:
+        send(
+            {
+                "type": "command",
+                "command": "toast",
+                "text": "Select at least one app to update",
+                "style": "info",
+            }
+        )
+        return
+
+    with state_lock:
+        state["screen"] = "update_log"
+        state["update_running"] = True
+        state["update_total"] = len(packages)
+        state["update_completed"] = 0
+        state["update_current"] = "Preparing updates…"
+        state["update_lines"] = []
+        state["update_run_id"] += 1
+
+    send({"type": "command", "command": "setQuery", "text": ""})
+    _update_log_line("info", f"Queued {len(packages)} app(s) for update")
 
     def work():
-        ok, out = run_winget(
-            [
-                "upgrade",
-                "--all",
-                "--silent",
-                "--accept-package-agreements",
-                "--accept-source-agreements",
-            ],
-            timeout=600,
-        )
-        if ok:
-            send(
-                {
-                    "type": "command",
-                    "command": "toast",
-                    "text": "All apps updated",
-                    "style": "success",
-                }
+        succeeded = 0
+        failed = 0
+        for index, pkg in enumerate(packages, start=1):
+            name = pkg["Name"]
+            pkg_id = pkg["Id"]
+            with state_lock:
+                state["update_current"] = name
+            _update_log_line(
+                "info",
+                f"[{index}/{len(packages)}] Updating {name} ({pkg_id})",
+                source=name,
             )
-            send(
-                {
-                    "type": "command",
-                    "command": "notify",
-                    "title": "WinGet",
-                    "text": "All apps updated",
-                }
+            ok, out = run_winget(
+                [
+                    "upgrade",
+                    "--id",
+                    pkg_id,
+                    "-e",
+                    "--silent",
+                    "--accept-package-agreements",
+                    "--accept-source-agreements",
+                ],
+                timeout=300,
             )
-        else:
-            send(
-                {
-                    "type": "command",
-                    "command": "toast",
-                    "text": "Some updates failed",
-                    "style": "error",
-                }
-            )
-            send(
-                {
-                    "type": "command",
-                    "command": "notify",
-                    "title": "WinGet",
-                    "text": "Some updates failed",
-                }
-            )
-        invalidate_cache()
+            if ok:
+                succeeded += 1
+                _update_log_line("success", f"Updated {name}", source=name)
+            else:
+                failed += 1
+                output_lines = [line.strip() for line in out.splitlines() if line.strip()]
+                reason = output_lines[-1] if output_lines else "Unknown winget error"
+                _update_log_line("error", f"Failed to update {name}: {reason}", source=name)
+            with state_lock:
+                state["update_completed"] = index
+            render_update_log(0)
+
         with state_lock:
-            screen = state["screen"]
+            state["update_running"] = False
+            state["update_current"] = ""
+        level = "success" if failed == 0 else "warn"
+        _update_log_line(level, f"Finished: {succeeded} succeeded, {failed} failed")
+        send(
+            {
+                "type": "command",
+                "command": "toast",
+                "text": "Updates complete" if failed == 0 else "Some updates failed",
+                "style": "success" if failed == 0 else "error",
+            }
+        )
+        send(
+            {
+                "type": "command",
+                "command": "notify",
+                "title": "WinGet updates complete",
+                "text": f"{succeeded} succeeded, {failed} failed",
+            }
+        )
+        invalidate_cache()
         start_fetch_installed()
         start_fetch_updates()
-        if screen == "root":
-            render_dashboard(0)
-        elif screen == "updates":
-            render_updates(0)
-        elif screen == "installed":
-            render_installed(0)
 
     threading.Thread(target=work, daemon=True).start()
+
+
+def do_update_all():
+    with state_lock:
+        ids = [f"upd:{pkg['Id']}" for pkg in (state["updates"] or [])]
+    do_update_selected(ids)
 
 
 # ---------------------------------------------------------------------------
@@ -824,7 +961,8 @@ def find_pkg(pkg_id, pools):
 # ---------------------------------------------------------------------------
 
 
-def handle_action(item_id, action):
+def handle_action(item_id, action, selected_ids=None):
+    selected_ids = selected_ids or []
     screen = state["screen"]
 
     # navigation from the dashboard
@@ -858,10 +996,7 @@ def handle_action(item_id, action):
             do_update_all()
             return
         if item_id.startswith("upd:") and action == "default":
-            pkg_id = item_id.split(":", 1)[1]
-            with state_lock:
-                pkg = find_pkg(pkg_id, [state["updates"]])
-            do_update(pkg_id, pkg["Name"] if pkg else pkg_id)
+            do_update_selected([item_id])
             return
         if item_id.startswith("pkg:") and action == "default":
             pkg_id = item_id.split(":", 1)[1]
@@ -885,7 +1020,7 @@ def handle_action(item_id, action):
                 do_uninstall(pkg_id, name)
                 return
             if action in ("default", "update"):
-                do_update(pkg_id, name)
+                do_update_selected([f"upd:{pkg_id}"])
                 return
 
     elif screen == "updates":
@@ -898,15 +1033,33 @@ def handle_action(item_id, action):
         if item_id == "" and action == "update-all":
             do_update_all()
             return
+        if item_id == "" and action == "update-selected":
+            do_update_selected(selected_ids)
+            return
         if item_id.startswith("upd:") and action in ("default", "update"):
-            pkg_id = item_id.split(":", 1)[1]
-            with state_lock:
-                pkg = find_pkg(pkg_id, [state["updates"]])
-            do_update(pkg_id, pkg["Name"] if pkg else pkg_id)
+            do_update_selected([item_id])
+            return
+
+    elif screen == "update_log":
+        if item_id == "" and action == "back-to-updates":
+            show_updates()
             return
 
 
+def show_updates():
+    state["screen"] = "updates"
+    send({"type": "command", "command": "setQuery", "text": ""})
+    with state_lock:
+        updates = state["updates"]
+    if updates is None:
+        start_fetch_updates()
+    render_updates(0)
+
+
 def handle_back():
+    if state["screen"] == "update_log":
+        show_updates()
+        return
     state["screen"] = "root"
     send({"type": "command", "command": "setQuery", "text": ""})
     render_dashboard(0)
@@ -944,7 +1097,11 @@ def main():
                 start_fetch_updates()
 
         elif t == "action":
-            handle_action(msg.get("id", ""), msg.get("action", "default"))
+            handle_action(
+                msg.get("id", ""),
+                msg.get("action", "default"),
+                msg.get("ids", []),
+            )
 
         elif t == "back":
             handle_back()

@@ -1112,6 +1112,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         return true;
       }
     }
+    for (final PluginAction action in frame.floatingActions) {
+      final PluginShortcut? shortcut = PluginShortcut.parse(action.shortcut);
+      if (shortcut != null && shortcut.matches(event)) {
+        _firePluginAction(frame.scope(), '', action);
+        return true;
+      }
+    }
     return false;
   }
 
@@ -1306,6 +1313,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                 onLoadMore: (PluginEventScope scope) => _pluginHost.sendLoadMore(scope: scope),
                 onEmptyAction: (PluginEventScope scope, PluginAction action) => _firePluginAction(scope, '', action),
                 onMetadataAction: _firePluginAction,
+                onFloatingAction: (PluginEventScope scope, PluginAction action) => _firePluginAction(scope, '', action),
                 selectedIdsFor: _selectedIdsFor,
                 onToggleSelection: _togglePluginSelection,
                 onToggleTree: (PluginEventScope scope, String id, bool expanded) =>

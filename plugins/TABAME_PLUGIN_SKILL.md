@@ -254,7 +254,7 @@ Notes:
 
 | Message         | When                                                                                                             | Fields                                                                                                                                                                                                                    |
 | --------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `init`          | Once, right after your process starts                                                                            | `query`: initial text after the keyword; `protocol`: int protocol version (currently 9); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"`                              |
+| `init`          | Once, right after your process starts                                                                            | `query`: initial text after the keyword; `protocol`: int protocol version (currently 11); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"`                             |
 | `query`         | On every keystroke while the keyword is active (not sent in `inputMode: "submit"`)                               | `text`: current text after the keyword; `rev`: integer generation counter                                                                                                                                                 |
 | `submitQuery`   | **Enter** while the frame declared `inputMode: "submit"` — the whole query line at once (chat-style input)       | `text`, `rev`                                                                                                                                                                                                             |
 | `select`        | When the highlighted item changes                                                                                | `id`: the selected item's id; `rev`                                                                                                                                                                                       |
@@ -272,13 +272,14 @@ Notes:
 | `back`          | **Escape** on a frame that declared `canGoBack: true`                                                            | `rev` — respond by rendering the previous screen                                                                                                                                                                          |
 | `navigate`      | A page breadcrumb was activated                                                                                  | `targetPageId`, `rev`, plus the common event scope                                                                                                                                                                        |
 | `kanbanMove`    | A kanban card was dropped in a column                                                                            | `id`, `columnId`, `index`, `rev`, plus the common event scope                                                                                                                                                              |
+| `calendarNavigate` | Calendar date or mode navigation was activated                                                                | `date` (`yyyy-mm-dd`), `mode` (`month` or `agenda`), `rev`, plus the common event scope                                                                                                                                    |
 | `tab`           | **Tab** pressed                                                                                                  | `id`: the highlighted item's id (`""` if none); `rev` — typically answered with a `setQuery` command                                                                                                                      |
 | `close`         | When the plugin is being shut down                                                                               | —                                                                                                                                                                                                                         |
 
 Example stdin lines:
 
 ```json
-{"type":"init","query":"rome","protocol":3,"theme":{"accent":"#63A0EA","text":"#E8E8E8","background":"#1B1D23","dark":true},"locale":"en-US"}
+{"type":"init","query":"rome","protocol":11,"theme":{"accent":"#63A0EA","text":"#E8E8E8","background":"#1B1D23","dark":true},"locale":"en-US"}
 {"type":"query","text":"rome","rev":1}
 {"type":"select","id":"item-2","rev":1}
 {"type":"action","id":"item-2","action":"copy"}
@@ -296,7 +297,7 @@ Notes:
 - `action` messages **have no `rev`**.
 - Pressing **Enter** always sends `action:"default"`, whether or not you listed a
   `"default"` action on the item.
-- Interactive v9 events may also carry `pageId`, `panelId`, and `elementId`.
+- Interactive v10 events may also carry `pageId`, `panelId`, and `elementId`.
   These identify the exact page, dashboard panel, and frame element that
   produced the event. They are additive; v8 plugins may ignore them.
 
@@ -427,7 +428,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 {
   "type": "render", // required, always "render"
   "rev": 0, // echo the query's rev, or 0 for unsolicited
-  "view": "list", // list|grid|detail|chat|form|table|tree|timeline|chart|operation|dashboard|kanban|diff|log
+  "view": "list", // list|grid|detail|chat|form|table|tree|timeline|chart|operation|dashboard|kanban|diff|log|calendar|gallery
   "page": { // optional stable identity + host state restoration
     "id": "issues",
     "title": "Issues",
@@ -447,6 +448,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
   "preview": { "enabled": true, "wide": false }, // split preview pane; wide defaults to true
   "canGoBack": false, // Escape sends {"type":"back"} instead of exiting
   "actions": [/* frame-level Ctrl+K actions, see §9 */],
+  "floatingAction": { "id": "run", "title": "Run", "icon": "play" }, // bottom-right button; an array is also accepted
   "selectId": "item-3", // move the highlight to this item
   "hasMore": false, // more items exist -> loadMore events
   "inputMode": "submit", // Enter submits the query (chat-style)
@@ -471,13 +473,15 @@ slow response to "rom" from overwriting the fresh results for "rome".
   "kanban": {"columns":[{"id":"todo","title":"To do","color":"#63A0EA","limit":5}]},
   "diff": {"mode":"unified","oldLabel":"Before","newLabel":"After","text":"-old\n+new"},
   "log": {"follow":true,"wrap":false,"lines":[{"id":"1","level":"info","text":"Ready"}]},
+  "calendar": {"mode":"month","date":"2026-08-01","weekStart":"monday","days":30},
+  "gallery": {"columns":4,"aspectRatio":1.15,"fit":"cover","showLabels":true},
   "items": [/* see §7 */],
 }
 ```
 
 | Field              | Type           | Notes                                                                                                                                                                                                                                                                            |
 | ------------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `view`             | string         | `"list"` (rows), `"grid"` (tiles), `"detail"` (full-width markdown), `"chat"` (message feed), `"form"` (inputs), `"table"`, `"tree"`, `"timeline"`, `"chart"`, `"operation"`, `"dashboard"`, `"kanban"`, `"diff"`, or `"log"`. Default `list`.                                      |
+| `view`             | string         | `"list"` (rows), `"grid"` (tiles), `"detail"` (full-width markdown), `"chat"` (message feed), `"form"` (inputs), `"table"`, `"tree"`, `"timeline"`, `"chart"`, `"operation"`, `"dashboard"`, `"kanban"`, `"diff"`, `"log"`, `"calendar"`, or `"gallery"`. Default `list`.                       |
 | `page`             | object         | Optional `{id,title?,history?:"none"|"push"|"replace",preserveState?,breadcrumbs?}`. Stable ids let Tabame restore selection, scroll, and form values. Breadcrumb clicks send `navigate`.                                                                                       |
 | `elementId`        | string         | Stable id for this frame inside its page. Returned as `elementId` on scoped events. Dashboard events additionally carry their panel's `panelId`.                                                                                                                               |
 | `selection`        | bool/object    | Enable bulk selection. `Enter` and `Ctrl+Space` toggle the highlighted item; list/table/tree/timeline also expose a pointer checkbox. `{max}` caps the selection count. Selected IDs arrive in `action.ids`.                                                                     |
@@ -488,6 +492,8 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `kanban`           | object         | `{columns:[{id,title,color?,limit?}]}`. Items use `column` (or `section`) to choose a column. Dropping a card sends `kanbanMove`.                                                                                                                                                |
 | `diff`             | object/string  | Unified or split source comparison. `{mode:"unified"|"split",oldLabel?,newLabel?,text?}` or `lines:[{type,text,oldLine?,newLine?}]`.                                                                                                                                         |
 | `log`              | object/array   | Structured stream `{follow?,wrap?,lines:[string|{id?,timestamp?,level?,source?,text}]}`. Levels: trace/debug/info/warn/error/success.                                                                                                                                             |
+| `calendar`         | object         | Calendar options: `{mode?:"month"|"agenda",date?:"yyyy-mm-dd",weekStart?:"monday"|"sunday",days?:1..90}`. Header navigation sends `calendarNavigate`.                                                                                                                     |
+| `gallery`          | object         | Media grid options: `{columns?:2..8,aspectRatio?:0.5..2.5,fit?:"cover"|"contain",showLabels?:bool}`.                                                                                                                                                                         |
 | `loading`          | bool or object | When truthy and `items` empty, a spinner is shown. `{"progress": 0..1}` makes it determinate.                                                                                                                                                                                    |
 | `loadingText`      | string         | Optional caption shown **under the spinner** while `loading`. Use this (not `emptyText`) for "Searching…"-style progress text — `emptyText` is only shown when _not_ loading.                                                                                                    |
 | `emptyText`        | string         | Message when there are no items. Default `"No results"`.                                                                                                                                                                                                                         |
@@ -504,6 +510,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `preview.wide`     | bool           | Controls whether an enabled split preview widens the launcher window. Default true. Set false on the frame's `preview` object to keep the normal window width; item-level `preview` objects only provide content and do not control window sizing.                               |
 | `canGoBack`        | bool           | When `true`, **Escape sends `{"type":"back"}`** (render your previous screen) instead of exiting the plugin. Leave it false on your root screen. Default false.                                                                                                                  |
 | `actions`          | array          | **Frame-level actions** shown in the Ctrl+K palette regardless of the highlighted item (refresh, create, sign out…), after the item's own actions. Same shape as item actions (§9), fired with an empty `id`.                                                                    |
+| `floatingAction`   | object/array   | One or more prominent bottom-right buttons using the normal action shape (§9). Clicking dispatches a frame-level `action` with `id:""`; bulk-selected item IDs are included in `action.ids`.                                                                                |
 | `selectId`         | string         | Moves the highlight to the item with this id — keep the cursor on the same row after a refresh/reorder (`rev: 0` re-render).                                                                                                                                                     |
 | `hasMore`          | bool           | List/grid: more items exist. Scrolling near the end sends `{"type":"loadMore","rev"}`; answer with a **longer full list** (a "Loading more…" footer shows meanwhile). See §13.                                                                                                   |
 | `inputMode`        | string         | `"submit"`: keystrokes are **not** streamed to you; Enter sends one `{"type":"submitQuery","text","rev"}` with the whole line. A second Enter on unchanged text fires the selected item's default action instead. Right for chat/LLM plugins.                                    |
@@ -523,6 +530,15 @@ slow response to "rom" from overwriting the fresh results for "rome".
   "lines": 1, // list view: subtitle wrap lines, 1–3
   "progress": 0.6, // list view: thin progress bar under the row (0..1)
   "tileColor": "#0EA5E9", // grid view: fill the tile with this color
+  "start": "2026-08-04T09:30:00", // calendar; `date` is accepted as an all-day alias
+  "end": "2026-08-04T10:15:00", // calendar, optional
+  "allDay": false, "color": "#8B5CF6", "location": "Studio A",
+  "media": { // gallery; a plain source string is shorthand for an image
+    "url": "https://example.com/poster.webp",
+    "type": "image", // image|video|audio|file
+    "thumbnail": "https://example.com/thumb.webp",
+    "duration": "02:18", "size": 2480000, "width": 1920, "height": 1080,
+  },
   "accessories": [{ "text": "IT", "color": "#8250DF", "icon": "clock" }], // trailing chips
   "actions": [
     // populate the Ctrl+K menu
@@ -547,6 +563,9 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `lines`       | int 1–3            | List view: how many lines the subtitle may wrap to. Default 1.                                                                                                                                                                                                                                       |
 | `progress`    | number 0–1         | List view: renders a thin progress bar under the row (downloads, timers).                                                                                                                                                                                                                            |
 | `tileColor`   | string             | Grid view: fills the tile with this `#RRGGBB` color; label flips black/white for contrast. Perfect for color pickers.                                                                                                                                                                                |
+| `start`/`date` | ISO-8601 string   | Calendar item start. Use `start` for timed events; `date` is an all-day-friendly alias. May instead be nested inside a `calendar` object.                                                                                                                                                           |
+| `end`/`allDay`/`color`/`location` | mixed | Optional calendar event details. `end` must not precede `start`; `color` is a hex tint. These may also be nested inside `calendar`.                                                                                                                                                                  |
+| `media`       | object/string      | Gallery media. Object: `{url,type?,thumbnail?,duration?,size?,width?,height?}`; type is image/video/audio/file. Sources support HTTP(S), `file://`, and `data:image/...` up to 2 MB. A string is shorthand for an image URL.                                                                            |
 | `accessories` | array              | Trailing badges. Each is a bare string or `{"text", "color"?, "icon"?}` — `color` tints the chip, `icon` is a §11 name.                                                                                                                                                                              |
 | `actions`     | array              | Entries for the item's **Ctrl+K** menu. Each: `{id, title, icon?, shortcut?, destructive?, confirm?}` — see §9 for the last three.                                                                                                                                                                   |
 | `preview`     | object/string/null | Shown in the preview pane while this item is selected: `{"markdown"?, "image": {"url", "width"?}, "metadata"?}` or a plain markdown string. `image` is an HTTP(S) raster displayed to the right of markdown; `width` is 48–280 px (default 160). Only visible when the frame sets `preview.enabled`. |
@@ -781,6 +800,22 @@ contain strings or `{id?,timestamp?,level?,source?,text}` objects. With
 `follow:true` the view stays at the end while the user is already following it;
 scrolling upward detaches. `wrap:false` keeps each line compact.
 
+### calendar
+
+Month grid or chronological agenda. Configure it with
+`calendar:{mode,date,weekStart,days}` and give each item a `start` (or `date`),
+plus optional `end`, `allDay`, `color`, and `location`. The header's previous,
+next, today, and month/agenda controls send
+`{"type":"calendarNavigate","date":"yyyy-mm-dd","mode":"month"|"agenda","rev",...scope}`;
+update your date/mode state and re-render the complete frame.
+
+### gallery
+
+Responsive media tiles for image, video, audio, and file results. Configure the
+grid with `gallery:{columns,aspectRatio,fit,showLabels}`. Each item supplies a
+`media` object; non-image types normally provide a `thumbnail`. Gallery supports
+normal item actions, keyboard selection, bulk selection, and `hasMore` paging.
+
 ---
 
 ## 9. Actions & Ctrl+K
@@ -799,6 +834,9 @@ scrolling upward detaches. `wrap:false` keeps each line compact.
 - After handling an action, respond with a **command** (§5.2 — e.g. `copy` +
   `hide` for "copy and dismiss", or `open` for a link) and/or a new render frame
   (with `rev: 0`) — e.g. a confirmation `detail` frame, or an updated list.
+- `floatingAction` renders one action object (or an array) as persistent
+  bottom-right buttons. They use the same confirmation, parameter, shortcut,
+  and bulk-selection dispatch path, but do not need the Ctrl+K palette.
 
 Each action (item- or frame-level) supports:
 

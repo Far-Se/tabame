@@ -1,45 +1,49 @@
-# Google Drive plugin for Tabame
+# Google Calendar plugin for Tabame
 
-Search your Google Drive from the launcher. Type `gdrive` followed by a
-filename. Enter opens a file in your browser or browses into a folder;
-Escape (or the **⬆ Up** row) goes back out. Ctrl+K also offers **Open in
-Browser**, **Copy Link**, and (for files) **Download**.
+This plugin turns the launcher into a real Google Calendar client. Type `cal`
+for the month view, switch to **Agenda** in the calendar header, search the
+visible date range, and use Ctrl+K to create or manage events.
 
-## 1. Create a Google OAuth client (one-time, ~2 minutes)
+## One-time Google setup
 
-Google requires every app to have its own OAuth client — there's no shared
-key this plugin can ship with.
+Google requires each user to provide a personal OAuth client; no shared secret
+is shipped with the plugin.
 
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/), create
-   a project (or pick an existing one).
-2. **APIs & Services → Library** → enable the **Google Calendar API**.
-3. **APIs & Services → OAuth consent screen** → set it up as **External**,
-   add your own Google account as a **test user** (this keeps it private —
-   no Google review needed for personal use).
-4. **APIs & Services → Credentials → Create Credentials → OAuth client ID**
-   → Application type **Desktop app** → Create.
-5. Click **Download JSON** on the client you just created.
+1. Open the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create or select a project.
+3. Under **APIs & Services → Library**, enable **Google Calendar API**.
+4. Configure **Google Auth platform**. For a private External testing app, add
+   your own Google account under **Audience → Test users**.
+5. Under **Google Auth platform → Clients**, create an OAuth client with
+   application type **Desktop app**.
+6. Download its JSON file, rename it to `client_secret.json`, and place it next
+   to `main.py` in this plugin folder.
+7. Reopen the Tabame launcher, type `cal`, and choose **Connect**.
 
-## 2. Install the plugin
+The refresh token is stored through Tabame's secret storage in Windows
+Credential Manager. It is not written to the plugin folder.
 
-1. Copy this folder to:
-   `%localappdata%\Tabame\plugins\gdrive\`
-2. Rename the file you downloaded in step 5 to `client_secret.json` and
-   drop it into that folder, replacing the placeholder — no manual editing
-   needed, it's already in the right format.
-3. Open the Tabame launcher and type `gdrive` — on first use it shows
-   **Connect Google Drive**. Press Enter; a browser tab opens for you to
-   sign in and approve access. Close the tab once it says you're signed in.
+## Everyday use
 
-That's it — the plugin stores a refresh token (via Tabame's secret storage,
-in Windows Credential Manager) so you won't need to sign in again.
+- `cal` — month view for the current date.
+- Use the header arrows, **Today**, **Month**, and **Agenda** controls to browse.
+- Type after `cal` to filter events in the visible date range.
+- `cal agenda` — open the 30-day agenda directly.
+- Ctrl+K → **New event** — create a detailed event with guests and notes.
+- Ctrl+K → **Quick add** — use Google's natural-language event parser.
+- Enter on an event — inspect its details without leaving the launcher.
+- Ctrl+K on an event — view details, join its meeting, edit, copy, or delete it.
 
-## Notes
+The plugin shows the primary calendar plus every calendar marked as selected in
+Google Calendar. Event and calendar writes use the full Calendar scope; deleting
+an event or changing its guest list can send Google invitation updates.
 
-- Search matches on file **name** only (Drive's full-text search is a
-  larger change — ask if you want it added).
-- Scope is `drive.readonly` — the plugin can see and open your files but
-  can't modify or delete anything.
-- To disconnect, delete the plugin's stored credential in Windows
-  Credential Manager (look for an entry under Tabame/gdrive), or ask to add
-  a "Sign out" item to the plugin.
+## Install location
+
+Copy this folder to:
+
+```text
+%localappdata%\Tabame\plugins\gcal\
+```
+
+Reopen the launcher after installing or changing the plugin so Tabame rescans it.

@@ -19,7 +19,8 @@ import 'dart:ui' show Color;
 /// 9 = page identity/history, scoped events, richer conditional forms, and
 ///     kanban/diff/log views.
 /// 10 = calendar/agenda and gallery/media-browser views.
-const int pluginProtocolVersion = 10;
+/// 11 = bottom-right `floatingAction` buttons.
+const int pluginProtocolVersion = 11;
 
 /// The layout a plugin render frame requests.
 enum PluginViewType {
@@ -376,6 +377,15 @@ class PluginAction {
   static List<PluginAction> listFromJson(Object? json) {
     if (json is! List) return const <PluginAction>[];
     return json.map(fromJson).whereType<PluginAction>().toList(growable: false);
+  }
+
+  /// Parses either one action object or an array of actions. This is used by
+  /// `floatingAction`, whose common one-button form stays pleasantly compact
+  /// while still allowing several bottom-right buttons when needed.
+  static List<PluginAction> listOrSingleFromJson(Object? json) {
+    if (json is List) return listFromJson(json);
+    final PluginAction? action = fromJson(json);
+    return action == null ? const <PluginAction>[] : <PluginAction>[action];
   }
 }
 
@@ -1237,6 +1247,7 @@ class PluginRenderFrame {
     this.empty,
     this.canGoBack = false,
     this.frameActions = const <PluginAction>[],
+    this.floatingActions = const <PluginAction>[],
     this.selectId,
     this.hasMore = false,
     this.submitInput = false,
@@ -1277,6 +1288,11 @@ class PluginRenderFrame {
   /// Frame-level Ctrl+K actions, available regardless of the highlighted item
   /// (refresh, create, sign out). Shown after the item's own actions.
   final List<PluginAction> frameActions;
+
+  /// Prominent action buttons overlaid at the bottom-right of this frame.
+  /// They dispatch frame-level action events (empty item id), including any
+  /// launcher-owned bulk-selection ids.
+  final List<PluginAction> floatingActions;
 
   /// When set, the launcher moves the highlight to the item with this id (only
   /// applied when the frame's item set actually changed).
@@ -1414,6 +1430,7 @@ class PluginRenderFrame {
       empty: empty,
       canGoBack: canGoBack,
       frameActions: frameActions,
+      floatingActions: floatingActions,
       selectId: selectId,
       hasMore: hasMore,
       submitInput: submitInput,
@@ -1606,6 +1623,7 @@ class PluginRenderFrame {
       empty: PluginEmptyState.fromJson(json['empty']),
       canGoBack: json['canGoBack'] == true,
       frameActions: PluginAction.listFromJson(json['actions']),
+      floatingActions: PluginAction.listOrSingleFromJson(json['floatingAction']),
       selectId: selectId is String && selectId.isNotEmpty ? selectId : null,
       hasMore: json['hasMore'] == true,
       submitInput: json['inputMode'] == 'submit',

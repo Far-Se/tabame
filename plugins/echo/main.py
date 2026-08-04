@@ -42,14 +42,20 @@ Try these queries after typing the `echo ` keyword in the launcher:
     echo kanban             -> draggable workflow cards + kanbanMove events
     echo diff               -> unified diff (add "split" for side-by-side)
     echo log                -> structured log levels, append action, wrapping
+    echo calendar           -> month calendar; switch to the agenda in its header
+    echo calendar agenda    -> agenda mode with date navigation
+    echo gallery            -> image, video, audio, and file media tiles
+    echo gallery contain    -> media browser with contain-fit thumbnails
     Tab on a list item       -> autocompletes the query via a setQuery command
     Ctrl+K                   -> item actions + frame actions (shortcuts, confirm)
 """
 
+import datetime
 import json
 import sys
 import threading
 import time
+from urllib.parse import quote
 
 
 def send(obj):
@@ -90,11 +96,13 @@ STATE = {
     ],
     "log_wrap": False,
     "log_lines": [
-        {"id": "log:1", "timestamp": "09:41:02", "level": "info", "source": "echo", "text": "Protocol v9 demo initialized"},
+        {"id": "log:1", "timestamp": "09:41:02", "level": "info", "source": "echo", "text": "Protocol v10 demo initialized"},
         {"id": "log:2", "timestamp": "09:41:03", "level": "debug", "source": "router", "text": "Registered page and scoped-event demos"},
         {"id": "log:3", "timestamp": "09:41:04", "level": "warn", "source": "worker", "text": "This warning is intentional and demonstrates level tinting"},
         {"id": "log:4", "timestamp": "09:41:05", "level": "success", "source": "render", "text": "Kanban, diff, and log frames are ready"},
     ],
+    "calendar_date": datetime.date.today().replace(day=1).isoformat(),
+    "calendar_mode": "month",
 }
 BG_THREAD = None
 
@@ -171,6 +179,8 @@ def render_list(text, rev, with_preview):
         "kanban",
         "diff",
         "log",
+        "calendar",
+        "gallery",
     ]
     items = []
     for i, word in enumerate(words):
@@ -317,6 +327,8 @@ PAGE_TOPICS = [
     ("history", "Host history", "Escape follows the page stack before leaving", "clock"),
     ("elements", "Element identity", "Independent widgets can reuse item IDs safely", "extension"),
     ("compat", "Additive protocol", "Older plugins can ignore all v9 scope fields", "check"),
+    ("calendar", "Calendar and agenda", "Month grid, chronological agenda, and date navigation", "calendar"),
+    ("gallery", "Gallery and media", "Image, video, audio, and file browser tiles", "image"),
 ]
 
 
@@ -1170,10 +1182,10 @@ def render_diff(rev, split=False):
     lines = [
         {"type": "header", "text": "@@ launcher plugin protocol @@"},
         {"type": "context", "text": "  view: dashboard", "oldLine": 41, "newLine": 41},
-        {"type": "remove", "text": "- protocol: 8", "oldLine": 42},
-        {"type": "add", "text": "+ protocol: 9", "newLine": 42},
-        {"type": "add", "text": "+ page: { id, history, breadcrumbs }", "newLine": 43},
-        {"type": "add", "text": "+ scope: { pageId, panelId, elementId }", "newLine": 44},
+        {"type": "remove", "text": "- protocol: 9", "oldLine": 42},
+        {"type": "add", "text": "+ protocol: 10", "newLine": 42},
+        {"type": "add", "text": "+ view: calendar | gallery", "newLine": 43},
+        {"type": "add", "text": "+ event: calendarNavigate", "newLine": 44},
         {"type": "context", "text": "  preserveState: true", "oldLine": 43, "newLine": 45},
     ]
     send(
@@ -1198,8 +1210,8 @@ def render_diff(rev, split=False):
             ],
             "diff": {
                 "mode": "split" if split else "unified",
-                "oldLabel": "Protocol v8",
-                "newLabel": "Protocol v9",
+                "oldLabel": "Protocol v9",
+                "newLabel": "Protocol v10",
                 "lines": lines,
             },
         }
@@ -1252,6 +1264,153 @@ def append_log_line():
         }
     )
     render_log(0)
+
+
+def media_svg(label, color, detail="ECHO MEDIA"):
+    """Build an offline-safe data URI for gallery thumbnails."""
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="{color}"/><stop offset="1" stop-color="#10131a"/></linearGradient></defs>
+<rect width="960" height="640" fill="url(#g)"/><circle cx="790" cy="100" r="180" fill="#ffffff" opacity=".08"/>
+<path d="M0 520 L230 310 L390 440 L560 230 L960 610 L960 640 L0 640Z" fill="#ffffff" opacity=".13"/>
+<text x="54" y="82" fill="#ffffff" opacity=".68" font-family="Segoe UI, sans-serif" font-size="22" font-weight="600" letter-spacing="4">{detail}</text>
+<text x="54" y="555" fill="#ffffff" font-family="Segoe UI, sans-serif" font-size="58" font-weight="700">{label}</text>
+</svg>"""
+    return "data:image/svg+xml," + quote(svg)
+
+
+def calendar_anchor(value):
+    try:
+        return datetime.date.fromisoformat(str(value))
+    except (TypeError, ValueError):
+        return datetime.date.today()
+
+
+def render_calendar(rev, mode=None, date_value=None):
+    if mode in {"month", "agenda"}:
+        STATE["calendar_mode"] = mode
+    anchor = calendar_anchor(date_value or STATE["calendar_date"])
+    STATE["calendar_date"] = anchor.isoformat()
+
+    month_start = anchor.replace(day=1)
+    event_specs = [
+        (1, "Release planning", "09:30", "10:15", "#8B5CF6", "Studio A", False),
+        (3, "Design critique", "14:00", "15:00", "#EC4899", "Workshop", False),
+        (5, "Ship protocol v10", None, None, "#10B981", None, True),
+        (8, "Partner sync", "11:00", "11:45", "#3B82F6", "Video room", False),
+        (12, "Media review", "16:30", "17:15", "#F59E0B", "Edit suite", False),
+        (17, "Focus day", None, None, "#06B6D4", None, True),
+        (21, "Launcher QA", "10:00", "12:00", "#EF4444", "Lab 2", False),
+        (26, "Demo recording", "15:00", "16:30", "#8B5CF6", "Studio B", False),
+    ]
+    items = []
+    for index, (offset, title, start_time, end_time, color, location, all_day) in enumerate(event_specs):
+        event_date = month_start + datetime.timedelta(days=offset)
+        start = event_date.isoformat() if all_day else f"{event_date.isoformat()}T{start_time}:00"
+        end = None if all_day else f"{event_date.isoformat()}T{end_time}:00"
+        item = {
+            "id": f"calendar:{index}",
+            "title": title,
+            "subtitle": "All day" if all_day else "",
+            "icon": "calendar",
+            "start": start,
+            "allDay": all_day,
+            "color": color,
+            "actions": [{"id": "default", "title": "Open event", "icon": "open"}],
+        }
+        if end:
+            item["end"] = end
+        if location:
+            item["location"] = location
+        items.append(item)
+        LAST_ITEMS[item["id"]] = title
+
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "calendar",
+            "page": {
+                "id": "views:calendar",
+                "title": "Calendar / agenda",
+                "history": "push",
+                "breadcrumbs": [{"id": "pages:home", "label": "Demos"}],
+            },
+            "elementId": "team-calendar",
+            "canGoBack": True,
+            "calendar": {
+                "mode": STATE["calendar_mode"],
+                "date": anchor.isoformat(),
+                "weekStart": "monday",
+                "days": 31,
+            },
+            "items": items,
+        }
+    )
+
+
+def render_gallery(rev, contain=False):
+    specs = [
+        ("cover", "Launch cover", "image", "#7C3AED", "1920×1080", None, 2480000),
+        ("reel", "Product reel", "video", "#DB2777", "4K video", "02:18", 184000000),
+        ("session", "Studio session", "audio", "#0D9488", "48 kHz audio", "43:07", 78000000),
+        ("guide", "Brand guide", "file", "#D97706", "PDF · 24 pages", None, 6100000),
+        ("portrait", "Team portrait", "image", "#2563EB", "2400×1600", None, 3900000),
+        ("prototype", "Motion prototype", "video", "#9333EA", "1080p video", "00:42", 32200000),
+        ("field", "Field recording", "audio", "#059669", "96 kHz audio", "12:36", 105000000),
+        ("archive", "Source archive", "file", "#DC2626", "ZIP bundle", None, 426000000),
+    ]
+    items = []
+    for key, title, media_type, color, subtitle, duration, size in specs:
+        artwork = media_svg(title, color, media_type.upper())
+        media = {
+            "url": artwork,
+            "type": media_type,
+            "thumbnail": artwork,
+            "size": size,
+            "width": 1920 if media_type in {"image", "video"} else None,
+            "height": 1080 if media_type in {"image", "video"} else None,
+        }
+        if duration:
+            media["duration"] = duration
+        media = {name: value for name, value in media.items() if value is not None}
+        item = {
+            "id": f"gallery:{key}",
+            "title": title,
+            "subtitle": subtitle,
+            "badges": [{"text": media_type.upper(), "color": color}],
+            "media": media,
+            "actions": [
+                {"id": "default", "title": "Open media", "icon": "open"},
+                {"id": "copy", "title": "Copy title", "icon": "copy"},
+            ],
+        }
+        items.append(item)
+        LAST_ITEMS[item["id"]] = title
+
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "gallery",
+            "page": {
+                "id": "views:gallery",
+                "title": "Gallery / media browser",
+                "history": "push",
+                "breadcrumbs": [{"id": "pages:home", "label": "Demos"}],
+            },
+            "elementId": "media-library",
+            "canGoBack": True,
+            "multiSelect": True,
+            "batchActions": [{"id": "gallery:add", "title": "Add selected to collection", "icon": "add"}],
+            "gallery": {
+                "columns": 4,
+                "aspectRatio": 1.12,
+                "fit": "contain" if contain else "cover",
+                "showLabels": True,
+            },
+            "items": items,
+        }
+    )
 
 
 def render_dashboard(rev, tabs=False):
@@ -1603,6 +1762,12 @@ def handle_query(text, rev):
     elif stripped.startswith("log"):
         STATE["screen"] = "log"
         render_log(rev)
+    elif stripped.startswith("calendar"):
+        STATE["screen"] = "calendar"
+        render_calendar(rev, mode="agenda" if "agenda" in stripped else "month")
+    elif stripped.startswith("gallery"):
+        STATE["screen"] = "gallery"
+        render_gallery(rev, contain="contain" in stripped)
     elif stripped.startswith("preview"):
         render_list(text[len("preview") :].strip(), rev, with_preview=True)
     else:
@@ -1681,6 +1846,27 @@ def handle_action(msg, last_items):
             STATE["log_wrap"] = not STATE["log_wrap"]
             render_log(0)
             return
+    if STATE["screen"] in {"calendar", "gallery"} and action == "default":
+        send(
+            {
+                "type": "command",
+                "command": "toast",
+                "text": f"Opened {title} · {event_scope(msg)}",
+                "style": "info",
+            }
+        )
+        return
+    if STATE["screen"] == "gallery" and action == "gallery:add":
+        ids = msg.get("ids") or []
+        send(
+            {
+                "type": "command",
+                "command": "toast",
+                "text": f"Added {len(ids)} media items to the demo collection",
+                "style": "success",
+            }
+        )
+        return
         if action == "log:clear":
             STATE["log_lines"] = STATE["log_lines"][:4]
             render_log(0)
@@ -1917,6 +2103,13 @@ def main():
                     msg.get("columnId", "todo"),
                     max(0, int(msg.get("index", 0))),
                     event_scope(msg),
+                )
+        elif kind == "calendarNavigate":
+            if STATE["screen"] == "calendar":
+                render_calendar(
+                    msg.get("rev", 0),
+                    mode=msg.get("mode"),
+                    date_value=msg.get("date"),
                 )
         elif kind == "cancel":
             if msg.get("id") == "echo:deploy":

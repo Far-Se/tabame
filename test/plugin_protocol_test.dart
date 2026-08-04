@@ -192,6 +192,28 @@ void main() {
   });
 
   group('PluginRenderFrame extras', () {
+    test('parses one or several floating actions', () {
+      final PluginRenderFrame single = PluginRenderFrame.fromJson(<String, dynamic>{
+        'type': 'render',
+        'floatingAction': <String, Object?>{
+          'id': 'update-selected',
+          'title': 'Update selected',
+          'icon': 'download',
+        },
+      });
+      expect(single.floatingActions, hasLength(1));
+      expect(single.floatingActions.single.id, 'update-selected');
+
+      final PluginRenderFrame several = PluginRenderFrame.fromJson(<String, dynamic>{
+        'type': 'render',
+        'floatingAction': <Object?>[
+          <String, Object?>{'id': 'save', 'title': 'Save'},
+          <String, Object?>{'id': 'run', 'title': 'Run'},
+        ],
+      });
+      expect(several.floatingActions.map((PluginAction action) => action.id), <String>['save', 'run']);
+    });
+
     test('parses determinate loading, placeholder, and empty state', () {
       final PluginRenderFrame frame = PluginRenderFrame.fromJson(<String, dynamic>{
         'type': 'render',
