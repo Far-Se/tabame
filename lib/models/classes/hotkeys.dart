@@ -975,18 +975,20 @@ class HotKeyInfo {
       }
     },
     "OpenLiveFancyShot": () async {
-      // WinUtils.startTabame(closeCurrent: false, arguments: "-capture");
       if (QuickMenuFunctions.isQuickMenuVisible) {
-        QuickMenuFunctions.hideQuickMenu();
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        WinUtils.startTabame(closeCurrent: false, arguments: "-screenCapture");
+        return;
+        // QuickMenuFunctions.hideQuickMenu();
+        // await Future<void>.delayed(const Duration(milliseconds: 50));
       }
       Globals.quickMenuPage = QuickMenuPage.fancyShotLive;
       QuickMenuFunctions.refreshQuickMenu();
     },
     "OpenFrozenFancyShot": () async {
       if (QuickMenuFunctions.isQuickMenuVisible) {
-        await QuickMenuFunctions.hideQuickMenu();
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        WinUtils.startTabame(closeCurrent: false, arguments: "-screenCapture -frozen");
+        // await QuickMenuFunctions.hideQuickMenu();
+        // await Future<void>.delayed(const Duration(milliseconds: 50));
       }
       Globals.quickMenuPage = QuickMenuPage.fancyShotFreeze;
       await FancyShotCaptureWidget.captureScreenshots();

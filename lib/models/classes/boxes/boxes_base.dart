@@ -139,6 +139,7 @@ class Boxes {
       ..audio = pref.getStringList("audio") ?? user.audio
       ..weather = pref.getStringList("weather") ?? user.weather
       ..customLogo = pref.getString("customLogo") ?? user.customLogo
+      ..mouseGestureMaxDelay = pref.getInt("mouseGestureMaxDelay") ?? user.mouseGestureMaxDelay
       ..newVersion = pref.getString("newVersion") ?? user.newVersion
       ..showTrayBar = pref.getBool("showTrayBar") ?? user.showTrayBar
       ..mergePinnedTray = pref.getBool("mergePinnedTray") ?? user.mergePinnedTray

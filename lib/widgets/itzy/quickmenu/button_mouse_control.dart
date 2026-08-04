@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/hotkeys.dart';
@@ -48,6 +51,7 @@ class _MouseControlPanelState extends State<MouseControlPanel> {
   ];
 
   late MouseControlConfig _config;
+  late final TextEditingController _maxDurationController;
   String _expandedCorner = '';
   String _newPattern = 'R';
   String _newButton = 'right';
@@ -57,12 +61,26 @@ class _MouseControlPanelState extends State<MouseControlPanel> {
   void initState() {
     super.initState();
     _config = Boxes.mouseControl.copyWith();
+    _maxDurationController = TextEditingController(text: user.mouseGestureMaxDelay.toString());
+  }
+
+  @override
+  void dispose() {
+    _maxDurationController.dispose();
+    super.dispose();
   }
 
   void _save() {
     Boxes.mouseControl = _config;
     MouseGesturesService.instance.applyConfig();
     setState(() {});
+  }
+
+  void _setMaxDuration(String value) {
+    final int? duration = int.tryParse(value);
+    if (duration == null) return;
+    user.mouseGestureMaxDelay = duration;
+    unawaited(Boxes.updateSettings('mouseGestureMaxDelay', duration));
   }
 
   static String _arrows(String pattern) {
@@ -137,6 +155,8 @@ class _MouseControlPanelState extends State<MouseControlPanel> {
                       'Each gesture can use the right or middle mouse button. Plain clicks are untouched.',
                       style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(120)),
                     ),
+                    const SizedBox(height: 8),
+                    _buildMaxDurationField(),
                     const SizedBox(height: 8),
                     if (_config.gestures.isEmpty)
                       Padding(
@@ -335,6 +355,59 @@ class _MouseControlPanelState extends State<MouseControlPanel> {
   // ---------------------------------------------------------------------------
   // Gestures
   // ---------------------------------------------------------------------------
+
+  Widget _buildMaxDurationField() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+      decoration: BoxDecoration(
+        color: Design.text.withAlpha(7),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Design.text.withAlpha(16)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              'Ignore gestures held longer than this.',
+              style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(130)),
+            ),
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 70,
+            child: TextField(
+              controller: _maxDurationController,
+              keyboardType: TextInputType.number,
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.digitsOnly,
+              ],
+              textAlign: TextAlign.center,
+              onChanged: _setMaxDuration,
+              decoration: InputDecoration(
+                // labelText: 'Max Duration',
+                suffixText: 'ms',
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Design.text.withAlpha(30)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Design.text.withAlpha(30)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Design.accent.withAlpha(120)),
+                ),
+              ),
+              style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildGestureRow(MouseGestureBinding binding) {
     final bool enabled = binding.enabled;

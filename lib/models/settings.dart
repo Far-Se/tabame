@@ -248,6 +248,7 @@ class Settings {
   int keystrokesScale = 100; // badge size, percent 60-200
   int keystrokesFadeMs = 2500; // how long a key badge stays before fading
   String customLogo = "";
+  int mouseGestureMaxDelay = 600;
   String customSpash = "";
   String launcherSearchText = "";
   String wallpapersFolder = "";

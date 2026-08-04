@@ -124,7 +124,8 @@ LRESULT CALLBACK mHandleMouseGestureHook(int nCode, WPARAM wParam, LPARAM lParam
     {
         mouseGesturePoints.push_back(info->pt);
         const std::string button = mouseGestureButton;
-        const std::string pattern = GetTickCount() - mouseGestureStartTime <= 15000
+        const DWORD durationMs = GetTickCount() - mouseGestureStartTime;
+        const std::string pattern = durationMs <= 15000
                                         ? ClassifyMouseGesture()
                                         : "";
         mouseGestureButton.clear();
@@ -135,6 +136,7 @@ LRESULT CALLBACK mHandleMouseGestureHook(int nCode, WPARAM wParam, LPARAM lParam
             flutter::EncodableMap args;
             args[flutter::EncodableValue("button")] = flutter::EncodableValue(button);
             args[flutter::EncodableValue("pattern")] = flutter::EncodableValue(pattern);
+            args[flutter::EncodableValue("durationMs")] = flutter::EncodableValue(static_cast<int>(durationMs));
             channel->InvokeMethod("onMouseGesture", std::make_unique<flutter::EncodableValue>(args));
         }
     }

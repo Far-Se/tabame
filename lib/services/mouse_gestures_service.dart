@@ -9,6 +9,7 @@ import '../logic/error_handler.dart';
 import '../models/classes/boxes.dart';
 import '../models/classes/hotkeys.dart';
 import '../models/classes/saved_maps.dart';
+import '../models/settings.dart';
 import '../models/win32/keys.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win_utils.dart';
@@ -32,6 +33,7 @@ class MouseGesturesService extends TabameListener {
   static final MouseGesturesService instance = MouseGesturesService._();
 
   static const int _idleIntervalMs = 120;
+  // static const int _maxGestureDurationMs = 600;
   MouseControlConfig _config = MouseControlConfig();
   Timer? _cornerTimer;
   bool _listening = false;
@@ -153,7 +155,9 @@ class MouseGesturesService extends TabameListener {
   // ---------------------------------------------------------------------------
 
   @override
-  void onMouseGesture(String button, String pattern) {
+  void onMouseGesture(String button, String pattern, int durationMs) {
+    if (durationMs > user.mouseGestureMaxDelay) return;
+
     MouseGestureBinding? match;
     for (final MouseGestureBinding binding in _config.gestures) {
       if (binding.enabled && binding.action.isSet && binding.button == button && binding.pattern == pattern) {

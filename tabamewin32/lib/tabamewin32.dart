@@ -1507,7 +1507,7 @@ abstract class TabameListener {
   void onViewsEvent(ViewsAction action, int hWnd) {}
   void onQuickClickEvent(String eventName, Map<String, String> params) {}
   void onKeyVizEvent(KeyVizEvent event) {}
-  void onMouseGesture(String button, String pattern) {}
+  void onMouseGesture(String button, String pattern, int durationMs) {}
 }
 
 abstract class ClipboardEventListener {
@@ -1646,9 +1646,10 @@ class NativeHooks {
       final Map<dynamic, dynamic> args = call.arguments as Map<dynamic, dynamic>;
       final String button = args['button'] as String;
       final String pattern = args['pattern'] as String;
+      final int durationMs = args['durationMs'] as int;
       for (final TabameListener listener in listeners) {
         if (!listenersObv.contains(listener)) continue;
-        listener.onMouseGesture(button, pattern);
+        listener.onMouseGesture(button, pattern, durationMs);
       }
     }
     if (call.method == "ViewsEvent") {

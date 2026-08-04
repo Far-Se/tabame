@@ -121,7 +121,7 @@ Uint8List _encodeRgbaToPngIsolate(List<dynamic> args) {
 // Entry point
 // ─────────────────────────────────────────────────────────────────────────────
 
-Future<void> startScreenCapture({bool freezeMode = false}) async {
+Future<void> startScreenCapture() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppStartup.initialize();
 
@@ -168,7 +168,7 @@ Future<void> startScreenCapture({bool freezeMode = false}) async {
   ShowWindow(Win32Window.hwnd, SW_SHOW);
   await windowManager.focus();
 
-  runApp(ScreenCaptureApp(freezeMode: freezeMode, preloadedSnapshots: preloadedSnapshots));
+  runApp(ScreenCaptureApp(freezeMode: user.args.contains('-frozen'), preloadedSnapshots: preloadedSnapshots));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
