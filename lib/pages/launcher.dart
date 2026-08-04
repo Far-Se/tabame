@@ -704,9 +704,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         panel.frame,
       ));
     }
-    final Set<String> liveKeys = scopes
-        .map(((PluginEventScope, PluginRenderFrame) entry) => entry.$1.key)
-        .toSet();
+    final Set<String> liveKeys = scopes.map(((PluginEventScope, PluginRenderFrame) entry) => entry.$1.key).toSet();
     _pluginSelectedIdsByScope.removeWhere((String key, Set<String> value) => !liveKeys.contains(key));
     for (final (PluginEventScope scope, PluginRenderFrame scopedFrame) in scopes) {
       final Set<String> selected = _selectedIdsFor(scope);
@@ -1208,8 +1206,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final int count = frame.items.length;
     if (count == 0) return KeyEventResult.ignored;
 
-    final bool isGrid = frame.view == PluginViewType.grid;
-    final int cols = isGrid ? frame.gridColumns : 1;
+    final bool isGrid = frame.view == PluginViewType.grid || frame.view == PluginViewType.gallery;
+    final int cols = frame.view == PluginViewType.gallery
+        ? frame.galleryColumns
+        : isGrid
+            ? frame.gridColumns
+            : 1;
     int index = _activeIndexNotifier.value.clamp(0, count - 1);
     final LogicalKeyboardKey key = event.logicalKey;
 
@@ -1316,6 +1318,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                 canNavigateBack: _pluginCanGoBack,
                 onKanbanMove: (PluginEventScope scope, String id, String columnId, int index) =>
                     _pluginHost.sendKanbanMove(id, columnId, index, scope: scope),
+                onCalendarNavigate: (PluginEventScope scope, String date, String mode) =>
+                    _pluginHost.sendCalendarNavigate(date, mode, scope: scope),
                 onOpenActions: _openPluginActions,
                 onMarkdownKeyEvent: _handlePluginKey,
                 onItemNavigation: _requestPluginNavigationFocus,

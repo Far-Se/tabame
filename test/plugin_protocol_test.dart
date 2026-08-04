@@ -329,6 +329,79 @@ void main() {
       expect(log.logWrap, isTrue);
       expect(log.logLines.single.level, 'warn');
     });
+
+    test('parses calendar and gallery view payloads', () {
+      final PluginRenderFrame calendar = PluginRenderFrame.fromJson(<String, dynamic>{
+        'type': 'render',
+        'view': 'calendar',
+        'calendar': <String, Object?>{
+          'mode': 'agenda',
+          'date': '2026-08-04',
+          'weekStart': 'sunday',
+          'days': 14,
+        },
+        'items': <Object?>[
+          <String, Object?>{
+            'id': 'event-1',
+            'title': 'Design critique',
+            'start': '2026-08-04T09:30:00',
+            'end': '2026-08-04T10:15:00',
+            'color': '#8B5CF6',
+            'location': 'Studio A',
+          },
+          <String, Object?>{
+            'id': 'event-2',
+            'title': 'Focus day',
+            'calendar': <String, Object?>{'date': '2026-08-05'},
+          },
+        ],
+      });
+      expect(calendar.view, PluginViewType.calendar);
+      expect(calendar.calendarMode, 'agenda');
+      expect(calendar.calendarDate, DateTime(2026, 8, 4));
+      expect(calendar.calendarWeekStart, DateTime.sunday);
+      expect(calendar.calendarDays, 14);
+      expect(calendar.items.first.calendar!.start, DateTime(2026, 8, 4, 9, 30));
+      expect(calendar.items.first.calendar!.end, DateTime(2026, 8, 4, 10, 15));
+      expect(calendar.items.first.calendar!.location, 'Studio A');
+      expect(calendar.items.last.calendar!.allDay, isTrue);
+
+      final PluginRenderFrame gallery = PluginRenderFrame.fromJson(<String, dynamic>{
+        'type': 'render',
+        'view': 'gallery',
+        'gallery': <String, Object?>{
+          'columns': 6,
+          'aspectRatio': 1.4,
+          'fit': 'contain',
+          'showLabels': false,
+        },
+        'items': <Object?>[
+          <String, Object?>{
+            'id': 'media-1',
+            'title': 'Product reel',
+            'media': <String, Object?>{
+              'url': 'https://example.com/reel.mp4',
+              'type': 'video',
+              'thumbnail': 'https://example.com/reel.webp',
+              'duration': '02:18',
+              'size': 2480000,
+              'width': 1920,
+              'height': 1080,
+            },
+          },
+        ],
+      });
+      expect(gallery.view, PluginViewType.gallery);
+      expect(gallery.galleryColumns, 6);
+      expect(gallery.galleryAspectRatio, 1.4);
+      expect(gallery.galleryFit, 'contain');
+      expect(gallery.galleryShowLabels, isFalse);
+      expect(gallery.items.single.media!.type, 'video');
+      expect(gallery.items.single.media!.displaySource, 'https://example.com/reel.webp');
+      expect(gallery.items.single.media!.duration, '02:18');
+      expect(gallery.items.single.media!.size, '2.4 MB');
+      expect(gallery.items.single.media!.width, 1920);
+    });
   });
 
   group('setQuery command', () {

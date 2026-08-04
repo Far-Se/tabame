@@ -583,6 +583,17 @@ class LauncherPluginHost {
     });
   }
 
+  /// The calendar header changed its visible date or month/agenda mode.
+  void sendCalendarNavigate(String date, String mode, {PluginEventScope scope = const PluginEventScope()}) {
+    _send(<String, Object?>{
+      'type': 'calendarNavigate',
+      'date': date,
+      'mode': mode,
+      'rev': _rev,
+      ...scope.fields,
+    });
+  }
+
   /// Tab pressed — [id] is the highlighted item (empty when there is none).
   /// Plugins typically respond with a `setQuery` command to autocomplete.
   void sendTab(String id, {PluginEventScope scope = const PluginEventScope()}) {

@@ -18,7 +18,8 @@ import 'dart:ui' show Color;
 /// 8 = composite dashboard frames with stacked or tabbed sub-views.
 /// 9 = page identity/history, scoped events, richer conditional forms, and
 ///     kanban/diff/log views.
-const int pluginProtocolVersion = 9;
+/// 10 = calendar/agenda and gallery/media-browser views.
+const int pluginProtocolVersion = 10;
 
 /// The layout a plugin render frame requests.
 enum PluginViewType {
@@ -36,6 +37,8 @@ enum PluginViewType {
   kanban,
   diff,
   log,
+  calendar,
+  gallery,
 }
 
 /// Parses a `#RGB` / `#RRGGBB` / `#AARRGGBB` string from plugin JSON into a
@@ -88,6 +91,10 @@ PluginViewType _viewFromString(String? value) {
       return PluginViewType.diff;
     case 'log':
       return PluginViewType.log;
+    case 'calendar':
+      return PluginViewType.calendar;
+    case 'gallery':
+      return PluginViewType.gallery;
     case 'list':
     default:
       return PluginViewType.list;
@@ -558,6 +565,110 @@ class PluginLogLine {
   }
 }
 
+/// Date/time metadata attached to an item in a `calendar` frame.
+class PluginCalendarItem {
+  const PluginCalendarItem({
+    required this.start,
+    this.end,
+    this.allDay = false,
+    this.color,
+    this.location = '',
+  });
+
+  final DateTime start;
+  final DateTime? end;
+  final bool allDay;
+  final Color? color;
+  final String location;
+
+  static PluginCalendarItem? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final Object? rawStart = json['start'] ?? json['date'];
+    final DateTime? start = rawStart is String ? DateTime.tryParse(rawStart.trim()) : null;
+    if (start == null) return null;
+    final Object? rawEnd = json['end'];
+    final DateTime? end = rawEnd is String ? DateTime.tryParse(rawEnd.trim()) : null;
+    return PluginCalendarItem(
+      start: start,
+      end: end != null && !end.isBefore(start) ? end : null,
+      allDay: json['allDay'] == true || !rawStart.toString().contains('T'),
+      color: parsePluginColor(json['color']),
+      location: json['location'] is String ? (json['location'] as String).trim() : '',
+    );
+  }
+}
+
+/// Thumbnail/source metadata attached to an item in a `gallery` frame.
+class PluginMediaInfo {
+  const PluginMediaInfo({
+    required this.url,
+    required this.type,
+    this.thumbnail,
+    this.duration = '',
+    this.size = '',
+    this.width,
+    this.height,
+  });
+
+  final String url;
+  final String type;
+  final String? thumbnail;
+  final String duration;
+  final String size;
+  final int? width;
+  final int? height;
+
+  String get displaySource => thumbnail ?? url;
+
+  static PluginMediaInfo? fromJson(Object? json) {
+    if (json is String && _isPluginMediaSource(json)) {
+      return PluginMediaInfo(url: json.trim(), type: 'image');
+    }
+    if (json is! Map || json['url'] is! String) return null;
+    final String url = (json['url'] as String).trim();
+    if (!_isPluginMediaSource(url)) return null;
+    final Object? rawType = json['type'];
+    final String type =
+        const <String>{'image', 'video', 'audio', 'file'}.contains(rawType) ? rawType as String : 'image';
+    final Object? rawThumbnail = json['thumbnail'];
+    final String? thumbnail = rawThumbnail is String && _isPluginMediaSource(rawThumbnail) ? rawThumbnail.trim() : null;
+    final Object? rawWidth = json['width'];
+    final Object? rawHeight = json['height'];
+    return PluginMediaInfo(
+      url: url,
+      type: type,
+      thumbnail: thumbnail,
+      duration: json['duration'] is String ? json['duration'] as String : '',
+      size: _sizeLabel(json['size']),
+      width: rawWidth is num && rawWidth > 0 ? rawWidth.toInt() : null,
+      height: rawHeight is num && rawHeight > 0 ? rawHeight.toInt() : null,
+    );
+  }
+
+  static bool _isPluginMediaSource(String value) {
+    final String source = value.trim();
+    if (source.startsWith('data:image/')) return source.length <= 2 * 1024 * 1024;
+    if (source.startsWith('file://')) return Uri.tryParse(source) != null;
+    final Uri? uri = Uri.tryParse(source);
+    return uri != null && (uri.scheme == 'http' || uri.scheme == 'https') && uri.host.isNotEmpty;
+  }
+
+  static String _sizeLabel(Object? value) {
+    if (value is String) return value.trim();
+    if (value is! num || value < 0) return '';
+    final double bytes = value.toDouble();
+    const List<String> units = <String>['B', 'KB', 'MB', 'GB', 'TB'];
+    double amount = bytes;
+    int unit = 0;
+    while (amount >= 1024 && unit < units.length - 1) {
+      amount /= 1024;
+      unit++;
+    }
+    final String formatted = unit == 0 || amount >= 10 ? amount.toStringAsFixed(0) : amount.toStringAsFixed(1);
+    return '$formatted ${units[unit]}';
+  }
+}
+
 /// A single row/tile emitted by the plugin.
 class PluginItem {
   const PluginItem({
@@ -581,6 +692,8 @@ class PluginItem {
     this.expanded = false,
     this.timestamp,
     this.column,
+    this.calendar,
+    this.media,
   });
 
   final String id;
@@ -631,6 +744,12 @@ class PluginItem {
 
   /// `kanban` view column id. Falls back to [section] for concise frames.
   final String? column;
+
+  /// Date/time data for `calendar` and `agenda` rendering.
+  final PluginCalendarItem? calendar;
+
+  /// Source/thumbnail data for `gallery` and media-browser rendering.
+  final PluginMediaInfo? media;
 
   static PluginItem fromJson(Map<String, dynamic> json, int index) {
     final Object? rawId = json['id'];
@@ -703,6 +822,8 @@ class PluginItem {
       column: json['column'] is String && (json['column'] as String).trim().isNotEmpty
           ? (json['column'] as String).trim()
           : (rawSection is String && rawSection.trim().isNotEmpty ? rawSection.trim() : null),
+      calendar: PluginCalendarItem.fromJson(json['calendar'] is Map ? json['calendar'] : json),
+      media: PluginMediaInfo.fromJson(json['media']),
     );
   }
 }
@@ -1138,6 +1259,14 @@ class PluginRenderFrame {
     this.logLines = const <PluginLogLine>[],
     this.logFollow = true,
     this.logWrap = false,
+    this.calendarMode = 'month',
+    this.calendarDate,
+    this.calendarWeekStart = DateTime.monday,
+    this.calendarDays = 30,
+    this.galleryColumns = 4,
+    this.galleryAspectRatio = 1.15,
+    this.galleryFit = 'cover',
+    this.galleryShowLabels = true,
   });
 
   final PluginViewType view;
@@ -1166,7 +1295,7 @@ class PluginRenderFrame {
   /// this before the frame reaches the view.
   final String? detailAppend;
 
-  /// Lets the user select several list/grid/table/tree items for batch actions.
+  /// Lets the user select several item views, including gallery, for batch actions.
   final bool multiSelect;
   final int? multiSelectMax;
   final List<PluginTableColumn> columns;
@@ -1191,6 +1320,14 @@ class PluginRenderFrame {
   final List<PluginLogLine> logLines;
   final bool logFollow;
   final bool logWrap;
+  final String calendarMode;
+  final DateTime? calendarDate;
+  final int calendarWeekStart;
+  final int calendarDays;
+  final int galleryColumns;
+  final double galleryAspectRatio;
+  final String galleryFit;
+  final bool galleryShowLabels;
 
   /// Full-width markdown, used when [view] is [PluginView.detail].
   final String? detailMarkdown;
@@ -1299,6 +1436,14 @@ class PluginRenderFrame {
       logLines: logLines,
       logFollow: logFollow,
       logWrap: logWrap,
+      calendarMode: calendarMode,
+      calendarDate: calendarDate,
+      calendarWeekStart: calendarWeekStart,
+      calendarDays: calendarDays,
+      galleryColumns: galleryColumns,
+      galleryAspectRatio: galleryAspectRatio,
+      galleryFit: galleryFit,
+      galleryShowLabels: galleryShowLabels,
     );
   }
 
@@ -1366,6 +1511,8 @@ class PluginRenderFrame {
     final Object? kanban = json['kanban'];
     final Object? diff = json['diff'];
     final Object? log = json['log'];
+    final Object? calendar = json['calendar'];
+    final Object? gallery = json['gallery'];
 
     int gridColumns = 4;
     double gridAspectRatio = 1.0;
@@ -1483,6 +1630,17 @@ class PluginRenderFrame {
       logLines: PluginLogLine.listFromJson(log is Map ? log['lines'] : log),
       logFollow: log is Map ? log['follow'] != false : true,
       logWrap: log is Map && log['wrap'] == true,
+      calendarMode: calendar is Map && calendar['mode'] == 'agenda' ? 'agenda' : 'month',
+      calendarDate:
+          calendar is Map && calendar['date'] is String ? DateTime.tryParse((calendar['date'] as String).trim()) : null,
+      calendarWeekStart: calendar is Map && calendar['weekStart'] == 'sunday' ? DateTime.sunday : DateTime.monday,
+      calendarDays: calendar is Map && calendar['days'] is num ? (calendar['days'] as num).toInt().clamp(1, 90) : 30,
+      galleryColumns: gallery is Map && gallery['columns'] is num ? (gallery['columns'] as num).toInt().clamp(2, 8) : 4,
+      galleryAspectRatio: gallery is Map && gallery['aspectRatio'] is num && (gallery['aspectRatio'] as num) > 0
+          ? (gallery['aspectRatio'] as num).toDouble().clamp(0.5, 2.5)
+          : 1.15,
+      galleryFit: gallery is Map && gallery['fit'] == 'contain' ? 'contain' : 'cover',
+      galleryShowLabels: gallery is! Map || gallery['showLabels'] != false,
     );
   }
 }

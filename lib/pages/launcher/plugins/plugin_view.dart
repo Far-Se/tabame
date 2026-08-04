@@ -20,11 +20,10 @@ import 'plugin_protocol.dart';
 /// Renders the live plugin UI described by a [PluginRenderFrame], replacing the
 /// launcher's default results list while a plugin is active.
 ///
-/// Supports list, grid, detail, chat, and form layouts plus an optional
-/// split preview pane bound to the selected item. Selection is owned by the
-/// launcher and passed down as [activeIndex]; taps and hovers are reported back
-/// through [onTapItem] / [onHoverItem]. The widget keeps the highlighted item
-/// scrolled into view.
+/// Supports every declarative plugin layout, including composite, calendar,
+/// and gallery views. Selection is owned by the launcher and passed down as
+/// [activeIndex]; taps and hovers are reported through [onTapItem] /
+/// [onHoverItem]. The widget keeps the highlighted item scrolled into view.
 class PluginView extends StatefulWidget {
   const PluginView({
     super.key,
@@ -48,6 +47,7 @@ class PluginView extends StatefulWidget {
     required this.onNavigateBack,
     required this.canNavigateBack,
     required this.onKanbanMove,
+    required this.onCalendarNavigate,
     this.onOpenActions,
     this.onMarkdownKeyEvent,
     this.onItemNavigation,
@@ -95,6 +95,7 @@ class PluginView extends StatefulWidget {
   final VoidCallback onNavigateBack;
   final bool canNavigateBack;
   final void Function(PluginEventScope scope, String id, String columnId, int index) onKanbanMove;
+  final void Function(PluginEventScope scope, String date, String mode) onCalendarNavigate;
 
   /// Ctrl+K pressed inside a form (the launcher opens the actions palette).
   final VoidCallback? onOpenActions;
@@ -388,6 +389,10 @@ class _PluginViewState extends State<PluginView> {
       body = _buildLog(frame);
     } else if (frame.view == PluginViewType.kanban) {
       body = _buildKanban(frame);
+    } else if (frame.view == PluginViewType.calendar) {
+      body = _buildCalendar(frame);
+    } else if (frame.view == PluginViewType.gallery) {
+      body = frame.items.isEmpty ? _buildEmptyOrLoading(frame) : _buildGallery(frame);
     } else if (frame.items.isEmpty) {
       body = _buildEmptyOrLoading(frame);
     } else {
@@ -532,7 +537,8 @@ class _PluginViewState extends State<PluginView> {
         frame.view == PluginViewType.table ||
         frame.view == PluginViewType.tree ||
         frame.view == PluginViewType.timeline ||
-        frame.view == PluginViewType.kanban;
+        frame.view == PluginViewType.kanban ||
+        frame.view == PluginViewType.gallery;
     final Widget body = itemView && frame.items.isEmpty
         ? _buildEmptyOrLoading(frame)
         : switch (frame.view) {
@@ -561,6 +567,8 @@ class _PluginViewState extends State<PluginView> {
             PluginViewType.kanban => _buildKanban(frame, controller: scrollController),
             PluginViewType.diff => _buildDiff(frame, controller: scrollController),
             PluginViewType.log => _buildLog(frame, controller: scrollController),
+            PluginViewType.calendar => _buildCalendar(frame, controller: scrollController),
+            PluginViewType.gallery => _buildGallery(frame, controller: scrollController),
             PluginViewType.operation => _buildEmptyOrLoading(frame),
             PluginViewType.grid => _buildGrid(frame, controller: scrollController),
             _ => _buildList(frame, controller: scrollController),
@@ -1150,6 +1158,222 @@ class _PluginViewState extends State<PluginView> {
               for (final PluginLogLine line in frame.logLines) _PluginLogRow(line: line, wrap: frame.logWrap),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  DateTime _calendarAnchor(PluginRenderFrame frame) {
+    final DateTime value = frame.calendarDate ?? DateTime.now();
+    return DateTime(value.year, value.month, value.day);
+  }
+
+  String _calendarDateValue(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+  bool _sameCalendarDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
+
+  Widget _buildCalendar(PluginRenderFrame frame, {ScrollController? controller}) {
+    final DateTime anchor = _calendarAnchor(frame);
+    final String mode = frame.calendarMode;
+    final PluginEventScope scope = _scopeFor(frame);
+    void navigate(DateTime date, String nextMode) =>
+        widget.onCalendarNavigate(scope, _calendarDateValue(date), nextMode);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _PluginCalendarHeader(
+          date: anchor,
+          mode: mode,
+          onPrevious: () => navigate(
+            mode == 'month' ? DateTime(anchor.year, anchor.month - 1) : anchor.subtract(const Duration(days: 7)),
+            mode,
+          ),
+          onNext: () => navigate(
+            mode == 'month' ? DateTime(anchor.year, anchor.month + 1) : anchor.add(const Duration(days: 7)),
+            mode,
+          ),
+          onToday: () => navigate(DateTime.now(), mode),
+          onModeChanged: (String nextMode) => navigate(anchor, nextMode),
+        ),
+        Expanded(
+          child: mode == 'agenda'
+              ? _buildAgenda(frame, anchor, controller: controller)
+              : _buildMonthCalendar(frame, anchor),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMonthCalendar(PluginRenderFrame frame, DateTime anchor) {
+    final DateTime first = DateTime(anchor.year, anchor.month);
+    final int leading = (first.weekday - frame.calendarWeekStart + 7) % 7;
+    final DateTime gridStart = first.subtract(Duration(days: leading));
+    final List<String> weekdays = frame.calendarWeekStart == DateTime.sunday
+        ? const <String>['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        : const <String>['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final DateTime today = DateTime.now();
+
+    return Column(children: <Widget>[
+      SizedBox(
+        height: 22,
+        child: Row(
+          children: <Widget>[
+            for (final String weekday in weekdays)
+              Expanded(
+                child: Center(
+                  child: Text(
+                    weekday.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                      color: Design.text.withAlpha(95),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+      Expanded(
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final double cellWidth = constraints.maxWidth / 7;
+            final double cellHeight = constraints.maxHeight / 6;
+            return GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(7, 0, 7, 7),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 7,
+                childAspectRatio: cellWidth / cellHeight,
+                mainAxisSpacing: 1,
+                crossAxisSpacing: 1,
+              ),
+              itemCount: 42,
+              itemBuilder: (BuildContext context, int dayOffset) {
+                final DateTime day = gridStart.add(Duration(days: dayOffset));
+                final List<(int, PluginItem)> events = <(int, PluginItem)>[
+                  for (int index = 0; index < frame.items.length; index++)
+                    if (frame.items[index].calendar != null &&
+                        _sameCalendarDay(frame.items[index].calendar!.start, day))
+                      (index, frame.items[index]),
+                ];
+                events.sort(((int, PluginItem) a, (int, PluginItem) b) {
+                  final bool selectedA = _isSelected(frame, a.$1);
+                  final bool selectedB = _isSelected(frame, b.$1);
+                  if (selectedA != selectedB) return selectedA ? -1 : 1;
+                  return a.$2.calendar!.start.compareTo(b.$2.calendar!.start);
+                });
+                final int visibleCount = cellHeight >= 66
+                    ? 2
+                    : cellHeight >= 38
+                        ? 1
+                        : 0;
+                return _PluginCalendarDayCell(
+                  day: day,
+                  inMonth: day.month == anchor.month,
+                  today: _sameCalendarDay(day, today),
+                  eventCount: events.length,
+                  visibleCount: visibleCount,
+                  eventBuilder: (int eventIndex) {
+                    final (int index, PluginItem item) = events[eventIndex];
+                    return KeyedSubtree(
+                      key: _keyFor(frame, index),
+                      child: _PluginCalendarEventChip(
+                        item: item,
+                        selected: _isSelected(frame, index),
+                        onTap: () => _tapItem(frame, index),
+                        onHover: () => _hoverSelect(frame, index),
+                      ),
+                    );
+                  },
+                );
+              },
+            );
+          },
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildAgenda(PluginRenderFrame frame, DateTime anchor, {ScrollController? controller}) {
+    final DateTime end = anchor.add(Duration(days: frame.calendarDays));
+    final List<(int, PluginItem)> events = <(int, PluginItem)>[
+      for (int index = 0; index < frame.items.length; index++)
+        if (frame.items[index].calendar != null &&
+            !frame.items[index].calendar!.start.isBefore(anchor) &&
+            frame.items[index].calendar!.start.isBefore(end))
+          (index, frame.items[index]),
+    ]..sort(((int, PluginItem) a, (int, PluginItem) b) => a.$2.calendar!.start.compareTo(b.$2.calendar!.start));
+    if (events.isEmpty) return _buildEmptyOrLoading(frame);
+
+    final List<Widget> children = <Widget>[];
+    DateTime? previousDay;
+    for (final (int index, PluginItem item) in events) {
+      final DateTime day = item.calendar!.start;
+      if (previousDay == null || !_sameCalendarDay(previousDay, day)) {
+        children.add(_PluginAgendaDayHeader(date: day));
+        previousDay = day;
+      }
+      children.add(
+        KeyedSubtree(
+          key: _keyFor(frame, index),
+          child: _PluginAgendaEventRow(
+            item: item,
+            selected: _isSelected(frame, index),
+            onTap: () => _tapItem(frame, index),
+            onHover: () => _hoverSelect(frame, index),
+          ),
+        ),
+      );
+    }
+    return WindowsScrollView(
+      controller: controller ?? _scrollController,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+      ),
+    );
+  }
+
+  Widget _buildGallery(PluginRenderFrame frame, {ScrollController? controller}) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: (ScrollNotification notification) => _onScrollNotification(frame, notification),
+      child: WindowsScrollView(
+        controller: controller ?? _scrollController,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(children: <Widget>[
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: frame.items.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: frame.galleryColumns,
+                childAspectRatio: frame.galleryAspectRatio,
+                mainAxisSpacing: 7,
+                crossAxisSpacing: 7,
+              ),
+              itemBuilder: (BuildContext context, int index) => KeyedSubtree(
+                key: _keyFor(frame, index),
+                child: _PluginGalleryTile(
+                  item: frame.items[index],
+                  selected: _isSelected(frame, index),
+                  marked: _selectedIds(frame).contains(frame.items[index].id),
+                  showLabels: frame.galleryShowLabels,
+                  fit: frame.galleryFit == 'contain' ? BoxFit.contain : BoxFit.cover,
+                  onTap: () => _tapItem(frame, index),
+                  onHover: () => _hoverSelect(frame, index),
+                  onToggle: frame.multiSelect
+                      ? () => widget.onToggleSelection(_scopeFor(frame), frame.items[index].id)
+                      : null,
+                ),
+              ),
+            ),
+            if (frame.hasMore) _loadMoreFooter(),
+          ]),
         ),
       ),
     );
@@ -1981,6 +2205,499 @@ class _DiscordChatBody extends StatelessWidget {
     }
     if (offset < text.length) spans.add(TextSpan(text: text.substring(offset)));
     return Text.rich(TextSpan(style: style, children: spans.isEmpty ? <InlineSpan>[TextSpan(text: text)] : spans));
+  }
+}
+
+const List<String> _pluginMonthNames = <String>[
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+const List<String> _pluginWeekdayNames = <String>[
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
+String _pluginClock(DateTime value) =>
+    '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+
+class _PluginCalendarHeader extends StatelessWidget {
+  const _PluginCalendarHeader({
+    required this.date,
+    required this.mode,
+    required this.onPrevious,
+    required this.onNext,
+    required this.onToday,
+    required this.onModeChanged,
+  });
+
+  final DateTime date;
+  final String mode;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+  final VoidCallback onToday;
+  final ValueChanged<String> onModeChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final String title = mode == 'month'
+        ? '${_pluginMonthNames[date.month - 1]} ${date.year}'
+        : '${_pluginMonthNames[date.month - 1]} ${date.day}, ${date.year}';
+    return Container(
+      height: 39,
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Design.text.withAlpha(18)))),
+      child: Row(children: <Widget>[
+        _PluginCalendarIconButton(icon: Icons.chevron_left_rounded, tooltip: 'Previous', onTap: onPrevious),
+        _PluginCalendarIconButton(icon: Icons.chevron_right_rounded, tooltip: 'Next', onTap: onNext),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Design.text.withAlpha(220)),
+          ),
+        ),
+        _PluginCalendarTextButton(label: 'Today', selected: false, onTap: onToday),
+        const SizedBox(width: 5),
+        Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            color: Design.text.withAlpha(8),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Design.text.withAlpha(18)),
+          ),
+          child: Row(children: <Widget>[
+            _PluginCalendarTextButton(
+              label: 'Month',
+              selected: mode == 'month',
+              onTap: () => onModeChanged('month'),
+            ),
+            _PluginCalendarTextButton(
+              label: 'Agenda',
+              selected: mode == 'agenda',
+              onTap: () => onModeChanged('agenda'),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
+class _PluginCalendarIconButton extends StatelessWidget {
+  const _PluginCalendarIconButton({required this.icon, required this.tooltip, required this.onTap});
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+        tooltip: tooltip,
+        visualDensity: VisualDensity.compact,
+        constraints: const BoxConstraints.tightFor(width: 27, height: 27),
+        padding: EdgeInsets.zero,
+        onPressed: onTap,
+        icon: Icon(icon, size: 16, color: Design.text.withAlpha(150)),
+      );
+}
+
+class _PluginCalendarTextButton extends StatelessWidget {
+  const _PluginCalendarTextButton({required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: selected ? Design.accent.withAlpha(32) : Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w700,
+                color: selected ? Design.accent : Design.text.withAlpha(125),
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+class _PluginCalendarDayCell extends StatelessWidget {
+  const _PluginCalendarDayCell({
+    required this.day,
+    required this.inMonth,
+    required this.today,
+    required this.eventCount,
+    required this.visibleCount,
+    required this.eventBuilder,
+  });
+
+  final DateTime day;
+  final bool inMonth;
+  final bool today;
+  final int eventCount;
+  final int visibleCount;
+  final Widget Function(int index) eventBuilder;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.fromLTRB(4, 3, 4, 2),
+        decoration: BoxDecoration(
+          color: inMonth ? Design.text.withAlpha(3) : Design.text.withAlpha(1),
+          border: Border.all(color: Design.text.withAlpha(inMonth ? 15 : 8)),
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+          Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              width: 19,
+              height: 19,
+              alignment: Alignment.center,
+              decoration: today ? BoxDecoration(color: Design.accent, shape: BoxShape.circle) : null,
+              child: Text(
+                '${day.day}',
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: today ? FontWeight.w800 : FontWeight.w600,
+                  color: today ? Colors.white : Design.text.withAlpha(inMonth ? 155 : 55),
+                ),
+              ),
+            ),
+          ),
+          for (int index = 0; index < eventCount && index < visibleCount; index++) eventBuilder(index),
+          if (eventCount > visibleCount)
+            Padding(
+              padding: const EdgeInsets.only(left: 3, top: 1),
+              child: Text(
+                '+${eventCount - visibleCount} more',
+                maxLines: 1,
+                style: TextStyle(fontSize: 8, fontWeight: FontWeight.w600, color: Design.text.withAlpha(85)),
+              ),
+            ),
+        ]),
+      );
+}
+
+class _PluginCalendarEventChip extends StatelessWidget {
+  const _PluginCalendarEventChip({
+    required this.item,
+    required this.selected,
+    required this.onTap,
+    required this.onHover,
+  });
+
+  final PluginItem item;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback onHover;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = item.calendar?.color ?? Design.accent;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => onHover(),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 16,
+          margin: const EdgeInsets.only(top: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          alignment: Alignment.centerLeft,
+          decoration: BoxDecoration(
+            color: color.withAlpha(selected ? 48 : 23),
+            borderRadius: BorderRadius.circular(3),
+            border: Border(left: BorderSide(color: color, width: 2)),
+          ),
+          child: Text(
+            item.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w600, color: Design.text.withAlpha(190)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PluginAgendaDayHeader extends StatelessWidget {
+  const _PluginAgendaDayHeader({required this.date});
+
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(5, 9, 5, 4),
+        child: Text(
+          '${_pluginWeekdayNames[date.weekday - 1]}, ${_pluginMonthNames[date.month - 1]} ${date.day}',
+          style: TextStyle(
+            fontSize: 9.5,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.4,
+            color: Design.text.withAlpha(120),
+          ),
+        ),
+      );
+}
+
+class _PluginAgendaEventRow extends StatelessWidget {
+  const _PluginAgendaEventRow({
+    required this.item,
+    required this.selected,
+    required this.onTap,
+    required this.onHover,
+  });
+
+  final PluginItem item;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback onHover;
+
+  @override
+  Widget build(BuildContext context) {
+    final PluginCalendarItem calendar = item.calendar!;
+    final Color color = calendar.color ?? Design.accent;
+    final String time = calendar.allDay
+        ? 'ALL DAY'
+        : calendar.end == null
+            ? _pluginClock(calendar.start)
+            : '${_pluginClock(calendar.start)}–${_pluginClock(calendar.end!)}';
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => onHover(),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          decoration: BoxDecoration(
+            color: selected ? Design.accent.withAlpha(24) : Design.text.withAlpha(5),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: selected ? Design.accent.withAlpha(70) : Design.text.withAlpha(14)),
+          ),
+          child: Row(children: <Widget>[
+            Container(
+                width: 3, height: 31, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 78,
+              child: Text(
+                time,
+                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Design.text.withAlpha(100)),
+              ),
+            ),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                Text(
+                  item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(210)),
+                ),
+                if (item.subtitle.isNotEmpty || calendar.location.isNotEmpty)
+                  Text(
+                    <String>[item.subtitle, calendar.location].where((String value) => value.isNotEmpty).join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 9.5, color: Design.text.withAlpha(105)),
+                  ),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+Widget _pluginGalleryVisual(PluginItem item, BoxFit fit) {
+  final PluginMediaInfo? media = item.media;
+  final Widget fallback = Container(
+    color: Design.text.withAlpha(7),
+    alignment: Alignment.center,
+    child: _PluginIcon(name: item.icon ?? media?.type, accent: Design.accent, size: 28),
+  );
+  if (media == null || (media.type != 'image' && media.thumbnail == null)) return fallback;
+  final String source = media.displaySource;
+  final bool isSvg =
+      source.startsWith('data:image/svg+xml') || (Uri.tryParse(source)?.path.toLowerCase().endsWith('.svg') ?? false);
+  if (source.startsWith('data:image/')) {
+    if (source.length > 2 * 1024 * 1024) return fallback;
+    try {
+      final Uint8List bytes = UriData.parse(source).contentAsBytes();
+      return isSvg
+          ? SvgPicture.memory(bytes, fit: fit, errorBuilder: (_, __, ___) => fallback)
+          : Image.memory(bytes, fit: fit, errorBuilder: (_, __, ___) => fallback);
+    } catch (_) {
+      return fallback;
+    }
+  }
+  if (source.startsWith('file://')) {
+    try {
+      final File file = File(Uri.parse(source).toFilePath(windows: true));
+      if (!file.existsSync()) return fallback;
+      return isSvg
+          ? SvgPicture.file(file, fit: fit, errorBuilder: (_, __, ___) => fallback)
+          : Image.file(file, fit: fit, filterQuality: FilterQuality.medium, errorBuilder: (_, __, ___) => fallback);
+    } catch (_) {
+      return fallback;
+    }
+  }
+  return isSvg
+      ? SvgPicture.network(source, fit: fit, errorBuilder: (_, __, ___) => fallback)
+      : Image.network(source, fit: fit, filterQuality: FilterQuality.medium, errorBuilder: (_, __, ___) => fallback);
+}
+
+class _PluginGalleryTile extends StatelessWidget {
+  const _PluginGalleryTile({
+    required this.item,
+    required this.selected,
+    required this.marked,
+    required this.showLabels,
+    required this.fit,
+    required this.onTap,
+    required this.onHover,
+    this.onToggle,
+  });
+
+  final PluginItem item;
+  final bool selected;
+  final bool marked;
+  final bool showLabels;
+  final BoxFit fit;
+  final VoidCallback onTap;
+  final VoidCallback onHover;
+  final VoidCallback? onToggle;
+
+  IconData get _typeIcon => switch (item.media?.type) {
+        'video' => Icons.play_arrow_rounded,
+        'audio' => Icons.graphic_eq_rounded,
+        'file' => Icons.insert_drive_file_rounded,
+        _ => Icons.image_rounded,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final PluginMediaInfo? media = item.media;
+    final String dimensions = media?.width != null && media?.height != null ? '${media!.width}×${media.height}' : '';
+    final String meta = <String>[media?.duration ?? '', media?.size ?? '', dimensions]
+        .where((String value) => value.isNotEmpty)
+        .join(' · ');
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => onHover(),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 100),
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: selected ? Design.accent.withAlpha(20) : Design.text.withAlpha(5),
+            borderRadius: BorderRadius.circular(7),
+            border: Border.all(
+              color: selected ? Design.accent.withAlpha(125) : Design.text.withAlpha(18),
+              width: selected ? 1.4 : 1,
+            ),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Stack(fit: StackFit.expand, children: <Widget>[
+                  ColoredBox(color: Design.text.withAlpha(7), child: _pluginGalleryVisual(item, fit)),
+                  if (media?.type != null && media!.type != 'image')
+                    Positioned(
+                      left: 5,
+                      top: 5,
+                      child: Container(
+                        width: 23,
+                        height: 23,
+                        decoration: BoxDecoration(color: Colors.black.withAlpha(145), shape: BoxShape.circle),
+                        child: Icon(_typeIcon, size: 14, color: Colors.white),
+                      ),
+                    ),
+                  if (media?.duration.isNotEmpty == true)
+                    Positioned(
+                      right: 5,
+                      bottom: 5,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration:
+                            BoxDecoration(color: Colors.black.withAlpha(165), borderRadius: BorderRadius.circular(3)),
+                        child: Text(media!.duration,
+                            style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ),
+                    ),
+                  if (onToggle != null)
+                    Positioned(
+                      right: 5,
+                      top: 5,
+                      child: GestureDetector(
+                        onTap: onToggle,
+                        child: Icon(
+                          marked ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                          size: 18,
+                          color: marked ? Design.accent : Colors.white.withAlpha(210),
+                          shadows: const <Shadow>[Shadow(color: Colors.black54, blurRadius: 3)],
+                        ),
+                      ),
+                    ),
+                ]),
+              ),
+            ),
+            if (showLabels && (item.title.isNotEmpty || item.subtitle.isNotEmpty || meta.isNotEmpty))
+              Padding(
+                padding: const EdgeInsets.fromLTRB(3, 5, 3, 1),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                  if (item.title.isNotEmpty)
+                    Text(item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(205))),
+                  if (item.subtitle.isNotEmpty || meta.isNotEmpty)
+                    Text(
+                      item.subtitle.isNotEmpty ? item.subtitle : meta,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 8.8, color: Design.text.withAlpha(95)),
+                    ),
+                ]),
+              ),
+          ]),
+        ),
+      ),
+    );
   }
 }
 
