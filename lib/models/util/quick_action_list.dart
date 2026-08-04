@@ -14,7 +14,7 @@ import '../../widgets/itzy/quickmenu/button_calculator.dart';
 import '../../widgets/itzy/quickmenu/button_change_theme.dart';
 import '../../widgets/itzy/quickmenu/button_chars.dart';
 import '../../widgets/itzy/quickmenu/button_block_keyboard.dart';
-import '../../widgets/itzy/quickmenu/button_claude_usage.dart';
+import '../../widgets/itzy/quickmenu/button_ai_usage.dart';
 import '../../widgets/itzy/quickmenu/button_cli_book.dart';
 import '../../widgets/itzy/quickmenu/button_clipboard_history.dart';
 import '../../widgets/itzy/quickmenu/button_closeonfocus.dart';
@@ -128,7 +128,7 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "ClaudeUsageButton": QuickAction(
     name: "AI Usage Stats",
     icon: Icons.bar_chart_rounded,
-    widget: () => const ClaudeUsageButton(),
+    widget: () => const AiUsageButton(),
   ),
   "EmojiButton": QuickAction(
     icon: Icons.emoji_emotions_outlined,
