@@ -475,8 +475,8 @@ class LauncherPluginHost {
 
   /// Notifies the plugin that the highlighted item changed (drives the preview
   /// pane and any per-selection work the plugin wants to do).
-  void sendSelect(String id) {
-    _send(<String, Object?>{'type': 'select', 'id': id, 'rev': _rev});
+  void sendSelect(String id, {PluginEventScope scope = const PluginEventScope()}) {
+    _send(<String, Object?>{'type': 'select', 'id': id, 'rev': _rev, ...scope.fields});
   }
 
   /// Triggers an action for an item — `default` on Enter, or a Ctrl+K action id.
@@ -485,6 +485,7 @@ class LauncherPluginHost {
     String action, {
     List<String> ids = const <String>[],
     Map<String, Object?>? parameters,
+    PluginEventScope scope = const PluginEventScope(),
   }) {
     if (action == _installDependenciesAction && _process == null) {
       final PluginManifest? manifest = _active;
@@ -497,60 +498,95 @@ class LauncherPluginHost {
       'action': action,
       if (ids.isNotEmpty) 'ids': ids,
       if (parameters != null) 'parameters': parameters,
+      ...scope.fields,
     });
   }
 
-  void sendToggle(String id, bool expanded) =>
-      _send(<String, Object?>{'type': 'toggle', 'id': id, 'expanded': expanded, 'rev': _rev});
+  void sendToggle(String id, bool expanded, {PluginEventScope scope = const PluginEventScope()}) =>
+      _send(<String, Object?>{'type': 'toggle', 'id': id, 'expanded': expanded, 'rev': _rev, ...scope.fields});
 
-  void sendChartSelect(String seriesId, int index, double value) => _send(
-      <String, Object?>{'type': 'chartSelect', 'seriesId': seriesId, 'index': index, 'value': value, 'rev': _rev});
+  void sendChartSelect(String seriesId, int index, double value, {PluginEventScope scope = const PluginEventScope()}) =>
+      _send(<String, Object?>{
+        'type': 'chartSelect',
+        'seriesId': seriesId,
+        'index': index,
+        'value': value,
+        'rev': _rev,
+        ...scope.fields,
+      });
 
-  void sendCancel(String operationId) => _send(<String, Object?>{'type': 'cancel', 'id': operationId, 'rev': _rev});
+  void sendCancel(String operationId, {PluginEventScope scope = const PluginEventScope()}) =>
+      _send(<String, Object?>{'type': 'cancel', 'id': operationId, 'rev': _rev, ...scope.fields});
 
   /// Delivers a form view's field values after the user submits. [button] is
   /// the id of the pressed `form.buttons` entry, when the form declared any.
-  void sendFormSubmit(Map<String, Object?> values, {String? button}) {
+  void sendFormSubmit(Map<String, Object?> values,
+      {String? button, PluginEventScope scope = const PluginEventScope()}) {
     debugLog.add(PluginDebugKind.info, 'submit ${jsonEncode(values)}');
     _send(<String, Object?>{
       'type': 'submit',
       'values': values,
       if (button != null) 'button': button,
+      ...scope.fields,
     });
   }
 
   /// A watched form field changed — lets plugins re-render dependent fields.
-  void sendFormChange(String fieldId, Map<String, Object?> values) {
-    _send(<String, Object?>{'type': 'change', 'id': fieldId, 'values': values});
+  void sendFormChange(String fieldId, Map<String, Object?> values,
+      {PluginEventScope scope = const PluginEventScope()}) {
+    _send(<String, Object?>{'type': 'change', 'id': fieldId, 'values': values, ...scope.fields});
   }
 
   /// The user scrolled near the end of a `hasMore` list — the plugin should
   /// answer with a longer item list (same rev semantics as a query response).
-  void sendLoadMore() {
+  void sendLoadMore({PluginEventScope scope = const PluginEventScope()}) {
     debugLog.add(PluginDebugKind.info, 'loadMore');
-    _send(<String, Object?>{'type': 'loadMore', 'rev': _rev});
+    _send(<String, Object?>{'type': 'loadMore', 'rev': _rev, ...scope.fields});
   }
 
   /// `inputMode: "submit"` — Enter submits the whole query text at once
   /// instead of streaming keystrokes.
-  void sendSubmitQuery(String text) {
+  void sendSubmitQuery(String text, {PluginEventScope scope = const PluginEventScope()}) {
     _rev++;
     _lastQuery = text;
     debugLog.add(PluginDebugKind.info, 'submitQuery "${_truncate(text)}"');
-    _send(<String, Object?>{'type': 'submitQuery', 'text': text, 'rev': _rev});
+    _send(<String, Object?>{'type': 'submitQuery', 'text': text, 'rev': _rev, ...scope.fields});
   }
 
   /// Escape on a frame that declared `canGoBack` — the plugin should render
   /// its previous screen.
-  void sendBack() {
+  void sendBack({String? fromPageId, String? toPageId, PluginEventScope scope = const PluginEventScope()}) {
     debugLog.add(PluginDebugKind.info, 'back');
-    _send(<String, Object?>{'type': 'back', 'rev': _rev});
+    _send(<String, Object?>{
+      'type': 'back',
+      'rev': _rev,
+      if (fromPageId != null) 'fromPageId': fromPageId,
+      if (toPageId != null) 'toPageId': toPageId,
+      ...scope.fields,
+    });
+  }
+
+  /// A page breadcrumb or other host navigation control was activated.
+  void sendNavigate(String targetPageId, {PluginEventScope scope = const PluginEventScope()}) {
+    _send(<String, Object?>{'type': 'navigate', 'targetPageId': targetPageId, 'rev': _rev, ...scope.fields});
+  }
+
+  /// A card moved within or between kanban columns.
+  void sendKanbanMove(String id, String columnId, int index, {PluginEventScope scope = const PluginEventScope()}) {
+    _send(<String, Object?>{
+      'type': 'kanbanMove',
+      'id': id,
+      'columnId': columnId,
+      'index': index,
+      'rev': _rev,
+      ...scope.fields,
+    });
   }
 
   /// Tab pressed — [id] is the highlighted item (empty when there is none).
   /// Plugins typically respond with a `setQuery` command to autocomplete.
-  void sendTab(String id) {
-    _send(<String, Object?>{'type': 'tab', 'id': id, 'rev': _rev});
+  void sendTab(String id, {PluginEventScope scope = const PluginEventScope()}) {
+    _send(<String, Object?>{'type': 'tab', 'id': id, 'rev': _rev, ...scope.fields});
   }
 
   void _handleStdoutLine(int generation, PluginManifest manifest, String line) {

@@ -22,7 +22,8 @@ Try these queries after typing the `echo ` keyword in the launcher:
     echo grid               -> a grid of color-swatch tiles (tileColor)
     echo detail             -> a full-width markdown view + metadata rows
     echo preview something   -> a list with a live preview pane (metadata + sparkline)
-    echo form               -> a form view (v3 fields, validation, buttons)
+    echo form               -> rich v9 form sections, conditions, async combobox
+    echo form legacy        -> original flat form for comparison
     echo empty              -> a custom empty state (with a call-to-action)
     echo chat               -> submit-mode input + streaming detail.append
     echo more               -> a paginated list (hasMore / loadMore)
@@ -37,6 +38,10 @@ Try these queries after typing the `echo ` keyword in the launcher:
     echo oauth              -> host-owned OAuth callback + secret-storage pattern
     echo dashboard          -> stacked markdown + table + chart + operation panels
     echo tabs               -> the same composite result as tabs
+    echo pages              -> page IDs, breadcrumbs, history, restored state
+    echo kanban             -> draggable workflow cards + kanbanMove events
+    echo diff               -> unified diff (add "split" for side-by-side)
+    echo log                -> structured log levels, append action, wrapping
     Tab on a list item       -> autocompletes the query via a setQuery command
     Ctrl+K                   -> item actions + frame actions (shortcuts, confirm)
 """
@@ -53,6 +58,14 @@ def send(obj):
     sys.stdout.flush()
 
 
+def event_scope(msg):
+    parts = []
+    for key in ("pageId", "panelId", "elementId"):
+        if msg.get(key):
+            parts.append(f"{key}={msg[key]}")
+    return ", ".join(parts) or "legacy scope"
+
+
 # id -> title of the items in the last frame, so actions can resolve them.
 LAST_ITEMS = {}
 
@@ -65,6 +78,23 @@ STATE = {
     "tree_expanded": False,
     "operation": None,
     "dashboard_sync_cancelled": False,
+    "page_topic": None,
+    "form_values": {},
+    "form_request": 0,
+    "kanban_cards": [
+        {"id": "card:spec", "title": "Write protocol spec", "column": "done", "owner": "Docs"},
+        {"id": "card:form", "title": "Polish rich forms", "column": "review", "owner": "UI"},
+        {"id": "card:scope", "title": "Verify scoped events", "column": "doing", "owner": "Runtime"},
+        {"id": "card:logs", "title": "Add log viewer demo", "column": "todo", "owner": "Echo"},
+        {"id": "card:diff", "title": "Exercise split diff", "column": "todo", "owner": "QA"},
+    ],
+    "log_wrap": False,
+    "log_lines": [
+        {"id": "log:1", "timestamp": "09:41:02", "level": "info", "source": "echo", "text": "Protocol v9 demo initialized"},
+        {"id": "log:2", "timestamp": "09:41:03", "level": "debug", "source": "router", "text": "Registered page and scoped-event demos"},
+        {"id": "log:3", "timestamp": "09:41:04", "level": "warn", "source": "worker", "text": "This warning is intentional and demonstrates level tinting"},
+        {"id": "log:4", "timestamp": "09:41:05", "level": "success", "source": "render", "text": "Kanban, diff, and log frames are ready"},
+    ],
 }
 BG_THREAD = None
 
@@ -135,9 +165,12 @@ def render_list(text, rev, with_preview):
         "operation",
         "params",
         "oauth",
-        "table",
         "tabs",
         "dashboard",
+        "pages",
+        "kanban",
+        "diff",
+        "log",
     ]
     items = []
     for i, word in enumerate(words):
@@ -183,8 +216,15 @@ def render_list(text, rev, with_preview):
             "type": "render",
             "rev": rev,
             "view": "list",
+            "page": {
+                "id": "echo:root",
+                "title": "Echo demo",
+                "history": "replace",
+                "preserveState": True,
+            },
+            "elementId": "echo-results",
             "emptyText": "Nothing to echo yet",
-            "placeholder": "echo <words> — try grid / detail / form / chat / more / storage",
+            "placeholder": "Try pages / form / dashboard / kanban / diff / log",
             "preview": {"enabled": with_preview},
             "actions": FRAME_ACTIONS,
             "items": items,
@@ -264,7 +304,94 @@ def render_detail(text, rev):
     )
 
 
-def render_form(rev, message_error=None):
+PAGE_TOPICS = [
+    ("navigation", "Page identity", "Stable IDs preserve selection and scroll position", "home"),
+    ("breadcrumbs", "Breadcrumb navigation", "Click the Demos crumb to return here", "link"),
+    ("scope", "Scoped events", "Events identify their page, panel, and element", "extension"),
+    ("forms", "Rich forms", "Sections, conditions, async choices, and validation", "edit"),
+    ("kanban", "Kanban", "Drag cards within and between workflow columns", "grid"),
+    ("diff", "Diff", "Selectable unified and split source comparison", "code"),
+    ("logs", "Logs", "Dense structured diagnostics with follow and wrap", "terminal"),
+    ("state", "State restoration", "Open this item, then go back to restore the cursor", "refresh"),
+    ("dashboard", "Connected panels", "Nested controls and data emit scoped events", "chart"),
+    ("history", "Host history", "Escape follows the page stack before leaving", "clock"),
+    ("elements", "Element identity", "Independent widgets can reuse item IDs safely", "extension"),
+    ("compat", "Additive protocol", "Older plugins can ignore all v9 scope fields", "check"),
+]
+
+
+def render_pages(rev):
+    STATE["screen"] = "pages"
+    STATE["page_topic"] = None
+    items = []
+    for key, title, subtitle, icon in PAGE_TOPICS:
+        item_id = f"page:{key}"
+        LAST_ITEMS[item_id] = title
+        items.append(
+            {
+                "id": item_id,
+                "title": title,
+                "subtitle": subtitle,
+                "icon": icon,
+                "accessories": [{"text": key, "color": "#0EA5E9"}],
+                "actions": [{"id": "default", "title": "Open page", "icon": "open"}],
+            }
+        )
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "list",
+            "page": {
+                "id": "pages:home",
+                "title": "Protocol v9 pages",
+                "history": "push",
+                "preserveState": True,
+            },
+            "elementId": "page-topic-list",
+            "canGoBack": True,
+            "placeholder": "Open a topic, then Escape or click its breadcrumb",
+            "items": items,
+        }
+    )
+
+
+def render_page_topic(topic, rev=0):
+    match = next((entry for entry in PAGE_TOPICS if entry[0] == topic), PAGE_TOPICS[0])
+    key, title, subtitle, _ = match
+    STATE["screen"] = "pages-detail"
+    STATE["page_topic"] = key
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "detail",
+            "page": {
+                "id": f"pages:topic:{key}",
+                "title": title,
+                "history": "push",
+                "preserveState": True,
+                "breadcrumbs": [{"id": "pages:home", "label": "Demos"}],
+            },
+            "elementId": "topic-document",
+            "canGoBack": True,
+            "detail": {
+                "markdown": (
+                    f"# {title}\n\n{subtitle}.\n\n"
+                    "This document has a stable page ID. Return with **Escape**, the back button, "
+                    "or the **Demos** breadcrumb. The host restores the list's selection and scroll offset."
+                ),
+                "metadata": [
+                    {"label": "Page ID", "text": f"pages:topic:{key}", "icon": "link"},
+                    {"label": "Element", "text": "topic-document", "icon": "extension"},
+                    {"label": "History", "text": "push", "color": "#10B981"},
+                ],
+            },
+        }
+    )
+
+
+def render_legacy_form(rev, message_error=None):
     send(
         {
             "type": "render",
@@ -333,6 +460,206 @@ def render_form(rev, message_error=None):
             },
         }
     )
+
+
+def render_rich_form(rev, message_error=None, options_loading=False, recipient_options=None):
+    if recipient_options is None:
+        recipient_options = [
+            {"value": "ada", "label": "Ada Lovelace"},
+            {"value": "grace", "label": "Grace Hopper"},
+            {"value": "margaret", "label": "Margaret Hamilton"},
+            {"value": "alan", "label": "Alan Turing"},
+        ]
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "form",
+            "page": {
+                "id": "form:rich",
+                "title": "Rich form",
+                "history": "push",
+                "preserveState": True,
+                "breadcrumbs": [{"id": "pages:home", "label": "Demos"}],
+            },
+            "elementId": "echo-form",
+            "canGoBack": True,
+            "actions": FRAME_ACTIONS,
+            "form": {
+                "title": "Compose a protocol-v9 echo",
+                **(
+                    {"error": "The server rejected one value. Your other fields were preserved."}
+                    if message_error
+                    else {}
+                ),
+                "sections": [
+                    {
+                        "id": "content",
+                        "title": "Content",
+                        "description": "Required message and optional notes",
+                    },
+                    {
+                        "id": "style",
+                        "title": "Style",
+                        "description": "Conditional formatting controls",
+                        "collapsible": True,
+                    },
+                    {
+                        "id": "delivery",
+                        "title": "Delivery",
+                        "description": "Async recipient search and scheduling",
+                        "collapsible": True,
+                    },
+                ],
+                "buttons": [
+                    {"id": "echo", "label": "Echo it"},
+                    {"id": "discard", "label": "Discard", "destructive": True},
+                ],
+                "fields": [
+                    {
+                        "id": "message",
+                        "type": "text",
+                        "label": "Message",
+                        "placeholder": "What should I echo?",
+                        "required": True,
+                        "section": "content",
+                        "minLength": 3,
+                        "maxLength": 60,
+                        "pattern": r".*\S.*",
+                        "validationMessage": "Use 3–60 non-blank characters",
+                        "description": "Try 'bad' to see server validation preserve state.",
+                        **({"error": message_error} if message_error else {}),
+                    },
+                    {
+                        "id": "include_notes",
+                        "type": "checkbox",
+                        "label": "Add private notes",
+                        "section": "content",
+                    },
+                    {
+                        "id": "notes",
+                        "type": "textarea",
+                        "label": "Notes",
+                        "section": "content",
+                        "visibleWhen": {"field": "include_notes", "equals": True},
+                    },
+                    {
+                        "id": "repeat",
+                        "type": "number",
+                        "label": "Repeat",
+                        "value": 1,
+                        "min": 1,
+                        "max": 5,
+                        "section": "style",
+                        "enabledWhen": {"field": "message", "truthy": True},
+                        "description": "Enabled after the message is non-empty",
+                    },
+                    {
+                        "id": "voice",
+                        "type": "dropdown",
+                        "label": "Voice",
+                        "value": "plain",
+                        "section": "style",
+                        "watch": True,
+                        "options": [
+                            "plain",
+                            {"value": "loud", "label": "LOUD"},
+                            {"value": "quiet", "label": "quiet…"},
+                        ],
+                    },
+                    {
+                        "id": "decorate",
+                        "type": "checkbox",
+                        "label": "Decorate the result",
+                        "section": "style",
+                    },
+                    {
+                        "id": "flavors",
+                        "type": "tags",
+                        "label": "Flavors",
+                        "section": "style",
+                        "options": ["bold", "italic", "code", "plain"],
+                        "value": ["plain"],
+                        "visibleWhen": {"field": "decorate", "equals": True},
+                    },
+                    {
+                        "id": "recipient",
+                        "type": "combobox",
+                        "label": "Recipient",
+                        "placeholder": "Type a name to search…",
+                        "section": "delivery",
+                        "watch": True,
+                        "allowCustom": True,
+                        "optionsLoading": options_loading,
+                        "options": recipient_options,
+                        "description": "Echo asynchronously re-renders matching choices.",
+                    },
+                    {
+                        "id": "schedule",
+                        "type": "checkbox",
+                        "label": "Schedule delivery",
+                        "section": "delivery",
+                    },
+                    {
+                        "id": "when",
+                        "type": "date",
+                        "label": "Delivery date",
+                        "section": "delivery",
+                        "visibleWhen": {"field": "schedule", "equals": True},
+                    },
+                    {
+                        "id": "attachment",
+                        "type": "filepicker",
+                        "label": "Attachment",
+                        "section": "delivery",
+                    },
+                    {
+                        "id": "protocol",
+                        "type": "text",
+                        "label": "Protocol",
+                        "value": "v9 · scoped + stateful",
+                        "section": "delivery",
+                        "readOnly": True,
+                    },
+                    {
+                        "id": "copy",
+                        "type": "checkbox",
+                        "label": "Copy result to clipboard",
+                        "section": "delivery",
+                    },
+                ],
+            },
+        }
+    )
+
+
+def refresh_recipient_options(values):
+    STATE["form_values"] = values
+    STATE["form_request"] += 1
+    request = STATE["form_request"]
+    render_rich_form(0, options_loading=True, recipient_options=[])
+
+    def finish():
+        time.sleep(0.25)
+        if STATE["screen"] != "form" or STATE["form_request"] != request:
+            return
+        query = str(values.get("recipient") or "").strip().lower()
+        people = [
+            ("ada", "Ada Lovelace"),
+            ("grace", "Grace Hopper"),
+            ("margaret", "Margaret Hamilton"),
+            ("alan", "Alan Turing"),
+            ("barbara", "Barbara Liskov"),
+            ("donald", "Donald Knuth"),
+        ]
+        options = [
+            {"value": value, "label": label}
+            for value, label in people
+            if not query or query in value or query in label.lower()
+        ]
+        render_rich_form(0, recipient_options=options)
+
+    threading.Thread(target=finish, daemon=True).start()
 
 
 def render_empty(rev):
@@ -503,7 +830,19 @@ def save_counter():
     )
 
 
-def handle_submit(values, button):
+def handle_submit(values, button, msg=None):
+    msg = msg or {}
+    if msg.get("panelId") == "controls":
+        send(
+            {
+                "type": "command",
+                "command": "toast",
+                "text": f"Panel form submitted · {event_scope(msg)}",
+                "style": "success",
+            }
+        )
+        render_dashboard(0, tabs=STATE["screen"] == "tabs")
+        return
     if button == "discard":
         send(
             {
@@ -519,7 +858,7 @@ def handle_submit(values, button):
     message = values.get("message") or ""
     if message.strip().lower() == "bad":
         # Plugin-side validation demo: reject and show an inline field error.
-        render_form(0, message_error='"bad" is not echo-worthy — try anything else')
+        render_rich_form(0, message_error='"bad" is not echo-worthy — try anything else')
         return
     voice = values.get("voice", "plain")
     if voice == "loud":
@@ -535,6 +874,17 @@ def handle_submit(values, button):
             "type": "render",
             "rev": 0,
             "view": "detail",
+            "page": {
+                "id": "form:result",
+                "title": "Echo result",
+                "history": "push",
+                "breadcrumbs": [
+                    {"id": "pages:home", "label": "Demos"},
+                    {"id": "form:rich", "label": "Rich form"},
+                ],
+            },
+            "elementId": "echo-result",
+            "canGoBack": True,
             "detail": {
                 "markdown": f"# Echoed\n\n> {message or '(nothing)'}",
                 "metadata": [
@@ -747,19 +1097,178 @@ def render_chart(rev):
     )
 
 
+def render_kanban(rev):
+    items = []
+    for card in STATE["kanban_cards"]:
+        LAST_ITEMS[card["id"]] = card["title"]
+        items.append(
+            {
+                "id": card["id"],
+                "title": card["title"],
+                "subtitle": f"Owner: {card['owner']}",
+                "icon": "check" if card["column"] == "done" else "note",
+                "column": card["column"],
+                "accessories": [{"text": card["owner"], "color": "#8250DF"}],
+                "actions": [{"id": "default", "title": "Inspect card", "icon": "open"}],
+            }
+        )
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "kanban",
+            "page": {
+                "id": "views:kanban",
+                "title": "Kanban",
+                "history": "push",
+                "breadcrumbs": [{"id": "pages:home", "label": "Demos"}],
+            },
+            "elementId": "workflow-board",
+            "canGoBack": True,
+            "kanban": {
+                "columns": [
+                    {"id": "todo", "title": "To do", "color": "#64748B", "limit": 4},
+                    {"id": "doing", "title": "In progress", "color": "#0EA5E9", "limit": 3},
+                    {"id": "review", "title": "Review", "color": "#F59E0B", "limit": 2},
+                    {"id": "done", "title": "Done", "color": "#10B981"},
+                ]
+            },
+            "items": items,
+        }
+    )
+
+
+def move_kanban_card(item_id, column_id, index, scope):
+    cards = STATE["kanban_cards"]
+    old_index = next((i for i, card in enumerate(cards) if card["id"] == item_id), None)
+    if old_index is None:
+        return
+    old_column = cards[old_index]["column"]
+    old_column_index = [card["id"] for card in cards if card["column"] == old_column].index(item_id)
+    card = cards.pop(old_index)
+    if old_column == column_id and old_column_index < index:
+        index -= 1
+    card["column"] = column_id
+    destination_indices = [i for i, candidate in enumerate(cards) if candidate["column"] == column_id]
+    if index >= len(destination_indices):
+        insert_at = destination_indices[-1] + 1 if destination_indices else len(cards)
+    else:
+        insert_at = destination_indices[max(0, index)]
+    cards.insert(insert_at, card)
+    send(
+        {
+            "type": "command",
+            "command": "toast",
+            "text": f"Moved {card['title']} to {column_id} · {scope}",
+            "style": "success",
+        }
+    )
+    render_kanban(0)
+
+
+def render_diff(rev, split=False):
+    lines = [
+        {"type": "header", "text": "@@ launcher plugin protocol @@"},
+        {"type": "context", "text": "  view: dashboard", "oldLine": 41, "newLine": 41},
+        {"type": "remove", "text": "- protocol: 8", "oldLine": 42},
+        {"type": "add", "text": "+ protocol: 9", "newLine": 42},
+        {"type": "add", "text": "+ page: { id, history, breadcrumbs }", "newLine": 43},
+        {"type": "add", "text": "+ scope: { pageId, panelId, elementId }", "newLine": 44},
+        {"type": "context", "text": "  preserveState: true", "oldLine": 43, "newLine": 45},
+    ]
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "diff",
+            "page": {
+                "id": "views:diff:split" if split else "views:diff:unified",
+                "title": "Split diff" if split else "Unified diff",
+                "history": "replace",
+                "breadcrumbs": [{"id": "pages:home", "label": "Demos"}],
+            },
+            "elementId": "protocol-diff",
+            "canGoBack": True,
+            "actions": [
+                {
+                    "id": "diff:toggle",
+                    "title": "Use unified mode" if split else "Use split mode",
+                    "icon": "code",
+                }
+            ],
+            "diff": {
+                "mode": "split" if split else "unified",
+                "oldLabel": "Protocol v8",
+                "newLabel": "Protocol v9",
+                "lines": lines,
+            },
+        }
+    )
+
+
+def render_log(rev):
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "log",
+            "page": {
+                "id": "views:log",
+                "title": "Structured log",
+                "history": "push",
+                "breadcrumbs": [{"id": "pages:home", "label": "Demos"}],
+            },
+            "elementId": "runtime-log",
+            "canGoBack": True,
+            "actions": [
+                {"id": "log:append", "title": "Append log entry", "icon": "add"},
+                {
+                    "id": "log:wrap",
+                    "title": "Disable wrapping" if STATE["log_wrap"] else "Enable wrapping",
+                    "icon": "document",
+                },
+                {"id": "log:clear", "title": "Reset sample log", "icon": "refresh"},
+            ],
+            "log": {
+                "follow": True,
+                "wrap": STATE["log_wrap"],
+                "lines": STATE["log_lines"],
+            },
+        }
+    )
+
+
+def append_log_line():
+    index = len(STATE["log_lines"]) + 1
+    levels = ["trace", "debug", "info", "warn", "error", "success"]
+    level = levels[(index - 1) % len(levels)]
+    STATE["log_lines"].append(
+        {
+            "id": f"log:{index}",
+            "timestamp": time.strftime("%H:%M:%S"),
+            "level": level,
+            "source": "action",
+            "text": f"Appended interactive line {index}; follow mode keeps the latest output visible",
+        }
+    )
+    render_log(0)
+
+
 def render_dashboard(rev, tabs=False):
-    """Protocol v8 composite result. Each panel is a normal view payload, so
-    plugins can choose one long report (`stack`) or a compact `tabs` layout."""
+    """Protocol v9 composite result with independently scoped panel events."""
+    LAST_ITEMS["dash:build"] = "Build"
+    LAST_ITEMS["dash:test"] = "Tests"
     panels = [
         {
             "id": "summary",
             "title": "Summary",
             "height": 180,
             "view": "detail",
+            "elementId": "release-summary",
             "detail": {
                 "markdown": "# Release health\n\n**All checks are green.** This markdown panel lives beside structured data.",
                 "metadata": [
-                    {"label": "Version", "text": "v8 demo", "color": "#10B981"},
+                    {"label": "Version", "text": "v9 demo", "color": "#10B981"},
                     {"label": "Owner", "text": "Echo"},
                 ],
             },
@@ -769,6 +1278,10 @@ def render_dashboard(rev, tabs=False):
             "title": "Jobs",
             "height": 190,
             "view": "table",
+            "elementId": "release-jobs",
+            "actions": [
+                {"id": "dashboard:rerun", "title": "Rerun jobs", "icon": "refresh"}
+            ],
             "columns": [
                 {"id": "title", "label": "Job"},
                 {"id": "status", "label": "Status"},
@@ -794,6 +1307,7 @@ def render_dashboard(rev, tabs=False):
             "title": "Latency",
             "height": 230,
             "view": "chart",
+            "elementId": "release-latency",
             "chart": {
                 "title": "p95 latency",
                 "series": [
@@ -806,6 +1320,47 @@ def render_dashboard(rev, tabs=False):
                 ],
             },
         },
+        {
+            "id": "controls",
+            "title": "Release controls",
+            "height": 390,
+            "view": "form",
+            "elementId": "release-controls",
+            "form": {
+                "title": "Connected panel form",
+                "sections": [
+                    {"id": "target", "title": "Target"},
+                    {"id": "safety", "title": "Safety", "collapsible": True},
+                ],
+                "submitLabel": "Apply",
+                "fields": [
+                    {
+                        "id": "channel",
+                        "type": "dropdown",
+                        "label": "Channel",
+                        "value": "staging",
+                        "watch": True,
+                        "section": "target",
+                        "options": ["staging", "production"],
+                    },
+                    {
+                        "id": "freeze",
+                        "type": "checkbox",
+                        "label": "Enable deployment freeze",
+                        "watch": True,
+                        "section": "safety",
+                    },
+                    {
+                        "id": "reason",
+                        "type": "text",
+                        "label": "Freeze reason",
+                        "required": True,
+                        "section": "safety",
+                        "visibleWhen": {"field": "freeze", "equals": True},
+                    },
+                ],
+            },
+        },
     ]
     if not STATE["dashboard_sync_cancelled"]:
         panels.append(
@@ -814,6 +1369,7 @@ def render_dashboard(rev, tabs=False):
                 "title": "Background sync",
                 "height": 86,
                 "view": "operation",
+                "elementId": "release-sync",
                 "operation": {
                     "id": "dashboard:sync",
                     "title": "Syncing release notes",
@@ -828,6 +1384,13 @@ def render_dashboard(rev, tabs=False):
             "type": "render",
             "rev": rev,
             "view": "dashboard",
+            "page": {
+                "id": "dashboard:tabs" if tabs else "dashboard:stack",
+                "title": "Scoped dashboard",
+                "history": "replace",
+                "breadcrumbs": [{"id": "pages:home", "label": "Demos"}],
+            },
+            "elementId": "release-dashboard",
             "canGoBack": True,
             "dashboard": {"layout": "tabs" if tabs else "stack", "panels": panels},
         }
@@ -977,7 +1540,13 @@ def handle_query(text, rev):
     elif stripped.startswith("detail"):
         render_detail(text, rev)
     elif stripped.startswith("form"):
-        render_form(rev)
+        STATE["screen"] = "form"
+        STATE["form_values"] = {}
+        STATE["form_request"] += 1
+        if "legacy" in stripped:
+            render_legacy_form(rev)
+        else:
+            render_rich_form(rev)
     elif stripped.startswith("empty"):
         render_empty(rev)
     elif stripped.startswith("chat"):
@@ -1023,6 +1592,17 @@ def handle_query(text, rev):
         STATE["screen"] = "tabs"
         STATE["dashboard_sync_cancelled"] = False
         render_dashboard(rev, tabs=True)
+    elif stripped.startswith("pages"):
+        render_pages(rev)
+    elif stripped.startswith("kanban"):
+        STATE["screen"] = "kanban"
+        render_kanban(rev)
+    elif stripped.startswith("diff"):
+        STATE["screen"] = "diff"
+        render_diff(rev, split="split" in stripped)
+    elif stripped.startswith("log"):
+        STATE["screen"] = "log"
+        render_log(rev)
     elif stripped.startswith("preview"):
         render_list(text[len("preview") :].strip(), rev, with_preview=True)
     else:
@@ -1074,6 +1654,48 @@ def handle_action(msg, last_items):
     # opens the same table view as `echo table`).
     if STATE["screen"] == "root" and action == "default":
         handle_query(title.strip("*`"), 0)
+        return
+
+    if STATE["screen"] == "pages" and action == "default" and item_id.startswith("page:"):
+        render_page_topic(item_id.split(":", 1)[1])
+        return
+    if STATE["screen"] == "kanban" and action == "default":
+        send(
+            {
+                "type": "command",
+                "command": "toast",
+                "text": f"Card action · {event_scope(msg)}",
+                "style": "info",
+            }
+        )
+        return
+    if STATE["screen"] == "diff" and action == "diff:toggle":
+        current_page = msg.get("pageId", "")
+        render_diff(0, split=not current_page.endswith(":split"))
+        return
+    if STATE["screen"] == "log":
+        if action == "log:append":
+            append_log_line()
+            return
+        if action == "log:wrap":
+            STATE["log_wrap"] = not STATE["log_wrap"]
+            render_log(0)
+            return
+        if action == "log:clear":
+            STATE["log_lines"] = STATE["log_lines"][:4]
+            render_log(0)
+            return
+    if STATE["screen"] in {"dashboard", "tabs"} and (
+        action == "dashboard:rerun" or (action == "default" and msg.get("panelId"))
+    ):
+        send(
+            {
+                "type": "command",
+                "command": "toast",
+                "text": f"Dashboard event: {item_id or action} · {event_scope(msg)}",
+                "style": "info",
+            }
+        )
         return
 
     # The structured demos should keep their interaction surface on screen.
@@ -1128,7 +1750,8 @@ def handle_action(msg, last_items):
             render_storage(0, select_id="inc")
         return
     if action == "empty:form":
-        render_form(0)
+        STATE["screen"] = "form"
+        render_rich_form(0)
         return
 
     if action == "bulk:archive":
@@ -1260,7 +1883,7 @@ def main():
         elif kind == "action":
             handle_action(msg, LAST_ITEMS)
         elif kind == "submit":
-            handle_submit(msg.get("values", {}), msg.get("button"))
+            handle_submit(msg.get("values", {}), msg.get("button"), msg)
         elif kind == "submitQuery":
             # Chat screen: Enter delivered the whole query line at once.
             if STATE["screen"] == "chat":
@@ -1280,10 +1903,21 @@ def main():
                 {
                     "type": "command",
                     "command": "toast",
-                    "text": f"Chart point: {msg.get('seriesId')}[{msg.get('index')}] = {msg.get('value')}",
+                    "text": (
+                        f"Chart point: {msg.get('seriesId')}[{msg.get('index')}] = {msg.get('value')}"
+                        f" · {event_scope(msg)}"
+                    ),
                     "style": "info",
                 }
             )
+        elif kind == "kanbanMove":
+            if STATE["screen"] == "kanban":
+                move_kanban_card(
+                    msg.get("id", ""),
+                    msg.get("columnId", "todo"),
+                    max(0, int(msg.get("index", 0))),
+                    event_scope(msg),
+                )
         elif kind == "cancel":
             if msg.get("id") == "echo:deploy":
                 STATE["operation"] = None
@@ -1329,13 +1963,19 @@ def main():
                         f"OAuth callback: {msg.get('error', 'no authorization code returned')}",
                     )
         elif kind == "change":
+            if STATE["screen"] == "form" and msg.get("id") == "recipient":
+                refresh_recipient_options(msg.get("values", {}))
+                continue
             # A watched form field changed — a real plugin would re-render
             # dependent fields; the demo just surfaces it.
             send(
                 {
                     "type": "command",
                     "command": "toast",
-                    "text": f"{msg.get('id')} → {msg.get('values', {}).get(msg.get('id'))}",
+                    "text": (
+                        f"{msg.get('id')} → {msg.get('values', {}).get(msg.get('id'))}"
+                        f" · {event_scope(msg)}"
+                    ),
                     "style": "info",
                 }
             )
@@ -1347,8 +1987,24 @@ def main():
                 if STATE["screen"] == "storage":
                     render_storage(0)
         elif kind == "back":
-            # Escape on a canGoBack frame: return to the root list.
-            handle_query("", 0)
+            target = msg.get("toPageId")
+            source = msg.get("fromPageId")
+            if target == "pages:home" or STATE["screen"] == "pages-detail":
+                render_pages(0)
+            elif target == "form:rich" or source == "form:result":
+                STATE["screen"] = "form"
+                render_rich_form(0)
+            else:
+                handle_query("", 0)
+        elif kind == "navigate":
+            target = msg.get("targetPageId", "")
+            if target == "pages:home":
+                render_pages(0)
+            elif target == "form:rich":
+                STATE["screen"] = "form"
+                render_rich_form(0)
+            elif target.startswith("pages:topic:"):
+                render_page_topic(target.rsplit(":", 1)[-1])
         elif kind == "tab":
             # Autocomplete: replace the query with the highlighted item's title.
             title = LAST_ITEMS.get(msg.get("id", ""))

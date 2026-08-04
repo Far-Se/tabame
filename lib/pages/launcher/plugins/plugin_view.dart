@@ -39,11 +39,15 @@ class PluginView extends StatefulWidget {
     required this.onLoadMore,
     required this.onEmptyAction,
     required this.onMetadataAction,
-    required this.selectedIds,
+    required this.selectedIdsFor,
     required this.onToggleSelection,
     required this.onToggleTree,
     required this.onChartSelect,
     required this.onCancelOperation,
+    required this.onNavigate,
+    required this.onNavigateBack,
+    required this.canNavigateBack,
+    required this.onKanbanMove,
     this.onOpenActions,
     this.onMarkdownKeyEvent,
     this.onItemNavigation,
@@ -56,8 +60,8 @@ class PluginView extends StatefulWidget {
 
   /// [frame] is the top-level frame for ordinary views and the owning panel's
   /// nested frame for dashboard items.
-  final void Function(PluginRenderFrame frame, int index) onTapItem;
-  final void Function(PluginRenderFrame frame, int index) onHoverItem;
+  final void Function(PluginEventScope scope, PluginRenderFrame frame, int index) onTapItem;
+  final void Function(PluginEventScope scope, PluginRenderFrame frame, int index) onHoverItem;
 
   /// Launcher-owned controller for the detail document, so arrow/page keys
   /// (handled by the launcher) can scroll it.
@@ -65,28 +69,32 @@ class PluginView extends StatefulWidget {
 
   /// Form view: the user pressed Enter/submit with these field values.
   /// [button] is the pressed `form.buttons` id, when the form declared any.
-  final void Function(Map<String, Object?> values, {String? button}) onFormSubmit;
+  final void Function(PluginEventScope scope, Map<String, Object?> values, {String? button}) onFormSubmit;
 
   /// Form view: the user pressed Escape.
-  final VoidCallback onFormCancel;
+  final void Function(PluginEventScope scope) onFormCancel;
 
   /// Form view: a `watch: true` field changed.
-  final void Function(String fieldId, Map<String, Object?> values) onFormChange;
+  final void Function(PluginEventScope scope, String fieldId, Map<String, Object?> values) onFormChange;
 
   /// The user scrolled near the end of a `hasMore` list/grid.
-  final VoidCallback onLoadMore;
+  final void Function(PluginEventScope scope) onLoadMore;
 
   /// The empty state's call-to-action button was clicked.
-  final void Function(PluginAction action) onEmptyAction;
+  final void Function(PluginEventScope scope, PluginAction action) onEmptyAction;
 
   /// A metadata action button was clicked. Preview metadata belongs to its
   /// selected item; detail metadata uses an empty item id.
-  final void Function(String itemId, PluginAction action) onMetadataAction;
-  final Set<String> selectedIds;
-  final void Function(String id) onToggleSelection;
-  final void Function(String id, bool expanded) onToggleTree;
-  final void Function(String seriesId, int index, double value) onChartSelect;
-  final void Function(String operationId) onCancelOperation;
+  final void Function(PluginEventScope scope, String itemId, PluginAction action) onMetadataAction;
+  final Set<String> Function(PluginEventScope scope) selectedIdsFor;
+  final void Function(PluginEventScope scope, String id) onToggleSelection;
+  final void Function(PluginEventScope scope, String id, bool expanded) onToggleTree;
+  final void Function(PluginEventScope scope, String seriesId, int index, double value) onChartSelect;
+  final void Function(PluginEventScope scope, String operationId) onCancelOperation;
+  final void Function(String targetPageId) onNavigate;
+  final VoidCallback onNavigateBack;
+  final bool canNavigateBack;
+  final void Function(PluginEventScope scope, String id, String columnId, int index) onKanbanMove;
 
   /// Ctrl+K pressed inside a form (the launcher opens the actions palette).
   final VoidCallback? onOpenActions;
@@ -108,6 +116,9 @@ class _PluginViewState extends State<PluginView> {
   final ScrollController _dashboardScrollController = ScrollController();
   final Map<String, ScrollController> _dashboardPanelScrollControllers = <String, ScrollController>{};
   final Map<(PluginRenderFrame, int), GlobalKey> _itemKeys = <(PluginRenderFrame, int), GlobalKey>{};
+  final Map<String, double> _pageScrollOffsets = <String, double>{};
+  final Map<String, double> _pageDetailOffsets = <String, double>{};
+  final Map<String, Map<String, Object?>> _formStateByPage = <String, Map<String, Object?>>{};
 
   PluginRenderFrame? _dashboardActiveFrame;
   int _dashboardActiveIndex = -1;
@@ -151,6 +162,35 @@ class _PluginViewState extends State<PluginView> {
     }
     _followStreamingDetail(oldWidget);
     _followChat(oldWidget);
+    _followLog(oldWidget);
+    _restorePageState(oldWidget.frame);
+  }
+
+  String _pageKey(PluginRenderFrame frame) => frame.page?.id ?? '__legacy__';
+
+  void _restorePageState(PluginRenderFrame oldFrame) {
+    final String oldKey = _pageKey(oldFrame);
+    final String newKey = _pageKey(widget.frame);
+    if (oldKey == newKey) return;
+    if (_scrollController.hasClients) _pageScrollOffsets[oldKey] = _scrollController.offset;
+    final ScrollController? detail = widget.detailScrollController;
+    if (detail != null && detail.hasClients) _pageDetailOffsets[oldKey] = detail.offset;
+    if (widget.frame.page?.preserveState == false) {
+      _pageScrollOffsets.remove(newKey);
+      _pageDetailOffsets.remove(newKey);
+      _formStateByPage.remove(newKey);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(
+          (_pageScrollOffsets[newKey] ?? 0).clamp(0.0, _scrollController.position.maxScrollExtent),
+        );
+      }
+      if (detail != null && detail.hasClients) {
+        detail.jumpTo((_pageDetailOffsets[newKey] ?? 0).clamp(0.0, detail.position.maxScrollExtent));
+      }
+    });
   }
 
   /// Streaming `detail.append`: when the document grew and the user was
@@ -210,14 +250,27 @@ class _PluginViewState extends State<PluginView> {
     }
   }
 
+  void _followLog(PluginView oldWidget) {
+    if (widget.frame.view != PluginViewType.log || !widget.frame.logFollow) return;
+    final bool enteredLog = oldWidget.frame.view != PluginViewType.log;
+    final bool gainedLines = widget.frame.logLines.length > oldWidget.frame.logLines.length;
+    if (!enteredLog && !gainedLines) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final ScrollPosition position = _scrollController.position;
+      if (!enteredLog && position.pixels < position.maxScrollExtent - 60) return;
+      _scrollController.jumpTo(position.maxScrollExtent);
+    });
+  }
+
   /// Fires `loadMore` when the user scrolls near the end of a `hasMore` frame.
-  bool _onScrollNotification(ScrollNotification notification) {
-    if (!widget.frame.hasMore || _loadMoreRequested) return false;
+  bool _onScrollNotification(PluginRenderFrame frame, ScrollNotification notification) {
+    if (!frame.hasMore || _loadMoreRequested) return false;
     final ScrollMetrics metrics = notification.metrics;
     if (metrics.axis != Axis.vertical) return false;
     if (metrics.pixels >= metrics.maxScrollExtent - 200) {
       _loadMoreRequested = true;
-      widget.onLoadMore();
+      widget.onLoadMore(_scopeFor(frame));
     }
     return false;
   }
@@ -233,7 +286,7 @@ class _PluginViewState extends State<PluginView> {
         _dashboardActiveIndex = index;
       });
     }
-    widget.onHoverItem(frame, index);
+    widget.onHoverItem(_scopeFor(frame), frame, index);
   }
 
   void _tapItem(PluginRenderFrame frame, int index) {
@@ -241,7 +294,7 @@ class _PluginViewState extends State<PluginView> {
     // still fires the primary action for the highlighted item, so plugins can
     // offer an explicit batch command without accidental navigation.
     if (frame.multiSelect) {
-      widget.onToggleSelection(frame.items[index].id);
+      widget.onToggleSelection(_scopeFor(frame), frame.items[index].id);
       return;
     }
     if (!identical(frame, widget.frame)) {
@@ -250,7 +303,7 @@ class _PluginViewState extends State<PluginView> {
         _dashboardActiveIndex = index;
       });
     }
-    widget.onTapItem(frame, index);
+    widget.onTapItem(_scopeFor(frame), frame, index);
     widget.onItemNavigation?.call();
   }
 
@@ -275,77 +328,145 @@ class _PluginViewState extends State<PluginView> {
   ScrollController _dashboardPanelController(String panelId) =>
       _dashboardPanelScrollControllers.putIfAbsent(panelId, ScrollController.new);
 
+  String? _panelIdFor(PluginRenderFrame frame) {
+    for (final PluginDashboardPanel panel in widget.frame.dashboardPanels) {
+      if (identical(panel.frame, frame)) return panel.id;
+    }
+    return null;
+  }
+
+  PluginEventScope _scopeFor(PluginRenderFrame frame) => PluginEventScope(
+        pageId: widget.frame.page?.id ?? frame.page?.id,
+        panelId: identical(frame, widget.frame) ? null : _panelIdFor(frame),
+        elementId: frame.elementId,
+      );
+
+  Set<String> _selectedIds(PluginRenderFrame frame) => widget.selectedIdsFor(_scopeFor(frame));
+
   @override
   Widget build(BuildContext context) {
     final PluginRenderFrame frame = widget.frame;
-
-    if (frame.view == PluginViewType.dashboard) return _withOperation(_buildDashboard(frame), frame.operation);
-
-    if (frame.view == PluginViewType.chart) return _withOperation(_buildChart(frame), frame.operation);
-
     if (frame.view == PluginViewType.operation) {
-      return frame.operation == null
+      final Widget operation = frame.operation == null
           ? _buildEmptyOrLoading(frame)
           : Column(children: <Widget>[
               _PluginOperationBar(
-                  operation: frame.operation!, onCancel: () => widget.onCancelOperation(frame.operation!.id))
+                operation: frame.operation!,
+                onCancel: () => widget.onCancelOperation(_scopeFor(frame), frame.operation!.id),
+              ),
             ]);
+      return _withPageChrome(operation, frame);
     }
 
-    if (frame.view == PluginViewType.detail) {
-      return _withOperation(_buildDetail(frame.detailMarkdown ?? '', frame.detailMetadata), frame.operation);
-    }
-
-    if (frame.view == PluginViewType.chat) {
-      return _withOperation(frame.items.isEmpty ? _buildEmptyOrLoading(frame) : _buildChat(frame), frame.operation);
-    }
-
+    Widget body;
     if (frame.view == PluginViewType.form) {
       final PluginForm? form = frame.form;
-      if (form == null) return _withOperation(_buildEmptyOrLoading(frame), frame.operation);
-      return _withOperation(
-          PluginFormView(
-            form: form,
-            onSubmit: widget.onFormSubmit,
-            onCancel: widget.onFormCancel,
-            onChanged: widget.onFormChange,
-            onOpenActions: widget.onOpenActions,
-          ),
-          frame.operation);
+      final PluginEventScope scope = _scopeFor(frame);
+      body = form == null
+          ? _buildEmptyOrLoading(frame)
+          : PluginFormView(
+              form: form,
+              initialValues: _formStateByPage[_pageKey(frame)] ?? const <String, Object?>{},
+              onStateChanged: (Map<String, Object?> values) => _formStateByPage[_pageKey(frame)] = values,
+              onSubmit: (Map<String, Object?> values, {String? button}) =>
+                  widget.onFormSubmit(scope, values, button: button),
+              onCancel: () => widget.onFormCancel(scope),
+              onChanged: (String fieldId, Map<String, Object?> values) => widget.onFormChange(scope, fieldId, values),
+              onOpenActions: widget.onOpenActions,
+            );
+    } else if (frame.view == PluginViewType.dashboard) {
+      body = _buildDashboard(frame);
+    } else if (frame.view == PluginViewType.chart) {
+      body = _buildChart(frame);
+    } else if (frame.view == PluginViewType.detail) {
+      body = _buildDetail(frame.detailMarkdown ?? '', frame.detailMetadata, scope: _scopeFor(frame));
+    } else if (frame.view == PluginViewType.chat) {
+      body = frame.items.isEmpty ? _buildEmptyOrLoading(frame) : _buildChat(frame);
+    } else if (frame.view == PluginViewType.diff) {
+      body = _buildDiff(frame);
+    } else if (frame.view == PluginViewType.log) {
+      body = _buildLog(frame);
+    } else if (frame.view == PluginViewType.kanban) {
+      body = _buildKanban(frame);
+    } else if (frame.items.isEmpty) {
+      body = _buildEmptyOrLoading(frame);
+    } else {
+      final Widget itemsPane = switch (frame.view) {
+        PluginViewType.grid => _buildGrid(frame),
+        PluginViewType.table => _buildTable(frame),
+        PluginViewType.tree => _buildTree(frame),
+        PluginViewType.timeline => _buildTimeline(frame),
+        _ => _buildList(frame),
+      };
+      if (!frame.hasPreview) {
+        body = itemsPane;
+      } else {
+        final int idx = widget.activeIndex.clamp(0, frame.items.length - 1);
+        body = Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Expanded(flex: 5, child: itemsPane),
+            Container(width: 1, color: Design.accent.withAlpha(30)),
+            Expanded(flex: 4, child: _buildPreviewPane(frame.items[idx], scope: _scopeFor(frame))),
+          ],
+        );
+      }
     }
-
-    if (frame.items.isEmpty) {
-      return _withOperation(_buildEmptyOrLoading(frame), frame.operation);
-    }
-
-    final Widget itemsPane = switch (frame.view) {
-      PluginViewType.grid => _buildGrid(frame),
-      PluginViewType.table => _buildTable(frame),
-      PluginViewType.tree => _buildTree(frame),
-      PluginViewType.timeline => _buildTimeline(frame),
-      _ => _buildList(frame),
-    };
-
-    if (!frame.hasPreview) return _withOperation(itemsPane, frame.operation);
-
-    // Split layout: items on the left, a markdown/metadata preview of the
-    // selected item on the right.
-    final int idx = widget.activeIndex.clamp(0, frame.items.length - 1);
-    final Widget content = Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Expanded(flex: 5, child: itemsPane),
-        Container(width: 1, color: Design.accent.withAlpha(30)),
-        Expanded(flex: 4, child: _buildPreviewPane(frame.items[idx])),
-      ],
-    );
-    return _withOperation(content, frame.operation);
+    return _withPageChrome(_withOperation(body, frame.operation, _scopeFor(frame)), frame);
   }
 
-  Widget _withOperation(Widget child, PluginOperation? operation) {
+  Widget _withOperation(Widget child, PluginOperation? operation, PluginEventScope scope) {
     if (operation == null) return child;
     return Column(children: <Widget>[
-      _PluginOperationBar(operation: operation, onCancel: () => widget.onCancelOperation(operation.id)),
+      _PluginOperationBar(operation: operation, onCancel: () => widget.onCancelOperation(scope, operation.id)),
+      Expanded(child: child),
+    ]);
+  }
+
+  Widget _withPageChrome(Widget child, PluginRenderFrame frame) {
+    final PluginPageInfo? page = frame.page;
+    if (page == null && !widget.canNavigateBack) return child;
+    final List<PluginBreadcrumb> breadcrumbs = page?.breadcrumbs ?? const <PluginBreadcrumb>[];
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+      Container(
+        padding: const EdgeInsets.fromLTRB(8, 5, 10, 5),
+        decoration: BoxDecoration(
+          color: Design.text.withAlpha(5),
+          border: Border(bottom: BorderSide(color: Design.text.withAlpha(18))),
+        ),
+        child: Row(children: <Widget>[
+          if (widget.canNavigateBack)
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints.tightFor(width: 28, height: 26),
+              padding: EdgeInsets.zero,
+              tooltip: 'Back',
+              onPressed: widget.onNavigateBack,
+              icon: Icon(Icons.arrow_back_rounded, size: 15, color: Design.text.withAlpha(160)),
+            ),
+          for (int index = 0; index < breadcrumbs.length; index++) ...<Widget>[
+            if (index > 0) Icon(Icons.chevron_right_rounded, size: 13, color: Design.text.withAlpha(70)),
+            InkWell(
+              borderRadius: BorderRadius.circular(4),
+              onTap: () => widget.onNavigate(breadcrumbs[index].id),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                child:
+                    Text(breadcrumbs[index].label, style: TextStyle(fontSize: 10.5, color: Design.text.withAlpha(115))),
+              ),
+            ),
+          ],
+          if (page != null && page.title.isNotEmpty) ...<Widget>[
+            if (breadcrumbs.isNotEmpty) Icon(Icons.chevron_right_rounded, size: 13, color: Design.text.withAlpha(70)),
+            Flexible(
+              child: Text(page.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(190))),
+            ),
+          ],
+        ]),
+      ),
       Expanded(child: child),
     ]);
   }
@@ -391,13 +512,14 @@ class _PluginViewState extends State<PluginView> {
 
   Widget _dashboardPanel(PluginDashboardPanel panel, {bool fill = false}) {
     final PluginRenderFrame frame = panel.frame;
+    final PluginEventScope scope = _scopeFor(frame);
     final ScrollController scrollController = _dashboardPanelController(panel.id);
     if (frame.view == PluginViewType.operation && frame.operation != null) {
       final Widget operation = Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: _PluginOperationBar(
           operation: frame.operation!,
-          onCancel: () => widget.onCancelOperation(frame.operation!.id),
+          onCancel: () => widget.onCancelOperation(scope, frame.operation!.id),
         ),
       );
       final double height = panel.height ?? 58;
@@ -409,16 +531,36 @@ class _PluginViewState extends State<PluginView> {
         frame.view == PluginViewType.grid ||
         frame.view == PluginViewType.table ||
         frame.view == PluginViewType.tree ||
-        frame.view == PluginViewType.timeline;
+        frame.view == PluginViewType.timeline ||
+        frame.view == PluginViewType.kanban;
     final Widget body = itemView && frame.items.isEmpty
         ? _buildEmptyOrLoading(frame)
         : switch (frame.view) {
-            PluginViewType.detail =>
-              _buildDetail(frame.detailMarkdown ?? '', frame.detailMetadata, controller: scrollController),
+            PluginViewType.detail => _buildDetail(frame.detailMarkdown ?? '', frame.detailMetadata,
+                controller: scrollController, scope: scope),
+            PluginViewType.chat => _buildChat(frame, controller: scrollController),
+            PluginViewType.form => frame.form == null
+                ? _buildEmptyOrLoading(frame)
+                : PluginFormView(
+                    form: frame.form!,
+                    initialValues:
+                        _formStateByPage['${_pageKey(widget.frame)}:${panel.id}'] ?? const <String, Object?>{},
+                    onStateChanged: (Map<String, Object?> values) =>
+                        _formStateByPage['${_pageKey(widget.frame)}:${panel.id}'] = values,
+                    onSubmit: (Map<String, Object?> values, {String? button}) =>
+                        widget.onFormSubmit(scope, values, button: button),
+                    onCancel: () => widget.onFormCancel(scope),
+                    onChanged: (String fieldId, Map<String, Object?> values) =>
+                        widget.onFormChange(scope, fieldId, values),
+                    onOpenActions: widget.onOpenActions,
+                  ),
             PluginViewType.table => _buildTable(frame, controller: scrollController),
             PluginViewType.tree => _buildTree(frame, controller: scrollController),
             PluginViewType.timeline => _buildTimeline(frame, controller: scrollController),
             PluginViewType.chart => _buildChart(frame),
+            PluginViewType.kanban => _buildKanban(frame, controller: scrollController),
+            PluginViewType.diff => _buildDiff(frame, controller: scrollController),
+            PluginViewType.log => _buildLog(frame, controller: scrollController),
             PluginViewType.operation => _buildEmptyOrLoading(frame),
             PluginViewType.grid => _buildGrid(frame, controller: scrollController),
             _ => _buildList(frame, controller: scrollController),
@@ -453,7 +595,7 @@ class _PluginViewState extends State<PluginView> {
                     tooltip: action.title,
                     icon: Icon(PluginIcons.resolve(action.icon), size: 15),
                     color: action.destructive ? const Color(0xFFE5534B) : Design.text.withAlpha(155),
-                    onPressed: () => widget.onMetadataAction('', action),
+                    onPressed: () => widget.onMetadataAction(scope, '', action),
                   ),
               ],
             ),
@@ -519,7 +661,7 @@ class _PluginViewState extends State<PluginView> {
             const SizedBox(height: 10),
             _EmptyActionButton(
               action: empty.action!,
-              onTap: () => widget.onEmptyAction(empty.action!),
+              onTap: () => widget.onEmptyAction(_scopeFor(frame), empty.action!),
             ),
           ],
         ],
@@ -571,7 +713,7 @@ class _PluginViewState extends State<PluginView> {
 
   Widget _buildList(PluginRenderFrame frame, {ScrollController? controller}) {
     return NotificationListener<ScrollNotification>(
-      onNotification: _onScrollNotification,
+      onNotification: (ScrollNotification notification) => _onScrollNotification(frame, notification),
       child: WindowsScrollView(
         controller: controller ?? _scrollController,
         child: Column(
@@ -594,7 +736,7 @@ class _PluginViewState extends State<PluginView> {
                       icon: _PluginIcon(name: frame.items[i].icon, accent: Design.accent),
                       title: frame.items[i].title,
                       subtitle: frame.items[i].subtitle,
-                      badge: _accessoryBadge(frame.items[i], multiSelect: frame.multiSelect),
+                      badge: _accessoryBadge(frame, frame.items[i], multiSelect: frame.multiSelect),
                       inlineMarkup: true,
                       subtitleMaxLines: frame.items[i].subtitleLines,
                     ),
@@ -617,9 +759,9 @@ class _PluginViewState extends State<PluginView> {
   /// Conversation surface. Each item is one message: `title` is the author,
   /// `subtitle` the message body, `icon` an optional avatar, and accessories
   /// (normally a timestamp) sit beside the author name.
-  Widget _buildChat(PluginRenderFrame frame) {
+  Widget _buildChat(PluginRenderFrame frame, {ScrollController? controller}) {
     return WindowsScrollView(
-      controller: _scrollController,
+      controller: controller ?? _scrollController,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
         child: Column(
@@ -637,18 +779,19 @@ class _PluginViewState extends State<PluginView> {
     );
   }
 
-  Widget? _accessoryBadge(PluginItem item, {bool multiSelect = false}) {
+  Widget? _accessoryBadge(PluginRenderFrame frame, PluginItem item, {bool multiSelect = false}) {
     if (item.accessories.isEmpty && !multiSelect) return null;
+    final Set<String> selectedIds = _selectedIds(frame);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         if (multiSelect)
           GestureDetector(
-            onTap: () => widget.onToggleSelection(item.id),
+            onTap: () => widget.onToggleSelection(_scopeFor(frame), item.id),
             child: Padding(
               padding: const EdgeInsets.only(right: 4),
-              child: Icon(widget.selectedIds.contains(item.id) ? Icons.check_box : Icons.check_box_outline_blank,
-                  size: 16, color: widget.selectedIds.contains(item.id) ? Design.accent : Design.text.withAlpha(100)),
+              child: Icon(selectedIds.contains(item.id) ? Icons.check_box : Icons.check_box_outline_blank,
+                  size: 16, color: selectedIds.contains(item.id) ? Design.accent : Design.text.withAlpha(100)),
             ),
           ),
         for (final PluginAccessory accessory in item.accessories)
@@ -705,7 +848,7 @@ class _PluginViewState extends State<PluginView> {
     }
 
     return NotificationListener<ScrollNotification>(
-      onNotification: _onScrollNotification,
+      onNotification: (ScrollNotification notification) => _onScrollNotification(frame, notification),
       child: WindowsScrollView(
         controller: controller ?? _scrollController,
         child: Padding(
@@ -774,11 +917,11 @@ class _PluginViewState extends State<PluginView> {
                 key: _keyFor(frame, i),
                 child: _PluginStructuredRow(
                   selected: _isSelected(frame, i),
-                  marked: widget.selectedIds.contains(frame.items[i].id),
+                  marked: _selectedIds(frame).contains(frame.items[i].id),
                   multiSelect: frame.multiSelect,
                   onTap: () => _tapItem(frame, i),
                   onHover: () => _hoverSelect(frame, i),
-                  onToggle: () => widget.onToggleSelection(frame.items[i].id),
+                  onToggle: () => widget.onToggleSelection(_scopeFor(frame), frame.items[i].id),
                   child: Row(children: <Widget>[
                     for (final PluginTableColumn column in columns) Expanded(child: cell(frame.items[i], column))
                   ]),
@@ -799,15 +942,16 @@ class _PluginViewState extends State<PluginView> {
                   key: _keyFor(frame, i),
                   child: _PluginStructuredRow(
                     selected: _isSelected(frame, i),
-                    marked: widget.selectedIds.contains(frame.items[i].id),
+                    marked: _selectedIds(frame).contains(frame.items[i].id),
                     multiSelect: frame.multiSelect,
                     onTap: () => _tapItem(frame, i),
                     onHover: () => _hoverSelect(frame, i),
-                    onToggle: () => widget.onToggleSelection(frame.items[i].id),
+                    onToggle: () => widget.onToggleSelection(_scopeFor(frame), frame.items[i].id),
                     child: Row(children: <Widget>[
                       SizedBox(width: frame.items[i].depth * 18.0),
                       GestureDetector(
-                          onTap: () => widget.onToggleTree(frame.items[i].id, !frame.items[i].expanded),
+                          onTap: () =>
+                              widget.onToggleTree(_scopeFor(frame), frame.items[i].id, !frame.items[i].expanded),
                           child: Icon(frame.items[i].expanded ? Icons.expand_more : Icons.chevron_right,
                               size: 17, color: Design.text.withAlpha(145))),
                       const SizedBox(width: 5),
@@ -837,11 +981,11 @@ class _PluginViewState extends State<PluginView> {
               _PluginTimelineRow(
                 item: frame.items[i],
                 selected: _isSelected(frame, i),
-                marked: widget.selectedIds.contains(frame.items[i].id),
+                marked: _selectedIds(frame).contains(frame.items[i].id),
                 multiSelect: frame.multiSelect,
                 onTap: () => _tapItem(frame, i),
                 onHover: () => _hoverSelect(frame, i),
-                onToggle: () => widget.onToggleSelection(frame.items[i].id),
+                onToggle: () => widget.onToggleSelection(_scopeFor(frame), frame.items[i].id),
               ),
             if (frame.hasMore) _loadMoreFooter(),
           ]),
@@ -851,10 +995,168 @@ class _PluginViewState extends State<PluginView> {
   Widget _buildChart(PluginRenderFrame frame) => _PluginChart(
         title: frame.chartTitle,
         series: frame.chartSeries,
-        onSelect: widget.onChartSelect,
+        onSelect: (String seriesId, int index, double value) =>
+            widget.onChartSelect(_scopeFor(frame), seriesId, index, value),
       );
 
-  Widget _buildDetail(String markdown, List<PluginMetadataEntry> metadata, {ScrollController? controller}) {
+  Widget _buildKanban(PluginRenderFrame frame, {ScrollController? controller}) {
+    final List<PluginKanbanColumn> columns = frame.kanbanColumns.isNotEmpty
+        ? frame.kanbanColumns
+        : <PluginKanbanColumn>[
+            for (final String id in frame.items.map((PluginItem item) => item.column ?? 'default').toSet())
+              PluginKanbanColumn(id: id, title: id),
+          ];
+    if (columns.isEmpty) return _buildEmptyOrLoading(frame);
+    final PluginEventScope scope = _scopeFor(frame);
+
+    Widget dropTarget(PluginKanbanColumn column, int index, {Widget? child}) {
+      return DragTarget<String>(
+        onWillAcceptWithDetails: (DragTargetDetails<String> details) =>
+            frame.items.any((PluginItem item) => item.id == details.data),
+        onAcceptWithDetails: (DragTargetDetails<String> details) =>
+            widget.onKanbanMove(scope, details.data, column.id, index),
+        builder: (BuildContext context, List<String?> candidates, List<dynamic> rejected) => AnimatedContainer(
+          duration: const Duration(milliseconds: 100),
+          height: child == null ? (candidates.isEmpty ? 7 : 28) : null,
+          decoration: BoxDecoration(
+            color: candidates.isEmpty ? Colors.transparent : Design.accent.withAlpha(24),
+            borderRadius: BorderRadius.circular(5),
+          ),
+          child: child,
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      controller: controller ?? _scrollController,
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          for (final PluginKanbanColumn column in columns) ...<Widget>[
+            SizedBox(
+              width: 248,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Design.text.withAlpha(6),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Design.text.withAlpha(18)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
+                  child: Builder(builder: (BuildContext context) {
+                    final List<(int, PluginItem)> cards = <(int, PluginItem)>[
+                      for (int index = 0; index < frame.items.length; index++)
+                        if ((frame.items[index].column ?? 'default') == column.id) (index, frame.items[index]),
+                    ];
+                    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+                      Row(children: <Widget>[
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(color: column.color ?? Design.accent, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Text(column.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 10.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(190))),
+                        ),
+                        Text(
+                          column.limit == null ? '${cards.length}' : '${cards.length}/${column.limit}',
+                          style: TextStyle(fontSize: 9.5, color: Design.text.withAlpha(90)),
+                        ),
+                      ]),
+                      const SizedBox(height: 6),
+                      for (int cardIndex = 0; cardIndex < cards.length; cardIndex++) ...<Widget>[
+                        dropTarget(column, cardIndex),
+                        Draggable<String>(
+                          data: cards[cardIndex].$2.id,
+                          feedback: Material(
+                            color: Colors.transparent,
+                            child: SizedBox(width: 232, child: _PluginKanbanCard(item: cards[cardIndex].$2)),
+                          ),
+                          childWhenDragging: Opacity(
+                            opacity: 0.35,
+                            child: _PluginKanbanCard(item: cards[cardIndex].$2),
+                          ),
+                          child: KeyedSubtree(
+                            key: _keyFor(frame, cards[cardIndex].$1),
+                            child: _PluginKanbanCard(
+                              item: cards[cardIndex].$2,
+                              selected: _isSelected(frame, cards[cardIndex].$1),
+                              onTap: () => _tapItem(frame, cards[cardIndex].$1),
+                              onHover: () => _hoverSelect(frame, cards[cardIndex].$1),
+                            ),
+                          ),
+                        ),
+                      ],
+                      dropTarget(column, cards.length),
+                    ]);
+                  }),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiff(PluginRenderFrame frame, {ScrollController? controller}) {
+    if (frame.diffLines.isEmpty) return _buildEmptyOrLoading(frame);
+    final bool split = frame.diffMode == 'split';
+    return WindowsScrollView(
+      controller: controller ?? _scrollController,
+      child: SelectionArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+            if (split)
+              Row(children: <Widget>[
+                Expanded(child: _diffHeader(frame.diffOldLabel)),
+                const SizedBox(width: 1),
+                Expanded(child: _diffHeader(frame.diffNewLabel)),
+              ]),
+            for (final PluginDiffLine line in frame.diffLines)
+              split ? _PluginSplitDiffRow(line: line) : _PluginUnifiedDiffRow(line: line),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _diffHeader(String label) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        color: Design.text.withAlpha(10),
+        child:
+            Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Design.text.withAlpha(150))),
+      );
+
+  Widget _buildLog(PluginRenderFrame frame, {ScrollController? controller}) {
+    if (frame.logLines.isEmpty) return _buildEmptyOrLoading(frame);
+    return WindowsScrollView(
+      controller: controller ?? _scrollController,
+      child: SelectionArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              for (final PluginLogLine line in frame.logLines) _PluginLogRow(line: line, wrap: frame.logWrap),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetail(String markdown, List<PluginMetadataEntry> metadata,
+      {ScrollController? controller, required PluginEventScope scope}) {
     final bool hasMarkdown = markdown.trim().isNotEmpty;
     final String renderedMarkdown = _normalizeLocalMarkdownImageUris(markdown);
     return WindowsScrollView(
@@ -879,7 +1181,7 @@ class _PluginViewState extends State<PluginView> {
                           _PluginMetadataPane(
                             entries: metadata,
                             topGap: hasMarkdown,
-                            onAction: (PluginAction action) => widget.onMetadataAction('', action),
+                            onAction: (PluginAction action) => widget.onMetadataAction(scope, '', action),
                           ),
                       ],
                     ),
@@ -890,7 +1192,7 @@ class _PluginViewState extends State<PluginView> {
     );
   }
 
-  Widget _buildPreviewPane(PluginItem item) {
+  Widget _buildPreviewPane(PluginItem item, {required PluginEventScope scope}) {
     final String markdown = item.previewMarkdown ?? '';
     final bool hasMarkdown = markdown.trim().isNotEmpty;
     final String renderedMarkdown = _normalizeLocalMarkdownImageUris(markdown);
@@ -926,7 +1228,7 @@ class _PluginViewState extends State<PluginView> {
                       _PluginMetadataPane(
                         entries: item.previewMetadata,
                         topGap: hasMarkdown || item.previewImageUrl != null,
-                        onAction: (PluginAction action) => widget.onMetadataAction(item.id, action),
+                        onAction: (PluginAction action) => widget.onMetadataAction(scope, item.id, action),
                       ),
                   ],
                 ),
@@ -1680,6 +1982,207 @@ class _DiscordChatBody extends StatelessWidget {
     if (offset < text.length) spans.add(TextSpan(text: text.substring(offset)));
     return Text.rich(TextSpan(style: style, children: spans.isEmpty ? <InlineSpan>[TextSpan(text: text)] : spans));
   }
+}
+
+class _PluginKanbanCard extends StatelessWidget {
+  const _PluginKanbanCard({required this.item, this.selected = false, this.onTap, this.onHover});
+
+  final PluginItem item;
+  final bool selected;
+  final VoidCallback? onTap;
+  final VoidCallback? onHover;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        cursor: onTap == null ? SystemMouseCursors.grabbing : SystemMouseCursors.click,
+        onEnter: onHover == null ? null : (_) => onHover!(),
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 2),
+            padding: const EdgeInsets.fromLTRB(9, 8, 9, 8),
+            decoration: BoxDecoration(
+              color: selected ? Design.accent.withAlpha(30) : Design.text.withAlpha(10),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: selected ? Design.accent.withAlpha(80) : Design.text.withAlpha(20)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+              Row(children: <Widget>[
+                _PluginIcon(name: item.icon, accent: Design.accent, size: 14),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Design.text.withAlpha(220))),
+                ),
+              ]),
+              if (item.subtitle.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 4),
+                Text(item.subtitle,
+                    maxLines: item.subtitleLines,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 10.5, height: 1.3, color: Design.text.withAlpha(125))),
+              ],
+              if (item.accessories.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: <Widget>[
+                    for (final PluginAccessory accessory in item.accessories)
+                      Text(accessory.text,
+                          style: TextStyle(
+                              fontSize: 9.5, fontWeight: FontWeight.w600, color: accessory.color ?? Design.accent)),
+                  ],
+                ),
+              ],
+            ]),
+          ),
+        ),
+      );
+}
+
+Color _diffTint(String type) => switch (type) {
+      'add' => const Color(0xFF3FB950),
+      'remove' => const Color(0xFFF85149),
+      'header' => Design.accent,
+      _ => Design.text,
+    };
+
+class _PluginUnifiedDiffRow extends StatelessWidget {
+  const _PluginUnifiedDiffRow({required this.line});
+
+  final PluginDiffLine line;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color tint = _diffTint(line.type);
+    return Container(
+      color: tint.withAlpha(line.type == 'context' ? 3 : 16),
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+        SizedBox(
+          width: 42,
+          child: Text(line.oldLine?.toString() ?? '',
+              textAlign: TextAlign.right,
+              style: TextStyle(fontFamily: 'Consolas', fontSize: 10, color: Design.text.withAlpha(70))),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 42,
+          child: Text(line.newLine?.toString() ?? '',
+              textAlign: TextAlign.right,
+              style: TextStyle(fontFamily: 'Consolas', fontSize: 10, color: Design.text.withAlpha(70))),
+        ),
+        const SizedBox(width: 8),
+        Text(
+            line.type == 'add'
+                ? '+'
+                : line.type == 'remove'
+                    ? '-'
+                    : ' ',
+            style: TextStyle(fontFamily: 'Consolas', fontSize: 11.5, color: tint)),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(line.text,
+              style:
+                  TextStyle(fontFamily: 'Consolas', fontSize: 11.5, height: 1.35, color: Design.text.withAlpha(205))),
+        ),
+      ]),
+    );
+  }
+}
+
+class _PluginSplitDiffRow extends StatelessWidget {
+  const _PluginSplitDiffRow({required this.line});
+
+  final PluginDiffLine line;
+
+  @override
+  Widget build(BuildContext context) {
+    if (line.type == 'header') return _PluginUnifiedDiffRow(line: line);
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+      Expanded(child: _cell(show: line.type != 'add', lineNumber: line.oldLine)),
+      Container(width: 1, height: 24, color: Design.text.withAlpha(16)),
+      Expanded(child: _cell(show: line.type != 'remove', lineNumber: line.newLine)),
+    ]);
+  }
+
+  Widget _cell({required bool show, required int? lineNumber}) {
+    final Color tint = _diffTint(line.type);
+    return Container(
+      constraints: const BoxConstraints(minHeight: 24),
+      color: show ? tint.withAlpha(line.type == 'context' ? 3 : 16) : Design.text.withAlpha(3),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      child: show
+          ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+              SizedBox(
+                width: 34,
+                child: Text(lineNumber?.toString() ?? '',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(fontFamily: 'Consolas', fontSize: 10, color: Design.text.withAlpha(70))),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(line.text,
+                    style: TextStyle(
+                        fontFamily: 'Consolas', fontSize: 11, height: 1.35, color: Design.text.withAlpha(205))),
+              ),
+            ])
+          : const SizedBox.shrink(),
+    );
+  }
+}
+
+class _PluginLogRow extends StatelessWidget {
+  const _PluginLogRow({required this.line, required this.wrap});
+
+  final PluginLogLine line;
+  final bool wrap;
+
+  Color get _tint => switch (line.level) {
+        'error' => const Color(0xFFF85149),
+        'warn' => const Color(0xFFD29922),
+        'success' => const Color(0xFF3FB950),
+        'debug' || 'trace' => Design.text.withAlpha(110),
+        _ => Design.accent,
+      };
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        color: _tint.withAlpha(line.level == 'info' ? 2 : 10),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+          if (line.timestamp.isNotEmpty)
+            SizedBox(
+              width: 82,
+              child: Text(line.timestamp,
+                  style: TextStyle(fontFamily: 'Consolas', fontSize: 10, color: Design.text.withAlpha(80))),
+            ),
+          SizedBox(
+            width: 52,
+            child: Text(line.level.toUpperCase(),
+                style: TextStyle(fontFamily: 'Consolas', fontSize: 9.5, fontWeight: FontWeight.w700, color: _tint)),
+          ),
+          if (line.source.isNotEmpty)
+            SizedBox(
+              width: 92,
+              child: Text(line.source,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontFamily: 'Consolas', fontSize: 10, color: Design.text.withAlpha(105))),
+            ),
+          Expanded(
+            child: Text(line.text,
+                maxLines: wrap ? null : 1,
+                softWrap: wrap,
+                overflow: wrap ? TextOverflow.visible : TextOverflow.ellipsis,
+                style:
+                    TextStyle(fontFamily: 'Consolas', fontSize: 10.8, height: 1.35, color: Design.text.withAlpha(205))),
+          ),
+        ]),
+      );
 }
 
 /// A thin determinate bar shown under a list row that carries `"progress"`.

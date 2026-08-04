@@ -145,6 +145,50 @@ void main() {
       });
       expect(frame.form, isNull);
     });
+
+    test('parses sections, conditions, combobox state, and validation rules', () {
+      final PluginForm form = PluginRenderFrame.fromJson(<String, dynamic>{
+        'type': 'render',
+        'view': 'form',
+        'form': <String, Object?>{
+          'error': 'Please review the highlighted fields',
+          'sections': <Object?>[
+            <String, Object?>{'id': 'deploy', 'title': 'Deployment', 'collapsible': true},
+          ],
+          'fields': <Object?>[
+            <String, Object?>{
+              'id': 'environment',
+              'type': 'combobox',
+              'section': 'deploy',
+              'watch': true,
+              'optionsLoading': true,
+              'allowCustom': true,
+              'options': <String>['staging', 'production'],
+              'visibleWhen': <String, Object?>{'field': 'mode', 'equals': 'deploy'},
+              'enabledWhen': <String, Object?>{'field': 'ready', 'truthy': true},
+              'minLength': 3,
+              'maxLength': 20,
+              'pattern': r'^[a-z]+$',
+              'validationMessage': 'Use lowercase letters',
+            },
+          ],
+        },
+      }).form!;
+      expect(form.error, 'Please review the highlighted fields');
+      expect(form.sections.single.id, 'deploy');
+      expect(form.sections.single.collapsible, isTrue);
+      final PluginFormField field = form.fields.single;
+      expect(field.type, 'combobox');
+      expect(field.section, 'deploy');
+      expect(field.optionsLoading, isTrue);
+      expect(field.allowCustom, isTrue);
+      expect(field.visibleWhen!.matches(<String, Object?>{'mode': 'deploy'}), isTrue);
+      expect(field.visibleWhen!.matches(<String, Object?>{'mode': 'inspect'}), isFalse);
+      expect(field.enabledWhen!.matches(<String, Object?>{'ready': true}), isTrue);
+      expect(field.minLength, 3);
+      expect(field.maxLength, 20);
+      expect(field.pattern, r'^[a-z]+$');
+    });
   });
 
   group('PluginRenderFrame extras', () {
@@ -222,6 +266,68 @@ void main() {
         isTrue,
       );
       expect(PluginRenderFrame.fromJson(<String, dynamic>{'type': 'render'}).canGoBack, isFalse);
+    });
+
+    test('parses page identity, breadcrumbs, and element scope', () {
+      final PluginRenderFrame frame = PluginRenderFrame.fromJson(<String, dynamic>{
+        'type': 'render',
+        'elementId': 'results',
+        'page': <String, Object?>{
+          'id': 'issues',
+          'title': 'Issues',
+          'history': 'push',
+          'breadcrumbs': <Object?>[
+            <String, Object?>{'id': 'root', 'label': 'Home'},
+          ],
+        },
+      });
+      expect(frame.page!.id, 'issues');
+      expect(frame.page!.history, 'push');
+      expect(frame.page!.breadcrumbs.single.label, 'Home');
+      expect(frame.scope().fields, <String, Object?>{'pageId': 'issues', 'elementId': 'results'});
+    });
+
+    test('parses kanban, diff, and log view payloads', () {
+      final PluginRenderFrame kanban = PluginRenderFrame.fromJson(<String, dynamic>{
+        'type': 'render',
+        'view': 'kanban',
+        'kanban': <String, Object?>{
+          'columns': <Object?>[
+            <String, Object?>{'id': 'todo', 'title': 'To do', 'limit': 3},
+          ],
+        },
+        'items': <Object?>[
+          <String, Object?>{'id': 'a', 'title': 'Card', 'column': 'todo'},
+        ],
+      });
+      expect(kanban.view, PluginViewType.kanban);
+      expect(kanban.kanbanColumns.single.limit, 3);
+      expect(kanban.items.single.column, 'todo');
+
+      final PluginRenderFrame diff = PluginRenderFrame.fromJson(<String, dynamic>{
+        'type': 'render',
+        'view': 'diff',
+        'diff': <String, Object?>{'mode': 'split', 'text': ' unchanged\n+added\n-removed'},
+      });
+      expect(diff.view, PluginViewType.diff);
+      expect(diff.diffMode, 'split');
+      expect(diff.diffLines.map((PluginDiffLine line) => line.type), <String>['context', 'add', 'remove']);
+
+      final PluginRenderFrame log = PluginRenderFrame.fromJson(<String, dynamic>{
+        'type': 'render',
+        'view': 'log',
+        'log': <String, Object?>{
+          'follow': false,
+          'wrap': true,
+          'lines': <Object?>[
+            <String, Object?>{'id': '1', 'level': 'warn', 'text': 'Slow request'},
+          ],
+        },
+      });
+      expect(log.view, PluginViewType.log);
+      expect(log.logFollow, isFalse);
+      expect(log.logWrap, isTrue);
+      expect(log.logLines.single.level, 'warn');
     });
   });
 

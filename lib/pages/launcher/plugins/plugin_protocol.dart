@@ -16,10 +16,27 @@ import 'dart:ui' show Color;
 /// 7 = bulk selection, table/tree/timeline/chart views, cancellable operations,
 ///     action parameters, and host-mediated loopback OAuth.
 /// 8 = composite dashboard frames with stacked or tabbed sub-views.
-const int pluginProtocolVersion = 8;
+/// 9 = page identity/history, scoped events, richer conditional forms, and
+///     kanban/diff/log views.
+const int pluginProtocolVersion = 9;
 
 /// The layout a plugin render frame requests.
-enum PluginViewType { list, grid, detail, chat, form, table, tree, timeline, chart, operation, dashboard }
+enum PluginViewType {
+  list,
+  grid,
+  detail,
+  chat,
+  form,
+  table,
+  tree,
+  timeline,
+  chart,
+  operation,
+  dashboard,
+  kanban,
+  diff,
+  log,
+}
 
 /// Parses a `#RGB` / `#RRGGBB` / `#AARRGGBB` string from plugin JSON into a
 /// [Color]. Returns null for anything else, so a bad value degrades to the
@@ -65,10 +82,89 @@ PluginViewType _viewFromString(String? value) {
       return PluginViewType.operation;
     case 'dashboard':
       return PluginViewType.dashboard;
+    case 'kanban':
+      return PluginViewType.kanban;
+    case 'diff':
+      return PluginViewType.diff;
+    case 'log':
+      return PluginViewType.log;
     case 'list':
     default:
       return PluginViewType.list;
   }
+}
+
+/// Stable page identity and lightweight host-side history hints. Plugins still
+/// own navigation and render the destination frame; the host uses this data to
+/// restore selection/scroll/form state and to render breadcrumbs.
+class PluginPageInfo {
+  const PluginPageInfo({
+    required this.id,
+    required this.title,
+    required this.breadcrumbs,
+    this.history = 'none',
+    this.preserveState = true,
+  });
+
+  final String id;
+  final String title;
+  final List<PluginBreadcrumb> breadcrumbs;
+  final String history;
+  final bool preserveState;
+
+  static PluginPageInfo? fromJson(Object? json) {
+    if (json is! Map || json['id'] is! String || (json['id'] as String).trim().isEmpty) return null;
+    final Object? rawHistory = json['history'];
+    final String history = rawHistory == 'push' || rawHistory == 'replace' ? rawHistory as String : 'none';
+    final Object? rawTitle = json['title'];
+    return PluginPageInfo(
+      id: (json['id'] as String).trim(),
+      title: rawTitle is String ? rawTitle.trim() : '',
+      breadcrumbs: PluginBreadcrumb.listFromJson(json['breadcrumbs'] ?? json['breadcrumb']),
+      history: history,
+      preserveState: json['preserveState'] != false,
+    );
+  }
+}
+
+/// One clickable ancestor in a page breadcrumb trail.
+class PluginBreadcrumb {
+  const PluginBreadcrumb({required this.id, required this.label});
+
+  final String id;
+  final String label;
+
+  static PluginBreadcrumb? fromJson(Object? json) {
+    if (json is String && json.trim().isNotEmpty) return PluginBreadcrumb(id: json.trim(), label: json.trim());
+    if (json is! Map || json['id'] is! String) return null;
+    final String id = (json['id'] as String).trim();
+    if (id.isEmpty) return null;
+    final Object? label = json['label'];
+    return PluginBreadcrumb(id: id, label: label is String && label.trim().isNotEmpty ? label.trim() : id);
+  }
+
+  static List<PluginBreadcrumb> listFromJson(Object? json) => json is List
+      ? json.map(PluginBreadcrumb.fromJson).whereType<PluginBreadcrumb>().toList(growable: false)
+      : const <PluginBreadcrumb>[];
+}
+
+/// Common source address attached to plugin UI events. Old plugins can ignore
+/// these additive fields; v9 plugins can distinguish nested dashboard panels
+/// and multiple interactive elements without encoding scope into item ids.
+class PluginEventScope {
+  const PluginEventScope({this.pageId, this.panelId, this.elementId});
+
+  final String? pageId;
+  final String? panelId;
+  final String? elementId;
+
+  String get key => '${pageId ?? ''}|${panelId ?? ''}|${elementId ?? ''}';
+
+  Map<String, Object?> get fields => <String, Object?>{
+        if (pageId != null) 'pageId': pageId,
+        if (panelId != null) 'panelId': panelId,
+        if (elementId != null) 'elementId': elementId,
+      };
 }
 
 /// A trailing chip shown on a list/grid item (e.g. a country code, a shortcut).
@@ -350,6 +446,118 @@ class PluginOperation {
   }
 }
 
+/// One column in a `kanban` frame. Cards are ordinary [PluginItem]s whose
+/// `column` field matches this id.
+class PluginKanbanColumn {
+  const PluginKanbanColumn({required this.id, required this.title, this.color, this.limit});
+
+  final String id;
+  final String title;
+  final Color? color;
+  final int? limit;
+
+  static PluginKanbanColumn? fromJson(Object? json) {
+    if (json is! Map || json['id'] is! String || (json['id'] as String).trim().isEmpty) return null;
+    final String id = (json['id'] as String).trim();
+    final Object? title = json['title'];
+    final Object? limit = json['limit'];
+    return PluginKanbanColumn(
+      id: id,
+      title: title is String && title.trim().isNotEmpty ? title.trim() : id,
+      color: parsePluginColor(json['color']),
+      limit: limit is num ? limit.toInt().clamp(1, 9999) : null,
+    );
+  }
+
+  static List<PluginKanbanColumn> listFromJson(Object? json) => json is List
+      ? json.map(PluginKanbanColumn.fromJson).whereType<PluginKanbanColumn>().toList(growable: false)
+      : const <PluginKanbanColumn>[];
+}
+
+/// One semantic line in a `diff` frame.
+class PluginDiffLine {
+  const PluginDiffLine({required this.type, required this.text, this.oldLine, this.newLine});
+
+  final String type;
+  final String text;
+  final int? oldLine;
+  final int? newLine;
+
+  static PluginDiffLine? fromJson(Object? json) {
+    if (json is String) return _fromText(json);
+    if (json is! Map || json['text'] is! String) return null;
+    final Object? rawType = json['type'];
+    final String type =
+        const <String>{'add', 'remove', 'context', 'header'}.contains(rawType) ? rawType as String : 'context';
+    return PluginDiffLine(
+      type: type,
+      text: json['text'] as String,
+      oldLine: json['oldLine'] is num ? (json['oldLine'] as num).toInt() : null,
+      newLine: json['newLine'] is num ? (json['newLine'] as num).toInt() : null,
+    );
+  }
+
+  static PluginDiffLine _fromText(String line) {
+    final String type = line.startsWith('+++') || line.startsWith('---') || line.startsWith('@@')
+        ? 'header'
+        : line.startsWith('+')
+            ? 'add'
+            : line.startsWith('-')
+                ? 'remove'
+                : 'context';
+    return PluginDiffLine(type: type, text: line);
+  }
+
+  static List<PluginDiffLine> listFromJson(Object? json) {
+    if (json is String) return json.split('\n').map(_fromText).toList(growable: false);
+    if (json is! List) return const <PluginDiffLine>[];
+    return json.map(fromJson).whereType<PluginDiffLine>().toList(growable: false);
+  }
+}
+
+/// One structured entry in a `log` frame.
+class PluginLogLine {
+  const PluginLogLine({
+    required this.id,
+    required this.text,
+    required this.level,
+    this.timestamp = '',
+    this.source = '',
+  });
+
+  final String id;
+  final String text;
+  final String level;
+  final String timestamp;
+  final String source;
+
+  static PluginLogLine? fromJson(Object? json, int index) {
+    if (json is String) return PluginLogLine(id: 'line-$index', text: json, level: 'info');
+    if (json is! Map || json['text'] is! String) return null;
+    final Object? rawLevel = json['level'];
+    final String level = const <String>{'trace', 'debug', 'info', 'warn', 'error', 'success'}.contains(rawLevel)
+        ? rawLevel as String
+        : 'info';
+    return PluginLogLine(
+      id: json['id']?.toString() ?? 'line-$index',
+      text: json['text'] as String,
+      level: level,
+      timestamp: json['timestamp'] is String ? json['timestamp'] as String : '',
+      source: json['source'] is String ? json['source'] as String : '',
+    );
+  }
+
+  static List<PluginLogLine> listFromJson(Object? json) {
+    if (json is! List) return const <PluginLogLine>[];
+    final List<PluginLogLine> lines = <PluginLogLine>[];
+    for (int index = 0; index < json.length; index++) {
+      final PluginLogLine? line = fromJson(json[index], index);
+      if (line != null) lines.add(line);
+    }
+    return lines;
+  }
+}
+
 /// A single row/tile emitted by the plugin.
 class PluginItem {
   const PluginItem({
@@ -372,6 +580,7 @@ class PluginItem {
     this.depth = 0,
     this.expanded = false,
     this.timestamp,
+    this.column,
   });
 
   final String id;
@@ -419,6 +628,9 @@ class PluginItem {
 
   /// `timeline` view's leading time/status label.
   final String? timestamp;
+
+  /// `kanban` view column id. Falls back to [section] for concise frames.
+  final String? column;
 
   static PluginItem fromJson(Map<String, dynamic> json, int index) {
     final Object? rawId = json['id'];
@@ -488,6 +700,9 @@ class PluginItem {
       timestamp: json['timestamp'] is String && (json['timestamp'] as String).trim().isNotEmpty
           ? (json['timestamp'] as String).trim()
           : null,
+      column: json['column'] is String && (json['column'] as String).trim().isNotEmpty
+          ? (json['column'] as String).trim()
+          : (rawSection is String && rawSection.trim().isNotEmpty ? rawSection.trim() : null),
     );
   }
 }
@@ -510,8 +725,71 @@ class PluginFormOption {
   }
 }
 
+/// Declarative dependency used by `visibleWhen` and `enabledWhen`.
+class PluginFormCondition {
+  const PluginFormCondition({required this.field, this.equals, this.notEquals, this.oneOf, this.truthy});
+
+  final String field;
+  final Object? equals;
+  final Object? notEquals;
+  final List<Object?>? oneOf;
+  final bool? truthy;
+
+  bool matches(Map<String, Object?> values) {
+    final Object? value = values[field];
+    if (truthy != null) {
+      final bool isTruthy = value == true ||
+          (value is String && value.trim().isNotEmpty) ||
+          (value is num && value != 0) ||
+          (value is Iterable && value.isNotEmpty);
+      if (isTruthy != truthy) return false;
+    }
+    if (oneOf != null && !oneOf!.contains(value)) return false;
+    if (equals != null && value != equals) return false;
+    if (notEquals != null && value == notEquals) return false;
+    return true;
+  }
+
+  static PluginFormCondition? fromJson(Object? json) {
+    if (json is! Map || json['field'] is! String || (json['field'] as String).trim().isEmpty) return null;
+    return PluginFormCondition(
+      field: (json['field'] as String).trim(),
+      equals: json['equals'],
+      notEquals: json['notEquals'],
+      oneOf: json['in'] is List ? List<Object?>.from(json['in'] as List) : null,
+      truthy: json['truthy'] is bool ? json['truthy'] as bool : null,
+    );
+  }
+}
+
+/// Visual grouping for related form fields.
+class PluginFormSection {
+  const PluginFormSection({required this.id, required this.title, this.description = '', this.collapsible = false});
+
+  final String id;
+  final String title;
+  final String description;
+  final bool collapsible;
+
+  static PluginFormSection? fromJson(Object? json) {
+    if (json is! Map || json['id'] is! String || (json['id'] as String).trim().isEmpty) return null;
+    final String id = (json['id'] as String).trim();
+    return PluginFormSection(
+      id: id,
+      title: json['title'] is String ? json['title'] as String : id,
+      description: json['description'] is String ? json['description'] as String : '',
+      collapsible: json['collapsible'] == true,
+    );
+  }
+
+  static List<PluginFormSection> listFromJson(Object? json) => json is List
+      ? json.map(PluginFormSection.fromJson).whereType<PluginFormSection>().toList(growable: false)
+      : const <PluginFormSection>[];
+}
+
 /// One input in a `form` view: `text`, `password`, `textarea`, `dropdown`,
-/// `checkbox`, `number`, `date`, `filepicker`, `folderpicker`, or `tags`.
+/// `combobox`, `checkbox`, `number`, `date`, `filepicker`, `folderpicker`, or
+/// `tags`.
 class PluginFormField {
   const PluginFormField({
     required this.id,
@@ -526,6 +804,16 @@ class PluginFormField {
     this.watch = false,
     this.min,
     this.max,
+    this.section,
+    this.visibleWhen,
+    this.enabledWhen,
+    this.readOnly = false,
+    this.minLength,
+    this.maxLength,
+    this.pattern,
+    this.validationMessage,
+    this.optionsLoading = false,
+    this.allowCustom = false,
   });
 
   final String id;
@@ -558,8 +846,23 @@ class PluginFormField {
   final num? min;
   final num? max;
 
+  final String? section;
+  final PluginFormCondition? visibleWhen;
+  final PluginFormCondition? enabledWhen;
+  final bool readOnly;
+  final int? minLength;
+  final int? maxLength;
+  final String? pattern;
+  final String? validationMessage;
+
+  /// `combobox`: show an inline spinner while the plugin is resolving options.
+  final bool optionsLoading;
+
+  /// `combobox`: permit values that are not present in [options].
+  final bool allowCustom;
+
   static const Set<String> knownTypes = <String>{
-    'text', 'password', 'textarea', 'dropdown', 'checkbox', //
+    'text', 'password', 'textarea', 'dropdown', 'combobox', 'checkbox', //
     'number', 'date', 'filepicker', 'folderpicker', 'tags',
   };
 
@@ -599,6 +902,18 @@ class PluginFormField {
       watch: json['watch'] == true,
       min: min is num ? min : null,
       max: max is num ? max : null,
+      section: json['section'] is String && (json['section'] as String).trim().isNotEmpty
+          ? (json['section'] as String).trim()
+          : null,
+      visibleWhen: PluginFormCondition.fromJson(json['visibleWhen']),
+      enabledWhen: PluginFormCondition.fromJson(json['enabledWhen']),
+      readOnly: json['readOnly'] == true,
+      minLength: json['minLength'] is num ? (json['minLength'] as num).toInt().clamp(0, 1000000) : null,
+      maxLength: json['maxLength'] is num ? (json['maxLength'] as num).toInt().clamp(0, 1000000) : null,
+      pattern: json['pattern'] is String && (json['pattern'] as String).isNotEmpty ? json['pattern'] as String : null,
+      validationMessage: json['validationMessage'] is String ? json['validationMessage'] as String : null,
+      optionsLoading: json['optionsLoading'] == true,
+      allowCustom: json['allowCustom'] == true,
     );
   }
 }
@@ -629,6 +944,8 @@ class PluginForm {
     required this.submitLabel,
     required this.fields,
     this.buttons = const <PluginFormButton>[],
+    this.sections = const <PluginFormSection>[],
+    this.error,
   });
 
   final String title;
@@ -638,6 +955,8 @@ class PluginForm {
   /// Optional multi-button row replacing the single submit CTA. Each submits
   /// the form with its id in the `submit` message's `"button"` field.
   final List<PluginFormButton> buttons;
+  final List<PluginFormSection> sections;
+  final String? error;
 
   static PluginForm? fromJson(Object? json) {
     if (json is! Map) return null;
@@ -653,6 +972,10 @@ class PluginForm {
       title: title is String ? title : '',
       submitLabel: submitLabel is String && submitLabel.trim().isNotEmpty ? submitLabel : 'Submit',
       fields: fields,
+      sections: PluginFormSection.listFromJson(json['sections']),
+      error: json['error'] is String && (json['error'] as String).trim().isNotEmpty
+          ? (json['error'] as String).trim()
+          : null,
       buttons: rawButtons is List
           ? rawButtons.map(PluginFormButton.fromJson).whereType<PluginFormButton>().toList(growable: false)
           : const <PluginFormButton>[],
@@ -805,6 +1128,16 @@ class PluginRenderFrame {
     this.operation,
     this.dashboardLayout = 'stack',
     this.dashboardPanels = const <PluginDashboardPanel>[],
+    this.page,
+    this.elementId,
+    this.kanbanColumns = const <PluginKanbanColumn>[],
+    this.diffLines = const <PluginDiffLine>[],
+    this.diffMode = 'unified',
+    this.diffOldLabel = 'Before',
+    this.diffNewLabel = 'After',
+    this.logLines = const <PluginLogLine>[],
+    this.logFollow = true,
+    this.logWrap = false,
   });
 
   final PluginViewType view;
@@ -844,6 +1177,20 @@ class PluginRenderFrame {
   /// `dashboard` composition: either vertically stacked panels or tabs.
   final String dashboardLayout;
   final List<PluginDashboardPanel> dashboardPanels;
+
+  /// Optional stable page identity used for navigation chrome and state
+  /// restoration. [elementId] addresses this frame within its page.
+  final PluginPageInfo? page;
+  final String? elementId;
+
+  final List<PluginKanbanColumn> kanbanColumns;
+  final List<PluginDiffLine> diffLines;
+  final String diffMode;
+  final String diffOldLabel;
+  final String diffNewLabel;
+  final List<PluginLogLine> logLines;
+  final bool logFollow;
+  final bool logWrap;
 
   /// Full-width markdown, used when [view] is [PluginView.detail].
   final String? detailMarkdown;
@@ -898,6 +1245,9 @@ class PluginRenderFrame {
   /// plugin's root should leave this false so Escape exits as usual.
   final bool canGoBack;
 
+  PluginEventScope scope({String? panelId}) =>
+      PluginEventScope(pageId: page?.id, panelId: panelId, elementId: elementId);
+
   bool get hasPreview =>
       previewEnabled && view != PluginViewType.detail && view != PluginViewType.chat && view != PluginViewType.form;
 
@@ -939,6 +1289,16 @@ class PluginRenderFrame {
       operation: operation,
       dashboardLayout: dashboardLayout,
       dashboardPanels: dashboardPanels,
+      page: page,
+      elementId: elementId,
+      kanbanColumns: kanbanColumns,
+      diffLines: diffLines,
+      diffMode: diffMode,
+      diffOldLabel: diffOldLabel,
+      diffNewLabel: diffNewLabel,
+      logLines: logLines,
+      logFollow: logFollow,
+      logWrap: logWrap,
     );
   }
 
@@ -1003,6 +1363,9 @@ class PluginRenderFrame {
     final Object? selection = json['selection'];
     final Object? chart = json['chart'];
     final Object? dashboard = json['dashboard'];
+    final Object? kanban = json['kanban'];
+    final Object? diff = json['diff'];
+    final Object? log = json['log'];
 
     int gridColumns = 4;
     double gridAspectRatio = 1.0;
@@ -1108,6 +1471,18 @@ class PluginRenderFrame {
       operation: PluginOperation.fromJson(json['operation']),
       dashboardLayout: dashboard is Map && dashboard['layout'] == 'tabs' ? 'tabs' : 'stack',
       dashboardPanels: PluginDashboardPanel.listFromJson(dashboard is Map ? dashboard['panels'] : json['panels']),
+      page: PluginPageInfo.fromJson(json['page']),
+      elementId: json['elementId'] is String && (json['elementId'] as String).trim().isNotEmpty
+          ? (json['elementId'] as String).trim()
+          : null,
+      kanbanColumns: PluginKanbanColumn.listFromJson(kanban is Map ? kanban['columns'] : json['kanbanColumns']),
+      diffLines: PluginDiffLine.listFromJson(diff is Map ? (diff['lines'] ?? diff['text']) : diff),
+      diffMode: diff is Map && diff['mode'] == 'split' ? 'split' : 'unified',
+      diffOldLabel: diff is Map && diff['oldLabel'] is String ? diff['oldLabel'] as String : 'Before',
+      diffNewLabel: diff is Map && diff['newLabel'] is String ? diff['newLabel'] as String : 'After',
+      logLines: PluginLogLine.listFromJson(log is Map ? log['lines'] : log),
+      logFollow: log is Map ? log['follow'] != false : true,
+      logWrap: log is Map && log['wrap'] == true,
     );
   }
 }

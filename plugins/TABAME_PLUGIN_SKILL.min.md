@@ -57,7 +57,7 @@ Custom env vars (any runtime): `"env"` object in `plugin.json` → `os.environ`/
 
 | Msg           | When                                                                                                                         | Fields                                                                                                                                                                                                                                                                         |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `init`        | once, at start                                                                                                               | `query` (initial text), `protocol` (int, currently 8), `theme` {accent,text,background,dark}, `locale` (e.g. `"en-US"`). Immediately followed by a `query` with same text — treat both alike (`text` falling back to `query`). Use `theme` for matching generated images/SVGs. |
+| `init`        | once, at start                                                                                                               | `query` (initial text), `protocol` (int, currently 9), `theme` {accent,text,background,dark}, `locale` (e.g. `"en-US"`). Immediately followed by a `query` with same text — treat both alike (`text` falling back to `query`). Use `theme` for matching generated images/SVGs. |
 | `query`       | every keystroke (not in `inputMode:"submit"`)                                                                                | `text`, `rev` (int, increases with typing)                                                                                                                                                                                                                                     |
 | `submitQuery` | Enter, when frame set `inputMode:"submit"`                                                                                   | `text`, `rev`                                                                                                                                                                                                                                                                  |
 | `select`      | highlighted item changed                                                                                                     | `id`, `rev`                                                                                                                                                                                                                                                                    |
@@ -72,6 +72,8 @@ Custom env vars (any runtime): `"env"` object in `plugin.json` → `os.environ`/
 | `storage`     | reply to `storage` get/keys                                                                                                  | `requestId` (echo), `key`+`value` or `keys`                                                                                                                                                                                                                                    |
 | `clipboard`   | reply to `clipboardRead`                                                                                                     | `requestId` (echo), `text`                                                                                                                                                                                                                                                     |
 | `back`        | Escape on `canGoBack:true` frame                                                                                             | `rev` — render previous screen                                                                                                                                                                                                                                                 |
+| `navigate`    | page breadcrumb clicked                                                                                                      | `targetPageId`,`rev`, optional `pageId`,`panelId`,`elementId`                                                                                                                                                                                                                  |
+| `kanbanMove`  | kanban card dropped                                                                                                          | `id`,`columnId`,`index`,`rev`, optional scope fields                                                                                                                                                                                                                            |
 | `tab`         | Tab pressed                                                                                                                  | `id` (highlighted item, `""` if none), `rev` — typically answer with `setQuery`                                                                                                                                                                                                |
 | `close`       | plugin shutting down                                                                                                         | —                                                                                                                                                                                                                                                                              |
 
@@ -127,7 +129,9 @@ keyword typed → process starts → `init` then `query` → typing → `query`s
 ```jsonc
 {
   "type": "render", "rev": 0,
-  "view": "list", // list|grid|detail|chat|form|table|tree|timeline|chart|operation|dashboard, default list
+  "view": "list", // list|grid|detail|chat|form|table|tree|timeline|chart|operation|dashboard|kanban|diff|log
+  "page": {"id":"issues","title":"Issues","history":"push","preserveState":true,"breadcrumbs":[{"id":"root","label":"Home"}]},
+  "elementId": "results", // events echo pageId/panelId/elementId scope
   "loading": false, // bool or {"progress":0.4} determinate
   "loadingText": "Searching…", // caption under spinner (shown only while loading; emptyText shown only when not loading)
   "emptyText": "No results",
@@ -147,6 +151,9 @@ keyword typed → process starts → `init` then `query` → typing → `query`s
   "chart": {"title":"Latency","series":[{"id":"p95","label":"p95","values":[24,31],"color":"#63A0EA"}]}, // click→chartSelect
   "operation": {"id":"deploy-42","title":"Deploying","progress":0.4,"cancellable":true}, // cancellable→cancel event
   "dashboard": {"layout":"stack","panels":[{"id","title","height"?(96-640),/*+ view fields*/}]}, // independently-scrolling panels
+  "kanban": {"columns":[{"id":"todo","title":"To do","color":"#63A0EA","limit":5}]}, // items use column; drop→kanbanMove
+  "diff": {"mode":"unified","text":"-old\n+new"}, // or structured lines with type/text/oldLine/newLine
+  "log": {"follow":true,"wrap":false,"lines":[{"level":"info","text":"Ready"}]},
   "items": [/*§6.2*/]
 }
 ```
@@ -273,7 +280,7 @@ Aligned key-value rows, preferred over markdown tables:
 }
 ```
 
-Types (unknown → `text`): `text,password,textarea,dropdown,checkbox,number,date,filepicker,folderpicker,tags`. `submit.values`: strings (text-likes/dropdown/date `yyyy-mm-dd`/paths), bool (checkbox), number (null if empty), string[] (tags). `required` + `min`/`max` validated before you see submit (inline error); for your own validation re-render same form with `"error":"…"` on a field (typed values persist since field set unchanged). `watch:true` → `change` message on edit, re-render to update dependent fields. `buttons[].destructive:true` = danger tint. Re-rendering with the _same_ field ids preserves typed values; changing ids resets. Good for create-flows / settings (prefer `storage` command over writing `config.json` yourself).
+Types (unknown → `text`): `text,password,textarea,dropdown,combobox,checkbox,number,date,filepicker,folderpicker,tags`. Forms support `sections`, form-level `error`, field `section`, `visibleWhen`/`enabledWhen`, `readOnly`, `minLength`/`maxLength`/`pattern`/`validationMessage`, and async combobox `optionsLoading`/`allowCustom` (pair with `watch:true`). `submit.values`: strings (text-likes/dropdown/date `yyyy-mm-dd`/paths), bool (checkbox), number (null if empty), string[] (tags). `required` + bounds validate before submit; plugin field `error` survives same-id re-renders. `buttons[].destructive:true` = danger tint.
 
 ## 8. Actions & Ctrl+K
 

@@ -254,7 +254,7 @@ Notes:
 
 | Message         | When                                                                                                             | Fields                                                                                                                                                                                                                    |
 | --------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `init`          | Once, right after your process starts                                                                            | `query`: initial text after the keyword; `protocol`: int protocol version (currently 8); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"`                              |
+| `init`          | Once, right after your process starts                                                                            | `query`: initial text after the keyword; `protocol`: int protocol version (currently 9); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"`                              |
 | `query`         | On every keystroke while the keyword is active (not sent in `inputMode: "submit"`)                               | `text`: current text after the keyword; `rev`: integer generation counter                                                                                                                                                 |
 | `submitQuery`   | **Enter** while the frame declared `inputMode: "submit"` — the whole query line at once (chat-style input)       | `text`, `rev`                                                                                                                                                                                                             |
 | `select`        | When the highlighted item changes                                                                                | `id`: the selected item's id; `rev`                                                                                                                                                                                       |
@@ -270,6 +270,8 @@ Notes:
 | `clipboard`     | Reply to a `clipboardRead` command                                                                               | `requestId` (echoed), `text`                                                                                                                                                                                              |
 | `browserBridge` | Reply/event from the optional app-owned Chromium bridge                                                          | Replies echo `requestId` with `ok` and `result`/`error`; events carry `event` and `data`                                                                                                                                  |
 | `back`          | **Escape** on a frame that declared `canGoBack: true`                                                            | `rev` — respond by rendering the previous screen                                                                                                                                                                          |
+| `navigate`      | A page breadcrumb was activated                                                                                  | `targetPageId`, `rev`, plus the common event scope                                                                                                                                                                        |
+| `kanbanMove`    | A kanban card was dropped in a column                                                                            | `id`, `columnId`, `index`, `rev`, plus the common event scope                                                                                                                                                              |
 | `tab`           | **Tab** pressed                                                                                                  | `id`: the highlighted item's id (`""` if none); `rev` — typically answered with a `setQuery` command                                                                                                                      |
 | `close`         | When the plugin is being shut down                                                                               | —                                                                                                                                                                                                                         |
 
@@ -294,6 +296,9 @@ Notes:
 - `action` messages **have no `rev`**.
 - Pressing **Enter** always sends `action:"default"`, whether or not you listed a
   `"default"` action on the item.
+- Interactive v9 events may also carry `pageId`, `panelId`, and `elementId`.
+  These identify the exact page, dashboard panel, and frame element that
+  produced the event. They are additive; v8 plugins may ignore them.
 
 ### 5.2 Messages you send Tabame (stdout)
 
@@ -422,7 +427,15 @@ slow response to "rom" from overwriting the fresh results for "rome".
 {
   "type": "render", // required, always "render"
   "rev": 0, // echo the query's rev, or 0 for unsolicited
-  "view": "list", // "list" | "grid" | "detail" | "chat" | "form" | "table" | "tree" | "timeline" | "chart" | "dashboard"
+  "view": "list", // list|grid|detail|chat|form|table|tree|timeline|chart|operation|dashboard|kanban|diff|log
+  "page": { // optional stable identity + host state restoration
+    "id": "issues",
+    "title": "Issues",
+    "history": "push", // none|push|replace
+    "preserveState": true,
+    "breadcrumbs": [{"id":"root","label":"Home"}],
+  },
+  "elementId": "results", // source id included in events
   "loading": false, // bool, or {"progress": 0.4} for a determinate spinner
   "loadingText": "Searching…", // caption shown under the spinner while loading
   "emptyText": "No results", // shown when items is empty and not loading
@@ -455,18 +468,26 @@ slow response to "rom" from overwriting the fresh results for "rome".
     "layout": "stack",
     "panels": [/* normal view payloads, see below */],
   },
+  "kanban": {"columns":[{"id":"todo","title":"To do","color":"#63A0EA","limit":5}]},
+  "diff": {"mode":"unified","oldLabel":"Before","newLabel":"After","text":"-old\n+new"},
+  "log": {"follow":true,"wrap":false,"lines":[{"id":"1","level":"info","text":"Ready"}]},
   "items": [/* see §7 */],
 }
 ```
 
 | Field              | Type           | Notes                                                                                                                                                                                                                                                                            |
 | ------------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `view`             | string         | `"list"` (rows), `"grid"` (tiles), `"detail"` (full-width markdown), `"chat"` (message feed), `"form"` (inputs), `"table"`, `"tree"`, `"timeline"`, `"chart"`, `"operation"`, or `"dashboard"`. Default `list`.                                                                  |
+| `view`             | string         | `"list"` (rows), `"grid"` (tiles), `"detail"` (full-width markdown), `"chat"` (message feed), `"form"` (inputs), `"table"`, `"tree"`, `"timeline"`, `"chart"`, `"operation"`, `"dashboard"`, `"kanban"`, `"diff"`, or `"log"`. Default `list`.                                      |
+| `page`             | object         | Optional `{id,title?,history?:"none"|"push"|"replace",preserveState?,breadcrumbs?}`. Stable ids let Tabame restore selection, scroll, and form values. Breadcrumb clicks send `navigate`.                                                                                       |
+| `elementId`        | string         | Stable id for this frame inside its page. Returned as `elementId` on scoped events. Dashboard events additionally carry their panel's `panelId`.                                                                                                                               |
 | `selection`        | bool/object    | Enable bulk selection. `Enter` and `Ctrl+Space` toggle the highlighted item; list/table/tree/timeline also expose a pointer checkbox. `{max}` caps the selection count. Selected IDs arrive in `action.ids`.                                                                     |
 | `columns`          | array          | `table` columns: `{id,label,width?,align?}`. Items provide matching string values in `cells`.                                                                                                                                                                                    |
 | `chart`            | object         | `chart` view data: `{title?,series:[{id,label?,values:[number,number,...],color?}]}`. Clicking a point sends `chartSelect`.                                                                                                                                                      |
 | `operation`        | object         | A visible long-running operation `{id,title,detail?,progress?:0..1,cancellable?:bool}`. A cancellable operation sends `cancel`.                                                                                                                                                  |
 | `dashboard`        | object         | Only for `view: "dashboard"`. `{layout:"stack"                                                                                                                                                                                                                                   | "tabs",panels:[...]}`composes independently scrollable normal view payloads. Each panel has`id`, `title`, optional `height`(96–640), plus`view` and the fields for that view. |
+| `kanban`           | object         | `{columns:[{id,title,color?,limit?}]}`. Items use `column` (or `section`) to choose a column. Dropping a card sends `kanbanMove`.                                                                                                                                                |
+| `diff`             | object/string  | Unified or split source comparison. `{mode:"unified"|"split",oldLabel?,newLabel?,text?}` or `lines:[{type,text,oldLine?,newLine?}]`.                                                                                                                                         |
+| `log`              | object/array   | Structured stream `{follow?,wrap?,lines:[string|{id?,timestamp?,level?,source?,text}]}`. Levels: trace/debug/info/warn/error/success.                                                                                                                                             |
 | `loading`          | bool or object | When truthy and `items` empty, a spinner is shown. `{"progress": 0..1}` makes it determinate.                                                                                                                                                                                    |
 | `loadingText`      | string         | Optional caption shown **under the spinner** while `loading`. Use this (not `emptyText`) for "Searching…"-style progress text — `emptyText` is only shown when _not_ loading.                                                                                                    |
 | `emptyText`        | string         | Message when there are no items. Default `"No results"`.                                                                                                                                                                                                                         |
@@ -631,6 +652,11 @@ frame set `canGoBack: true`. Enter in a single-line field submits.
   "view": "form",
   "form": {
     "title": "New Issue",
+    "error": "Please review the highlighted fields", // optional form-level error
+    "sections": [
+      {"id":"main","title":"Issue","description":"Required details"},
+      {"id":"advanced","title":"Advanced","collapsible":true},
+    ],
     "submitLabel": "Create", // optional, default "Submit"
     "buttons": [
       // optional — replaces the single CTA
@@ -673,10 +699,15 @@ frame set `canGoBack: true`. Enter in a single-line field submits.
       },
       {
         "id": "team",
-        "type": "dropdown",
+        "type": "combobox",
         "label": "Team",
         "value": "eng",
         "watch": true,
+        "optionsLoading": false,
+        "allowCustom": false,
+        "section": "main",
+        "visibleWhen": {"field":"urgent","equals":true},
+        "enabledWhen": {"field":"title","truthy":true},
         "options": ["eng", { "value": "ops", "label": "Operations" }],
       },
       { "id": "urgent", "type": "checkbox", "label": "Urgent", "value": true },
@@ -685,7 +716,7 @@ frame set `canGoBack: true`. Enter in a single-line field submits.
 }
 ```
 
-- Field `type` is one of `text`, `password`, `textarea`, `dropdown`, `checkbox`,
+- Field `type` is one of `text`, `password`, `textarea`, `dropdown`, `combobox`, `checkbox`,
   `number`, `date`, `filepicker`, `folderpicker`, `tags` (unknown types fall
   back to `text`); `value` sets the initial value.
 - `values` in the `submit` message maps field ids to strings (text-likes,
@@ -697,6 +728,15 @@ frame set `canGoBack: true`. Enter in a single-line field submits.
   same form with an `"error": "…"` string on the offending field — typed values
   survive because the field set is unchanged.
 - `description` renders a dimmed hint under the field.
+- `sections` groups fields by their `section` id; a section may be
+  `collapsible:true`. `visibleWhen` and `enabledWhen` support
+  `{field,equals?,notEquals?,in?,truthy?}` conditions evaluated against current
+  values.
+- `combobox` filters its options as the user types. Pair it with `watch:true`
+  and re-rendered `options` for async search; `optionsLoading:true` shows a
+  spinner and `allowCustom:true` accepts a value outside the option list.
+- Text validation supports `minLength`, `maxLength`, `pattern`, and an optional
+  `validationMessage`, in addition to `required` and number `min`/`max`.
 - `"watch": true` sends you `{"type":"change","id",<values>}` on every change of
   that field — re-render the form to update dependent dropdowns.
 - `buttons` replaces the single CTA with several; the `submit` message then
@@ -719,6 +759,27 @@ restores when the plugin exits. Set `"preview": {"enabled": true, "wide": false}
 on the **frame** to keep the normal launcher width. A `wide` field inside an
 item's `preview` is ignored because item previews contain content only. (The
 frame preview is ignored for `detail` and `form` views.)
+
+### kanban
+
+Horizontal workflow columns with draggable cards. Declare columns in
+`kanban.columns`; cards are normal items with a `column` id (`section` is an
+accepted fallback). A drop sends
+`{"type":"kanbanMove","id","columnId","index","rev",...scope}`. Re-render
+the complete board after applying the move.
+
+### diff
+
+Selectable source comparison in `unified` or `split` mode. `diff.text` accepts
+a unified-diff string. For precise line numbers use
+`diff.lines:[{type:"add"|"remove"|"context"|"header",text,oldLine?,newLine?}]`.
+
+### log
+
+Dense selectable output for builds, services, and diagnostics. `log.lines` may
+contain strings or `{id?,timestamp?,level?,source?,text}` objects. With
+`follow:true` the view stays at the end while the user is already following it;
+scrolling upward detaches. `wrap:false` keeps each line compact.
 
 ---
 

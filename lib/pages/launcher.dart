@@ -214,7 +214,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   late final LauncherPluginHost _pluginHost = LauncherPluginHost(onFrame: _onPluginFrame, onCommand: _onPluginCommand);
   PluginManifest? _activePlugin;
   PluginRenderFrame? _pluginFrame;
-  final Set<String> _pluginSelectedIds = <String>{};
+  final Map<String, Set<String>> _pluginSelectedIdsByScope = <String, Set<String>>{};
+  final Map<String, String> _pluginPageSelectionIds = <String, String>{};
+  final List<String> _pluginPageHistory = <String>[];
   Timer? _pluginQueryDebounce;
 
   PluginAction get _launcherWindowAction => PluginAction(
@@ -526,6 +528,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
     if (switching) {
       _pluginSubmitPending = false;
+      _pluginSelectedIdsByScope.clear();
+      _pluginPageSelectionIds.clear();
+      _pluginPageHistory.clear();
       setState(() {
         _searchMode = LauncherSearchMode.mixed;
         _isSearching = true;
@@ -557,6 +562,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _pluginToastTimer = null;
     if (_activePlugin == null && _pluginFrame == null) return;
     _activePlugin = null;
+    _pluginSelectedIdsByScope.clear();
+    _pluginPageSelectionIds.clear();
+    _pluginPageHistory.clear();
     Globals.isLauncherPluginActive = false;
     unawaited(_pluginHost.deactivate());
     _restorePluginWindowWidth();
@@ -581,28 +589,40 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   void _onPluginFrame(PluginRenderFrame frame) {
     if (!mounted || _activePlugin == null) return;
     final PluginRenderFrame? previous = _pluginFrame;
-    final bool wasForm = previous?.view == PluginViewType.form;
+    final bool wasForm = previous?.view == PluginViewType.form ||
+        (previous?.view == PluginViewType.dashboard &&
+            previous!.dashboardPanels.any((PluginDashboardPanel panel) => panel.frame.view == PluginViewType.form));
     // Streaming `detail.append` frames carry only the new chunk — resolve them
     // against the markdown currently on screen before rendering.
     if (frame.detailAppend != null) {
       frame = frame.resolveAppend(previous?.view == PluginViewType.detail ? previous?.detailMarkdown : null);
     }
+    if (previous?.page != null && previous!.items.isNotEmpty) {
+      final int oldIndex = _activeIndexNotifier.value.clamp(0, previous.items.length - 1);
+      _pluginPageSelectionIds[previous.page!.id] = previous.items[oldIndex].id;
+    }
+    _updatePluginPageHistory(previous, frame);
     // A different item set means a new screen (drill-in) or a fresh search:
     // snap the selection back to the first row so it matches what's shown and
     // arrow keys start from there. Same-id re-renders (e.g. a background badge
     // refresh) keep the cursor where the user left it. A frame carrying
     // `selectId` picks its own highlight instead.
-    final bool sameItemSet = previous != null && _sameItemIds(previous.items, frame.items);
+    final bool sameItemSet =
+        previous != null && previous.page?.id == frame.page?.id && _sameItemIds(previous.items, frame.items);
     setState(() {
       _pluginFrame = frame;
-      if (!frame.multiSelect) _pluginSelectedIds.clear();
-      _pluginSelectedIds.removeWhere((String id) => !frame.items.any((PluginItem item) => item.id == id));
+      _prunePluginSelections(frame);
       _isSearching = frame.loading;
       final int count = frame.items.length;
       final int selectIdIndex =
           frame.selectId == null ? -1 : frame.items.indexWhere((PluginItem item) => item.id == frame.selectId);
+      final String? restoredId = frame.page == null ? null : _pluginPageSelectionIds[frame.page!.id];
+      final int restoredIndex =
+          restoredId == null ? -1 : frame.items.indexWhere((PluginItem item) => item.id == restoredId);
       if (selectIdIndex >= 0) {
         _activeIndexNotifier.value = selectIdIndex;
+      } else if (restoredIndex >= 0) {
+        _activeIndexNotifier.value = restoredIndex;
       } else if (count == 0 || !sameItemSet) {
         _activeIndexNotifier.value = 0;
       } else if (_activeIndexNotifier.value >= count) {
@@ -616,12 +636,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       _pluginSubmitPending = false;
       if (frame.items.isNotEmpty) {
         _activeIndexNotifier.value = 0;
-        _pluginHost.sendAction(frame.items.first.id, 'default');
+        _pluginHost.sendAction(frame.items.first.id, 'default', scope: frame.scope());
       }
     }
     // Leaving a form view: the form's field held focus, hand it back to the
     // search box so typing works again.
-    if (wasForm && frame.view != PluginViewType.form) _requestLauncherFocus();
+    final bool isForm = frame.view == PluginViewType.form ||
+        (frame.view == PluginViewType.dashboard &&
+            frame.dashboardPanels.any((PluginDashboardPanel panel) => panel.frame.view == PluginViewType.form));
+    if (wasForm && !isForm) _requestLauncherFocus();
     _applyPluginWindowWidth(frame.wantsWideWindow);
   }
 
@@ -635,20 +658,83 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     return true;
   }
 
+  void _updatePluginPageHistory(PluginRenderFrame? previous, PluginRenderFrame next) {
+    final String? pageId = next.page?.id;
+    if (pageId == null) return;
+    if (_pluginPageHistory.isEmpty) {
+      _pluginPageHistory.add(pageId);
+      return;
+    }
+    if (_pluginPageHistory.last == pageId) return;
+    final int existing = _pluginPageHistory.lastIndexOf(pageId);
+    if (existing >= 0) {
+      _pluginPageHistory.removeRange(existing + 1, _pluginPageHistory.length);
+      return;
+    }
+    if (next.page!.history == 'replace') {
+      _pluginPageHistory[_pluginPageHistory.length - 1] = pageId;
+    } else if (next.page!.history == 'push' || previous?.page == null) {
+      _pluginPageHistory.add(pageId);
+    }
+  }
+
+  PluginEventScope get _topPluginScope => _pluginFrame?.scope() ?? const PluginEventScope();
+
+  bool get _pluginCanGoBack => (_pluginFrame?.canGoBack ?? false) || _pluginPageHistory.length > 1;
+
+  Set<String> _selectedIdsFor(PluginEventScope scope) =>
+      _pluginSelectedIdsByScope.putIfAbsent(scope.key, () => <String>{});
+
+  PluginRenderFrame? _frameForScope(PluginEventScope scope) {
+    final PluginRenderFrame? frame = _pluginFrame;
+    if (frame == null || scope.panelId == null) return frame;
+    for (final PluginDashboardPanel panel in frame.dashboardPanels) {
+      if (panel.id == scope.panelId) return panel.frame;
+    }
+    return frame;
+  }
+
+  void _prunePluginSelections(PluginRenderFrame frame) {
+    final List<(PluginEventScope, PluginRenderFrame)> scopes = <(PluginEventScope, PluginRenderFrame)>[
+      (frame.scope(), frame)
+    ];
+    for (final PluginDashboardPanel panel in frame.dashboardPanels) {
+      scopes.add((
+        PluginEventScope(pageId: frame.page?.id, panelId: panel.id, elementId: panel.frame.elementId),
+        panel.frame,
+      ));
+    }
+    final Set<String> liveKeys = scopes
+        .map(((PluginEventScope, PluginRenderFrame) entry) => entry.$1.key)
+        .toSet();
+    _pluginSelectedIdsByScope.removeWhere((String key, Set<String> value) => !liveKeys.contains(key));
+    for (final (PluginEventScope scope, PluginRenderFrame scopedFrame) in scopes) {
+      final Set<String> selected = _selectedIdsFor(scope);
+      if (!scopedFrame.multiSelect) selected.clear();
+      selected.removeWhere((String id) => !scopedFrame.items.any((PluginItem item) => item.id == id));
+    }
+  }
+
+  void _sendPluginBack() {
+    final String? from = _pluginFrame?.page?.id;
+    final String? to = _pluginPageHistory.length > 1 ? _pluginPageHistory[_pluginPageHistory.length - 2] : null;
+    _pluginHost.sendBack(fromPageId: from, toPageId: to, scope: _topPluginScope);
+  }
+
   /// Form view submit: forwards the field values to the plugin.
-  void _onPluginFormSubmit(Map<String, Object?> values, {String? button}) {
-    _pluginHost.sendFormSubmit(values, button: button);
+  void _onPluginFormSubmit(PluginEventScope scope, Map<String, Object?> values, {String? button}) {
+    _pluginHost.sendFormSubmit(values, button: button, scope: scope);
   }
 
   /// Form view: a `watch: true` field changed (dependent dropdowns).
-  void _onPluginFormChange(String fieldId, Map<String, Object?> values) {
-    _pluginHost.sendFormChange(fieldId, values);
+  void _onPluginFormChange(PluginEventScope scope, String fieldId, Map<String, Object?> values) {
+    _pluginHost.sendFormChange(fieldId, values, scope: scope);
   }
 
   /// Form view Escape: back when the frame declared canGoBack, otherwise exit.
-  void _onPluginFormCancel() {
-    if (_pluginFrame?.canGoBack == true) {
-      _pluginHost.sendBack();
+  void _onPluginFormCancel(PluginEventScope scope) {
+    if (_pluginCanGoBack) {
+      _sendPluginBack();
       return;
     }
     _exitPlugin();
@@ -843,7 +929,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final PluginRenderFrame? frame = _pluginFrame;
     if (frame == null || index < 0 || index >= frame.items.length) return;
     _activeIndexNotifier.value = index;
-    _pluginHost.sendSelect(frame.items[index].id);
+    if (frame.page != null) _pluginPageSelectionIds[frame.page!.id] = frame.items[index].id;
+    _pluginHost.sendSelect(frame.items[index].id, scope: frame.scope());
   }
 
   /// Fires the default action for the selected plugin item (Enter / tap).
@@ -856,7 +943,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       final String text = PluginRegistry.queryAfterKeyword(_controller.text, plugin);
       if (text.trim().isNotEmpty && text != _pluginLastSubmittedQuery) {
         _pluginLastSubmittedQuery = text;
-        _pluginHost.sendSubmitQuery(text);
+        _pluginHost.sendSubmitQuery(text, scope: _topPluginScope);
         // A submit-mode frame is a chat-style composer. Reset it immediately
         // so the next Enter sends a new message instead of an item action.
         _controller.value = TextEditingValue(
@@ -873,7 +960,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final PluginRenderFrame? selectionFrame = _pluginFrame;
     if (selectionFrame?.multiSelect == true && selectionFrame!.items.isNotEmpty) {
       final int index = _activeIndexNotifier.value.clamp(0, selectionFrame.items.length - 1);
-      _togglePluginSelection(selectionFrame.items[index].id);
+      _togglePluginSelection(selectionFrame.scope(), selectionFrame.items[index].id);
       return;
     }
     // A query keystroke is still waiting out its debounce: the visible frame
@@ -889,22 +976,22 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final PluginRenderFrame? frame = _pluginFrame;
     if (frame == null || frame.items.isEmpty) return;
     final int idx = _activeIndexNotifier.value.clamp(0, frame.items.length - 1);
-    _submitPluginItemAction(frame.items[idx]);
+    _submitPluginItemAction(frame.items[idx], scope: frame.scope());
   }
 
-  void _submitPluginItemAction(PluginItem item) {
+  void _submitPluginItemAction(PluginItem item, {required PluginEventScope scope}) {
     // Enter fires "default"; when the item *lists* a default action with a
     // confirm/destructive gate, honor it.
     PluginAction? declared;
     for (final PluginAction action in item.actions) {
       if (action.id == 'default') declared = action;
     }
-    _firePluginAction(item.id, declared ?? const PluginAction(id: 'default', title: ''));
+    _firePluginAction(scope, item.id, declared ?? const PluginAction(id: 'default', title: ''));
   }
 
   /// Central action dispatch: shows the action's confirm gate (if any), then
   /// forwards it to the plugin. [itemId] is empty for frame-level actions.
-  Future<void> _firePluginAction(String itemId, PluginAction action) async {
+  Future<void> _firePluginAction(PluginEventScope scope, String itemId, PluginAction action) async {
     Map<String, Object?>? parameters;
     if (action.parameters.isNotEmpty) {
       parameters = await showModalBottomSheet<Map<String, Object?>>(
@@ -916,11 +1003,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       );
       if (parameters == null || _activePlugin == null) return;
     }
-    final List<String> ids = _pluginFrame?.multiSelect == true && _pluginSelectedIds.isNotEmpty
-        ? _pluginSelectedIds.toList(growable: false)
+    final PluginRenderFrame? scopedFrame = _frameForScope(scope);
+    final Set<String> selectedIds = _selectedIdsFor(scope);
+    final List<String> ids = scopedFrame?.multiSelect == true && selectedIds.isNotEmpty
+        ? selectedIds.toList(growable: false)
         : const <String>[];
     if (action.confirm == null) {
-      _pluginHost.sendAction(itemId, action.id, ids: ids, parameters: parameters);
+      _pluginHost.sendAction(itemId, action.id, ids: ids, parameters: parameters, scope: scope);
       return;
     }
     showModalBottomSheet<bool>(
@@ -931,19 +1020,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       builder: (_) => PluginConfirmPanel(action: action),
     ).then((bool? confirmed) {
       if (confirmed == true && _activePlugin != null) {
-        _pluginHost.sendAction(itemId, action.id, ids: ids, parameters: parameters);
+        _pluginHost.sendAction(itemId, action.id, ids: ids, parameters: parameters, scope: scope);
       }
     });
   }
 
-  void _togglePluginSelection(String id) {
-    final PluginRenderFrame? frame = _pluginFrame;
+  void _togglePluginSelection(PluginEventScope scope, String id) {
+    final PluginRenderFrame? frame = _frameForScope(scope);
     if (frame?.multiSelect != true) return;
+    final Set<String> selectedIds = _selectedIdsFor(scope);
     setState(() {
-      if (_pluginSelectedIds.contains(id)) {
-        _pluginSelectedIds.remove(id);
-      } else if (frame!.multiSelectMax == null || _pluginSelectedIds.length < frame.multiSelectMax!) {
-        _pluginSelectedIds.add(id);
+      if (selectedIds.contains(id)) {
+        selectedIds.remove(id);
+      } else if (frame!.multiSelectMax == null || selectedIds.length < frame.multiSelectMax!) {
+        selectedIds.add(id);
       }
     });
   }
@@ -972,7 +1062,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         launcherWindowAction: _launcherWindowAction,
         onLauncherWindowSelected: _handleLauncherWindowAction,
         onSelected: (PluginAction action, {required bool isFrameAction}) =>
-            _firePluginAction(isFrameAction ? '' : (item?.id ?? ''), action),
+            _firePluginAction(frame.scope(), isFrameAction ? '' : (item?.id ?? ''), action),
         readmeAction:
             hasReadme ? const PluginAction(id: '__readme__', title: 'Read README.md', icon: 'description') : null,
         onReadmeSelected: hasReadme ? () => _openPluginReadme(plugin!, readme!) : null,
@@ -1013,14 +1103,14 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     for (final PluginAction action in item?.actions ?? const <PluginAction>[]) {
       final PluginShortcut? shortcut = PluginShortcut.parse(action.shortcut);
       if (shortcut != null && shortcut.matches(event)) {
-        _firePluginAction(item!.id, action);
+        _firePluginAction(frame.scope(), item!.id, action);
         return true;
       }
     }
     for (final PluginAction action in frame.frameActions) {
       final PluginShortcut? shortcut = PluginShortcut.parse(action.shortcut);
       if (shortcut != null && shortcut.matches(event)) {
-        _firePluginAction('', action);
+        _firePluginAction(frame.scope(), '', action);
         return true;
       }
     }
@@ -1074,8 +1164,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       // A frame that declared canGoBack owns Escape: the plugin renders its
       // previous screen. Root frames exit the plugin as usual.
       if (event is KeyDownEvent) {
-        if (frame.canGoBack) {
-          _pluginHost.sendBack();
+        if (_pluginCanGoBack) {
+          _sendPluginBack();
         } else {
           _exitPlugin();
         }
@@ -1089,7 +1179,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       if (event is KeyDownEvent) {
         final int count = frame.items.length;
         final String id = count == 0 ? '' : frame.items[_activeIndexNotifier.value.clamp(0, count - 1)].id;
-        _pluginHost.sendTab(id);
+        _pluginHost.sendTab(id, scope: frame.scope());
       }
       return KeyEventResult.handled;
     }
@@ -1103,7 +1193,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         HardwareKeyboard.instance.isControlPressed &&
         frame.multiSelect &&
         frame.items.isNotEmpty) {
-      _togglePluginSelection(frame.items[_activeIndexNotifier.value.clamp(0, frame.items.length - 1)].id);
+      _togglePluginSelection(
+          frame.scope(), frame.items[_activeIndexNotifier.value.clamp(0, frame.items.length - 1)].id);
       return KeyEventResult.handled;
     }
 
@@ -1191,33 +1282,40 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                 frame: frame,
                 activeIndex: activeIndex,
                 isRepeating: isRepeating,
-                onTapItem: (PluginRenderFrame sourceFrame, int i) {
+                onTapItem: (PluginEventScope scope, PluginRenderFrame sourceFrame, int i) {
                   final PluginItem item = sourceFrame.items[i];
                   if (identical(sourceFrame, frame)) {
                     _setPluginSelection(i);
                     _submitPluginItem();
                   } else {
-                    _submitPluginItemAction(item);
+                    _submitPluginItemAction(item, scope: scope);
                   }
                 },
-                onHoverItem: (PluginRenderFrame sourceFrame, int i) {
+                onHoverItem: (PluginEventScope scope, PluginRenderFrame sourceFrame, int i) {
                   if (identical(sourceFrame, frame)) {
                     _setPluginSelection(i);
                   } else {
-                    _pluginHost.sendSelect(sourceFrame.items[i].id);
+                    _pluginHost.sendSelect(sourceFrame.items[i].id, scope: scope);
                   }
                 },
                 onFormSubmit: _onPluginFormSubmit,
                 onFormCancel: _onPluginFormCancel,
                 onFormChange: _onPluginFormChange,
-                onLoadMore: _pluginHost.sendLoadMore,
-                onEmptyAction: (PluginAction action) => _firePluginAction('', action),
+                onLoadMore: (PluginEventScope scope) => _pluginHost.sendLoadMore(scope: scope),
+                onEmptyAction: (PluginEventScope scope, PluginAction action) => _firePluginAction(scope, '', action),
                 onMetadataAction: _firePluginAction,
-                selectedIds: _pluginSelectedIds,
+                selectedIdsFor: _selectedIdsFor,
                 onToggleSelection: _togglePluginSelection,
-                onToggleTree: (String id, bool expanded) => _pluginHost.sendToggle(id, expanded),
-                onChartSelect: _pluginHost.sendChartSelect,
-                onCancelOperation: _pluginHost.sendCancel,
+                onToggleTree: (PluginEventScope scope, String id, bool expanded) =>
+                    _pluginHost.sendToggle(id, expanded, scope: scope),
+                onChartSelect: (PluginEventScope scope, String seriesId, int index, double value) =>
+                    _pluginHost.sendChartSelect(seriesId, index, value, scope: scope),
+                onCancelOperation: (PluginEventScope scope, String id) => _pluginHost.sendCancel(id, scope: scope),
+                onNavigate: (String targetPageId) => _pluginHost.sendNavigate(targetPageId, scope: frame.scope()),
+                onNavigateBack: _sendPluginBack,
+                canNavigateBack: _pluginCanGoBack,
+                onKanbanMove: (PluginEventScope scope, String id, String columnId, int index) =>
+                    _pluginHost.sendKanbanMove(id, columnId, index, scope: scope),
                 onOpenActions: _openPluginActions,
                 onMarkdownKeyEvent: _handlePluginKey,
                 onItemNavigation: _requestPluginNavigationFocus,
@@ -1708,6 +1806,14 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   @override
   void requestQuickMenuFocus() => _requestLauncherFocus(focusWindow: true);
 
+  bool get _pluginOwnsFormFocus {
+    final PluginRenderFrame? frame = _pluginFrame;
+    if (_activePlugin == null || frame == null) return false;
+    return frame.view == PluginViewType.form ||
+        (frame.view == PluginViewType.dashboard &&
+            frame.dashboardPanels.any((PluginDashboardPanel panel) => panel.frame.view == PluginViewType.form));
+  }
+
   bool get _canFocusLauncher {
     if (!mounted) return false;
     if (!QuickMenuFunctions.isQuickMenuVisible) return false;
@@ -1715,7 +1821,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     if (Navigator.of(context).canPop()) return false;
     // A plugin form owns focus while it is shown — the search field must not
     // steal keystrokes back from its inputs.
-    if (_activePlugin != null && _pluginFrame?.view == PluginViewType.form) return false;
+    if (_pluginOwnsFormFocus) return false;
     // Plugin markdown (detail view or the split preview pane) is wrapped in a
     // SelectionArea so users can select/copy text with the mouse. That widget
     // grabs focus on tap-drag; auto-reclaiming focus for the search field
@@ -1744,9 +1850,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   /// Opening a plugin item is distinct from selecting markdown in its detail
   /// view: item navigation must restore the launcher's keyboard shortcuts.
   void _requestPluginNavigationFocus() {
-    if (!mounted || _activePlugin == null || _pluginFrame?.view == PluginViewType.form) return;
+    if (!mounted || _activePlugin == null || _pluginOwnsFormFocus) return;
     void restore() {
-      if (mounted && _activePlugin != null && _pluginFrame?.view != PluginViewType.form) {
+      if (mounted && _activePlugin != null && !_pluginOwnsFormFocus) {
         _resultsFocusNode.requestFocus();
       }
     }

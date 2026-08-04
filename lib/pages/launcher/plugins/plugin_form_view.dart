@@ -32,6 +32,8 @@ class PluginFormView extends StatefulWidget {
     required this.onCancel,
     this.onChanged,
     this.onOpenActions,
+    this.initialValues = const <String, Object?>{},
+    this.onStateChanged,
   });
 
   final PluginForm form;
@@ -49,6 +51,11 @@ class PluginFormView extends StatefulWidget {
   /// Ctrl+K — the launcher opens the frame-level actions palette.
   final VoidCallback? onOpenActions;
 
+  /// Page-state restoration values supplied by [PluginView]. Plugin-declared
+  /// field values remain the fallback for keys that are absent here.
+  final Map<String, Object?> initialValues;
+  final ValueChanged<Map<String, Object?>>? onStateChanged;
+
   @override
   State<PluginFormView> createState() => _PluginFormViewState();
 }
@@ -57,9 +64,12 @@ class _PluginFormViewState extends State<PluginFormView> {
   final Map<String, TextEditingController> _textControllers = <String, TextEditingController>{};
   final Map<String, bool> _checkboxValues = <String, bool>{};
   final Map<String, String?> _dropdownValues = <String, String?>{};
+  final Map<String, String?> _comboboxValues = <String, String?>{};
   final Map<String, String> _pathValues = <String, String>{};
   final Map<String, String> _dateValues = <String, String>{};
   final Map<String, Set<String>> _tagValues = <String, Set<String>>{};
+  final Map<String, FocusNode> _comboboxFocusNodes = <String, FocusNode>{};
+  final Map<String, bool> _sectionExpanded = <String, bool>{};
 
   /// Host-side validation errors, keyed by field id. Cleared per-field on edit.
   final Map<String, String> _localErrors = <String, String>{};
@@ -87,6 +97,9 @@ class _PluginFormViewState extends State<PluginFormView> {
     for (final TextEditingController controller in _textControllers.values) {
       controller.dispose();
     }
+    for (final FocusNode node in _comboboxFocusNodes.values) {
+      node.dispose();
+    }
     _firstFieldFocus.dispose();
     super.dispose();
   }
@@ -98,6 +111,23 @@ class _PluginFormViewState extends State<PluginFormView> {
   bool _isNumber(PluginFormField field) => field.type == 'number';
   bool _isPath(PluginFormField field) => field.type == 'filepicker' || field.type == 'folderpicker';
 
+  PluginFormOption? _optionForValue(PluginFormField field, String value) {
+    for (final PluginFormOption option in field.options) {
+      if (option.value == value) return option;
+    }
+    return null;
+  }
+
+  PluginFormOption? _optionForLabel(PluginFormField field, String label) {
+    for (final PluginFormOption option in field.options) {
+      if (option.label == label) return option;
+    }
+    return null;
+  }
+
+  Object? _initialValue(PluginFormField field) =>
+      widget.initialValues.containsKey(field.id) ? widget.initialValues[field.id] : field.value;
+
   void _syncFieldState({required bool resetAll}) {
     if (resetAll) {
       for (final TextEditingController controller in _textControllers.values) {
@@ -106,38 +136,58 @@ class _PluginFormViewState extends State<PluginFormView> {
       _textControllers.clear();
       _checkboxValues.clear();
       _dropdownValues.clear();
+      _comboboxValues.clear();
       _pathValues.clear();
       _dateValues.clear();
       _tagValues.clear();
+      for (final FocusNode node in _comboboxFocusNodes.values) {
+        node.dispose();
+      }
+      _comboboxFocusNodes.clear();
+      _sectionExpanded.clear();
       _localErrors.clear();
     }
     for (final PluginFormField field in widget.form.fields) {
       if (field.isTextLike || _isNumber(field)) {
         _textControllers.putIfAbsent(field.id, () {
-          final Object? value = field.value;
+          final Object? value = _initialValue(field);
           final String text = value is String ? value : (value is num ? '$value' : '');
           return TextEditingController(text: text);
         });
       } else if (field.type == 'checkbox') {
-        _checkboxValues.putIfAbsent(field.id, () => field.value == true);
+        _checkboxValues.putIfAbsent(field.id, () => _initialValue(field) == true);
       } else if (field.type == 'dropdown') {
-        final String? initial = field.value is String ? field.value as String? : null;
+        final Object? rawInitial = _initialValue(field);
+        final String? initial = rawInitial is String ? rawInitial : null;
         _dropdownValues.putIfAbsent(
           field.id,
           () => field.options.any((PluginFormOption o) => o.value == initial)
               ? initial
               : (field.options.isEmpty ? null : field.options.first.value),
         );
+      } else if (field.type == 'combobox') {
+        final Object? rawInitial = _initialValue(field);
+        final String initial = rawInitial is String ? rawInitial : '';
+        _comboboxValues.putIfAbsent(field.id, () => initial);
+        _textControllers.putIfAbsent(field.id, () {
+          final PluginFormOption? selected = _optionForValue(field, initial);
+          return TextEditingController(text: selected?.label ?? initial);
+        });
       } else if (_isPath(field)) {
-        _pathValues.putIfAbsent(field.id, () => field.value is String ? field.value as String : '');
+        final Object? initial = _initialValue(field);
+        _pathValues.putIfAbsent(field.id, () => initial is String ? initial : '');
       } else if (field.type == 'date') {
-        _dateValues.putIfAbsent(field.id, () => field.value is String ? field.value as String : '');
+        final Object? initial = _initialValue(field);
+        _dateValues.putIfAbsent(field.id, () => initial is String ? initial : '');
       } else if (field.type == 'tags') {
         _tagValues.putIfAbsent(field.id, () {
-          final Object? value = field.value;
+          final Object? value = _initialValue(field);
           return value is List ? value.whereType<String>().toSet() : <String>{};
         });
       }
+    }
+    for (final PluginFormSection section in widget.form.sections) {
+      _sectionExpanded.putIfAbsent(section.id, () => true);
     }
   }
 
@@ -152,6 +202,9 @@ class _PluginFormViewState extends State<PluginFormView> {
         values[field.id] = _checkboxValues[field.id] ?? false;
       } else if (field.type == 'dropdown') {
         values[field.id] = _dropdownValues[field.id];
+      } else if (field.type == 'combobox') {
+        values[field.id] =
+            _comboboxValues[field.id] ?? (field.allowCustom ? _textControllers[field.id]?.text ?? '' : null);
       } else if (_isPath(field)) {
         values[field.id] = _pathValues[field.id] ?? '';
       } else if (field.type == 'date') {
@@ -165,8 +218,11 @@ class _PluginFormViewState extends State<PluginFormView> {
 
   /// A change to [field]: clears its stale error and reports watched fields.
   void _fieldChanged(PluginFormField field) {
-    if (_localErrors.remove(field.id) != null) setState(() {});
-    if (field.watch) widget.onChanged?.call(field.id, _collectValues());
+    _localErrors.remove(field.id);
+    final Map<String, Object?> values = _collectValues();
+    setState(() {});
+    widget.onStateChanged?.call(values);
+    if (field.watch) widget.onChanged?.call(field.id, values);
   }
 
   /// Host-side validation. Returns true when the form may submit.
@@ -174,6 +230,7 @@ class _PluginFormViewState extends State<PluginFormView> {
     final Map<String, Object?> values = _collectValues();
     _localErrors.clear();
     for (final PluginFormField field in widget.form.fields) {
+      if (!_isVisible(field, values) || !_isEnabled(field, values)) continue;
       final Object? value = values[field.id];
       if (_isNumber(field)) {
         final String raw = _textControllers[field.id]?.text.trim() ?? '';
@@ -192,6 +249,27 @@ class _PluginFormViewState extends State<PluginFormView> {
           }
         }
       }
+      if (value is String) {
+        if (field.minLength != null && value.length < field.minLength!) {
+          _localErrors[field.id] = field.validationMessage ?? 'Must be at least ${field.minLength} characters';
+          continue;
+        }
+        if (field.maxLength != null && value.length > field.maxLength!) {
+          _localErrors[field.id] = field.validationMessage ?? 'Must be at most ${field.maxLength} characters';
+          continue;
+        }
+        if (field.pattern != null) {
+          try {
+            if (!RegExp(field.pattern!).hasMatch(value)) {
+              _localErrors[field.id] = field.validationMessage ?? 'Invalid format';
+              continue;
+            }
+          } on FormatException {
+            _localErrors[field.id] = 'Invalid validation pattern';
+            continue;
+          }
+        }
+      }
       if (!field.required) continue;
       final bool empty = value == null ||
           (value is String && value.trim().isEmpty) ||
@@ -205,6 +283,11 @@ class _PluginFormViewState extends State<PluginFormView> {
     }
     return true;
   }
+
+  bool _isVisible(PluginFormField field, Map<String, Object?> values) => field.visibleWhen?.matches(values) ?? true;
+
+  bool _isEnabled(PluginFormField field, Map<String, Object?> values) =>
+      field.enabledWhen?.matches(values) ?? true;
 
   void _submit({String? button}) {
     if (!_validate()) return;
@@ -245,6 +328,10 @@ class _PluginFormViewState extends State<PluginFormView> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(7),
         borderSide: BorderSide(color: hasError ? const Color(0xFFE5534B) : Design.accent.withAlpha(160)),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(7),
+        borderSide: BorderSide(color: Design.text.withAlpha(16)),
       ),
     );
   }
@@ -298,10 +385,10 @@ class _PluginFormViewState extends State<PluginFormView> {
   /// A read-only "value + trailing button" shell shared by date/file/folder
   /// pickers, styled like the text fields.
   Widget _pickerShell(PluginFormField field,
-      {required String value, required IconData icon, required VoidCallback onPick}) {
+      {required String value, required IconData icon, required VoidCallback? onPick}) {
     final bool hasError = _errorFor(field) != null;
     return MouseRegion(
-      cursor: SystemMouseCursors.click,
+      cursor: onPick == null ? SystemMouseCursors.basic : SystemMouseCursors.click,
       child: GestureDetector(
         onTap: onPick,
         child: Container(
@@ -377,8 +464,9 @@ class _PluginFormViewState extends State<PluginFormView> {
     _fieldChanged(field);
   }
 
-  Widget _buildField(PluginFormField field, {required bool autofocus}) {
+  Widget _buildField(PluginFormField field, {required bool autofocus, required bool enabled}) {
     final TextStyle valueStyle = TextStyle(fontSize: 12.5, color: Design.text);
+    final bool interactive = enabled && !field.readOnly;
 
     Widget input;
     if (field.isTextLike || _isNumber(field)) {
@@ -386,14 +474,16 @@ class _PluginFormViewState extends State<PluginFormView> {
         controller: _textControllers[field.id],
         focusNode: autofocus ? _firstFieldFocus : null,
         obscureText: field.type == 'password',
+        enabled: enabled,
+        readOnly: field.readOnly,
         maxLines: field.type == 'textarea' ? 4 : 1,
         keyboardType: _isNumber(field) ? const TextInputType.numberWithOptions(decimal: true, signed: true) : null,
         inputFormatters:
             _isNumber(field) ? <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'[0-9eE+\-.]'))] : null,
         style: valueStyle,
         decoration: _decoration(field),
-        onChanged: (_) => _fieldChanged(field),
-        onSubmitted: field.type == 'textarea' ? null : (_) => _submit(),
+        onChanged: interactive ? (_) => _fieldChanged(field) : null,
+        onSubmitted: field.type == 'textarea' || !interactive ? null : (_) => _submit(),
       );
     } else if (field.type == 'dropdown') {
       input = DropdownButtonFormField<String>(
@@ -402,13 +492,102 @@ class _PluginFormViewState extends State<PluginFormView> {
         isDense: true,
         style: valueStyle,
         decoration: _decoration(field),
+        disabledHint: _dropdownValues[field.id] == null
+            ? null
+            : Text(
+                field.options
+                    .firstWhere((PluginFormOption option) => option.value == _dropdownValues[field.id],
+                        orElse: () =>
+                            PluginFormOption(value: _dropdownValues[field.id]!, label: _dropdownValues[field.id]!))
+                    .label,
+              ),
         items: <DropdownMenuItem<String>>[
           for (final PluginFormOption option in field.options)
             DropdownMenuItem<String>(value: option.value, child: Text(option.label)),
         ],
-        onChanged: (String? value) {
-          setState(() => _dropdownValues[field.id] = value);
+        onChanged: interactive
+            ? (String? value) {
+                setState(() => _dropdownValues[field.id] = value);
+                _fieldChanged(field);
+              }
+            : null,
+      );
+    } else if (field.type == 'combobox') {
+      final FocusNode focusNode = autofocus
+          ? _firstFieldFocus
+          : _comboboxFocusNodes.putIfAbsent(field.id, () => FocusNode(debugLabel: 'plugin-form-${field.id}'));
+      input = RawAutocomplete<PluginFormOption>(
+        textEditingController: _textControllers[field.id],
+        focusNode: focusNode,
+        displayStringForOption: (PluginFormOption option) => option.label,
+        optionsBuilder: (TextEditingValue value) {
+          final String query = value.text.trim().toLowerCase();
+          if (!interactive) return const Iterable<PluginFormOption>.empty();
+          return field.options.where((PluginFormOption option) =>
+              query.isEmpty ||
+              option.label.toLowerCase().contains(query) ||
+              option.value.toLowerCase().contains(query));
+        },
+        onSelected: (PluginFormOption option) {
+          _comboboxValues[field.id] = option.value;
           _fieldChanged(field);
+        },
+        fieldViewBuilder:
+            (BuildContext context, TextEditingController controller, FocusNode node, VoidCallback onFieldSubmitted) {
+          return TextField(
+            controller: controller,
+            focusNode: node,
+            enabled: enabled,
+            readOnly: field.readOnly,
+            style: valueStyle,
+            decoration: _decoration(field).copyWith(
+              suffixIcon: field.optionsLoading
+                  ? Padding(
+                      padding: const EdgeInsets.all(9),
+                      child: SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 1.5, color: Design.accent),
+                      ),
+                    )
+                  : const Icon(Icons.expand_more_rounded, size: 16),
+            ),
+            onChanged: interactive
+                ? (String value) {
+                    final PluginFormOption? exact = _optionForLabel(field, value);
+                    _comboboxValues[field.id] = exact?.value ?? (field.allowCustom ? value : null);
+                    _fieldChanged(field);
+                  }
+                : null,
+            onSubmitted: interactive ? (_) => onFieldSubmitted() : null,
+          );
+        },
+        optionsViewBuilder: (BuildContext context, AutocompleteOnSelected<PluginFormOption> onSelected,
+            Iterable<PluginFormOption> options) {
+          final List<PluginFormOption> visible = options.take(8).toList(growable: false);
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              elevation: 8,
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(7),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420, maxHeight: 240),
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  shrinkWrap: true,
+                  itemCount: visible.length,
+                  itemBuilder: (BuildContext context, int index) => InkWell(
+                    onTap: () => onSelected(visible[index]),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      child: Text(visible[index].label, style: valueStyle),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
         },
       );
     } else if (field.type == 'date') {
@@ -416,14 +595,14 @@ class _PluginFormViewState extends State<PluginFormView> {
         field,
         value: _dateValues[field.id] ?? '',
         icon: Icons.calendar_month_rounded,
-        onPick: () => _pickDate(field),
+        onPick: interactive ? () => _pickDate(field) : null,
       );
     } else if (_isPath(field)) {
       input = _pickerShell(
         field,
         value: _pathValues[field.id] ?? '',
         icon: field.type == 'folderpicker' ? Icons.folder_open_rounded : Icons.file_open_rounded,
-        onPick: () => _pickPath(field),
+        onPick: interactive ? () => _pickPath(field) : null,
       );
     } else if (field.type == 'tags') {
       final Set<String> selected = _tagValues[field.id] ?? <String>{};
@@ -435,13 +614,15 @@ class _PluginFormViewState extends State<PluginFormView> {
             _TagChip(
               label: option.label,
               selected: selected.contains(option.value),
-              onTap: () {
-                setState(() {
-                  selected.contains(option.value) ? selected.remove(option.value) : selected.add(option.value);
-                  _tagValues[field.id] = selected;
-                });
-                _fieldChanged(field);
-              },
+              onTap: interactive
+                  ? () {
+                      setState(() {
+                        selected.contains(option.value) ? selected.remove(option.value) : selected.add(option.value);
+                        _tagValues[field.id] = selected;
+                      });
+                      _fieldChanged(field);
+                    }
+                  : null,
             ),
         ],
       );
@@ -451,10 +632,12 @@ class _PluginFormViewState extends State<PluginFormView> {
       input = MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
-          onTap: () {
-            setState(() => _checkboxValues[field.id] = !checked);
-            _fieldChanged(field);
-          },
+          onTap: interactive
+              ? () {
+                  setState(() => _checkboxValues[field.id] = !checked);
+                  _fieldChanged(field);
+                }
+              : null,
           child: Row(
             children: <Widget>[
               SizedBox(
@@ -464,10 +647,12 @@ class _PluginFormViewState extends State<PluginFormView> {
                   value: checked,
                   focusNode: autofocus ? _firstFieldFocus : null,
                   activeColor: Design.accent,
-                  onChanged: (bool? value) {
-                    setState(() => _checkboxValues[field.id] = value ?? false);
-                    _fieldChanged(field);
-                  },
+                  onChanged: interactive
+                      ? (bool? value) {
+                          setState(() => _checkboxValues[field.id] = value ?? false);
+                          _fieldChanged(field);
+                        }
+                      : null,
                 ),
               ),
               const SizedBox(width: 8),
@@ -499,9 +684,63 @@ class _PluginFormViewState extends State<PluginFormView> {
     );
   }
 
+  List<Widget> _buildFormFields(Map<String, Object?> values) {
+    final Map<String, PluginFormSection> sections = <String, PluginFormSection>{
+      for (final PluginFormSection section in widget.form.sections) section.id: section,
+    };
+    final Set<String> renderedSections = <String>{};
+    final List<Widget> children = <Widget>[];
+    bool assignedAutofocus = false;
+
+    for (final PluginFormField field in widget.form.fields) {
+      if (!_isVisible(field, values)) continue;
+      final PluginFormSection? section = field.section == null ? null : sections[field.section];
+      if (section != null && renderedSections.add(section.id)) {
+        final bool expanded = _sectionExpanded[section.id] ?? true;
+        children.add(
+          Padding(
+            padding: EdgeInsets.only(top: children.isEmpty ? 0 : 5, bottom: 8),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(5),
+              onTap: section.collapsible ? () => setState(() => _sectionExpanded[section.id] = !expanded) : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(children: <Widget>[
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                      Text(section.title,
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Design.text)),
+                      if (section.description.isNotEmpty)
+                        Text(section.description,
+                            style: TextStyle(fontSize: 10.5, height: 1.3, color: Design.text.withAlpha(100))),
+                    ]),
+                  ),
+                  if (section.collapsible)
+                    Icon(expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                        size: 16, color: Design.text.withAlpha(120)),
+                ]),
+              ),
+            ),
+          ),
+        );
+      }
+      if (section != null && !(_sectionExpanded[section.id] ?? true)) continue;
+      final bool autofocus = !assignedAutofocus;
+      assignedAutofocus = true;
+      children.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _buildField(field, autofocus: autofocus, enabled: _isEnabled(field, values)),
+        ),
+      );
+    }
+    return children;
+  }
+
   @override
   Widget build(BuildContext context) {
     final PluginForm form = widget.form;
+    final Map<String, Object?> values = _collectValues();
     return Focus(
       onKeyEvent: _onKey,
       child: WindowsScrollView(
@@ -518,11 +757,23 @@ class _PluginFormViewState extends State<PluginFormView> {
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Design.text),
                   ),
                 ),
-              for (int i = 0; i < form.fields.length; i++)
+              if (form.error != null)
                 Padding(
-                  padding: EdgeInsets.only(bottom: i == form.fields.length - 1 ? 12 : 10),
-                  child: _buildField(form.fields[i], autofocus: i == 0),
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE5534B).withAlpha(18),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFE5534B).withAlpha(70)),
+                    ),
+                    child: Text(form.error!,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFFE5534B))),
+                  ),
                 ),
+              ..._buildFormFields(values),
+              const SizedBox(height: 2),
               Row(
                 children: <Widget>[
                   if (form.buttons.isEmpty)
@@ -558,19 +809,19 @@ class _TagChip extends StatelessWidget {
 
   final String label;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: SystemMouseCursors.click,
+      cursor: onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click,
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 100),
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
           decoration: BoxDecoration(
-            color: selected ? Design.accent.withAlpha(40) : Design.text.withAlpha(10),
+            color: selected ? Design.accent.withAlpha(onTap == null ? 22 : 40) : Design.text.withAlpha(10),
             borderRadius: BorderRadius.circular(6),
             border: Border.all(color: selected ? Design.accent.withAlpha(150) : Design.text.withAlpha(26)),
           ),
