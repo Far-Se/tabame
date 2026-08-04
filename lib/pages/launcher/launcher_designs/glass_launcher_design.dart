@@ -174,10 +174,26 @@ class GlassLauncherFrame extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[child],
-                  ),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(Design.borderRadius),
+                    child: Stack(
+                      children: <Widget>[
+                        if (Design.hasBackdrop) const StableBackdrop(),
+                        child,
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: DateTimeWidget(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
+                  )
                 ],
               ),
             ),

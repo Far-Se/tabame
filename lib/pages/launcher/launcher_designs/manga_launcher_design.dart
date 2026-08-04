@@ -100,6 +100,10 @@ class _MangaLauncherMasthead extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.3)),
             ),
+            DateTimeWidget(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                style: TextStyle(
+                    color: paper, fontSize: Design.baseFontSize - 3, fontWeight: FontWeight.w700, letterSpacing: 1.3)),
           ]),
         ]),
       );

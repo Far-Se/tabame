@@ -171,17 +171,24 @@ class _CommandFooter extends StatelessWidget {
               _KbdHint(label: '→', action: 'actions', accent: accent, onSurface: onSurface),
               const SizedBox(width: 12),
               _KbdHint(label: 'esc', action: 'close', accent: accent, onSurface: onSurface),
-              if (!Globals.isLauncherPluginActive) const Spacer(),
-              if (!Globals.isLauncherPluginActive)
-                Text(
-                  resultCount == 1 ? '1 result' : '$resultCount results',
+              const Spacer(),
+              Text(
+                Globals.isLauncherPluginActive ? "PLUGIN" : (resultCount == 1 ? '1 result' : '$resultCount results'),
+                style: TextStyle(
+                  fontSize: Design.baseFontSize - 1,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.4,
+                  color: onSurface.withAlpha(120),
+                ),
+              ),
+              DateTimeWidget(
+                  padding: const EdgeInsets.only(left: 10),
                   style: TextStyle(
                     fontSize: Design.baseFontSize - 1,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.4,
                     color: onSurface.withAlpha(120),
-                  ),
-                ),
+                  )),
             ],
           ),
         ),

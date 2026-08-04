@@ -95,6 +95,10 @@ class _TechLauncherStatus extends StatelessWidget {
             Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount OBJECTS',
                 style: TextStyle(
                     color: accent.withAlpha(175), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.2)),
+            DateTimeWidget(
+                padding: const EdgeInsets.only(left: 10),
+                style: TextStyle(
+                    color: accent.withAlpha(175), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.2)),
           ],
         ),
       );

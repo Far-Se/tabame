@@ -254,6 +254,15 @@ class _TerminalStatusBar extends StatelessWidget {
               letterSpacing: 0.5,
             ),
           ),
+          DateTimeWidget(
+            padding: const EdgeInsets.only(left: 10),
+            style: TerminalTokens.mono(
+              fontSize: Design.baseFontSize - 1.5,
+              color: accent.withAlpha(180),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
         ],
       ),
     );

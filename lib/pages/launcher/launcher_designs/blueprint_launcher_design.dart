@@ -246,18 +246,28 @@ class _BlueprintTitleBlock extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 1),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.clip,
-            style: BlueprintTokens.tech(
-              fontSize: Design.baseFontSize - 1.5,
-              color: onSurface.withAlpha(220),
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.8,
-              height: 1.1,
-            ),
-          ),
+          value == "TIME"
+              ? DateTimeWidget(
+                  // padding: const EdgeInsets.only(left: 10),
+                  style: BlueprintTokens.tech(
+                  fontSize: Design.baseFontSize - 1.5,
+                  color: onSurface.withAlpha(220),
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.8,
+                  height: 1.1,
+                ))
+              : Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  style: BlueprintTokens.tech(
+                    fontSize: Design.baseFontSize - 1.5,
+                    color: onSurface.withAlpha(220),
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.8,
+                    height: 1.1,
+                  ),
+                ),
         ],
       ),
     );
@@ -279,8 +289,12 @@ class _BlueprintTitleBlock extends StatelessWidget {
             _cell('ENTER', 'OPEN'),
             divider,
             _cell('ESC', 'CLOSE'),
-            if (!Globals.isLauncherPluginActive) divider,
-            if (!Globals.isLauncherPluginActive) _cell('QTY', resultCount.toString().padLeft(2, '0')),
+            divider,
+            Globals.isLauncherPluginActive
+                ? _cell('TPY', "PLUGIN")
+                : _cell('QTY', resultCount.toString().padLeft(2, '0')),
+            divider,
+            _cell('TIME', 'TIME'),
           ],
         ),
       ),

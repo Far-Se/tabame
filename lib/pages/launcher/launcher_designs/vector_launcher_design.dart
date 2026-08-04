@@ -58,6 +58,11 @@ class VectorLauncherFrame extends StatelessWidget {
                   Text(resultCount.toString().padLeft(3, '0'),
                       style: TextStyle(
                           color: accent.withAlpha(190), fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
+                  DateTimeWidget(
+                    padding: const EdgeInsets.only(left: 10),
+                    style: TextStyle(
+                        color: accent.withAlpha(190), fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4),
+                  ),
                 ]),
               ),
               child,

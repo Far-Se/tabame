@@ -108,6 +108,11 @@ class Outrun2LauncherFrame extends StatelessWidget {
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 1.4)),
+                  DateTimeWidget(
+                    padding: const EdgeInsets.only(left: 10),
+                    style: TextStyle(
+                        color: onSurface.withAlpha(145), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.4),
+                  ),
                 ]),
               ),
               child,

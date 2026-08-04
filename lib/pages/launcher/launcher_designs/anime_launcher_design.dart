@@ -71,6 +71,9 @@ class AnimeLauncherFrame extends StatelessWidget {
                         const Spacer(),
                         Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount MATCHES',
                             style: TextStyle(fontSize: 10, color: onSurface.withAlpha(150))),
+                        DateTimeWidget(
+                            padding: const EdgeInsets.only(left: 10),
+                            style: TextStyle(fontSize: 10, color: onSurface.withAlpha(150))),
                       ],
                     ),
                   ),

@@ -10,7 +10,7 @@ BoxDecoration windows98LauncherOuterDecoration() {
       bottom: BorderSide(color: Windows98Tokens.dark, width: 2),
     ),
     boxShadow: <BoxShadow>[
-      BoxShadow(color: Color(0x66000000), offset: Offset(4, 5), blurRadius: 0),
+      const BoxShadow(color: Color(0x66000000), offset: Offset(4, 5), blurRadius: 0),
     ],
   );
 }
@@ -223,15 +223,27 @@ class _Windows98Footer extends StatelessWidget {
                 raised: false,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(5, 3, 5, 3),
-                  child: Text(
-                    Globals.isLauncherPluginActive
-                        ? "PLUGIN"
-                        : (resultCount == 1 ? '1 object' : '$resultCount objects'),
-                    style: Windows98Tokens.system(
-                      fontSize: Design.baseFontSize - 1,
-                      color: Windows98Tokens.foreground,
-                      height: 1,
-                    ),
+                  child: Row(
+                    children: <Widget>[
+                      DateTimeWidget(
+                        padding: const EdgeInsets.only(right: 10),
+                        style: Windows98Tokens.system(
+                          fontSize: Design.baseFontSize - 1,
+                          color: Windows98Tokens.foreground,
+                          height: 1,
+                        ),
+                      ),
+                      Text(
+                        Globals.isLauncherPluginActive
+                            ? "PLUGIN"
+                            : (resultCount == 1 ? '1 object' : '$resultCount objects'),
+                        style: Windows98Tokens.system(
+                          fontSize: Design.baseFontSize - 1,
+                          color: Windows98Tokens.foreground,
+                          height: 1,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -301,8 +313,8 @@ class _Windows98EtchedLine extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        ColoredBox(color: Windows98Tokens.shadow, child: SizedBox(height: 1, width: double.infinity)),
-        ColoredBox(color: Windows98Tokens.light, child: SizedBox(height: 1, width: double.infinity)),
+        ColoredBox(color: Windows98Tokens.shadow, child: const SizedBox(height: 1, width: double.infinity)),
+        ColoredBox(color: Windows98Tokens.light, child: const SizedBox(height: 1, width: double.infinity)),
       ],
     );
   }

@@ -208,6 +208,15 @@ class _TransitFooter extends StatelessWidget {
               letterSpacing: 1.2,
             ),
           ),
+          DateTimeWidget(
+            padding: const EdgeInsets.only(left: 10),
+            style: TransitTokens.sign(
+              fontSize: Design.baseFontSize - 1,
+              color: TransitTokens.dim(isDark),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
         ],
       ),
     );

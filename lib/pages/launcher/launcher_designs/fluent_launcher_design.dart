@@ -186,6 +186,14 @@ class _FluentFooter extends StatelessWidget {
               fontWeight: FontWeight.w400,
             ),
           ),
+          DateTimeWidget(
+            padding: const EdgeInsets.only(left: 10),
+            style: FluentTokens.segoe(
+              fontSize: Design.baseFontSize - 1,
+              color: FluentTokens.dim(isDark),
+              fontWeight: FontWeight.w400,
+            ),
+          ),
         ],
       ),
     );

@@ -376,6 +376,15 @@ class _OrbitTelemetryFooter extends StatelessWidget {
               letterSpacing: 1.2,
             ),
           ),
+          DateTimeWidget(
+            padding: const EdgeInsets.only(left: 10),
+            style: OrbitTokens.tele(
+              fontSize: Design.baseFontSize - 1,
+              color: accent.withAlpha(190),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
         ],
       ),
     );

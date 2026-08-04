@@ -217,6 +217,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   final Map<String, Set<String>> _pluginSelectedIdsByScope = <String, Set<String>>{};
   final Map<String, String> _pluginPageSelectionIds = <String, String>{};
   final List<String> _pluginPageHistory = <String>[];
+  String? _pluginKeyboardSelectedItemId;
+  int _pluginKeyboardSelectedIndex = 0;
   Timer? _pluginQueryDebounce;
 
   PluginAction get _launcherWindowAction => PluginAction(
@@ -528,6 +530,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
     if (switching) {
       _pluginSubmitPending = false;
+      _pluginKeyboardSelectedItemId = null;
+      _pluginKeyboardSelectedIndex = 0;
       _pluginSelectedIdsByScope.clear();
       _pluginPageSelectionIds.clear();
       _pluginPageHistory.clear();
@@ -558,6 +562,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _pluginQueryDebounce?.cancel();
     _pluginSubmitPending = false;
     _pluginLastSubmittedQuery = null;
+    _pluginKeyboardSelectedItemId = null;
+    _pluginKeyboardSelectedIndex = 0;
     _pluginToastTimer?.cancel();
     _pluginToastTimer = null;
     if (_activePlugin == null && _pluginFrame == null) return;
@@ -609,6 +615,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     // `selectId` picks its own highlight instead.
     final bool sameItemSet =
         previous != null && previous.page?.id == frame.page?.id && _sameItemIds(previous.items, frame.items);
+    final bool keepKeyboardSelection = previous != null &&
+        previous.page?.id == frame.page?.id &&
+        _hasKeyboardNavigatedCurrentQuery &&
+        _pluginKeyboardSelectedItemId != null;
     setState(() {
       _pluginFrame = frame;
       _prunePluginSelections(frame);
@@ -619,10 +629,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       final String? restoredId = frame.page == null ? null : _pluginPageSelectionIds[frame.page!.id];
       final int restoredIndex =
           restoredId == null ? -1 : frame.items.indexWhere((PluginItem item) => item.id == restoredId);
+      final int keyboardSelectedIndex = !keepKeyboardSelection
+          ? -1
+          : frame.items.indexWhere((PluginItem item) => item.id == _pluginKeyboardSelectedItemId);
       if (selectIdIndex >= 0) {
         _activeIndexNotifier.value = selectIdIndex;
       } else if (restoredIndex >= 0) {
         _activeIndexNotifier.value = restoredIndex;
+      } else if (keepKeyboardSelection && count > 0) {
+        _activeIndexNotifier.value =
+            keyboardSelectedIndex >= 0 ? keyboardSelectedIndex : _pluginKeyboardSelectedIndex.clamp(0, count - 1);
+        _pluginKeyboardSelectedIndex = _activeIndexNotifier.value;
       } else if (count == 0 || !sameItemSet) {
         _activeIndexNotifier.value = 0;
       } else if (_activeIndexNotifier.value >= count) {
@@ -923,10 +940,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   }
 
   /// Moves the plugin selection and notifies the script (drives the preview).
-  void _setPluginSelection(int index) {
+  void _setPluginSelection(int index, {bool fromKeyboard = false}) {
     final PluginRenderFrame? frame = _pluginFrame;
     if (frame == null || index < 0 || index >= frame.items.length) return;
     _activeIndexNotifier.value = index;
+    if (fromKeyboard) {
+      _hasKeyboardNavigatedCurrentQuery = true;
+      _pluginKeyboardSelectedItemId = frame.items[index].id;
+      _pluginKeyboardSelectedIndex = index;
+    }
     if (frame.page != null) _pluginPageSelectionIds[frame.page!.id] = frame.items[index].id;
     _pluginHost.sendSelect(frame.items[index].id, scope: frame.scope());
   }
@@ -1242,7 +1264,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       return KeyEventResult.ignored;
     }
 
-    _setPluginSelection(index);
+    _setPluginSelection(index, fromKeyboard: true);
     return KeyEventResult.handled;
   }
 
@@ -1631,6 +1653,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final int current = _activeIndexNotifier.value.clamp(0, items.length - 1);
     _setPluginSelection(
       key == LogicalKeyboardKey.arrowUp ? (current - 1 + items.length) % items.length : (current + 1) % items.length,
+      fromKeyboard: true,
     );
   }
 
@@ -2139,6 +2162,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     if (query != _keyboardNavigationQuery) {
       _keyboardNavigationQuery = query;
       _hasKeyboardNavigatedCurrentQuery = false;
+      _pluginKeyboardSelectedItemId = null;
+      _pluginKeyboardSelectedIndex = 0;
     }
 
     // Plugin routing takes precedence: a keyword owns the launcher until the

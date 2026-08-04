@@ -146,14 +146,28 @@ class _ZenFooter extends StatelessWidget {
             alignment: Alignment.bottomCenter,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 7),
-              child: Text(
-                Globals.isLauncherPluginActive ? "PLUGIN" : (resultCount == 0 ? 'breathe' : '$resultCount found'),
-                style: ZenTokens.soft(
-                  fontSize: Design.baseFontSize - 1,
-                  color: onSurface.withAlpha(120),
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 1.2,
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Text(
+                    Globals.isLauncherPluginActive ? "PLUGIN" : (resultCount == 0 ? 'breathe' : '$resultCount found'),
+                    style: ZenTokens.soft(
+                      fontSize: Design.baseFontSize - 1,
+                      color: onSurface.withAlpha(120),
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  DateTimeWidget(
+                    padding: const EdgeInsets.only(left: 10),
+                    style: ZenTokens.soft(
+                      fontSize: Design.baseFontSize - 1,
+                      color: onSurface.withAlpha(120),
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

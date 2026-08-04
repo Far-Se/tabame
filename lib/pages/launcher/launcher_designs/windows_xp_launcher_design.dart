@@ -311,6 +311,13 @@ class _WindowsXpFooter extends StatelessWidget {
               color: const Color(0xFFDDE9FF),
             ),
           ),
+          DateTimeWidget(
+            padding: const EdgeInsets.only(left: 10),
+            style: WindowsXpTokens.tahoma(
+              fontSize: Design.baseFontSize - 1,
+              color: const Color(0xFFDDE9FF),
+            ),
+          ),
         ],
       ),
     );

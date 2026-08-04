@@ -55,6 +55,14 @@ class CyberLauncherFrame extends StatelessWidget {
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 1.1)),
+                    DateTimeWidget(
+                      padding: const EdgeInsets.only(left: 10),
+                      style: TextStyle(
+                          color: onSurface.withAlpha(125),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.1),
+                    ),
                   ]),
                 ),
                 child,

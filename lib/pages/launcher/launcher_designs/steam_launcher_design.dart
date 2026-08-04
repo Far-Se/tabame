@@ -82,7 +82,17 @@ class SteamLauncherFrame extends StatelessWidget {
                     const Spacer(),
                     Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount ITEMS',
                         style: TextStyle(
-                            color: accent.withAlpha(190), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.1))
+                            color: accent.withAlpha(190),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.1)),
+                    DateTimeWidget(
+                        padding: const EdgeInsets.only(left: 10),
+                        style: TextStyle(
+                            color: accent.withAlpha(190),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.1)),
                   ]),
                 ),
               ),

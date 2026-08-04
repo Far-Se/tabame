@@ -148,6 +148,15 @@ class _MatrixLauncherFrameState extends State<MatrixLauncherFrame> {
                       trailing: widget.resultCount.toString().padLeft(2, '0'),
                       child: widget.resultsChild,
                     ),
+                    DateTimeWidget(
+                      padding: const EdgeInsets.only(left: 10),
+                      style: TextStyle(
+                        color: text.withAlpha(85),
+                        fontSize: 8,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
                   ],
                 ),
               ),

@@ -215,6 +215,12 @@ class _NotionLauncherFooter extends StatelessWidget {
               color: NotionTokens.dim(isDark),
             ),
           ),
+          DateTimeWidget(
+              padding: const EdgeInsets.only(left: 10),
+              style: NotionTokens.ui(
+                fontSize: Design.baseFontSize - 1,
+                color: NotionTokens.dim(isDark),
+              )),
         ],
       ),
     );

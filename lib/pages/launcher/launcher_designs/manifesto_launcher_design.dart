@@ -253,6 +253,15 @@ class _ManifestoFooter extends StatelessWidget {
               letterSpacing: 1.4,
             ),
           ),
+          DateTimeWidget(
+            padding: const EdgeInsets.only(left: 10),
+            style: ManifestoTokens.display(
+              fontSize: Design.baseFontSize - 0.5,
+              fontWeight: FontWeight.w700,
+              color: paper,
+              letterSpacing: 1.4,
+            ),
+          ),
         ],
       ),
     );
