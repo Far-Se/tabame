@@ -1,0 +1,11 @@
+{
+  "id": "kanban",
+  "name": "Kanban Workspace",
+  "description": "Persistent boards with rich cards, WIP limits, activity history, filters, and import/export.",
+  "keyword": "kanban",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "icon": "grid",
+  "dev": false
+}
