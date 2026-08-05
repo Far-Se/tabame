@@ -72,5 +72,5 @@ The essential request sent by the adapter looks like this:
 
 The reply arrives on stdin as a `browserBridge` message with the same
 `requestId`; successful data is in `result`. Only use page scripts with sites
-and accounts the user trusts. See `plugins\TABAME_PLUGIN_SKILL.md` and
+and accounts the user trusts. See `skills\TABAME_PLUGIN_SKILL.md` and
 `tabame-extension\chrome\PROTOCOL.md` for the complete contract.

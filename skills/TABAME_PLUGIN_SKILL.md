@@ -7,7 +7,10 @@ description: Author a Tabame launcher plugin — an external Python/Node/Bun scr
 
 > If you're the AI reading this: treat everything below as authoritative.
 > Do not invent fields or message types that aren't documented here.
-> When in doubt, prefer the `list` view and copy one of the full templates in §15.
+> Choose the view from the user's task and the shape of the data. Do **not**
+> default to a `list` + preview merely because the smoke-test templates use it.
+> A substantial plugin should feel like a small, navigable application made of
+> purpose-built pages, not a command list with every capability hidden in Ctrl+K.
 
 ---
 
@@ -36,10 +39,11 @@ logic wants extra libraries, see §4.1.
 
 ---
 
-## 2. Quick start (minimal example)
+## 2. Quick start (minimal protocol example)
 
 A plugin is a folder with a `plugin.json` and a script. Minimal Python plugin
-that echoes the query as a single-item list:
+that echoes the query as a single-item list. This only demonstrates the wire
+protocol; it is **not** a UX template for a real plugin:
 
 `plugin.json`
 
@@ -84,6 +88,68 @@ for line in sys.stdin:
 
 Install it to `%localappdata%\Tabame\plugins\hello\`, open the launcher, and type
 `hi something`.
+
+### 2.1 Design the pages before writing handlers
+
+For anything beyond one focused search or command, first write a short **page
+map**. A page is a meaningful user destination with its own task, view, query
+behavior, primary action, and navigation. A good page map for an operations
+plugin might be:
+
+```text
+Home             dashboard   health chart + active incidents + recent deploys
+Services         table       compare status, latency, owner, and version
+Service          dashboard   metadata, latency chart, recent log, deploy action
+Deploy           form        collect environment, version, and approval
+Deploy progress  operation   determinate progress with Cancel
+Deploy result    diff/detail show changed config and the outcome
+```
+
+That immediately produces a richer, more coherent plugin than “Home = list of
+commands; everything else = Ctrl+K.” Keep the architecture proportional: a
+calculator may still be one `detail` page; an issue tracker, reader, media
+library, or deployment tool normally needs several pages and views.
+
+For every page decide:
+
+1. **Dominant task and information shape.** Is the user scanning rows, comparing
+   columns, browsing a hierarchy, reading, editing, watching progress, or
+   understanding a trend? Choose the native view for that job (§8).
+2. **Query contract.** State what typing filters or submits on this page. Clear
+   stale text with `setQuery` when navigating, and set a page-specific
+   `placeholder` such as “Filter cards…” or “Ask about this log…”.
+3. **Primary interaction.** Enter should perform the obvious item action or
+   drill into the next page. Put an important page-wide verb such as **Create**,
+   **Run**, or **Deploy** in `floatingAction`; keep Ctrl+K for contextual and
+   secondary actions rather than making it the only way to discover the plugin.
+4. **States.** Design loading, rich empty, populated, error, and success states.
+   Use `loadingText`, `empty.action`, `detail` errors/confirmations, and
+   `operation` progress instead of falling back to blank lists or toasts for
+   everything.
+5. **Next destinations.** Decide where Enter, submit, cancel, back, breadcrumbs,
+   and successful actions go. The plugin owns this state machine and must render
+   every destination.
+
+Use the `page` object on real destinations:
+
+- Give each conceptual page a stable id such as `issues:home`,
+  `issues:board:ENG`, or `issues:item:ENG-42`. Do not include the current query,
+  selection, loading status, or other transient state in the id.
+- Use `history: "push"` for a forward drill-down, `"replace"` for a redirect or
+  same-depth replacement, and `"none"` when a frame should not alter history.
+  The root is normally the first stable page and does not need manual back.
+- List **ancestors only** in `breadcrumbs`; Tabame adds the current page title.
+  Breadcrumb clicks send `navigate`. Handle `navigate.targetPageId` by restoring
+  your matching route/state and rendering it.
+- Handle `back` by rendering `toPageId` when supplied, or your previous route.
+  `canGoBack: true` is still useful for a manual sub-screen that is not represented
+  in page history. Never set it on a screen from which your plugin cannot return.
+- Keep `preserveState: true` when revisiting a page should restore selection,
+  scroll position, or form values. Set it false only for an intentional reset,
+  such as a fresh create form.
+- Give independently interactive surfaces stable `elementId`s. Dashboard panel
+  events also include `panelId`; dispatch with `pageId` + `panelId` + `elementId`
+  instead of guessing from item ids.
 
 ---
 
@@ -269,7 +335,7 @@ Notes:
 | `storage`       | Reply to a `storage` command with `op` `get`/`keys`                                                              | `requestId` (echoed), and `key`+`value` or `keys`                                                                                                                                                                         |
 | `clipboard`     | Reply to a `clipboardRead` command                                                                               | `requestId` (echoed), `text`                                                                                                                                                                                              |
 | `browserBridge` | Reply/event from the optional app-owned Chromium bridge                                                          | Replies echo `requestId` with `ok` and `result`/`error`; events carry `event` and `data`                                                                                                                                  |
-| `back`          | **Escape** on a frame that declared `canGoBack: true`                                                            | `rev` — respond by rendering the previous screen                                                                                                                                                                          |
+| `back`          | **Escape/back button** when `canGoBack: true` or page history has a previous entry                              | `rev`, optional `fromPageId`/`toPageId`, plus scope — render the previous screen                                                                                                                                           |
 | `navigate`      | A page breadcrumb was activated                                                                                  | `targetPageId`, `rev`, plus the common event scope                                                                                                                                                                        |
 | `kanbanMove`    | A kanban card was dropped in a column                                                                            | `id`, `columnId`, `index`, `rev`, plus the common event scope                                                                                                                                                              |
 | `calendarNavigate` | Calendar date or mode navigation was activated                                                                | `date` (`yyyy-mm-dd`), `mode` (`month` or `agenda`), `rev`, plus the common event scope                                                                                                                                    |
@@ -446,7 +512,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
   "detail": { "markdown": "# Hi", "metadata": [/* see §7.1 */] }, // only used by "detail" view
   "form": {/* see §8, form */}, // only used by "form" view
   "preview": { "enabled": true, "wide": false }, // split preview pane; wide defaults to true
-  "canGoBack": false, // Escape sends {"type":"back"} instead of exiting
+  "canGoBack": false, // manually enables back; page history can also enable it
   "actions": [/* frame-level Ctrl+K actions, see §9 */],
   "floatingAction": { "id": "run", "title": "Run", "icon": "play" }, // bottom-right button; an array is also accepted
   "selectId": "item-3", // move the highlight to this item
@@ -488,7 +554,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `columns`          | array          | `table` columns: `{id,label,width?,align?}`. Items provide matching string values in `cells`.                                                                                                                                                                                    |
 | `chart`            | object         | `chart` view data: `{title?,series:[{id,label?,values:[number,number,...],color?}]}`. Clicking a point sends `chartSelect`.                                                                                                                                                      |
 | `operation`        | object         | A visible long-running operation `{id,title,detail?,progress?:0..1,cancellable?:bool}`. A cancellable operation sends `cancel`.                                                                                                                                                  |
-| `dashboard`        | object         | Only for `view: "dashboard"`. `{layout:"stack"                                                                                                                                                                                                                                   | "tabs",panels:[...]}`composes independently scrollable normal view payloads. Each panel has`id`, `title`, optional `height`(96–640), plus`view` and the fields for that view. |
+| `dashboard`        | object         | Only for `view: "dashboard"`. `{layout:"stack" \| "tabs",panels:[...]}` composes independently scrollable normal view payloads. Each panel has `id`, `title`, optional `height` (96–640), plus `view` and that view's fields.                                                                                                                |
 | `kanban`           | object         | `{columns:[{id,title,color?,limit?}]}`. Items use `column` (or `section`) to choose a column. Dropping a card sends `kanbanMove`.                                                                                                                                                |
 | `diff`             | object/string  | Unified or split source comparison. `{mode:"unified"|"split",oldLabel?,newLabel?,text?}` or `lines:[{type,text,oldLine?,newLine?}]`.                                                                                                                                         |
 | `log`              | object/array   | Structured stream `{follow?,wrap?,lines:[string|{id?,timestamp?,level?,source?,text}]}`. Levels: trace/debug/info/warn/error/success.                                                                                                                                             |
@@ -508,7 +574,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `form`             | object         | The form definition when `view` is `"form"`. See §8.                                                                                                                                                                                                                             |
 | `preview.enabled`  | bool           | When `true` (list/grid only), a split preview pane appears on the right showing the **selected item's** preview. The launcher window widens automatically and restores when you leave. (You may also pass `"preview": true`.)                                                    |
 | `preview.wide`     | bool           | Controls whether an enabled split preview widens the launcher window. Default true. Set false on the frame's `preview` object to keep the normal window width; item-level `preview` objects only provide content and do not control window sizing.                               |
-| `canGoBack`        | bool           | When `true`, **Escape sends `{"type":"back"}`** (render your previous screen) instead of exiting the plugin. Leave it false on your root screen. Default false.                                                                                                                  |
+| `canGoBack`        | bool           | Manually makes **Escape send `{"type":"back"}`** instead of exiting. Page history can independently enable native back. Use this for non-page sub-screens, leave it false on the root, and handle the event. Default false.                                                                                                      |
 | `actions`          | array          | **Frame-level actions** shown in the Ctrl+K palette regardless of the highlighted item (refresh, create, sign out…), after the item's own actions. Same shape as item actions (§9), fired with an empty `id`.                                                                    |
 | `floatingAction`   | object/array   | One or more prominent bottom-right buttons using the normal action shape (§9). Clicking dispatches a frame-level `action` with `id:""`; bulk-selected item IDs are included in `action.ids`.                                                                                |
 | `selectId`         | string         | Moves the highlight to the item with this id — keep the cursor on the same row after a refresh/reorder (`rev: 0` re-render).                                                                                                                                                     |
@@ -530,6 +596,10 @@ slow response to "rom" from overwriting the fresh results for "rome".
   "lines": 1, // list view: subtitle wrap lines, 1–3
   "progress": 0.6, // list view: thin progress bar under the row (0..1)
   "tileColor": "#0EA5E9", // grid view: fill the tile with this color
+  "cells": {"status":"Healthy", "latency":"42 ms"}, // table columns
+  "depth": 1, "expanded": true, // tree indentation/disclosure state
+  "timestamp": "10:42", // timeline leading label
+  "column": "review", // kanban column id
   "start": "2026-08-04T09:30:00", // calendar; `date` is accepted as an all-day alias
   "end": "2026-08-04T10:15:00", // calendar, optional
   "allDay": false, "color": "#8B5CF6", "location": "Studio A",
@@ -563,6 +633,10 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `lines`       | int 1–3            | List view: how many lines the subtitle may wrap to. Default 1.                                                                                                                                                                                                                                       |
 | `progress`    | number 0–1         | List view: renders a thin progress bar under the row (downloads, timers).                                                                                                                                                                                                                            |
 | `tileColor`   | string             | Grid view: fills the tile with this `#RRGGBB` color; label flips black/white for contrast. Perfect for color pickers.                                                                                                                                                                                |
+| `cells`       | object             | Table view values keyed by `columns[].id`. Keep `title` useful as the row's identity even when the same fact also appears in a cell.                                                                                                                                                                  |
+| `depth`/`expanded` | int/bool       | Tree view indentation (0–12) and whether this node currently shows its children. The plugin updates and re-renders these after `toggle`.                                                                                                                                                              |
+| `timestamp`   | string             | Timeline view's leading time or status label, such as `10:42`, `Yesterday`, or `Failed`.                                                                                                                                                                                                              |
+| `column`      | string             | Kanban destination column id. `section` is accepted as a concise fallback.                                                                                                                                                                                                                             |
 | `start`/`date` | ISO-8601 string   | Calendar item start. Use `start` for timed events; `date` is an all-day-friendly alias. May instead be nested inside a `calendar` object.                                                                                                                                                           |
 | `end`/`allDay`/`color`/`location` | mixed | Optional calendar event details. `end` must not precede `start`; `color` is a hex tint. These may also be nested inside `calendar`.                                                                                                                                                                  |
 | `media`       | object/string      | Gallery media. Object: `{url,type?,thumbnail?,duration?,size?,width?,height?}`; type is image/video/audio/file. Sources support HTTP(S), `file://`, and `data:image/...` up to 2 MB. A string is shorthand for an image URL.                                                                            |
@@ -614,12 +688,97 @@ key-value row:
 
 ## 8. View types
 
+### Choose by information shape, not by template familiarity
+
+`list` is one tool, not the plugin shell. Pick the view that makes the page's
+main question easiest to answer:
+
+| User's question or task | Best starting view | Verbal example |
+| ----------------------- | ------------------ | -------------- |
+| “Which short result do I want?” | `list` | Commands, contacts, search matches, or notifications with one dominant label. |
+| “Which visual/spatial choice do I want?” | `grid` | Theme, color, emoji, application, or preset picker. |
+| “How do these records compare across fields?” | `table` | Services by status/latency/owner, packages by version/license/size, expenses by date/vendor/amount. |
+| “Where is this in a hierarchy?” | `tree` | Files, nested categories, bookmarks, organization units, or dependency nodes. |
+| “What happened, and in what order?” | `timeline` | Incident history, order tracking, Git activity, audit trail, or project milestones. |
+| “How is a metric changing?” | `chart` | CPU/latency history, spending by month, habit streak, download rate, or build duration. |
+| “What is the current state of several related things?” | `dashboard` | A project home with summary, chart, recent activity, and open work; a service home with health, deploys, and logs. |
+| “What stage is each work item in?” | `kanban` | Issues, editorial pipeline, sales leads, personal tasks, or release checklist. |
+| “What does this one thing say?” | `detail` | Article, issue, package README, error explanation, report, help, or action result. |
+| “What values must I provide or edit?” | `form` | Create issue, configure account, rename columns, export options, or deployment parameters. |
+| “What are we saying back and forth?” | `chat` | Assistant, team thread, support conversation, or iterative query session. |
+| “How far has the long-running work progressed?” | `operation` | Deploy, download, indexing, migration, sync, or export with optional cancel. |
+| “What changed?” | `diff` | Config edit, generated patch, version comparison, migration preview, or before/after text. |
+| “What is the live diagnostic stream?” | `log` | Build output, server tail, test runner, device events, or command execution. |
+| “What happens on a date?” | `calendar` | Meetings, deadlines, releases, shifts, reminders, or content schedule. |
+| “Which media asset do I want?” | `gallery` | Photos, screenshots, album art, clips, recordings, or design assets. |
+
+The split `preview` pane is a **modifier for list/grid**, not a universal second
+page. Use it when a quick glance helps the user decide among adjacent items and
+the preview is cheap to provide. Navigate to a proper `detail` page when the
+content is long, deserves a readable width, has its own actions/history, or is
+a destination the user may return to. Do not duplicate the row subtitle in a
+mostly empty preview just to fill the right side.
+
+### Build workflows, not a collection of disconnected views
+
+Views become valuable when they form an intentional page flow. Examples:
+
+- **Issue tracker:** a `dashboard` home summarizes counts and activity; Enter on
+  the work panel opens a `kanban` board; Enter on a card opens `detail`; Edit
+  opens a `form`; Activity opens a `timeline`. Bulk close/move uses `selection`
+  on a `table` or list, not dozens of repeated Ctrl+K operations.
+- **Deployment tool:** a `table` compares services; a service `dashboard`
+  combines metadata, a latency `chart`, recent `log` lines, and a visible Deploy
+  `floatingAction`; Deploy opens a `form`, then an `operation`, then a `diff` or
+  `detail` result. Cancel is the operation's native event.
+- **Media library:** start with `gallery`, use sections for albums and
+  `hasMore` for paging; Enter opens a wide `detail` page with metadata; Edit
+  opens a `form`; a bulk Export floating action consumes `action.ids`.
+- **Knowledge/files plugin:** browse folders as a `tree`, compare search results
+  in a `table`, read the chosen document in `detail`, and show revisions in a
+  `timeline` leading to a `diff` page.
+- **Planner:** use `calendar` as the natural home, an agenda `timeline` for the
+  selected day, a `form` to create/edit events, and a compact `dashboard` for
+  overdue work plus a completion chart.
+
+Do not add views just to reach a quota. A view earns its page when it improves a
+real task. Conversely, do not flatten a naturally rich workflow into rows just
+because rows are easier to generate.
+
+### Use the rest of the UI deliberately
+
+- Make **Enter** the obvious primary item verb. Use item `actions` for
+  contextual alternatives and frame `actions` for page-wide utilities such as
+  Refresh, Settings, Import, and Sign out.
+- Use `floatingAction` for one or two important, discoverable page verbs. A
+  Create button should not exist only inside Ctrl+K. Use an action's compact
+  `parameters` for a small one-shot choice; use a full `form` page when fields
+  need explanation, validation, dependencies, or editing.
+- Use `selection` when users reasonably act on several items. Name bulk actions
+  for the group (“Archive 6”), read `action.ids`, and keep destructive actions
+  confirmed.
+- Use `accessories` for terse scan facts (status, age, owner), `section` for
+  meaningful groups, `progress` for row-local progress, and metadata for aligned
+  facts. Do not turn subtitles into unscannable database dumps.
+- Use a `dashboard` only for a true overview or multi-surface workspace. Prefer
+  2–5 purposeful panels. `stack` reads like a report; `tabs` fit peer surfaces
+  that do not need simultaneous comparison. Give every panel a stable `id`, a
+  useful `title`, an intentional `height`, and its own `elementId` when it emits
+  events.
+- Preserve context after refreshes with stable item ids and `selectId`. Use
+  `hasMore` rather than rendering an enormous collection, and use the rich
+  `empty` state with a recovery or create action when zero items is actionable.
+- Show work in the surface where it matters: `loading` for a page fetch,
+  per-item `progress` for several concurrent jobs, `operation` for one prominent
+  cancellable job, `log` for diagnostic output, and a final `detail`/`diff` for
+  the durable result.
+
 ### list
 
 Vertical rows: icon + title + subtitle + optional trailing accessory badges. The
-default and the right choice for most plugins. Extras: `section` headers to
-group rows, `lines` for wrapping subtitles, `progress` for a thin bar under a
-row, and colored/iconed accessories (§7).
+right choice for quick scanning when every item has one dominant identity.
+Extras: `section` headers to group rows, `lines` for wrapping subtitles,
+`progress` for a thin bar under a row, and colored/iconed accessories (§7).
 
 ### grid
 
@@ -662,7 +821,8 @@ is already reading the latest message.
 
 A titled stack of inputs. Submitting sends you `{"type":"submit","values":{...}}`;
 **Escape cancels** — exiting the plugin, or sending `{"type":"back"}` when the
-frame set `canGoBack: true`. Enter in a single-line field submits.
+frame enabled manual back or page history has a previous entry. Enter in a
+single-line field submits.
 
 ```jsonc
 {
@@ -767,6 +927,70 @@ frame set `canGoBack: true`. Enter in a single-line field submits.
   changing the field set resets it.
 - Great for create-flows and for a settings screen that writes `config.json`
   (or better: the `storage` command, §5.2).
+
+### table
+
+Dense, aligned records for **comparison**. Declare frame `columns` as
+`{id,label,width?,align?}` and put each record's remaining values in item
+`cells`. Column ids `title` and `subtitle` use those item fields automatically.
+Use `align:"end"` for numbers and keep the identity column first. Tables are
+better than accessories when users must compare the same 3–6 facts across many
+records; they are worse than a list when most cells would be blank or verbose.
+They support normal selection, item actions, bulk `selection`, and paging.
+
+### tree
+
+A hierarchy represented as the **currently visible flattened nodes**. Each item
+declares `depth` and `expanded`; a disclosure sends `toggle` with the requested
+state. Your plugin loads/inserts or removes descendants and re-renders the
+complete visible tree. Use it when parentage itself matters (folders,
+categories, dependencies), not as decorative indentation for unrelated groups.
+Enter should normally open the node's page; disclosure should only expand or
+collapse it.
+
+### timeline
+
+Chronological or causal events with a leading `timestamp`, icon, title,
+subtitle, and accessories. Sort deliberately (newest-first for an activity feed,
+oldest-first for a process story) and keep the direction consistent. A timeline
+explains sequence better than a date accessory on ordinary rows: incident phases,
+shipment checkpoints, commits, approvals, and audit events are natural fits.
+
+### chart
+
+Compact quantitative comparison. `chart.series` contains stable series ids and
+index-aligned numeric `values`; clicking a point sends `chartSelect`, which can
+drill into a filtered `table`, `timeline`, or `detail` page. Use charts for
+shape, trend, and outliers, and pair them with a title and a nearby factual panel
+when exact numbers matter. A chart should answer a named question (“Did p95
+latency regress?”), not merely decorate a dashboard.
+
+### operation
+
+A prominent long-running job with `id`, `title`, optional `detail`, determinate
+`progress` (or indeterminate when omitted), and `cancellable`. Use the standalone
+`operation` view when the job is the page's whole purpose. The same `operation`
+field can accompany another view as a progress bar above its content—for example,
+a table that remains browsable during sync. Update with `rev:0`; handle `cancel`
+and render a durable success/error `detail`, `diff`, or refreshed destination
+when the job finishes.
+
+### dashboard
+
+A composition page whose panels reuse normal view payloads. Use `layout:"stack"`
+for a scrollable report where panels should be read together, or `"tabs"` for
+peer workspaces that deserve the same area. Each panel has `id`, `title`, optional
+`height` (96–640), `view`, and that view's normal fields. Good combinations are:
+
+- status `detail` + trend `chart` + incident `timeline`;
+- summary `chart` + comparable records `table` + recent `log`;
+- media `gallery` + queue `list` + active `operation`.
+
+Panels are independently scrollable and interactive. Events include the outer
+`pageId`, the panel's `panelId`, and its child `elementId`; use that scope to
+dispatch actions, selection, submits, toggles, chart points, and pagination.
+Avoid a dashboard of six tiny lists. If one panel becomes the user's main task,
+Enter or a visible action should open it as a full page in its native view.
 
 ### preview pane (split)
 
@@ -884,9 +1108,10 @@ Each action (item- or frame-level) supports:
 - **Navigation keys** (arrows) are handled by the launcher and don't reach you.
 - **Enter** and **Ctrl+K** reach you as `action` messages; **Tab** reaches you
   as a `tab` message (answer with a `setQuery` command to autocomplete).
-- **Escape** exits the whole plugin (you get `close`) — _unless_ the current
-  frame set `"canGoBack": true`, in which case you get `{"type":"back"}` and
-  should render the previous screen (see §13).
+- **Escape** exits the whole plugin (you get `close`) unless the current frame
+  set `"canGoBack": true` **or** page history has a previous entry. In either
+  back-capable case you get `{"type":"back"}` (with page ids when available)
+  and should render the previous screen (see §13).
 - Keep the event loop responsive. If an operation is slow, first emit a
   `loading:true` frame (echoing the rev), then emit the result frame.
 
@@ -966,39 +1191,64 @@ the frame is _not_ loading.)
 Both frames carry the same `rev`, so if the user kept typing, Tabame drops the
 stale result automatically.
 
-### Multi-command plugins (internal state machine)
+### Multi-page plugins (route/state machine)
 
-The launcher gives you one query line, so a plugin with several "commands" should
-keep its own screen state:
+The launcher supplies the chrome and events; the plugin still owns routes and
+data state. Do not make the root a list of verbs unless the product truly is a
+small command dispatcher. A rich plugin usually starts on its natural home
+(`dashboard`, `calendar`, `gallery`, `kanban`, etc.) and navigates to other
+purpose-built pages.
 
-1. Start on a **root** screen that lists your commands as items (filter them by
-   the query text). Render it **without** `canGoBack` so Escape exits.
-2. When the user presses Enter on a command (`action:"default"`), switch your
-   internal `screen` variable and render that command's view **with
-   `"canGoBack": true`**.
-3. On sub-screens, treat the query text as that screen's search/input.
-4. Escape on a `canGoBack` frame sends you `{"type":"back"}` — reset `screen`
-   to root and re-render. No "◀ Back" items needed.
+1. Give every route a stable `page.id` and a render function. Keep the current
+   route/entity in plugin state.
+2. Forward navigation renders the destination with `page.history:"push"`.
+   Clear or rewrite the query with `setQuery` if its meaning changes.
+3. Handle `back` by rendering `toPageId` when present; otherwise pop your own
+   route stack. Handle breadcrumb `navigate` by rendering `targetPageId`.
+4. Use each destination's native view. For example: home dashboard → projects
+   table → project kanban → task detail → edit form.
+5. Keep page ids and item ids stable so host-restored scroll, selection, and form
+   state remain useful after a re-render.
 
 Sketch:
 
 ```python
-state = {"screen": "root"}
+state = {"page_id": "ops:home", "route_stack": ["ops:home"]}
+routes = {
+    "ops:home": render_dashboard,
+    "ops:services": render_services_table,
+    "ops:deploy": render_deploy_form,
+}
 
-def handle_action(item_id, action):
-    if item_id.startswith("cmd:"):
-        state["screen"] = item_id[4:]      # drill into a command
-        return render(0, "")               # sub-screen frames set canGoBack: true
-    # ... item-specific actions (open, copy, create) ...
+def go(page_id, *, forward=False, clear_query=True):
+    if page_id not in routes:
+        page_id = "ops:home"
+    if forward:
+        state["route_stack"].append(page_id)
+    state["page_id"] = page_id
+    if clear_query:
+        send({"type":"command", "command":"setQuery", "text":""})
+    routes[page_id](0)  # emitted frame declares matching page.id/history
 
-def handle_back():
-    state["screen"] = "root"
-    render(0, "")                           # root frame omits canGoBack
+def handle_back(msg):
+    target = msg.get("toPageId")
+    if target in state["route_stack"]:
+        state["route_stack"] = state["route_stack"][:state["route_stack"].index(target) + 1]
+    elif not target and len(state["route_stack"]) > 1:
+        state["route_stack"].pop()
+        target = state["route_stack"][-1]
+    go(target or "ops:home", clear_query=True)
+
+def handle_navigate(msg):
+    target = msg.get("targetPageId", "ops:home")
+    if target in state["route_stack"]:
+        state["route_stack"] = state["route_stack"][:state["route_stack"].index(target) + 1]
+    go(target, clear_query=True)
 ```
 
-Pair drill-downs with a `setQuery` command (e.g. `setQuery: ""`) to clear the
-sub-screen's search text, and set `placeholder` so the user knows what the
-query now filters.
+Use `canGoBack:true` for temporary manual sub-screens that are outside the page
+history model. Page-history destinations already expose native back chrome; in
+both cases, never render a back-capable dead end.
 
 ### Streaming answers (chat / LLM plugins)
 
@@ -1081,13 +1331,21 @@ except Exception as e:
 - [ ] **Read stdin line by line**; don't block waiting for all input.
 - [ ] Keep the keyword **short and distinct**.
 - [ ] Only use documented `view` values, message types, and fields.
+- [ ] For a multi-workflow plugin, write a page map and choose each page's view
+      from its real task/data shape — do not ship the smoke-test list + preview
+      as the product architecture.
+- [ ] Give conceptual destinations stable `page.id`s; handle `back.toPageId` and
+      `navigate.targetPageId`; use `push`/`replace`/`none` intentionally.
+- [ ] Keep primary navigation and primary page verbs discoverable through Enter,
+      page chrome, and `floatingAction`; do not bury the whole product in Ctrl+K.
 - [ ] Use **commands** (§5.2) for clipboard / open / hide / toast — don't shell out to `clip`/`start`.
 - [ ] Remember the working directory is the **plugin folder** (put `config.json` there).
 - [ ] Need libraries? Tabame auto-installs them on first run — **Python:** `"pip"` / `requirements.txt`; **Node/Bun:** a `package.json` (§4.1). Lazy-load heavy deps so a failed install degrades gracefully.
 - [ ] Icons must be a name from §11, a `#RRGGBB` color, a `data:image/...` URI (up to 2 MB), or a `file://`/`https://` raster or SVG image.
 - [ ] Prefer `metadata` rows (§7.1) over markdown tables for structured facts.
 - [ ] Keep items sharing a `section` adjacent — headers appear on value _changes_ (lists **and** grids).
-- [ ] Set `canGoBack: true` on sub-screens (and handle `back`); leave it off your root screen.
+- [ ] Dispatch dashboard interactions with `pageId`/`panelId`/`elementId` scope.
+- [ ] Use `canGoBack: true` only for manual sub-screens outside page history (and handle `back`); leave it off your root screen.
 - [ ] Never set `canGoBack` on a frame you can't navigate away from — Escape would be trapped.
 - [ ] Action `shortcut`s must include Ctrl and/or Alt; bare/Shift-only combos are ignored.
 - [ ] Gate destructive actions with `"confirm"` (and mark them `"destructive": true`).
@@ -1100,6 +1358,12 @@ except Exception as e:
 ---
 
 ## 15. Full templates
+
+The templates below are protocol smoke tests: they demonstrate a correct event
+loop, stable ids, and action dispatch. They intentionally use the smallest
+possible UI. **Do not preserve their list + preview screen as the architecture
+of a real multi-workflow plugin.** Start from the page map in §2.1 and replace
+`render()` with route-specific render functions using the view guidance in §8.
 
 ### 15.1 Python template
 
@@ -1270,10 +1534,15 @@ process.stdin.on("end", () => process.exit(0));
 Paste this document into your chatbot, then add a request like:
 
 > Using the Tabame Launcher Plugin spec above, write a **<Python|Node>** plugin.
-> Keyword: `<keyword>`. It should: `<describe what it does — data source, what each
-item shows, what Enter does, what Ctrl+K actions to offer, and whether to use a
-list / grid / detail / preview pane>`. Read any secrets from `config.json` in the
-> plugin folder. Follow every rule in §14 and give me both `plugin.json` and the
-> script, plus the exact folder to drop them in.
+> Keyword: `<keyword>`. It should: `<describe the users, data source, major tasks,
+> and desired workflows>`. Before coding, provide a compact page map: each page's
+> stable id, purpose, native view, what the query does, Enter/primary action, and
+> destinations. Choose from **all** documented views according to §8; do not
+> default to list + preview or hide primary navigation in Ctrl+K. Use proper page
+> history, breadcrumbs, visible floating actions, forms, loading/empty/error
+> states, and scoped dashboard panels where they improve the workflow—without
+> adding irrelevant views merely for variety. Read secrets through `storage`
+> with `secret:true`. Follow every rule in §14 and give me `plugin.json`, the
+> complete script, install path, and a short walkthrough of the finished pages.
 
 The chatbot should return a complete, ready-to-install plugin.

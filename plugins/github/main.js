@@ -3,7 +3,7 @@
  * GitHub plugin for the Tabame launcher.
  *
  * A long-lived child process speaking the launcher's newline-delimited JSON
- * protocol (see plugins/TABAME_PLUGIN_SKILL.md). The launcher exposes a single
+ * protocol (see skills/TABAME_PLUGIN_SKILL.md). The launcher exposes a single
  * query line, so this plugin is an internal state machine: a root command list
  * that drills into each command's own screen. Sub-screens set canGoBack, so
  * Escape walks back up the stack instead of exiting the plugin.

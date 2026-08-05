@@ -39,6 +39,13 @@ formatter:
 analyzer:
   errors:
     curly_braces_in_flow_control_structures: ignore
-# Additional information about this file can be found at
-# https://dart.dev/guides/language/analysis-options
-#
+  exclude:
+    - build/**
+    - lib/generated/**
+    - generated/**
+    - backups/**
+    - old/**
+    - temp/**
+    - plugins/**/build/**
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"

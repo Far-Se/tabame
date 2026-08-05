@@ -16,7 +16,7 @@ The script is the source of truth for the UI: every time you want the launcher t
 
 The complete, authoritative protocol spec lives in the repo. **Read it before writing non-trivial plugins** — do not invent fields or message types not documented there:
 
-- **Full spec:** [plugins/TABAME_PLUGIN_SKILL.md](../../../plugins/TABAME_PLUGIN_SKILL.md) — every message type, render-frame field, item field, view type, icon name, and pattern.
+- **Full spec:** [skills/TABAME_PLUGIN_SKILL.md](../../../skills/TABAME_PLUGIN_SKILL.md) — every message type, render-frame field, item field, view type, icon name, and pattern.
 - **Working examples** to copy from:
   - `plugins/echo/` — Python demo exercising list/grid/detail/preview + actions.
   - `plugins/linear/` — Node.js plugin with an HTTP API and `config.json` secrets.

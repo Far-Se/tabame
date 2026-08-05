@@ -1,10 +1,9 @@
 ---
 name: Plugin submission
 about: Submit a launcher plugin for review, so it can be added to the community gallery
-title: '[Plugin] '
+title: "[Plugin] "
 labels: plugin
-assignees: ''
-
+assignees: ""
 ---
 
 <!--
@@ -12,7 +11,7 @@ Thanks for contributing a Tabame launcher plugin!
 
 A plugin is an external script (Python / Node / Bun) that Tabame runs when the
 user types your keyword in the launcher. It talks newline-delimited JSON over
-stdin/stdout — see plugins/TABAME_PLUGIN_SKILL.md for the full protocol.
+stdin/stdout — see skills/TABAME_PLUGIN_SKILL.md for the full protocol.
 
 I will manually review submissions before adding them to resources/plugins.json
 so they appear in everyone's Plugin Gallery. Please fill in everything below and

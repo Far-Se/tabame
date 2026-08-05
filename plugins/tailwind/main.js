@@ -3,7 +3,7 @@
  * Tailwind CSS plugin for the Tabame launcher.
  *
  * Long-lived child process speaking the launcher's newline-delimited JSON
- * protocol (see plugins/TABAME_PLUGIN_SKILL.md). Type the keyword `tw`
+ * protocol (see skills/TABAME_PLUGIN_SKILL.md). Type the keyword `tw`
  * followed by a class name or CSS property (e.g. `tw p-4`, `tw flex`,
  * `tw bg-red-500`, `tw grid-cols`, `tw rounded`) to search the Tailwind utility
  * catalog and inspect the CSS each class generates, an example snippet, and a

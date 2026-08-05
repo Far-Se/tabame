@@ -96,6 +96,8 @@ class ClaudeUsagePanel extends StatefulWidget {
 }
 
 class _ClaudeUsagePanelState extends State<ClaudeUsagePanel> {
+  static const Duration _claudeStaleAfter = Duration(days: 2);
+
   ClaudeUsageRecord? _claudeRecord;
   CodexUsageRecord? _codexRecord;
   bool _claudeLoading = true;
@@ -184,6 +186,11 @@ class _ClaudeUsagePanelState extends State<ClaudeUsagePanel> {
 
   Widget _buildClaudeSection() {
     final ClaudeUsageRecord? record = _claudeRecord;
+    if (record != null) {
+      final Duration age = DateTime.now().difference(record.fetchedAt);
+      if (age > _claudeStaleAfter) return _buildClaudeStaleMessage(age.inDays);
+    }
+
     return Column(
       crossAxisAlignment: C.start,
       children: <Widget>[
@@ -221,6 +228,17 @@ class _ClaudeUsagePanelState extends State<ClaudeUsagePanel> {
           ),
         ],
       ],
+    );
+  }
+
+  Widget _buildClaudeStaleMessage(int daysAgo) {
+    return Text(
+      'Claude: Stale data from $daysAgo days ago',
+      style: TextStyle(
+        fontSize: Design.baseFontSize + 1,
+        fontWeight: FontWeight.w600,
+        color: Design.text.withAlpha(175),
+      ),
     );
   }
 
@@ -570,7 +588,8 @@ class _UsageCard extends StatelessWidget {
       return 'resets in ${diff.inMinutes}m at $time';
     } on FormatException {
       final String lower = resetValue.toLowerCase();
-      if (lower.startsWith('resets ') || lower.startsWith('reset ') || lower.startsWith('resetting ')) return resetValue;
+      if (lower.startsWith('resets ') || lower.startsWith('reset ') || lower.startsWith('resetting '))
+        return resetValue;
       return 'resets $resetValue';
     }
   }

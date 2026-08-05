@@ -16,7 +16,7 @@ The script is the source of truth for the UI: every time you want the launcher t
 
 The complete, authoritative protocol spec lives in the repo. **Read it before writing non-trivial plugins** — do not invent fields or message types not documented there:
 
-- **Full spec:** [plugins/TABAME_PLUGIN_SKILL.md](../../../plugins/TABAME_PLUGIN_SKILL.md) — every message type, render-frame field, item field, view type, icon name, and pattern.
+- **Full spec:** [skills/TABAME_PLUGIN_SKILL.md](../../../skills/TABAME_PLUGIN_SKILL.md) — every message type, render-frame field, item field, view type, icon name, and pattern.
 - **Working examples** to copy from:
   - `plugins/echo/` — Python demo exercising list/grid/detail/preview, actions (shortcuts/confirm), forms v2, streaming chat, pagination, storage, and background notify.
   - `plugins/linear/` — Node.js plugin with an HTTP API and `config.json` secrets.
@@ -61,20 +61,20 @@ Launch is effectively `<runtime> <args...> <entry>`, started **without a shell**
 
 Messages you receive on **stdin**:
 
-| Message  | When                                                | Key fields                         |
-| -------- | --------------------------------------------------- | ---------------------------------- |
-| `init`   | Once at startup                                     | `query`, `protocol` (3), `theme` (`{accent,text,background,dark}` hex + flag), `locale` |
-| `query`  | Every keystroke (not in `inputMode:"submit"`)       | `text`, `rev` (generation counter) |
-| `submitQuery` | Enter on an `inputMode:"submit"` frame — the whole line at once (chat) | `text`, `rev` |
-| `select` | Highlighted item changed                            | `id`, `rev`                        |
-| `action` | **Enter** (`action:"default"`), a **Ctrl+K** pick, an action `shortcut`, or the empty-state CTA | `id` (`""` for frame-level/empty-state), `action` (no `rev`) |
-| `submit` | User submits a `form` view                          | `values` (`{fieldId: value}`), `button` (pressed `form.buttons` id) |
-| `change` | A `watch: true` form field changed                  | `id`, `values`                     |
-| `loadMore` | Scrolled near the end of a `hasMore` frame        | `rev` — answer with a longer full list |
-| `storage` / `clipboard` | Replies to `storage` get/keys and `clipboardRead` commands | `requestId` (echoed), `value`/`keys`/`text` |
-| `back`   | Escape on a frame with `canGoBack: true`            | `rev` — render the previous screen |
-| `tab`    | Tab pressed                                          | `id` of highlighted item, `rev` — answer with `setQuery` |
-| `close`  | Shutting down                                       | —                                  |
+| Message                 | When                                                                                            | Key fields                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `init`                  | Once at startup                                                                                 | `query`, `protocol` (3), `theme` (`{accent,text,background,dark}` hex + flag), `locale` |
+| `query`                 | Every keystroke (not in `inputMode:"submit"`)                                                   | `text`, `rev` (generation counter)                                                      |
+| `submitQuery`           | Enter on an `inputMode:"submit"` frame — the whole line at once (chat)                          | `text`, `rev`                                                                           |
+| `select`                | Highlighted item changed                                                                        | `id`, `rev`                                                                             |
+| `action`                | **Enter** (`action:"default"`), a **Ctrl+K** pick, an action `shortcut`, or the empty-state CTA | `id` (`""` for frame-level/empty-state), `action` (no `rev`)                            |
+| `submit`                | User submits a `form` view                                                                      | `values` (`{fieldId: value}`), `button` (pressed `form.buttons` id)                     |
+| `change`                | A `watch: true` form field changed                                                              | `id`, `values`                                                                          |
+| `loadMore`              | Scrolled near the end of a `hasMore` frame                                                      | `rev` — answer with a longer full list                                                  |
+| `storage` / `clipboard` | Replies to `storage` get/keys and `clipboardRead` commands                                      | `requestId` (echoed), `value`/`keys`/`text`                                             |
+| `back`                  | Escape on a frame with `canGoBack: true`                                                        | `rev` — render the previous screen                                                      |
+| `tab`                   | Tab pressed                                                                                     | `id` of highlighted item, `rev` — answer with `setQuery`                                |
+| `close`                 | Shutting down                                                                                   | —                                                                                       |
 
 Minimal render frame you print to **stdout**:
 

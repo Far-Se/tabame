@@ -300,7 +300,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
           data: '''
 Build a plugin with your favorite AI coding assistant:
 
-1. Copy [TABAME_PLUGIN_SKILL.md](https://github.com/Far-Se/tabame/blob/main/plugins/TABAME_PLUGIN_SKILL.md) or [TABAME_PLUGIN_SKILL.min.md](https://github.com/Far-Se/tabame/blob/main/plugins/TABAME_PLUGIN_SKILL.min.md).
+1. Copy [TABAME_PLUGIN_SKILL.md](https://github.com/Far-Se/tabame/blob/main/skills/TABAME_PLUGIN_SKILL.md) or [TABAME_PLUGIN_SKILL.min.md](https://github.com/Far-Se/tabame/blob/main/skills/TABAME_PLUGIN_SKILL.min.md) (the 'skills' folder has multiple separate skills).
 2. Open your favorite AI coding site or app and paste the file.
 3. Tell the AI what plugin you need, with detailed instructions for how it should work.
 4. Create a new folder in `%localappdata%/tabame/plugins/` for your plugin.
