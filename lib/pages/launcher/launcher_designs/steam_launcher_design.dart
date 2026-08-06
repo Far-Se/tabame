@@ -54,46 +54,48 @@ class SteamLauncherFrame extends StatelessWidget {
                                 radius: 1.6,
                                 colors: <Color>[accent.withAlpha(36), Colors.transparent]))))),
             Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-              ColoredBox(
-                color: header.withAlpha(245),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(13, 7, 13, 6),
-                  child: Row(children: <Widget>[
-                    Text('TABAME',
-                        style: TextStyle(
-                            color: onSurface.withAlpha(85),
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.4)),
-                    const SizedBox(width: 14),
-                    Text('LIBRARY',
-                        style: TextStyle(
-                            color: onSurface.withAlpha(220),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.4)),
-                    const SizedBox(width: 14),
-                    Text('QuickLaunch',
-                        style: TextStyle(
-                            color: onSurface.withAlpha(85),
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.4)),
-                    const Spacer(),
-                    Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount ITEMS',
-                        style: TextStyle(
-                            color: accent.withAlpha(190),
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.1)),
-                    DateTimeWidget(
-                        padding: const EdgeInsets.only(left: 10),
-                        style: TextStyle(
-                            color: accent.withAlpha(190),
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.1)),
-                  ]),
+              DragToMoveArea(
+                child: ColoredBox(
+                  color: header.withAlpha(245),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(13, 7, 13, 6),
+                    child: Row(children: <Widget>[
+                      Text('TABAME',
+                          style: TextStyle(
+                              color: onSurface.withAlpha(85),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.4)),
+                      const SizedBox(width: 14),
+                      Text('LIBRARY',
+                          style: TextStyle(
+                              color: onSurface.withAlpha(220),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.4)),
+                      const SizedBox(width: 14),
+                      Text('QuickLaunch',
+                          style: TextStyle(
+                              color: onSurface.withAlpha(85),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.4)),
+                      const Spacer(),
+                      Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount ITEMS',
+                          style: TextStyle(
+                              color: accent.withAlpha(190),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.1)),
+                      DateTimeWidget(
+                          padding: const EdgeInsets.only(left: 10),
+                          style: TextStyle(
+                              color: accent.withAlpha(190),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.1)),
+                    ]),
+                  ),
                 ),
               ),
               Container(

@@ -1,0 +1,10 @@
+{
+  "name": "Image Resizer",
+  "keyword": "imgresize",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "icon": "image",
+  "description": "Resize one image or a whole folder of images to an exact size.",
+  "pip": ["pillow"]
+}

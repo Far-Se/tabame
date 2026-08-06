@@ -546,6 +546,14 @@ class LauncherPluginHost {
 
   /// `inputMode: "submit"` — Enter submits the whole query text at once
   /// instead of streaming keystrokes.
+  /// The launcher window became active again. Plugins can use this lifecycle
+  /// signal to acknowledge background read state without creating a native
+  /// notification.
+  void sendFocus() {
+    debugLog.add(PluginDebugKind.info, 'focus');
+    _send(<String, Object?>{'type': 'focus'});
+  }
+
   void sendSubmitQuery(String text, {PluginEventScope scope = const PluginEventScope()}) {
     _rev++;
     _lastQuery = text;

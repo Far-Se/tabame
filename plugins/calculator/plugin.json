@@ -1,0 +1,10 @@
+{
+  "id": "calculator",
+  "name": "Calculator",
+  "description": "Extended math, currency conversion, and unit conversion — all in one expression",
+  "keyword": "calc",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "icon": "calculator"
+}

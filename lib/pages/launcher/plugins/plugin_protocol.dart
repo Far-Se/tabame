@@ -20,7 +20,8 @@ import 'dart:ui' show Color;
 ///     kanban/diff/log views.
 /// 10 = calendar/agenda and gallery/media-browser views.
 /// 11 = bottom-right `floatingAction` buttons.
-const int pluginProtocolVersion = 11;
+/// 12 = chat typing/status text and chat history affordances.
+const int pluginProtocolVersion = 12;
 
 /// The layout a plugin render frame requests.
 enum PluginViewType {
@@ -202,6 +203,28 @@ class PluginAccessory {
       }
     }
     return null;
+  }
+}
+
+/// A compact quoted-message preview rendered above a chat message.
+class PluginReplyPreview {
+  const PluginReplyPreview({required this.author, required this.text, this.icon});
+
+  final String author;
+  final String text;
+  final String? icon;
+
+  static PluginReplyPreview? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final Object? author = json['author'];
+    final Object? text = json['text'];
+    if (author is! String || text is! String || author.trim().isEmpty || text.trim().isEmpty) return null;
+    final Object? icon = json['icon'];
+    return PluginReplyPreview(
+      author: author.trim(),
+      text: text.trim(),
+      icon: icon is String && icon.trim().isNotEmpty ? icon.trim() : null,
+    );
   }
 }
 
@@ -704,6 +727,7 @@ class PluginItem {
     this.column,
     this.calendar,
     this.media,
+    this.reply,
   });
 
   final String id;
@@ -761,6 +785,9 @@ class PluginItem {
   /// Source/thumbnail data for `gallery` and media-browser rendering.
   final PluginMediaInfo? media;
 
+  /// Optional quoted message preview shown above a chat message.
+  final PluginReplyPreview? reply;
+
   static PluginItem fromJson(Map<String, dynamic> json, int index) {
     final Object? rawId = json['id'];
     final Object? rawAccessories = json['accessories'];
@@ -771,6 +798,7 @@ class PluginItem {
     final Object? rawLines = json['lines'];
     final Object? rawImages = json['images'];
     final Object? rawCells = json['cells'];
+    final PluginReplyPreview? reply = PluginReplyPreview.fromJson(json['reply']);
 
     String? previewMarkdown;
     List<PluginMetadataEntry> previewMetadata = const <PluginMetadataEntry>[];
@@ -834,6 +862,7 @@ class PluginItem {
           : (rawSection is String && rawSection.trim().isNotEmpty ? rawSection.trim() : null),
       calendar: PluginCalendarItem.fromJson(json['calendar'] is Map ? json['calendar'] : json),
       media: PluginMediaInfo.fromJson(json['media']),
+      reply: reply,
     );
   }
 }
@@ -1251,6 +1280,7 @@ class PluginRenderFrame {
     this.selectId,
     this.hasMore = false,
     this.submitInput = false,
+    this.typing,
     this.detailAppend,
     this.multiSelect = false,
     this.multiSelectMax,
@@ -1305,6 +1335,11 @@ class PluginRenderFrame {
   /// `inputMode: "submit"` — keystrokes are not streamed to the plugin; Enter
   /// sends one `{"type":"submitQuery"}` with the full text (chat-style input).
   final bool submitInput;
+
+  /// Optional transient status shown at the bottom of a chat, such as
+  /// "Ava is typing...". Plugins can keep ephemeral presence out of message
+  /// rows by using this field.
+  final String? typing;
 
   /// `detail.append`: a chunk to add to the *previous* frame's detail markdown
   /// instead of replacing the document — streaming LLM output. The host merges
@@ -1434,6 +1469,7 @@ class PluginRenderFrame {
       selectId: selectId,
       hasMore: hasMore,
       submitInput: submitInput,
+      typing: typing,
       detailAppend: null,
       multiSelect: multiSelect,
       multiSelectMax: multiSelectMax,
@@ -1627,6 +1663,9 @@ class PluginRenderFrame {
       selectId: selectId is String && selectId.isNotEmpty ? selectId : null,
       hasMore: json['hasMore'] == true,
       submitInput: json['inputMode'] == 'submit',
+      typing: json['typing'] is String && (json['typing'] as String).trim().isNotEmpty
+          ? (json['typing'] as String).trim()
+          : null,
       detailAppend: detailAppend,
       multiSelect: selection == true || (selection is Map && selection['enabled'] != false),
       multiSelectMax: multiSelectMax,

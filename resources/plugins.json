@@ -923,6 +923,69 @@
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/pc-specs/plugin.json",
         "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/pc-specs/main.py"
       }
+    },
+    {
+      "id": "kanban",
+      "name": "Kanban Workspace",
+      "keyword": "kanban",
+      "description": "Persistent boards with rich cards, WIP limits, activity history, filters, and import/export.",
+      "icon": "grid",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/kanban",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kanban/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kanban/main.py",
+        "test_main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kanban/test_main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kanban/README.md"
+      }
+    },
+    {
+      "id": "calculator",
+      "name": "Calculator",
+      "keyword": "calc",
+      "description": "Extended math, currency conversion, and unit conversion — all in one expression",
+      "icon": "calculator",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/calculator",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/calculator/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/calculator/main.py"
+      }
+    },
+    {
+      "id": "image-resizer",
+      "name": "Image Resizer",
+      "keyword": "imgresize",
+      "description": "Resize one image or a whole folder of images to an exact size.",
+      "icon": "image",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/image-resizer",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/image-resizer/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/image-resizer/main.py"
+      }
+    },
+    {
+      "id": "xprice2",
+      "name": "xPrice Dashboard",
+      "keyword": "xprice2",
+      "description": "Compare product prices in a native dashboard with history and store alternatives",
+      "icon": "chart",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/xprice2",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/xprice2/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/xprice2/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/xprice2/README.md"
+      }
     }
   ]
 }

@@ -6,8 +6,17 @@ import sys
 from pathlib import Path
 
 PAGE_SIZE = 30
-PREVIEW_LIMIT = 2000
-state = {"query": "", "rev": 0, "entries": [], "has_more": False}
+PREVIEW_LIMIT = 400  # the list command already returns a bounded text summary
+
+state = {
+    "query": "",
+    "rev": 0,
+    "entries": [],  # compact entries, in display order
+    "entries_by_id": {},  # id -> compact entry, O(1) lookup
+    "has_more": False,
+    "item_cache": {},  # id -> already-rendered item dict (memoized)
+    "history_request_id": "",
+}
 
 
 def send(message):
@@ -21,7 +30,7 @@ def request_history(offset=0):
             "type": "command",
             "command": "clipboardHistory",
             "op": "list",
-            "requestId": "history",
+            "requestId": state["history_request_id"],
             "offset": offset,
             "limit": PAGE_SIZE,
             "query": state["query"],
@@ -44,8 +53,13 @@ def preview_markdown(entry):
             except (OSError, ValueError):
                 pass
         return "## Image clipboard item\n\nThe cached image is unavailable. Use **Copy** to restore the original image."
+
+    # The history list intentionally returns only a short text summary. Keep
+    # the preview bounded as well: fetching the full entry on hover makes the
+    # host reread and parse the entire history file for every focused item.
     text = entry.get("text", "")
     total = entry.get("textLength", len(text))
+
     if len(text) > PREVIEW_LIMIT:
         text = text[:PREVIEW_LIMIT] + "\n\n… Preview truncated"
     suffix = (
@@ -56,7 +70,7 @@ def preview_markdown(entry):
     return "## Clipboard preview\n\n```text\n" + text + "\n```" + suffix
 
 
-def item(entry):
+def build_item(entry):
     entry_type = entry.get("type", "text")
     text = entry.get("text", "")
     total = entry.get("textLength", len(text))
@@ -101,6 +115,24 @@ def item(entry):
     }
 
 
+def get_item(entry):
+    """Return the rendered item for `entry`, memoized.
+
+    Without this, every render() call would rebuild (and re-serialize)
+    preview markdown for *every* entry currently loaded even though the
+    compact entries are unchanged. That O(n) rebuild adds unnecessary work as
+    the history list grows. Here we build an item once and reuse it until its
+    underlying compact data changes.
+    """
+    eid = entry["id"]
+    cached = state["item_cache"].get(eid)
+    if cached is not None:
+        return cached
+    built = build_item(entry)
+    state["item_cache"][eid] = built
+    return built
+
+
 def render():
     send(
         {
@@ -115,8 +147,20 @@ def render():
                 "title": "No clipboard history",
                 "hint": "Copy some text while Clipboard History is enabled in Tabame.",
             },
-            "items": [item(entry) for entry in state["entries"]],
+            "items": [get_item(entry) for entry in state["entries"]],
         }
+    )
+
+
+def reset_state(query, rev):
+    state.update(
+        query=query,
+        rev=rev,
+        entries=[],
+        entries_by_id={},
+        has_more=False,
+        item_cache={},
+        history_request_id=f"history:{rev}",
     )
 
 
@@ -130,57 +174,30 @@ def main():
         if kind == "close":
             return
         if kind in ("init", "query"):
-            state.update(
-                query=message.get("text", message.get("query", "")),
-                rev=message.get("rev", 0),
-                entries=[],
-                has_more=False,
+            reset_state(
+                message.get("text", message.get("query", "")),
+                message.get("rev", 0),
             )
             request_history()
         elif (
             kind == "clipboardHistory"
-            and message.get("requestId") == "history"
+            and message.get("requestId") == state["history_request_id"]
             and message.get("op") == "list"
         ):
             entries = message.get("entries", [])
-            state["entries"].extend(entries if isinstance(entries, list) else [])
+            if isinstance(entries, list):
+                for entry in entries:
+                    eid = entry.get("id")
+                    if eid and eid not in state["entries_by_id"]:
+                        state["entries"].append(entry)
+                        state["entries_by_id"][eid] = entry
             state["has_more"] = message.get("hasMore") is True
             render()
-            if state["entries"]:
-                send(
-                    {
-                        "type": "command",
-                        "command": "clipboardHistory",
-                        "op": "entry",
-                        "requestId": "preview",
-                        "id": state["entries"][0]["id"],
-                    }
-                )
-        elif (
-            kind == "clipboardHistory"
-            and message.get("requestId") == "preview"
-            and message.get("op") == "entry"
-        ):
-            full_entry = message.get("entry")
-            if not isinstance(full_entry, dict):
-                continue
-            for index, existing in enumerate(state["entries"]):
-                if existing.get("id") == full_entry.get("id"):
-                    state["entries"][index] = full_entry
-                    render()
-                    break
         elif kind == "select":
-            selected_id = message.get("id", "")
-            if selected_id:
-                send(
-                    {
-                        "type": "command",
-                        "command": "clipboardHistory",
-                        "op": "entry",
-                        "requestId": "preview",
-                        "id": selected_id,
-                    }
-                )
+            # The preview is already embedded in each rendered item. Do not
+            # fetch the full clipboard entry on hover: the host's full-entry
+            # lookup scans the history file and would stall the launcher.
+            continue
         elif kind == "loadMore" and state["has_more"]:
             state["rev"] = message.get("rev", state["rev"])
             request_history(len(state["entries"]))

@@ -987,6 +987,7 @@ class HotKeyInfo {
     "OpenFrozenFancyShot": () async {
       if (QuickMenuFunctions.isQuickMenuVisible) {
         WinUtils.startTabame(closeCurrent: false, arguments: "-screenCapture -frozen");
+        return;
         // await QuickMenuFunctions.hideQuickMenu();
         // await Future<void>.delayed(const Duration(milliseconds: 50));
       }

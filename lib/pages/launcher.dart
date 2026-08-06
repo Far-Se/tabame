@@ -1808,6 +1808,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _resultsFocusNode.dispose();
     _scrollController.dispose();
     _activeIndexNotifier.dispose();
+    _exitPlugin(); // <- this.
     super.dispose();
   }
 
@@ -1839,7 +1840,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   }
 
   @override
-  void requestQuickMenuFocus() => _requestLauncherFocus(focusWindow: true);
+  void requestQuickMenuFocus() {
+    _requestLauncherFocus(focusWindow: true);
+    if (_activePlugin != null) _pluginHost.sendFocus();
+  }
 
   bool get _pluginOwnsFormFocus {
     final PluginRenderFrame? frame = _pluginFrame;

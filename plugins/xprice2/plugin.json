@@ -1,0 +1,11 @@
+{
+  "name": "xPrice Dashboard",
+  "keyword": "xprice2",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "id": "xprice2",
+  "description": "Compare product prices in a native dashboard with history and store alternatives",
+  "icon": "chart",
+  "dev": false
+}

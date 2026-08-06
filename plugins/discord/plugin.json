@@ -3,10 +3,10 @@
   "id": "discord",
   "keyword": "discord",
   "runtime": "python",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "entry": "main.py",
   "icon": "chat",
-  "description": "Browse servers/channels and send messages using your Discord user token",
-  "pip": ["requests"],
+  "description": "A compact Discord client for servers, channels, DMs, threads, live chat, search, and uploads",
+  "pip": ["requests", "websocket-client"],
   "dev": false
 }

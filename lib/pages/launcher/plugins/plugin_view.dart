@@ -138,6 +138,10 @@ class _PluginViewState extends State<PluginView> {
   /// One `loadMore` per frame: set when the user nears the end of a `hasMore`
   /// list, cleared when the plugin answers with a different item count.
   bool _loadMoreRequested = false;
+  bool _chatAwayFromBottom = false;
+  bool _chatLoadMoreRequested = false;
+  double? _chatLoadMorePreviousPixels;
+  double? _chatLoadMorePreviousMaxExtent;
 
   @override
   void dispose() {
@@ -160,10 +164,42 @@ class _PluginViewState extends State<PluginView> {
       }
     }
     if (oldWidget.frame.items.length != widget.frame.items.length) _loadMoreRequested = false;
+    if (widget.frame.view == PluginViewType.chat &&
+        _chatLoadMoreRequested &&
+        (oldWidget.frame.items.length != widget.frame.items.length || !widget.frame.hasMore)) {
+      final double? previousPixels = _chatLoadMorePreviousPixels;
+      final double? previousMaxExtent = _chatLoadMorePreviousMaxExtent;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_scrollController.hasClients) return;
+        if (previousPixels != null &&
+            previousMaxExtent != null &&
+            widget.frame.items.length > oldWidget.frame.items.length) {
+          final double addedExtent =
+              (_scrollController.position.maxScrollExtent - previousMaxExtent).clamp(0.0, double.infinity).toDouble();
+          final double target = (previousPixels + addedExtent)
+              .clamp(
+                _scrollController.position.minScrollExtent,
+                _scrollController.position.maxScrollExtent,
+              )
+              .toDouble();
+          _scrollController.jumpTo(target);
+        }
+        if (mounted) {
+          setState(() {
+            _chatLoadMoreRequested = false;
+            _chatLoadMorePreviousPixels = null;
+            _chatLoadMorePreviousMaxExtent = null;
+          });
+        }
+      });
+    }
     if (!identical(oldWidget.frame, widget.frame)) {
       _dashboardActiveFrame = null;
       _dashboardActiveIndex = -1;
       _itemKeys.clear();
+      if (oldWidget.frame.view != PluginViewType.chat || widget.frame.view != PluginViewType.chat) {
+        _chatAwayFromBottom = false;
+      }
     }
     _followStreamingDetail(oldWidget);
     _followChat(oldWidget);
@@ -232,20 +268,31 @@ class _PluginViewState extends State<PluginView> {
 
   /// A chat starts at its newest message and stays there as new messages arrive
   /// unless the user has deliberately scrolled back through the conversation.
+  bool _chatIsAtBottom(ScrollController controller) {
+    if (!controller.hasClients) return true;
+    final ScrollPosition position = controller.position;
+    return position.pixels >= position.maxScrollExtent - 72;
+  }
+
   void _followChat(PluginView oldWidget) {
     if (widget.frame.view != PluginViewType.chat) return;
     final bool enteredChat = oldWidget.frame.view != PluginViewType.chat;
-    final bool gainedMessages = widget.frame.items.length > oldWidget.frame.items.length;
-    if (!enteredChat && !gainedMessages) return;
+    final bool frameChanged = !identical(oldWidget.frame, widget.frame);
+    if (!enteredChat && !frameChanged) return;
     // Network images can grow the chat after its first layout. Pin a few times
     // while entering an empty chat so its actual last message—not the initial
     // pre-image layout—ends up on screen.
     final bool openingConversation = enteredChat || oldWidget.frame.items.isEmpty;
+    final bool wasAtBottom = openingConversation || (!_chatAwayFromBottom && _chatIsAtBottom(_scrollController));
     void pinToEnd() {
       if (!mounted || !_scrollController.hasClients) return;
-      final ScrollPosition position = _scrollController.position;
-      if (!openingConversation && position.pixels < position.maxScrollExtent - 60) return;
-      _scrollController.jumpTo(position.maxScrollExtent);
+      // Use the position from before the new frame landed. Once a new message
+      // is laid out, maxScrollExtent grows, so checking "at bottom" here would
+      // incorrectly classify a user who was at the bottom as scrolled away.
+      if (!wasAtBottom || _chatAwayFromBottom) return;
+      if (openingConversation && !_chatIsAtBottom(_scrollController)) return;
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      if (_chatAwayFromBottom && mounted) setState(() => _chatAwayFromBottom = false);
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) => pinToEnd());
@@ -253,6 +300,14 @@ class _PluginViewState extends State<PluginView> {
       Timer(const Duration(milliseconds: 180), pinToEnd);
       Timer(const Duration(milliseconds: 650), pinToEnd);
     }
+  }
+
+  void _pinChatToEndIfFollowing(ScrollController controller) {
+    if (!mounted || _chatAwayFromBottom || !controller.hasClients || !_chatIsAtBottom(controller)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _chatAwayFromBottom || !controller.hasClients) return;
+      controller.jumpTo(controller.position.maxScrollExtent);
+    });
   }
 
   void _followLog(PluginView oldWidget) {
@@ -806,21 +861,98 @@ class _PluginViewState extends State<PluginView> {
   /// `subtitle` the message body, `icon` an optional avatar, and accessories
   /// (normally a timestamp) sit beside the author name.
   Widget _buildChat(PluginRenderFrame frame, {ScrollController? controller}) {
-    return WindowsScrollView(
-      controller: controller ?? _scrollController,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            for (int i = 0; i < frame.items.length; i++) ...<Widget>[
-              if (frame.items[i].section != null && (i == 0 || frame.items[i].section != frame.items[i - 1].section))
-                _sectionHeader(frame.items[i].section!),
-              _PluginChatMessage(item: frame.items[i]),
-            ],
-            if (frame.hasMore) _loadMoreFooter(),
-          ],
+    final ScrollController chatController = controller ?? _scrollController;
+    return Stack(
+      children: <Widget>[
+        NotificationListener<ScrollNotification>(
+          onNotification: (ScrollNotification notification) {
+            if (notification.metrics.axis != Axis.vertical) return false;
+            if (frame.hasMore &&
+                !_chatLoadMoreRequested &&
+                notification.metrics.pixels <= notification.metrics.minScrollExtent + 120) {
+              _chatLoadMoreRequested = true;
+              _chatLoadMorePreviousPixels = notification.metrics.pixels;
+              _chatLoadMorePreviousMaxExtent = notification.metrics.maxScrollExtent;
+              widget.onLoadMore(_scopeFor(frame));
+            }
+            final bool away = notification.metrics.maxScrollExtent > 0 &&
+                notification.metrics.pixels < notification.metrics.maxScrollExtent - 72;
+            if (away != _chatAwayFromBottom && mounted) setState(() => _chatAwayFromBottom = away);
+            return false;
+          },
+          child: WindowsScrollView(
+            controller: chatController,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 4, 10, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  if (frame.hasMore) _loadMoreFooter(),
+                  for (int i = 0; i < frame.items.length; i++) ...<Widget>[
+                    if (frame.items[i].section != null &&
+                        (i == 0 || frame.items[i].section != frame.items[i - 1].section))
+                      _chatDateDivider(frame.items[i].section!),
+                    KeyedSubtree(
+                      key: _keyFor(frame, i),
+                      child: _PluginChatMessage(
+                        item: frame.items[i],
+                        grouped: i > 0 &&
+                            frame.items[i].section == frame.items[i - 1].section &&
+                            frame.items[i].title == frame.items[i - 1].title,
+                        onContentSizeChanged: () => _pinChatToEndIfFollowing(chatController),
+                        onAction: (PluginAction action) =>
+                            widget.onMetadataAction(_scopeFor(frame), frame.items[i].id, action),
+                      ),
+                    ),
+                  ],
+                  if (frame.typing != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(50, 5, 8, 0),
+                      child: Text(
+                        frame.typing!,
+                        style:
+                            TextStyle(fontSize: 10.5, color: Design.text.withAlpha(105), fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
         ),
+        if (_chatAwayFromBottom)
+          Positioned(
+            right: 16,
+            bottom: 12,
+            child: _PluginChatJumpButton(
+              onTap: () {
+                if (!chatController.hasClients) return;
+                chatController.animateTo(
+                  chatController.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _chatDateDivider(String label) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 13, 8, 5),
+      child: Row(
+        children: <Widget>[
+          Expanded(child: Container(height: 1, color: Design.text.withAlpha(20))),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(115)),
+            ),
+          ),
+          Expanded(child: Container(height: 1, color: Design.text.withAlpha(20))),
+        ],
       ),
     );
   }
@@ -2121,128 +2253,379 @@ class _PluginIcon extends StatelessWidget {
   }
 }
 
-/// One message in a plugin `chat` view. The message schema deliberately reuses
-/// [PluginItem], keeping chat feeds compatible with existing plugin tooling.
-class _PluginChatMessage extends StatelessWidget {
-  const _PluginChatMessage({required this.item});
+class _PluginChatJumpButton extends StatelessWidget {
+  const _PluginChatJumpButton({required this.onTap});
 
-  final PluginItem item;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    return Material(
+      color: Design.background.withAlpha(235),
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Design.accent.withAlpha(110)),
+          ),
+          child: Icon(Icons.keyboard_double_arrow_down_rounded, size: 17, color: Design.accent),
+        ),
+      ),
+    );
+  }
+}
+
+/// One message in a plugin `chat` view. Consecutive messages from the same
+/// author collapse into a Discord-style group, while item actions appear only
+/// when the pointer is over the row.
+class _PluginChatMessage extends StatefulWidget {
+  const _PluginChatMessage({
+    required this.item,
+    required this.grouped,
+    required this.onContentSizeChanged,
+    required this.onAction,
+  });
+
+  final PluginItem item;
+  final bool grouped;
+  final VoidCallback onContentSizeChanged;
+  final ValueChanged<PluginAction> onAction;
+
+  @override
+  State<_PluginChatMessage> createState() => _PluginChatMessageState();
+}
+
+class _PluginChatMessageState extends State<_PluginChatMessage> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final PluginItem item = widget.item;
     final String? avatar = item.icon?.trim();
     final Widget avatarWidget = avatar != null && (avatar.startsWith('http://') || avatar.startsWith('https://'))
         ? ClipOval(
             child: Image.network(
               avatar,
-              width: 30,
-              height: 30,
+              width: 32,
+              height: 32,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => _chatAvatarFallback(),
             ),
           )
         : _chatAvatarFallback();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          SizedBox(width: 30, height: 30, child: avatarWidget),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
-              decoration: BoxDecoration(
-                color: Design.text.withAlpha(7),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Design.text.withAlpha(12)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    final List<PluginAccessory> headerAccessories =
+        item.accessories.where((PluginAccessory accessory) => accessory.icon != 'heart').toList();
+    final List<PluginAccessory> reactions =
+        item.accessories.where((PluginAccessory accessory) => accessory.icon == 'heart').toList();
+    final bool hasActions = item.actions.isNotEmpty;
+
+    return MouseRegion(
+      onEnter: (_) {
+        if (hasActions && mounted) setState(() => _hovered = true);
+      },
+      onExit: (_) {
+        if (_hovered && mounted) setState(() => _hovered = false);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 90),
+        padding: EdgeInsets.fromLTRB(8, widget.grouped ? 1 : 9, 8, reactions.isEmpty ? 3 : 5),
+        color: _hovered ? Design.text.withAlpha(8) : Colors.transparent,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            if (widget.grouped)
+              const SizedBox(width: 42)
+            else ...<Widget>[
+              SizedBox(width: 32, height: 32, child: avatarWidget),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              child: Stack(
+                clipBehavior: Clip.none,
                 children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Flexible(
-                        child: Text(
-                          item.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Design.text.withAlpha(225)),
+                  Padding(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        if (!widget.grouped)
+                          Row(
+                            children: <Widget>[
+                              Flexible(
+                                child: Text(
+                                  item.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Design.text.withAlpha(230),
+                                  ),
+                                ),
+                              ),
+                              for (final PluginAccessory accessory in headerAccessories) ...<Widget>[
+                                const SizedBox(width: 7),
+                                Text(
+                                  accessory.text,
+                                  style: TextStyle(
+                                    fontSize: accessory.icon == 'clock' ? 10 : 9.5,
+                                    color: accessory.color ?? Design.text.withAlpha(105),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        if (item.reply != null) _DiscordReplyPreview(reply: item.reply!),
+                        if (item.subtitle.isNotEmpty) ...<Widget>[
+                          if (!widget.grouped) const SizedBox(height: 2),
+                          _DiscordChatBody(text: item.subtitle, onImageLoaded: widget.onContentSizeChanged),
+                        ],
+                        for (final String imageUrl in item.chatImageUrls) ...<Widget>[
+                          const SizedBox(height: 7),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 460, maxHeight: 320),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Design.text.withAlpha(6),
+                                  border: Border.all(color: Design.text.withAlpha(16)),
+                                ),
+                                child: Image.network(
+                                  imageUrl,
+                                  width: 460,
+                                  fit: BoxFit.contain,
+                                  alignment: Alignment.centerLeft,
+                                  frameBuilder:
+                                      (BuildContext context, Widget child, int? frame, bool wasSynchronouslyLoaded) {
+                                    if (frame != null || wasSynchronouslyLoaded) {
+                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        if (mounted) widget.onContentSizeChanged();
+                                      });
+                                    }
+                                    return child;
+                                  },
+                                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (reactions.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 5),
+                            child: Wrap(
+                              spacing: 4,
+                              runSpacing: 4,
+                              children: <Widget>[
+                                for (final PluginAccessory reaction in reactions)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: (reaction.color ?? Design.accent).withAlpha(22),
+                                      borderRadius: BorderRadius.circular(5),
+                                      border: Border.all(color: (reaction.color ?? Design.accent).withAlpha(65)),
+                                    ),
+                                    child: Text(
+                                      reaction.text,
+                                      style:
+                                          TextStyle(fontSize: 10, color: reaction.color ?? Design.text.withAlpha(175)),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (_hovered && hasActions)
+                    Positioned(
+                      top: -7,
+                      right: 0,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Design.background.withAlpha(245),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Design.text.withAlpha(34)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            for (final PluginAction action in item.actions)
+                              IconButton(
+                                tooltip: action.title,
+                                visualDensity: VisualDensity.compact,
+                                constraints: const BoxConstraints.tightFor(width: 27, height: 27),
+                                padding: EdgeInsets.zero,
+                                icon: Icon(
+                                  PluginIcons.resolve(action.icon),
+                                  size: 14,
+                                  color: action.destructive ? const Color(0xFFE5534B) : Design.text.withAlpha(175),
+                                ),
+                                onPressed: () => widget.onAction(action),
+                              ),
+                          ],
                         ),
                       ),
-                      for (final PluginAccessory accessory in item.accessories) ...<Widget>[
-                        const SizedBox(width: 7),
-                        Text(accessory.text, style: TextStyle(fontSize: 10, color: Design.text.withAlpha(105))),
-                      ],
-                    ],
-                  ),
-                  if (item.subtitle.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 3),
-                    _DiscordChatBody(text: item.subtitle),
-                  ],
-                  for (final String imageUrl in item.chatImageUrls) ...<Widget>[
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Image.network(
-                        imageUrl,
-                        width: 400,
-                        fit: BoxFit.contain,
-                        alignment: Alignment.centerLeft,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                      ),
                     ),
-                  ],
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _chatAvatarFallback() => Container(
-        decoration: BoxDecoration(color: Design.accent.withAlpha(36), shape: BoxShape.circle),
-        alignment: Alignment.center,
-        child: Icon(Icons.person_rounded, size: 17, color: Design.accent.withAlpha(210)),
-      );
+  Widget _chatAvatarFallback() {
+    final String name = widget.item.title.trim();
+    final String initial = name.isEmpty ? '?' : name.characters.first.toUpperCase();
+    return Container(
+      decoration: BoxDecoration(color: Design.accent.withAlpha(42), shape: BoxShape.circle),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Design.accent.withAlpha(225)),
+      ),
+    );
+  }
 }
 
-/// Discord represents custom emoji as `<:name:id>` / `<a:name:id>`. Render
-/// those tokens as CDN images while leaving normal Unicode emoji alone.
-class _DiscordChatBody extends StatelessWidget {
-  const _DiscordChatBody({required this.text});
+class _DiscordReplyPreview extends StatelessWidget {
+  const _DiscordReplyPreview({required this.reply});
 
-  static final RegExp _customEmoji = RegExp(r'<(a?):[A-Za-z0-9_]+:(\d+)>');
-
-  final String text;
+  final PluginReplyPreview reply;
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle style = TextStyle(fontSize: 12, height: 1.35, color: Design.text.withAlpha(185));
+    final String? avatar = reply.icon?.trim();
+    final bool hasAvatar = avatar != null && (avatar.startsWith('http://') || avatar.startsWith('https://'));
+    return Padding(
+      padding: const EdgeInsets.only(top: 3, bottom: 4),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(left: BorderSide(color: Design.accent.withAlpha(125), width: 2)),
+        ),
+        padding: const EdgeInsets.only(left: 7),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            if (hasAvatar) ...<Widget>[
+              ClipOval(
+                child: Image.network(
+                  avatar,
+                  width: 15,
+                  height: 15,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+              const SizedBox(width: 5),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    reply.author,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: Design.accent.withAlpha(205),
+                    ),
+                  ),
+                  _DiscordChatBody(
+                    text: reply.text,
+                    maxLines: 2,
+                    style: TextStyle(fontSize: 10.5, height: 1.25, color: Design.text.withAlpha(135)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Discord represents custom emoji as `<:name:id>` / `<a:name:id>`. Render
+/// those tokens and the common inline emphasis forms while leaving normal
+/// Unicode emoji alone.
+class _DiscordChatBody extends StatelessWidget {
+  const _DiscordChatBody({required this.text, this.onImageLoaded, this.maxLines, this.style});
+
+  static final RegExp _inlineToken = RegExp(
+    r'<(a?):[A-Za-z0-9_]+:(\d+)>'
+    r'|(\*\*[^*\n]+\*\*)|(__[^_\n]+__)|(`[^`\n]+`)|(\*[^*\n]+\*)|(_[^_\n]+_)',
+  );
+
+  final String text;
+  final VoidCallback? onImageLoaded;
+  final int? maxLines;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle bodyStyle = style ?? TextStyle(fontSize: 12, height: 1.4, color: Design.text.withAlpha(205));
     final List<InlineSpan> spans = <InlineSpan>[];
     int offset = 0;
-    for (final RegExpMatch match in _customEmoji.allMatches(text)) {
+    for (final RegExpMatch match in _inlineToken.allMatches(text)) {
       if (match.start > offset) spans.add(TextSpan(text: text.substring(offset, match.start)));
-      final bool animated = match.group(1) == 'a';
-      final String id = match.group(2)!;
-      spans.add(
-        WidgetSpan(
-          alignment: PlaceholderAlignment.middle,
-          child: Image.network(
-            'https://cdn.discordapp.com/emojis/$id.${animated ? 'gif' : 'png'}?size=48&quality=lossless',
-            width: 20,
-            height: 20,
-            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      if (match.group(1) != null) {
+        final bool animated = match.group(1) == 'a';
+        final String id = match.group(2)!;
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Image.network(
+              'https://cdn.discordapp.com/emojis/$id.${animated ? 'gif' : 'png'}?size=48&quality=lossless',
+              width: 20,
+              height: 20,
+              frameBuilder: (BuildContext context, Widget child, int? frame, bool wasSynchronouslyLoaded) {
+                if ((frame != null || wasSynchronouslyLoaded) && onImageLoaded != null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) => onImageLoaded!());
+                }
+                return child;
+              },
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        final String token = match.group(0)!;
+        final bool bold = token.startsWith('**') || token.startsWith('__');
+        final bool code = token.startsWith('`');
+        final bool italic = !bold && !code;
+        final int trim = bold || code ? 2 : 1;
+        spans.add(
+          TextSpan(
+            text: token.substring(trim, token.length - trim),
+            style: TextStyle(
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+              fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+              fontFamily: code ? 'Consolas' : null,
+              color: code ? Design.text.withAlpha(225) : null,
+              backgroundColor: code ? Design.text.withAlpha(18) : null,
+            ),
+          ),
+        );
+      }
       offset = match.end;
     }
     if (offset < text.length) spans.add(TextSpan(text: text.substring(offset)));
-    return Text.rich(TextSpan(style: style, children: spans.isEmpty ? <InlineSpan>[TextSpan(text: text)] : spans));
+    return Text.rich(
+      TextSpan(style: bodyStyle, children: spans.isEmpty ? <InlineSpan>[TextSpan(text: text)] : spans),
+      maxLines: maxLines,
+      overflow: maxLines == null ? TextOverflow.clip : TextOverflow.ellipsis,
+    );
   }
 }
 

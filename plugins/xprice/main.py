@@ -37,7 +37,7 @@ from datetime import datetime
 from itertools import count
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 XPRICE_URL = "https://xprice.ro/"
 REQUEST_TIMEOUT = 30
@@ -509,6 +509,444 @@ def generate_image(data):
 
 
 # ---------------------------------------------------------------------------
+# Compact price-watch card
+# ---------------------------------------------------------------------------
+
+
+COMPACT_CARD_BG = "#171A20"
+COMPACT_PANEL_BG = "#20242B"
+COMPACT_PANEL_ALT = "#1C2026"
+COMPACT_BORDER = "#343A44"
+COMPACT_TEXT = "#F0F2EE"
+COMPACT_MUTED = "#929AA5"
+COMPACT_FAINT = "#626B77"
+COMPACT_GREEN = "#7FC58B"
+COMPACT_GREEN_BG = "#24362C"
+COMPACT_BLUE = "#73A9D2"
+COMPACT_RED = "#D57C78"
+COMPACT_IMAGE_BG = "#EFF1EC"
+
+
+def _compact_fit_text(draw, value, font, max_width):
+    value = str(value or "")
+    if draw.textlength(value, font=font) <= max_width:
+        return value
+    ellipsis = "\u2026"
+    while value and draw.textlength(value + ellipsis, font=font) > max_width:
+        value = value[:-1]
+    return value.rstrip() + ellipsis
+
+
+def _compact_wrap_text(draw, value, font, max_width, max_lines):
+    words = str(value or "").split()
+    lines = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if current and draw.textlength(candidate, font=font) > max_width:
+            lines.append(current)
+            current = word
+        else:
+            current = candidate
+    if current:
+        lines.append(current)
+    if len(lines) <= max_lines:
+        return [_compact_fit_text(draw, line, font, max_width) for line in lines]
+    visible_lines = lines[: max_lines - 1]
+    visible_lines.append(
+        _compact_fit_text(draw, " ".join(lines[max_lines - 1 :]), font, max_width)
+    )
+    return visible_lines
+
+
+def _compact_center_text(draw, box, value, font, fill):
+    x1, y1, x2, y2 = box
+    bbox = draw.textbbox((0, 0), value, font=font)
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+    draw.text(
+        ((x1 + x2 - tw) / 2 - bbox[0], (y1 + y2 - th) / 2 - bbox[1]),
+        value,
+        font=font,
+        fill=fill,
+    )
+
+
+def _compact_panel(draw, box, fill=COMPACT_PANEL_BG):
+    draw.rounded_rectangle(box, radius=12, fill=fill, outline=COMPACT_BORDER, width=1)
+
+
+def _compact_date(value):
+    value = str(value or "")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return parsed.strftime("%d.%m")
+    except (TypeError, ValueError):
+        return value[:10]
+
+
+def _compact_trend(history):
+    if len(history) < 2:
+        return "", COMPACT_MUTED
+    first = history[0]["price"]
+    latest = history[-1]["price"]
+    if not first:
+        return "", COMPACT_MUTED
+    change_pct = (latest - first) / first * 100
+    if abs(change_pct) < 0.05:
+        return "Stabil", COMPACT_MUTED
+    direction = "\u2193" if change_pct < 0 else "\u2191"
+    color = COMPACT_GREEN if change_pct < 0 else COMPACT_RED
+    return f"{direction} {abs(change_pct):.1f}% fa\u021b\u0103 de început", color
+
+
+def _compact_paste_product_image(card, draw, image_url, box, fallback_font):
+    x1, y1, x2, y2 = box
+    draw.rounded_rectangle(
+        box, radius=10, fill=COMPACT_IMAGE_BG, outline=COMPACT_BORDER, width=1
+    )
+    if image_url:
+        try:
+            req = urllib.request.Request(
+                image_url, headers={"User-Agent": "Mozilla/5.0"}
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                raw = resp.read()
+            product_img = Image.open(io.BytesIO(raw)).convert("RGBA")
+            inner_w = max(1, x2 - x1 - 16)
+            inner_h = max(1, y2 - y1 - 16)
+            resampling = getattr(Image, "Resampling", Image).LANCZOS
+            fitted = ImageOps.contain(product_img, (inner_w, inner_h), resampling)
+            offset = (
+                x1 + (x2 - x1 - fitted.width) // 2,
+                y1 + (y2 - y1 - fitted.height) // 2,
+            )
+            card.paste(fitted, offset, fitted)
+            return
+        except Exception as err:
+            log("product image download failed:", err)
+    _compact_center_text(draw, box, "F\u0103r\u0103 imagine", fallback_font, COMPACT_MUTED)
+
+
+def _compact_history_chart(draw, history, x, y, w, h, label_font, value_font):
+    if len(history) < 2:
+        _compact_center_text(
+            draw,
+            (x, y, x + w, y + h),
+            "Nu exist\u0103 suficient istoric de pre\u021b",
+            label_font,
+            COMPACT_MUTED,
+        )
+        return
+
+    prices = [point["price"] for point in history]
+    lo, hi = min(prices), max(prices)
+    span = max(hi - lo, 1.0)
+    chart_lo = lo - span * 0.12
+    chart_hi = hi + span * 0.12
+    left = x + 62
+    right = x + w - 16
+    top = y + 12
+    bottom = y + h - 30
+    plot_w = max(1, right - left)
+    plot_h = max(1, bottom - top)
+
+    for fraction in (0, 0.5, 1):
+        grid_y = top + plot_h * fraction
+        draw.line((left, grid_y, right, grid_y), fill=COMPACT_BORDER, width=1)
+        value = chart_hi - (chart_hi - chart_lo) * fraction
+        draw.text((x, grid_y - 7), f"{value:.0f}", font=label_font, fill=COMPACT_FAINT)
+
+    count_points = len(history)
+
+    def point(index, price):
+        px = left + plot_w * index / (count_points - 1)
+        py = top + plot_h * (1 - (price - chart_lo) / (chart_hi - chart_lo))
+        return px, py
+
+    points = [point(index, item["price"]) for index, item in enumerate(history)]
+    draw.line(points, fill=COMPACT_BLUE, width=3, joint="curve")
+    latest_x, latest_y = points[-1]
+    draw.ellipse(
+        (latest_x - 5, latest_y - 5, latest_x + 5, latest_y + 5),
+        fill=COMPACT_BLUE,
+        outline=COMPACT_TEXT,
+        width=2,
+    )
+
+    latest_text = f"{history[-1]['price']:.2f} RON"
+    latest_width = draw.textlength(latest_text, font=value_font)
+    label_x = max(
+        left,
+        min(right - latest_width - 12, latest_x - latest_width / 2 - 6),
+    )
+    label_y = max(y + 2, min(bottom - 24, latest_y - 23))
+    draw.rounded_rectangle(
+        (label_x, label_y, label_x + latest_width + 12, label_y + 22),
+        radius=6,
+        fill=COMPACT_GREEN_BG,
+    )
+    draw.text((label_x + 6, label_y + 3), latest_text, font=value_font, fill=COMPACT_GREEN)
+
+    first_label = _compact_date(history[0].get("date"))
+    last_label = _compact_date(history[-1].get("date"))
+    draw.text((left, bottom + 7), first_label, font=label_font, fill=COMPACT_FAINT)
+    last_width = draw.textlength(last_label, font=label_font)
+    draw.text((right - last_width, bottom + 7), last_label, font=label_font, fill=COMPACT_FAINT)
+
+
+def _compact_offer_rows(draw, offers, x, y, w, row_h, body_font, price_font, small_font):
+    if not offers:
+        _compact_center_text(
+            draw,
+            (x, y, x + w, y + row_h),
+            "Nu s-au găsit magazine",
+            body_font,
+            COMPACT_MUTED,
+        )
+        return
+
+    best_price = offers[0]["price"]
+    rank_font = load_font(13, bold=True)
+    for index, offer in enumerate(offers):
+        row_y = y + index * row_h
+        if index == 0:
+            draw.rounded_rectangle(
+                (x, row_y, x + w, row_y + row_h - 3),
+                radius=7,
+                fill=COMPACT_GREEN_BG,
+            )
+        else:
+            draw.line((x, row_y, x + w, row_y), fill=COMPACT_BORDER, width=1)
+
+        rank_box = (x + 10, row_y + 7, x + 38, row_y + row_h - 7)
+        rank_fill = COMPACT_GREEN if index == 0 else COMPACT_PANEL_ALT
+        rank_text = COMPACT_TEXT if index == 0 else COMPACT_MUTED
+        draw.rounded_rectangle(rank_box, radius=5, fill=rank_fill)
+        _compact_center_text(
+            draw,
+            rank_box,
+            str(index + 1),
+            rank_font,
+            COMPACT_CARD_BG if index == 0 else rank_text,
+        )
+
+        price_text = f"{offer['price']:.2f} RON"
+        price_width = draw.textlength(price_text, font=price_font)
+        draw.text(
+            (x + w - price_width - 12, row_y + 7),
+            price_text,
+            font=price_font,
+            fill=COMPACT_GREEN if index == 0 else COMPACT_TEXT,
+        )
+        delta_width = 0
+        if index > 0:
+            delta_text = f"+{offer['price'] - best_price:.2f}"
+            delta_width = draw.textlength(delta_text, font=small_font)
+            draw.text(
+                (x + w - price_width - delta_width - 24, row_y + 10),
+                delta_text,
+                font=small_font,
+                fill=COMPACT_FAINT,
+            )
+
+        seller_max_width = max(
+            40,
+            w - 58 - price_width - (delta_width + 24 if index > 0 else 12),
+        )
+        seller = _compact_fit_text(
+            draw,
+            offer.get("seller") or "Magazin",
+            body_font,
+            seller_max_width,
+        )
+        draw.text((x + 50, row_y + 8), seller, font=body_font, fill=COMPACT_TEXT)
+        if index == 0:
+            draw.text(
+                (x + 50, row_y + 24),
+                "CEL MAI IEFTIN",
+                font=small_font,
+                fill=COMPACT_GREEN,
+            )
+
+
+def generate_compact_image(data):
+    """Render a compact, dynamic price-watch/comparison card."""
+    name = data.get("name") or "Produs"
+    offers = sorted(
+        [o for o in (data.get("offers") or []) if o.get("price") is not None],
+        key=lambda o: o["price"],
+    )
+    history = [h for h in (data.get("history") or []) if h.get("price") is not None]
+    visible_offers = offers[:7]
+
+    width = 1280
+    margin = 32
+    gap = 16
+    thumb_size = 112
+    price_box_w = 320
+    price_box_h = 112
+    history_panel_w = 650
+    offers_panel_w = width - margin * 2 - gap - history_panel_w
+    row_h = 36
+    offers_content_h = 62 + len(visible_offers) * row_h
+    if len(offers) > len(visible_offers):
+        offers_content_h += 22
+    panel_h = max(258, offers_content_h)
+    body_y = margin + max(thumb_size, price_box_h) + 22
+    footer_h = 34
+    height = body_y + panel_h + footer_h + margin
+
+    title_font = load_font(29, bold=True)
+    header_price_font = load_font(28, bold=True)
+    section_font = load_font(16, bold=True)
+    body_font = load_font(16)
+    row_price_font = load_font(17, bold=True)
+    small_font = load_font(12)
+    tiny_font = load_font(11)
+
+    card = Image.new("RGB", (width, height), COMPACT_CARD_BG)
+    draw = ImageDraw.Draw(card)
+    right_edge = width - margin
+    price_box_x = right_edge - price_box_w
+    title_x = margin + thumb_size + 20
+    title_w = price_box_x - title_x - 20
+
+    thumb_box = (margin, margin, margin + thumb_size, margin + thumb_size)
+    _compact_paste_product_image(card, draw, data.get("image"), thumb_box, body_font)
+
+    draw.text((title_x, margin + 2), "XPRICE / PRICE WATCH", font=small_font, fill=COMPACT_GREEN)
+    title_lines = _compact_wrap_text(draw, name, title_font, title_w, 2)
+    title_y = margin + 22
+    for line in title_lines:
+        draw.text((title_x, title_y), line, font=title_font, fill=COMPACT_TEXT)
+        title_y += 32
+
+    stats = [f"{len(offers)} magazine"]
+    if history:
+        stats.append(f"{len(history)} zile urmărite")
+    draw.text(
+        (title_x, margin + thumb_size - 26),
+        "  ·  ".join(stats),
+        font=body_font,
+        fill=COMPACT_MUTED,
+    )
+
+    best_offer = offers[0] if offers else None
+    best_price = best_offer["price"] if best_offer else None
+    draw.rounded_rectangle(
+        (price_box_x, margin, right_edge, margin + price_box_h),
+        radius=10,
+        fill=COMPACT_PANEL_BG,
+        outline=COMPACT_BORDER,
+        width=1,
+    )
+    draw.text(
+        (price_box_x + 16, margin + 13),
+        "CEL MAI BUN PREȚ",
+        font=small_font,
+        fill=COMPACT_GREEN,
+    )
+    price_text = f"{best_price:.2f} RON" if best_price is not None else "Nespecificat"
+    draw.text(
+        (price_box_x + 16, margin + 30),
+        price_text,
+        font=header_price_font,
+        fill=COMPACT_TEXT,
+    )
+    seller_text = (
+        f"la {best_offer.get('seller') or 'magazin'}"
+        if best_offer
+        else "Fără ofertă disponibilă"
+    )
+    draw.text(
+        (price_box_x + 16, margin + 78),
+        _compact_fit_text(draw, seller_text, body_font, price_box_w - 32),
+        font=body_font,
+        fill=COMPACT_MUTED,
+    )
+
+    divider_y = body_y - 11
+    draw.line((margin, divider_y, right_edge, divider_y), fill=COMPACT_BORDER, width=1)
+
+    history_box = (margin, body_y, margin + history_panel_w, body_y + panel_h)
+    offers_x = margin + history_panel_w + gap
+    offers_box = (offers_x, body_y, right_edge, body_y + panel_h)
+    _compact_panel(draw, history_box)
+    _compact_panel(draw, offers_box, fill=COMPACT_PANEL_ALT)
+
+    section_y = body_y + 14
+    draw.text((margin + 18, section_y), "ISTORIC PREȚ", font=section_font, fill=COMPACT_TEXT)
+    trend_text, trend_color = _compact_trend(history)
+    if trend_text:
+        trend_width = draw.textlength(trend_text, font=small_font)
+        draw.text(
+            (margin + history_panel_w - trend_width - 18, section_y + 2),
+            trend_text,
+            font=small_font,
+            fill=trend_color,
+        )
+    _compact_history_chart(
+        draw,
+        history,
+        margin + 18,
+        body_y + 46,
+        history_panel_w - 36,
+        panel_h - 58,
+        tiny_font,
+        small_font,
+    )
+
+    draw.text((offers_x + 18, section_y), "COMPARĂ MAGAZINELE", font=section_font, fill=COMPACT_TEXT)
+    offers_count = f"{len(offers)} oferte"
+    count_width = draw.textlength(offers_count, font=small_font)
+    draw.text(
+        (right_edge - count_width - 18, section_y + 2),
+        offers_count,
+        font=small_font,
+        fill=COMPACT_MUTED,
+    )
+    _compact_offer_rows(
+        draw,
+        visible_offers,
+        offers_x + 10,
+        body_y + 45,
+        offers_panel_w - 20,
+        row_h,
+        body_font,
+        row_price_font,
+        small_font,
+    )
+    if len(offers) > len(visible_offers):
+        more_text = f"+ încă {len(offers) - len(visible_offers)} magazine"
+        draw.text(
+            (offers_x + 18, body_y + 45 + len(visible_offers) * row_h + 4),
+            more_text,
+            font=small_font,
+            fill=COMPACT_MUTED,
+        )
+
+    footer_y = body_y + panel_h + 13
+    footer = f"xPrice  ·  {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+    draw.text((margin, footer_y), footer, font=tiny_font, fill=COMPACT_FAINT)
+    if data.get("pageUrl"):
+        source_text = "sursă: xprice.ro"
+        source_width = draw.textlength(source_text, font=tiny_font)
+        draw.text(
+            (right_edge - source_width, footer_y),
+            source_text,
+            font=tiny_font,
+            fill=COMPACT_FAINT,
+        )
+
+    cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    out_path = os.path.join(cache_dir, f"xprice_{int(time.time() * 1000)}.png")
+    card.save(out_path, "PNG")
+    return out_path
+
+
+# ---------------------------------------------------------------------------
 # Rendering
 # ---------------------------------------------------------------------------
 
@@ -757,7 +1195,7 @@ def run_lookup(url):
         render(
             0, "list", loading=True, loadingText="Building the price card…", items=[]
         )
-        image_path = generate_image(data)
+        image_path = generate_compact_image(data)
 
         state["last_result"] = data
         state["last_image_path"] = image_path
