@@ -30,6 +30,9 @@ class PluginManagerButton extends StatelessWidget {
 /// "Plugin submission" GitHub issue template. Curated submissions land in
 /// `resources/plugins.json` and show up in everyone's gallery.
 const String _submitPluginUrl = 'https://github.com/Far-Se/tabame/issues/new?template=plugin_submission.md';
+const String _chromeConnectorUrl =
+    'https://chromewebstore.google.com/detail/tabame-connector/affgkglfpdpkdfolkogkaplllgmmkhdd?authuser=0&hl=en';
+const String _firefoxConnectorUrl = 'https://addons.mozilla.org/en-US/firefox/addon/tabame-connector-for-firefox/';
 
 enum _PanelMode { installed, gallery, makeYourOwn }
 
@@ -701,14 +704,23 @@ class _BrowserBridgeCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Keeps the extension paired while Tabame is running, so browser plugins open instantly. Run `browser` plugin to setup connection.',
+                      'Keeps the extension paired while Tabame is running, so browser plugins open instantly. Install the connector below, then run the `browser` plugin to finish pairing.',
                       style: TextStyle(
                         fontSize: Design.baseFontSize - 0.5,
                         height: 1.25,
                         color: text.withAlpha(enabled ? 140 : 100),
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 7),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 5,
+                      children: <Widget>[
+                        _storeLink(label: 'Chrome Web Store', url: _chromeConnectorUrl, accent: accent),
+                        _storeLink(label: 'Firefox Add-ons', url: _firefoxConnectorUrl, accent: accent),
+                      ],
+                    ),
+                    const SizedBox(height: 7),
                     Row(
                       children: <Widget>[
                         Icon(state.$3, size: 12, color: state.$2),
@@ -755,6 +767,36 @@ class _BrowserBridgeCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _storeLink({required String label, required String url, required Color accent}) {
+    return InkWell(
+      onTap: () => WinUtils.open(url),
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+        decoration: BoxDecoration(
+          color: accent.withAlpha(12),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: accent.withAlpha(42)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.open_in_new_rounded, size: 12, color: accent),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: Design.baseFontSize - 1,
+                fontWeight: FontWeight.w700,
+                color: accent,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

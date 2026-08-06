@@ -611,14 +611,21 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     // A different item set means a new screen (drill-in) or a fresh search:
     // snap the selection back to the first row so it matches what's shown and
     // arrow keys start from there. Same-id re-renders (e.g. a background badge
-    // refresh) keep the cursor where the user left it. A frame carrying
-    // `selectId` picks its own highlight instead.
-    final bool sameItemSet =
-        previous != null && previous.page?.id == frame.page?.id && _sameItemIds(previous.items, frame.items);
-    final bool keepKeyboardSelection = previous != null &&
-        previous.page?.id == frame.page?.id &&
-        _hasKeyboardNavigatedCurrentQuery &&
-        _pluginKeyboardSelectedItemId != null;
+    // refresh) keep the cursor where the user left it. Pagination is also a
+    // same-screen update: preserve the current item when the new frame contains
+    // the previous list followed by another page. A frame carrying `selectId`
+    // picks its own highlight instead.
+    final bool samePage = previous != null && previous.page?.id == frame.page?.id;
+    final bool sameItemSet = previous != null && samePage && _sameItemIds(previous.items, frame.items);
+    final bool appendedItems = previous != null && samePage && _isPluginItemListAppend(previous.items, frame.items);
+    final int previousSelectedIndex = previous == null || previous.items.isEmpty
+        ? -1
+        : _activeIndexNotifier.value.clamp(0, previous.items.length - 1);
+    final int appendedSelectionIndex = appendedItems
+        ? frame.items.indexWhere((PluginItem item) => item.id == previous.items[previousSelectedIndex].id)
+        : -1;
+    final bool keepKeyboardSelection =
+        samePage && _hasKeyboardNavigatedCurrentQuery && _pluginKeyboardSelectedItemId != null;
     setState(() {
       _pluginFrame = frame;
       _prunePluginSelections(frame);
@@ -636,6 +643,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         _activeIndexNotifier.value = selectIdIndex;
       } else if (restoredIndex >= 0) {
         _activeIndexNotifier.value = restoredIndex;
+      } else if (appendedSelectionIndex >= 0) {
+        _activeIndexNotifier.value = appendedSelectionIndex;
       } else if (keepKeyboardSelection && count > 0) {
         _activeIndexNotifier.value =
             keyboardSelectedIndex >= 0 ? keyboardSelectedIndex : _pluginKeyboardSelectedIndex.clamp(0, count - 1);
@@ -663,6 +672,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
             frame.dashboardPanels.any((PluginDashboardPanel panel) => panel.frame.view == PluginViewType.form));
     if (wasForm && !isForm) _requestLauncherFocus();
     _applyPluginWindowWidth(frame.wantsWideWindow);
+  }
+
+  /// Whether [next] is the previous list followed by one or more new pages.
+  /// Pagination frames are full snapshots, so preserving the selected item here
+  /// prevents the list from being mistaken for a fresh search.
+  bool _isPluginItemListAppend(List<PluginItem> previous, List<PluginItem> next) {
+    if (previous.isEmpty || next.length <= previous.length) return false;
+    for (int i = 0; i < previous.length; i++) {
+      if (previous[i].id != next[i].id) return false;
+    }
+    return true;
   }
 
   /// Whether two plugin item lists carry the same ids in the same order — the

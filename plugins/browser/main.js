@@ -3,6 +3,10 @@
 
 const ANALYTICS_URL =
   "https://chatgpt.com/codex/cloud/settings/analytics#usage";
+const CHROME_CONNECTOR_URL =
+  "https://chromewebstore.google.com/detail/tabame-connector/affgkglfpdpkdfolkogkaplllgmmkhdd?authuser=0&hl=en";
+const FIREFOX_CONNECTOR_URL =
+  "https://addons.mozilla.org/en-US/firefox/addon/tabame-connector-for-firefox/";
 const REQUEST_TIMEOUT_MS = 30_000;
 const config = { token: "", port: 17373 };
 const CODEX_USAGE_SCRIPT = `
@@ -235,6 +239,15 @@ function connectionAccessory() {
   };
 }
 
+function connectorStoreLinksMarkdown() {
+  return [
+    "Install **Tabame Connector** for your browser:",
+    "",
+    `- [Chrome Web Store](${CHROME_CONNECTOR_URL})`,
+    `- [Firefox Add-ons](${FIREFOX_CONNECTOR_URL})`,
+  ].join("\n");
+}
+
 function rootItems(text) {
   const items = [
     {
@@ -275,7 +288,7 @@ function rootItems(text) {
       title: "Connection & pairing",
       subtitle: bridge.connected
         ? `Connector ${bridge.clientInfo.extensionVersion} is ready`
-        : `Pair the Chromium extension on port ${config.port}`,
+        : `Pair the browser extension on port ${config.port}`,
       icon: bridge.connected ? "link" : "key",
       accessories: [connectionAccessory()],
       preview: {
@@ -673,24 +686,31 @@ function renderConnection(rev) {
         "",
         "Open **Launcher Plugins** and enable **Persistent browser connector**.",
         "",
+        connectorStoreLinksMarkdown(),
+        "",
         "The bridge is optional and remains completely stopped while this setting is off.",
       ].join("\n")
     : connected
       ? [
           "# Browser connector is online",
           "",
-          "Tabame can now exchange allowlisted requests with this Chromium profile.",
+          "Tabame can now exchange allowlisted requests with this browser profile.",
           "",
           "Use **Escape** to return to browser commands.",
         ].join("\n")
       : [
-          "# Pair the Chromium extension",
+          "# Pair the browser extension",
           "",
-          "1. Load `tabame-extension` from `chrome://extensions`.",
-          "2. Enable **Allow User Scripts** on the extension details page if shown.",
-          "3. Click the **Tabame Connector** toolbar icon.",
-          "4. Paste the token below and keep the default port.",
-          "5. Click **Save & connect**.",
+          connectorStoreLinksMarkdown(),
+          "",
+          "Alternatively, for a local development build:",
+          "1. Load `tabame-extension` from `chrome://extensions`, or load `tabame-extension/firefox/manifest.json` from Firefox's `about:debugging` page.",
+          "2. Enable **Allow User Scripts** in Chromium when that toggle is shown; Firefox requests its optional permission in the extension popup.",
+          "",
+          "After installing or loading the extension:",
+          "1. Click the **Tabame Connector** toolbar icon.",
+          "2. Paste the token below and keep the default port.",
+          "3. Click **Save & connect**.",
           "",
           "### Pairing token",
           "",

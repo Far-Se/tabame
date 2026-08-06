@@ -6,11 +6,16 @@ Control Chromium or Firefox through the companion **Tabame Connector** extension
 
 1. Copy this folder to `%localappdata%\Tabame\plugins\browser\`.
 2. Make sure Node.js is on `PATH`.
-3. Load `tabame-extension` as an unpacked Chromium extension, or load
-   `tabame-extension/firefox/manifest.json` from Firefox's
+3. Install the companion **Tabame Connector** extension:
+   - [Chrome Web Store](https://chromewebstore.google.com/detail/tabame-connector/affgkglfpdpkdfolkogkaplllgmmkhdd?authuser=0&hl=en)
+   - [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/tabame-connector-for-firefox/)
+
+   For local development, load `tabame-extension` as an unpacked Chromium
+   extension, or load `tabame-extension/firefox/manifest.json` from Firefox's
    `about:debugging` page. Enable **Allow User Scripts** in Chromium when
    that toggle is shown; Firefox requests its optional permission in the
    extension popup.
+
 4. Open **Launcher Plugins** and enable **Persistent browser connector**.
 5. Reopen the Tabame launcher and type **`browser`**.
 6. Open **Connection & pairing**, copy the token, and paste it into the

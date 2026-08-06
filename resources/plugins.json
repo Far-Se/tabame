@@ -953,7 +953,8 @@
       "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/calculator",
       "files": {
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/calculator/plugin.json",
-        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/calculator/main.py"
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/calculator/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/calculator/README.md"
       }
     },
     {
