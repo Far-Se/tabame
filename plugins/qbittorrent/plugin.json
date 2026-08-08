@@ -2,10 +2,10 @@
   "id": "qbittorrent",
   "name": "qBittorrent",
   "keyword": "qbit",
-  "description": "Browse qBittorrent torrents and open their download folders",
+  "description": "Browse qBittorrent through its direct Web API",
   "icon": "download",
   "runtime": "node",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "entry": "main.js",
   "args": [],
   "dev": false

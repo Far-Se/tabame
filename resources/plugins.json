@@ -788,11 +788,11 @@
       "id": "qbittorrent",
       "name": "qBittorrent",
       "keyword": "qbit",
-      "description": "Browse qBittorrent torrents and open their download folders",
+      "description": "Browse qBittorrent through its direct Web API",
       "icon": "download",
       "runtime": "node",
       "author": "Far-Se",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/qbittorrent",
       "files": {
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/qbittorrent/plugin.json",

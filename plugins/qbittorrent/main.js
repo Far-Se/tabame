@@ -5,39 +5,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const REQUEST_TIMEOUT_MS = 30_000;
-const READY_TIMEOUT_MS = 20_000;
 const REFRESH_INTERVAL_MS = 15_000;
 const PAGE_SIZE = 60;
 const CONFIG_PATH = path.join(process.cwd(), "config.json");
-
-const PAGE_API_SCRIPT = `
-const target = new URL(input.path, input.base).href;
-const request = {
-  method: input.method || "GET",
-  credentials: "include",
-  cache: "no-store",
-  headers: input.headers || {},
-};
-if (input.body != null) request.body = input.body;
-
-const response = await fetch(target, request);
-const text = await response.text();
-let data = null;
-try {
-  data = text ? JSON.parse(text) : null;
-} catch {
-  // Some qBittorrent endpoints intentionally return plain text such as "Ok.".
-}
-
-return {
-  ok: response.ok,
-  status: response.status,
-  statusText: response.statusText,
-  url: response.url,
-  data,
-  text: text.slice(0, 12_000),
-};
-`;
 
 function send(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
@@ -65,19 +35,34 @@ function text(value, fallback = "—") {
 }
 
 function loadSettings() {
+  let parsed = {};
   try {
-    const parsed = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
-    return {
-      url: typeof parsed.url === "string" ? parsed.url.trim() : "",
-      proxy: typeof parsed.proxy === "string" ? parsed.proxy.trim() : "",
-    };
+    const candidate = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+    if (candidate && typeof candidate === "object") parsed = candidate;
   } catch {
-    return { url: "", proxy: "" };
+    // The setup form will collect the URL when no config exists yet.
   }
+
+  const setting = (key, environmentKey) => {
+    if (typeof parsed[key] === "string") return parsed[key];
+    return typeof process.env[environmentKey] === "string"
+      ? process.env[environmentKey]
+      : "";
+  };
+
+  return {
+    url: setting("url", "QBIT_URL").trim(),
+    username: setting("username", "QBIT_USERNAME").trim(),
+    // Do not trim passwords: spaces can be valid password characters.
+    password: setting("password", "QBIT_PASSWORD"),
+    proxy: setting("proxy", "QBIT_PROXY").trim(),
+  };
 }
 
 let settings = loadSettings();
 let directProxyAgent = null;
+let sessionCookie = "";
+let loginPromise = null;
 
 function normalizeWebUiUrl(value) {
   const parsed = new URL(String(value || "").trim());
@@ -103,10 +88,21 @@ function validateProxy(value) {
 function saveSettings(next) {
   fs.writeFileSync(
     CONFIG_PATH,
-    `${JSON.stringify({ url: next.url, proxy: next.proxy }, null, 2)}\n`,
+    `${JSON.stringify(
+      {
+        url: next.url,
+        username: next.username,
+        password: next.password,
+        proxy: next.proxy,
+      },
+      null,
+      2,
+    )}\n`,
     "utf8",
   );
   settings = next;
+  sessionCookie = "";
+  loginPromise = null;
   directProxyAgent = null;
 }
 
@@ -125,7 +121,7 @@ const state = {
   screen: configured() ? "root" : "config",
   query: "",
   filter: "all",
-  qbitTabId: null,
+
   torrents: [],
   torrentById: new Map(),
   offset: 0,
@@ -137,120 +133,14 @@ const state = {
   refreshBusy: false,
 };
 
-class BrowserBridge {
-  constructor(onStateChange, onEvent) {
-    this.onStateChange = onStateChange;
-    this.onEvent = onEvent;
-    this.connected = false;
-    this.enabled = false;
-    this.running = false;
-    this.startError = null;
-    this.pending = new Map();
-    this.requestCounter = 0;
-  }
-
-  start() {
-    void this.refreshStatus().catch((error) => {
-      this.startError = error instanceof Error ? error.message : String(error);
-      this.onStateChange();
-    });
-  }
-
-  refreshStatus() {
-    return this.callHost("status").then((status) => {
-      this.applyStatus(status);
-      this.onStateChange();
-      return status;
-    });
-  }
-
-  handleHostMessage(message) {
-    if (typeof message.requestId === "string") {
-      const pending = this.pending.get(message.requestId);
-      if (!pending) return;
-      clearTimeout(pending.timer);
-      this.pending.delete(message.requestId);
-      if (message.ok) {
-        pending.resolve(message.result);
-      } else {
-        pending.reject(
-          new Error(message.error || "Browser bridge request failed"),
-        );
-      }
-      return;
-    }
-
-    if (message.event === "connection.changed") {
-      this.applyStatus(message.data || {});
-      this.onStateChange();
-      return;
-    }
-    if (typeof message.event === "string") {
-      this.onEvent(message.event, message.data || {});
-    }
-  }
-
-  applyStatus(status) {
-    this.enabled = Boolean(status.enabled);
-    this.running = Boolean(status.running);
-    this.connected = Boolean(status.connected);
-    this.startError = status.error ? String(status.error) : null;
-    if (!this.enabled) {
-      this.startError = "The persistent browser connector is disabled.";
-    } else if (!this.running && !this.startError) {
-      this.startError = "The persistent browser connector is starting.";
-    }
-  }
-
-  callHost(op, fields = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
-    const requestId = `qbit-${process.pid}-${Date.now()}-${this.requestCounter++}`;
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(requestId);
-        reject(new Error(`Tabame browser bridge timed out: ${op}`));
-      }, timeoutMs);
-      this.pending.set(requestId, { resolve, reject, timer });
-      command("browserBridge", { op, requestId, ...fields, timeoutMs });
-    });
-  }
-
-  request(method, params = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
-    return this.callHost("request", { method, params }, timeoutMs);
-  }
-
-  close() {
-    for (const pending of this.pending.values()) {
-      clearTimeout(pending.timer);
-      pending.reject(new Error("qBittorrent plugin closed"));
-    }
-    this.pending.clear();
-  }
+function hasCredentials() {
+  return Boolean(settings.username || settings.password);
 }
 
-const bridge = new BrowserBridge(
-  () => {
-    if (!state.initialized || state.shuttingDown) return;
-    if (state.screen === "root") {
-      renderRoot(0, state.query);
-    }
-  },
-  (event) => {
-    if (event !== "tabs.changed" || !state.initialized) return;
-    if (state.screen === "torrents") {
-      scheduleRefresh();
-    }
-  },
-);
-bridge.start();
-
 function connectionAccessory() {
-  if (bridge.connected) {
-    return { text: "WebUI tab ready", color: "#3D9B72", icon: "check" };
-  }
-  if (!bridge.enabled) {
-    return { text: "Connector off", color: "#A28C93", icon: "warning" };
-  }
-  return { text: "Browser session optional", color: "#D18B47", icon: "link" };
+  return hasCredentials()
+    ? { text: "Direct API · credentials saved", color: "#3D9B72", icon: "link" }
+    : { text: "Direct API", color: "#63A0EA", icon: "link" };
 }
 
 function filterLabel(filter) {
@@ -277,11 +167,12 @@ function filterItems(items, query) {
 
 function renderConfig(rev, values = null, error = "", errorField = "url") {
   const current = values || settings;
+  const savedPassword = Boolean(settings.password);
   render(rev, "form", {
     canGoBack: configured(),
     placeholder: "Configure qBittorrent…",
     form: {
-      title: "qBittorrent connection",
+      title: "qBittorrent direct API",
       submitLabel: "Save and connect",
       fields: [
         {
@@ -296,13 +187,34 @@ function renderConfig(rev, values = null, error = "", errorField = "url") {
           ...(error && errorField === "url" ? { error } : {}),
         },
         {
+          id: "username",
+          type: "text",
+          label: "Username (optional)",
+          placeholder: "admin",
+          value: current.username || "",
+          description:
+            "Use the qBittorrent WebUI username when authentication is enabled.",
+          ...(error && errorField === "username" ? { error } : {}),
+        },
+        {
+          id: "password",
+          type: "password",
+          label: "Password (optional)",
+          placeholder: savedPassword
+            ? "Saved — leave blank to keep it"
+            : "WebUI password",
+          description:
+            "Leave both credential fields blank when WebUI authentication is disabled.",
+          ...(error && errorField === "password" ? { error } : {}),
+        },
+        {
           id: "proxy",
           type: "text",
           label: "Proxy (optional)",
           placeholder: "http://127.0.0.1:8080",
           value: current.proxy || "",
           description:
-            "HTTP(S) forward proxy for direct API fallback requests. The browser tab uses the browser's proxy settings.",
+            "HTTP(S) forward proxy used by the plugin's direct API requests.",
           ...(error && errorField === "proxy" ? { error } : {}),
         },
       ],
@@ -378,29 +290,27 @@ function rootItems() {
     },
     {
       id: "webui:open",
-      title: "Open qBittorrent WebUI tab",
-      subtitle: bridge.connected
-        ? "Focus the existing tab or open a new one"
-        : "Open the configured URL in the default browser",
+      title: "Open qBittorrent WebUI",
+      subtitle: "Optional — open the full WebUI in your browser",
       icon: "open",
       accessories: [status],
       actions: [{ id: "default", title: "Open WebUI", icon: "open" }],
       preview: {
         markdown:
-          "## WebUI tab\n\nThe plugin uses a normal browser tab for same-origin API access, so the browser's qBittorrent login session is reused.",
+          "## Optional WebUI\n\nThe plugin reads qBittorrent through its HTTP API directly. Open the full WebUI only when you want it; no browser extension is required.",
       },
     },
     {
       id: "settings",
       title: "Connection settings",
-      subtitle: settings.proxy
-        ? "URL and proxy are configured"
-        : "Configure URL and optional proxy",
+      subtitle: hasCredentials()
+        ? "URL and API credentials are configured"
+        : "Configure URL and optional credentials",
       icon: "settings",
       actions: [{ id: "default", title: "Edit settings", icon: "edit" }],
       preview: {
         markdown:
-          "## Connection settings\n\nChange the qBittorrent WebUI URL or the optional direct-API proxy.",
+          "## Connection settings\n\nChange the qBittorrent WebUI URL, credentials, or optional direct-API proxy.",
       },
     },
   ];
@@ -576,7 +486,7 @@ function torrentActions(torrent) {
     },
     { id: "recheck", title: "Force recheck", icon: "sync" },
     { id: "open_folder", title: "Open download folder", icon: "folder" },
-    { id: "open_webui", title: "Open WebUI tab", icon: "open" },
+    { id: "open_webui", title: "Open WebUI", icon: "open" },
     { id: "copy_hash", title: "Copy torrent hash", icon: "copy" },
   ];
 }
@@ -661,38 +571,6 @@ function renderTorrentsFrame(rev, query) {
   });
 }
 
-function renderWaiting(rev, canGoBack = false) {
-  const markdown = !bridge.enabled
-    ? [
-        "# Browser connector is off",
-        "",
-        "Enable **Persistent browser connector** in Tabame's Launcher Plugins settings to reuse a logged-in qBittorrent WebUI tab.",
-        "",
-        "The plugin can still try direct API requests when the server allows them.",
-      ].join("\n")
-    : bridge.connected
-      ? "# qBittorrent is ready\n\nOpening the configured WebUI tab…"
-      : [
-          "# Waiting for the browser connector",
-          "",
-          escapeMarkdown(
-            bridge.startError ||
-              "Pair the tabame-extension browser extension, then try again.",
-          ),
-          "",
-          "Use **Connection settings** to verify the WebUI URL.",
-        ].join("\n");
-  render(rev, "detail", {
-    canGoBack,
-    detail: { markdown },
-    actions: [
-      { id: "refresh", title: "Try again", icon: "refresh" },
-      { id: "open_webui", title: "Open qBittorrent WebUI", icon: "open" },
-      { id: "settings", title: "Connection settings", icon: "settings" },
-    ],
-  });
-}
-
 function renderError(rev, error, canGoBack = true) {
   const message = error instanceof Error ? error.message : String(error);
   render(rev, "detail", {
@@ -704,12 +582,12 @@ function renderError(rev, error, canGoBack = true) {
         "",
         escapeMarkdown(message),
         "",
-        "If qBittorrent shows a login page, open the WebUI tab, sign in, and refresh this view.",
+        "Check the WebUI URL and API credentials in Connection settings. Leave the credentials blank only when qBittorrent WebUI authentication is disabled.",
       ].join("\n"),
     },
     actions: [
       { id: "refresh", title: "Try again", icon: "refresh" },
-      { id: "open_webui", title: "Open WebUI tab", icon: "open" },
+      { id: "open_webui", title: "Open WebUI", icon: "open" },
       { id: "settings", title: "Connection settings", icon: "settings" },
     ],
   });
@@ -725,29 +603,6 @@ function apiPath(endpoint, params = {}) {
   return `api/v2/${endpoint}${suffix ? `?${suffix}` : ""}`;
 }
 
-async function pageApiRequest(tabId, requestPath, options = {}) {
-  const execution = await bridge.request(
-    "javascript.execute",
-    {
-      tabId,
-      code: PAGE_API_SCRIPT,
-      input: {
-        base: normalizeWebUiUrl(settings.url),
-        path: requestPath,
-        method: options.method || "GET",
-        headers: options.headers || {},
-        body: options.body,
-      },
-    },
-    REQUEST_TIMEOUT_MS,
-  );
-  const result = execution && execution.result;
-  if (!result || typeof result !== "object") {
-    throw new Error("The qBittorrent WebUI returned no API response");
-  }
-  return result;
-}
-
 function getDirectProxyAgent() {
   if (!settings.proxy) return undefined;
   if (directProxyAgent) return directProxyAgent;
@@ -760,40 +615,147 @@ function getDirectProxyAgent() {
   }
 }
 
-async function directApiRequest(requestPath, options = {}) {
+function sessionCookieFromResponse(response) {
+  const values = [];
+  const headers = response && response.headers;
+  if (!headers) return "";
+
+  if (typeof headers.getSetCookie === "function") {
+    try {
+      values.push(...headers.getSetCookie());
+    } catch {
+      // Older Node 18 releases may expose only headers.get().
+    }
+  }
+  const combined = headers.get("set-cookie");
+  if (combined) values.push(combined);
+
+  for (const value of values) {
+    const match = String(value).match(/(?:^|[;,]\s*)SID=([^;,\s]+)/i);
+    if (match) return `SID=${match[1]}`;
+  }
+  return "";
+}
+
+async function rawDirectApiRequest(requestPath, options = {}) {
   const target = new URL(requestPath, normalizeWebUiUrl(settings.url));
+  const headers = {
+    Accept: "application/json",
+    ...(options.headers || {}),
+  };
+  if (
+    sessionCookie &&
+    options.includeSession !== false &&
+    !headers.Cookie &&
+    !headers.cookie
+  ) {
+    headers.Cookie = sessionCookie;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   const init = {
     method: options.method || "GET",
-    headers: options.headers || {},
+    headers,
+    signal: controller.signal,
   };
   if (options.body != null) init.body = options.body;
   const dispatcher = getDirectProxyAgent();
   if (dispatcher) init.dispatcher = dispatcher;
-  const response = await fetch(target, init);
-  const bodyText = await response.text();
-  let data = null;
+
   try {
-    data = bodyText ? JSON.parse(bodyText) : null;
-  } catch {
-    // Plain-text qBittorrent responses are valid for mutation endpoints.
+    const response = await fetch(target, init);
+    const bodyText = await response.text();
+    let data = null;
+    try {
+      data = bodyText ? JSON.parse(bodyText) : null;
+    } catch {
+      // Plain-text qBittorrent responses are valid for mutation endpoints.
+    }
+    return {
+      ok: response.ok,
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      data,
+      text: bodyText.slice(0, 12_000),
+      sessionCookie: sessionCookieFromResponse(response),
+    };
+  } catch (error) {
+    if (error && error.name === "AbortError") {
+      throw new Error(
+        `qBittorrent API request timed out after ${REQUEST_TIMEOUT_MS / 1000}s`,
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-  return {
-    ok: response.ok,
-    status: response.status,
-    statusText: response.statusText,
-    url: response.url,
-    data,
-    text: bodyText.slice(0, 12_000),
-  };
 }
 
-async function apiRequest(requestPath, options = {}, tabId = null) {
-  if (Number.isInteger(tabId))
-    return pageApiRequest(tabId, requestPath, options);
-  if (bridge.connected) {
-    const tab = await ensureQbitTab(false);
-    return pageApiRequest(tab.id, requestPath, options);
+async function loginDirect() {
+  if (!hasCredentials()) return;
+
+  const response = await rawDirectApiRequest(apiPath("auth/login"), {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: postBody({
+      username: settings.username,
+      password: settings.password,
+    }),
+    includeSession: false,
+  });
+  const reply = String(response.text || "").trim();
+  if (!response.ok || !/^Ok\.?$/i.test(reply)) {
+    if (response.status === 403 || /^Fails\.?$/i.test(reply)) {
+      throw new Error(
+        "qBittorrent login failed. Check the WebUI username and password.",
+      );
+    }
+    throw new Error(
+      `qBittorrent login failed${response.status ? ` (${response.status})` : ""}: ${text(reply, "No response body")}`,
+    );
   }
+
+  const cookie = response.sessionCookie;
+  if (!cookie) {
+    throw new Error(
+      "qBittorrent accepted the login but did not return a session cookie.",
+    );
+  }
+  sessionCookie = cookie;
+}
+
+async function ensureAuthenticated() {
+  if (!hasCredentials() || sessionCookie) return;
+  if (!loginPromise) {
+    loginPromise = loginDirect().finally(() => {
+      loginPromise = null;
+    });
+  }
+  await loginPromise;
+}
+
+async function directApiRequest(requestPath, options = {}) {
+  await ensureAuthenticated();
+  let response = await rawDirectApiRequest(requestPath, options);
+
+  if (
+    (response.status === 401 || response.status === 403) &&
+    hasCredentials() &&
+    !options.authRetried
+  ) {
+    sessionCookie = "";
+    await ensureAuthenticated();
+    response = await rawDirectApiRequest(requestPath, {
+      ...options,
+      authRetried: true,
+    });
+  }
+  return response;
+}
+
+async function apiRequest(requestPath, options = {}) {
   return directApiRequest(requestPath, options);
 }
 
@@ -802,93 +764,23 @@ function assertApiSuccess(response) {
     const status = response && response.status ? ` (${response.status})` : "";
     const detail = text(response && response.text, "No response body");
     if (response && (response.status === 401 || response.status === 403)) {
-      throw new Error(
-        `qBittorrent rejected the request${status}. Sign in to the WebUI tab first.`,
-      );
+      const hint = hasCredentials()
+        ? "Check the WebUI username and password in Connection settings."
+        : "Add the WebUI username and password in Connection settings, or disable WebUI authentication.";
+      throw new Error(`qBittorrent rejected the request${status}. ${hint}`);
     }
     throw new Error(`qBittorrent API error${status}: ${detail}`);
   }
   return response.data;
 }
 
-function tabMatchesConfiguredUrl(tab) {
-  try {
-    const base = new URL(normalizeWebUiUrl(settings.url));
-    const candidate = new URL(String(tab.url || ""));
-    if (candidate.origin !== base.origin) return false;
-    const basePath = base.pathname.replace(/\/+$/, "") || "/";
-    const prefix = basePath === "/" ? "/" : `${basePath}/`;
-    return (
-      candidate.pathname === basePath || candidate.pathname.startsWith(prefix)
-    );
-  } catch {
-    return false;
-  }
-}
-
-async function waitForTabReady(tabId) {
-  const deadline = Date.now() + READY_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    const snapshot = await bridge.request("tabs.list", {}, 10_000);
-    const tab = (snapshot.tabs || []).find(
-      (candidate) => candidate.id === tabId,
-    );
-    if (!tab) throw new Error("The qBittorrent WebUI tab was closed");
-    if (tab.status === "complete") return tab;
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  throw new Error("The qBittorrent WebUI did not finish loading");
-}
-
-async function ensureQbitTab(active) {
-  if (!bridge.connected) {
-    throw new Error("The Tabame browser connector is not connected");
-  }
-
-  let snapshot = await bridge.request("tabs.list");
-  let tab = (snapshot.tabs || []).find(
-    (candidate) =>
-      candidate.id === state.qbitTabId && tabMatchesConfiguredUrl(candidate),
-  );
-  if (!tab) {
-    tab = (snapshot.tabs || []).find((candidate) =>
-      tabMatchesConfiguredUrl(candidate),
-    );
-  }
-  if (!tab) {
-    tab = await bridge.request("tabs.open", {
-      url: normalizeWebUiUrl(settings.url),
-      active: Boolean(active),
-    });
-  } else if (active) {
-    await bridge.request("tabs.activate", { tabId: tab.id });
-  }
-
-  if (!Number.isInteger(Number(tab.id))) {
-    throw new Error("Tabame did not return a qBittorrent tab id");
-  }
-  state.qbitTabId = Number(tab.id);
-  if (tab.status !== "complete") await waitForTabReady(state.qbitTabId);
-  return { ...tab, id: state.qbitTabId };
-}
-
-async function openWebUi() {
+function openWebUi() {
   if (!configured()) {
     enterConfig();
     return;
   }
-  try {
-    if (bridge.connected) {
-      await ensureQbitTab(true);
-    } else {
-      command("open", { url: normalizeWebUiUrl(settings.url) });
-    }
-    command("hide");
-  } catch (error) {
-    log("Could not focus qBittorrent tab:", error.message);
-    command("open", { url: normalizeWebUiUrl(settings.url) });
-    command("hide");
-  }
+  command("open", { url: normalizeWebUiUrl(settings.url) });
+  command("hide");
 }
 
 function scheduleRefresh() {
@@ -977,7 +869,7 @@ function detailActions(torrent) {
       icon: paused ? "play" : "clock",
     },
     { id: "recheck", title: "Force recheck", icon: "sync" },
-    { id: "open_webui", title: "Open WebUI tab", icon: "open" },
+    { id: "open_webui", title: "Open WebUI", icon: "open" },
     { id: "copy_hash", title: "Copy torrent hash", icon: "copy" },
     { id: "refresh", title: "Refresh details", icon: "refresh" },
   ];
@@ -1073,15 +965,9 @@ async function showTorrentDetail(rev, torrent) {
   });
 
   try {
-    let tabId = null;
-    if (bridge.connected) tabId = (await ensureQbitTab(false)).id;
     const [propertiesResponse, filesResponse] = await Promise.all([
-      apiRequest(
-        apiPath("torrents/properties", { hash: torrent.hash }),
-        {},
-        tabId,
-      ),
-      apiRequest(apiPath("torrents/files", { hash: torrent.hash }), {}, tabId),
+      apiRequest(apiPath("torrents/properties", { hash: torrent.hash })),
+      apiRequest(apiPath("torrents/files", { hash: torrent.hash })),
     ]);
     const properties = assertApiSuccess(propertiesResponse) || {};
     const files = assertApiSuccess(filesResponse) || [];
@@ -1215,21 +1101,35 @@ async function handleTorrentAction(id, action) {
 async function handleConfigSubmit(values) {
   const raw = {
     url: String(values.url || "").trim(),
+    username: String(values.username || "").trim(),
+    password: String(values.password || ""),
     proxy: String(values.proxy || "").trim(),
   };
   try {
     const next = {
       url: normalizeWebUiUrl(raw.url),
+      username: raw.username,
+      // A blank password keeps the saved secret when editing settings.
+      password: raw.password || settings.password,
       proxy: validateProxy(raw.proxy),
     };
     saveSettings(next);
+
+    const response = await apiRequest(apiPath("app/version"));
+    assertApiSuccess(response);
     state.screen = "root";
     state.query = "";
-    command("toast", { text: "qBittorrent settings saved", style: "success" });
+    command("toast", { text: "qBittorrent API connected", style: "success" });
     renderRoot(0, "");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const errorField = /proxy/i.test(message) ? "proxy" : "url";
+    const errorField = /proxy/i.test(message)
+      ? "proxy"
+      : /password|login|credential/i.test(message)
+        ? "password"
+        : /username/i.test(message)
+          ? "username"
+          : "url";
     renderConfig(0, raw, message, errorField);
   }
 }
@@ -1241,7 +1141,12 @@ async function handleAction(message) {
   try {
     if (action === "refresh") {
       if (state.screen === "root") {
-        await bridge.refreshStatus();
+        const response = await apiRequest(apiPath("app/version"));
+        assertApiSuccess(response);
+        command("toast", {
+          text: "qBittorrent API connected",
+          style: "success",
+        });
         renderRoot(0, state.query);
       } else if (state.screen === "torrents") {
         await loadTorrents(0, state.query);
@@ -1324,11 +1229,12 @@ let inputBuffer = "";
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => {
   inputBuffer += chunk;
-  let newline;
-  while ((newline = inputBuffer.indexOf("\n")) >= 0) {
+  let newline = inputBuffer.indexOf("\n");
+  while (newline >= 0) {
     const line = inputBuffer.slice(0, newline).trim();
     inputBuffer = inputBuffer.slice(newline + 1);
     if (line) void handleLine(line);
+    newline = inputBuffer.indexOf("\n");
   }
 });
 process.stdin.on("end", shutdown);
@@ -1346,9 +1252,7 @@ async function handleLine(line) {
     case "close":
       shutdown();
       break;
-    case "browserBridge":
-      bridge.handleHostMessage(message);
-      break;
+
     case "init":
     case "query":
       state.initialized = true;
@@ -1389,14 +1293,12 @@ async function handleLine(line) {
   }
 }
 
-let shutdownTimer = null;
 function shutdown() {
   if (state.shuttingDown) return;
   state.shuttingDown = true;
   clearTimeout(state.refreshTimer);
-  bridge.close();
   if (directProxyAgent && typeof directProxyAgent.close === "function") {
     void directProxyAgent.close().catch(() => {});
   }
-  shutdownTimer = setTimeout(() => process.exit(0), 20);
+  setTimeout(() => process.exit(0), 20);
 }
