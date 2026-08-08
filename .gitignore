@@ -103,3 +103,5 @@ client_secret.json
 **/.pluginlibs/
 resources/logos_x/
 **/ephemeral/
+generated_*
+GeneratedPluginRegistrant*

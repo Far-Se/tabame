@@ -911,7 +911,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
         children: <Widget>[
           Row(
             children: <Widget>[
-              if (leading != null) ...[leading, const SizedBox(width: 10)],
+              if (leading != null) ...<Widget>[leading, const SizedBox(width: 10)],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

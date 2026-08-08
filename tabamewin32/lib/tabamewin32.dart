@@ -1498,7 +1498,7 @@ class KeyVizEvent {
   bool get isClick => kind == "click";
 }
 
-abstract class TabameListener {
+mixin class TabameListener {
   void onHotKeyEvent(HotkeyEvent hotkeyInfo) {}
   void onDisplayChange(MonitorEvent hotkeyInfo) {}
   void onForegroundWindowChanged(int hWnd) {}
@@ -1510,7 +1510,7 @@ abstract class TabameListener {
   void onMouseGesture(String button, String pattern, int durationMs) {}
 }
 
-abstract class ClipboardEventListener {
+mixin class ClipboardEventListener {
   void onClipboardUpdate() {}
 }
 

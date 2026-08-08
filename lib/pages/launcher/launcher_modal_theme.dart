@@ -495,8 +495,8 @@ class LauncherModalHeader extends StatelessWidget {
           border: Border(
             left: BorderSide(color: WindowsXpTokens.controlLight),
             top: BorderSide(color: WindowsXpTokens.controlLight),
-            right: BorderSide(color: WindowsXpTokens.controlShadow),
-            bottom: BorderSide(color: WindowsXpTokens.controlShadow),
+            right: const BorderSide(color: WindowsXpTokens.controlShadow),
+            bottom: const BorderSide(color: WindowsXpTokens.controlShadow),
           ),
         ),
       LauncherDesign.windows98 => BoxDecoration(

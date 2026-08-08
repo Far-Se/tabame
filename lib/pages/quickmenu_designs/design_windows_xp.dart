@@ -95,7 +95,7 @@ class _XpMenuHeader extends StatelessWidget {
     return Container(
       height: 35,
       padding: const EdgeInsets.fromLTRB(8, 5, 9, 5),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -172,7 +172,7 @@ class _XpInsetBand extends StatelessWidget {
         color: _XpColors.cream,
         border: Border(
           top: BorderSide(color: _XpColors.creamLight),
-          bottom: BorderSide(color: Color(0xFFACA899)),
+          bottom: const BorderSide(color: Color(0xFFACA899)),
         ),
       ),
       child: child,
@@ -187,7 +187,7 @@ class _XpPinnedBand extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: <Color>[
@@ -197,10 +197,10 @@ class _XpPinnedBand extends StatelessWidget {
         ),
         border: Border(
           top: BorderSide(color: _XpColors.creamLight),
-          bottom: BorderSide(color: Color(0xFFB8C7DA)),
+          bottom: const BorderSide(color: Color(0xFFB8C7DA)),
         ),
       ),
-      child: PinnedAndTrayList(),
+      child: const PinnedAndTrayList(),
     );
   }
 }
