@@ -61,7 +61,13 @@ pubspec.lock
 .a.Release.lnk
 *.lnk
 .vscode
-# *Release*
+*Release*
+!.github/workflows/release-packaging-linux.yml
+!.github/workflows/release-packaging-macos.yml
+# The macOS target references these source-controlled release settings.
+!macos/Flutter/Flutter-Release.xcconfig
+!macos/Runner/Configs/Release.xcconfig
+!macos/Runner/Release.entitlements
 Tabame.lnk
 ##
 *.pem
