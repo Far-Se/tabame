@@ -26,7 +26,7 @@ abstract final class PluginRegistry {
   static Future<void> load() async {
     final List<PluginManifest> found = <PluginManifest>[];
     try {
-      final Directory root = Directory(AppPaths.resolvePath('plugins'));
+      final Directory root = Directory(AppPaths.pluginsDirectory);
       if (root.existsSync()) {
         final List<FileSystemEntity> pluginDirectories = root
             .listSync(followLinks: false)

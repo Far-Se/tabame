@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
@@ -7,6 +9,8 @@ import '../../../pages/launcher/plugins/plugin_gallery.dart';
 import '../../../pages/launcher/plugins/plugin_icons.dart';
 import '../../../pages/launcher/plugins/plugin_manifest.dart';
 import '../../../pages/launcher/plugins/plugin_registry.dart';
+import '../../../platform/app_paths.dart';
+import '../../../platform/file_picker_service.dart';
 import '../../../services/browser_bridge_service.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
@@ -91,6 +95,18 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   String _galleryError = '';
   String? _installingId;
   String _installStatus = '';
+  final TextEditingController _installedSearchController = TextEditingController();
+  final TextEditingController _gallerySearchController = TextEditingController();
+  bool _pluginDirectoryBusy = false;
+  String _pluginDirectoryStatus = '';
+  bool _pluginDirectoryStatusError = false;
+
+  @override
+  void dispose() {
+    _installedSearchController.dispose();
+    _gallerySearchController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -104,6 +120,32 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
     await PluginRegistry.load();
     if (!mounted) return;
     setState(() => _reloading = false);
+  }
+
+  Future<void> _changePluginDirectory() async {
+    if (_pluginDirectoryBusy) return;
+
+    final Directory currentDirectory = Directory(AppPaths.pluginsDirectory);
+    final DirectoryPicker picker = DirectoryPicker()
+      ..title = 'Select Launcher Plugins Folder'
+      ..initialDirectory = currentDirectory.existsSync() ? currentDirectory.path : null
+      ..alwaysShowInitialDirectory = currentDirectory.existsSync();
+    final Directory? selectedDirectory = await picker.getDirectoryAsync();
+    if (!mounted || selectedDirectory == null || selectedDirectory.path.trim().isEmpty) return;
+
+    setState(() {
+      _pluginDirectoryBusy = true;
+      _pluginDirectoryStatus = '';
+      _pluginDirectoryStatusError = false;
+    });
+    final String? error = await AppPaths.setPluginsDirectory(selectedDirectory.path);
+    if (error == null) await PluginRegistry.load();
+    if (!mounted) return;
+    setState(() {
+      _pluginDirectoryBusy = false;
+      _pluginDirectoryStatusError = error != null;
+      _pluginDirectoryStatus = error ?? 'Plugin folder moved successfully.';
+    });
   }
 
   Future<void> _toggle(PluginManifest manifest, bool enabled) async {
@@ -182,6 +224,43 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
     if (_mode == mode) return;
     setState(() => _mode = mode);
     if (mode == _PanelMode.gallery && _galleryEntries == null) _loadGallery();
+  }
+
+  bool _matchesSearch(String query, Iterable<String> fields) {
+    return query.isEmpty || fields.any((String field) => field.toLowerCase().contains(query));
+  }
+
+  Widget _buildSearchField({required TextEditingController controller, required String hintText}) {
+    return TextField(
+      controller: controller,
+      onChanged: (_) => setState(() {}),
+      style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text),
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: hintText,
+        hintStyle: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(110)),
+        prefixIcon: Icon(Icons.search_rounded, size: 16, color: Design.accent),
+        suffixIcon: controller.text.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Clear search',
+                onPressed: () {
+                  controller.clear();
+                  setState(() {});
+                },
+                icon: Icon(Icons.close_rounded, size: 16, color: Design.text.withAlpha(130)),
+              ),
+        filled: true,
+        fillColor: Design.accent.withAlpha(12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Design.accent.withAlpha(90), width: 1),
+        ),
+      ),
+    );
   }
 
   @override
@@ -306,7 +385,7 @@ Build a plugin with your favorite AI coding assistant:
 1. Copy [TABAME_PLUGIN_SKILL.md](https://github.com/Far-Se/tabame/blob/main/skills/TABAME_PLUGIN_SKILL.md) or [TABAME_PLUGIN_SKILL.min.md](https://github.com/Far-Se/tabame/blob/main/skills/TABAME_PLUGIN_SKILL.min.md) (the 'skills' folder has multiple separate skills).
 2. Open your favorite AI coding site or app and paste the file.
 3. Tell the AI what plugin you need, with detailed instructions for how it should work.
-4. Create a new folder in `%localappdata%/tabame/plugins/` for your plugin.
+4. Create a new folder inside the plugin installation folder shown on the Installed tab.
 5. Paste in your `plugin.json` and script files.
 6. Open the launcher and type the shortcut.
 7. If you want to share it with the community, make an issue [HERE](https://github.com/Far-Se/tabame/issues/new?template=plugin_submission.md) with the code, either paste it or zip/gist/rep.
@@ -336,6 +415,18 @@ Build a plugin with your favorite AI coding assistant:
 
   Widget _buildInstalled() {
     final List<PluginManifest> plugins = PluginRegistry.manifests;
+    final String query = _installedSearchController.text.trim().toLowerCase();
+    final List<PluginManifest> filteredPlugins = plugins
+        .where(
+          (PluginManifest manifest) => _matchesSearch(query, <String>[
+            manifest.name,
+            manifest.id,
+            manifest.keyword,
+            manifest.description,
+            manifest.runtime,
+          ]),
+        )
+        .toList(growable: false);
     final int enabledCount = plugins.where((PluginManifest m) => m.enabled).length;
 
     return WindowsScrollView(
@@ -344,6 +435,14 @@ Build a plugin with your favorite AI coding assistant:
         child: Column(
           crossAxisAlignment: C.start,
           children: <Widget>[
+            _buildSectionLabel(
+              label: "Plugin folder",
+              countText: "CONFIG",
+              icon: Icons.folder_rounded,
+            ),
+            const SizedBox(height: 8),
+            _buildPluginDirectoryCard(),
+            const SizedBox(height: 16),
             _buildSectionLabel(
               label: "Browser integration",
               countText: "Optional",
@@ -358,14 +457,21 @@ Build a plugin with your favorite AI coding assistant:
               icon: Icons.extension_rounded,
             ),
             const SizedBox(height: 8),
+            _buildSearchField(
+              controller: _installedSearchController,
+              hintText: "Search installed plugins...",
+            ),
+            const SizedBox(height: 8),
             if (_keywordError.isNotEmpty) ...<Widget>[
               _buildStatusStrip(_keywordError, error: true),
               const SizedBox(height: 8),
             ],
             if (plugins.isEmpty)
               _buildInstalledEmpty()
+            else if (filteredPlugins.isEmpty)
+              _buildNoSearchResults("No installed plugins match your search.")
             else
-              for (final PluginManifest m in plugins) ...<Widget>[
+              for (final PluginManifest m in filteredPlugins) ...<Widget>[
                 _PluginCard(
                   manifest: m,
                   busy: _busyId == m.id,
@@ -376,6 +482,133 @@ Build a plugin with your favorite AI coding assistant:
               ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildNoSearchResults(String message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(Icons.search_off_rounded, size: 18, color: Design.text.withAlpha(90)),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(130)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPluginDirectoryCard() {
+    final Color accent = Design.accent;
+    final Color text = Design.text;
+    final Color statusColor = _pluginDirectoryStatusError ? Colors.red.shade400 : accent;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
+      decoration: BoxDecoration(
+        color: text.withAlpha(7),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: text.withAlpha(16)),
+      ),
+      child: Row(
+        crossAxisAlignment: C.start,
+        children: <Widget>[
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: accent.withAlpha(20),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.folder_rounded, size: 16, color: accent),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: C.start,
+              children: <Widget>[
+                Text(
+                  'Installation folder',
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize + 1.5,
+                    fontWeight: FontWeight.w700,
+                    color: text.withAlpha(235),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  AppPaths.pluginsDirectory,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize - 0.5,
+                    height: 1.25,
+                    color: text.withAlpha(140),
+                  ),
+                ),
+                if (_pluginDirectoryStatus.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 5),
+                  Text(
+                    _pluginDirectoryStatus,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: Design.baseFontSize - 1,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Tooltip(
+            message: 'Change installation folder',
+            waitDuration: const Duration(milliseconds: 400),
+            child: InkWell(
+              onTap: _pluginDirectoryBusy ? null : _changePluginDirectory,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: accent.withAlpha(60)),
+                ),
+                child: _pluginDirectoryBusy
+                    ? SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: accent),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Icon(Icons.edit_location_alt_rounded, size: 14, color: accent),
+                          const SizedBox(width: 5),
+                          Text(
+                            'CHANGE',
+                            style: TextStyle(
+                              fontSize: Design.baseFontSize - 1,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.4,
+                              color: accent,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -405,7 +638,7 @@ Build a plugin with your favorite AI coding assistant:
             ),
             const SizedBox(height: 4),
             Text(
-              "Install one from the Gallery, or drop a plugin folder into %localappdata%\\Tabame\\plugins.",
+              "Install one from the Gallery, or drop a plugin folder into ${AppPaths.pluginsDirectory}.",
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(110)),
             ),
@@ -459,6 +692,20 @@ Build a plugin with your favorite AI coding assistant:
       );
     }
 
+    final String query = _gallerySearchController.text.trim().toLowerCase();
+    final List<PluginGalleryEntry> filteredEntries = entries
+        .where(
+          (PluginGalleryEntry entry) => _matchesSearch(query, <String>[
+            entry.name,
+            entry.id,
+            entry.keyword,
+            entry.description,
+            entry.author,
+            entry.runtime,
+          ]),
+        )
+        .toList(growable: false);
+
     return WindowsScrollView(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
@@ -471,20 +718,28 @@ Build a plugin with your favorite AI coding assistant:
             ],
             _buildSectionLabel(
               label: "Community Plugins",
-              countText: "${entries.length}",
+              countText: query.isEmpty ? "${entries.length}" : "${filteredEntries.length}/${entries.length}",
               icon: Icons.storefront_rounded,
             ),
             const SizedBox(height: 8),
-            for (final PluginGalleryEntry entry in entries) ...<Widget>[
-              _GalleryCard(
-                entry: entry,
-                installedManifest: _findInstalledPlugin(entry.id),
-                installing: _installingId == entry.id,
-                onInstall: () => _install(entry),
-                onOpenHomepage: entry.homepage.isEmpty ? null : () => WinUtils.open(entry.homepage),
-              ),
-              const SizedBox(height: 8),
-            ],
+            _buildSearchField(
+              controller: _gallerySearchController,
+              hintText: "Search gallery...",
+            ),
+            const SizedBox(height: 8),
+            if (filteredEntries.isEmpty)
+              _buildNoSearchResults("No gallery plugins match your search.")
+            else
+              for (final PluginGalleryEntry entry in filteredEntries) ...<Widget>[
+                _GalleryCard(
+                  entry: entry,
+                  installedManifest: _findInstalledPlugin(entry.id),
+                  installing: _installingId == entry.id,
+                  onInstall: () => _install(entry),
+                  onOpenHomepage: entry.homepage.isEmpty ? null : () => WinUtils.open(entry.homepage),
+                ),
+                const SizedBox(height: 8),
+              ],
             _buildSubmitStrip(),
           ],
         ),

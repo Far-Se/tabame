@@ -1,5 +1,5 @@
 /// Describes a single user-installed launcher plugin, parsed from the
-/// `plugin.json` that lives in each `%localappdata%\Tabame\plugins\<id>\` folder.
+/// `plugin.json` that lives in each configured plugin folder's `<id>` directory.
 ///
 /// A plugin is an external script (Python / Node / Bun) that Tabame launches as
 /// a long-running child process when the user types the plugin's [keyword] in

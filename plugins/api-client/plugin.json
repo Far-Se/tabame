@@ -1,0 +1,11 @@
+{
+  "id": "api-client",
+  "name": "API Client",
+  "keyword": "api",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "description": "Postman-lite API client — build, send, and save HTTP requests with history and environments",
+  "icon": "globe",
+  "pip": ["requests"]
+}

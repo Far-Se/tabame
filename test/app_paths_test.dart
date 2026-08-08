@@ -103,4 +103,60 @@ void main() {
     await File(AppPaths.settingsPath('settings.json', forWrite: true)).writeAsString('{}');
     expect(AppPaths.hasSettingsFile, isTrue);
   });
+
+  test('moves the complete plugin folder and remembers its location', () async {
+    final Directory original = Directory(AppPaths.pluginsDirectory);
+    await File(p.join(original.path, 'demo', 'plugin.json')).parent.create(recursive: true);
+    await File(p.join(original.path, 'demo', 'plugin.json')).writeAsString('{"keyword":"demo"}');
+    await File(p.join(original.path, 'demo', 'data.txt')).writeAsString('plugin data');
+
+    final Directory custom = Directory(p.join(workspace.path, 'custom-plugins'))..createSync();
+    expect(await AppPaths.setPluginsDirectory(custom.path), isNull);
+    expect(AppPaths.pluginsDirectory, p.normalize(custom.absolute.path));
+    expect(File(p.join(custom.path, 'demo', 'plugin.json')).existsSync(), isTrue);
+    expect(File(p.join(custom.path, 'demo', 'data.txt')).readAsStringSync(), 'plugin data');
+    expect(original.existsSync(), isFalse);
+
+    AppPaths.resetForTesting();
+    await AppPaths.initialize(
+      applicationSupportDirectory: () async => Directory(p.join(workspace.path, 'support')),
+      applicationCacheDirectory: () async => Directory(p.join(workspace.path, 'cache')),
+      temporaryDirectory: () async => hostTemp,
+      rootOverride: canonicalRoot.path,
+      legacyRootOverride: legacyRoot.path,
+      migrateLegacyData: false,
+    );
+    expect(AppPaths.pluginsDirectory, p.normalize(custom.absolute.path));
+
+    final String defaultPath = AppPaths.currentPath('plugins');
+    expect(await AppPaths.setPluginsDirectory(defaultPath), isNull);
+    expect(AppPaths.pluginsDirectory, p.normalize(defaultPath));
+    expect(File(p.join(defaultPath, 'demo', 'plugin.json')).existsSync(), isTrue);
+
+    AppPaths.resetForTesting();
+    await AppPaths.initialize(
+      applicationSupportDirectory: () async => Directory(p.join(workspace.path, 'support')),
+      applicationCacheDirectory: () async => Directory(p.join(workspace.path, 'cache')),
+      temporaryDirectory: () async => hostTemp,
+      rootOverride: canonicalRoot.path,
+      legacyRootOverride: legacyRoot.path,
+      migrateLegacyData: false,
+    );
+    expect(AppPaths.pluginsDirectory, p.normalize(defaultPath));
+  });
+
+  test('does not move plugins into a non-empty destination', () async {
+    final Directory original = Directory(AppPaths.pluginsDirectory);
+    await File(p.join(original.path, 'demo', 'plugin.json')).parent.create(recursive: true);
+    await File(p.join(original.path, 'demo', 'plugin.json')).writeAsString('{"keyword":"demo"}');
+
+    final Directory destination = Directory(p.join(workspace.path, 'existing-plugins'))..createSync();
+    final File existingFile = File(p.join(destination.path, 'keep.txt'));
+    await existingFile.writeAsString('keep');
+
+    expect(await AppPaths.setPluginsDirectory(destination.path), contains('not empty'));
+    expect(File(p.join(original.path, 'demo', 'plugin.json')).existsSync(), isTrue);
+    expect(existingFile.readAsStringSync(), 'keep');
+    expect(AppPaths.pluginsDirectory, p.normalize(original.absolute.path));
+  });
 }

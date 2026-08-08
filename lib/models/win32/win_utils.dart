@@ -245,8 +245,8 @@ class WinUtils {
     return directory;
   }
 
-  /// Root folder holding user-installed launcher plugins
-  /// (`<root>\\plugins\\<id>\\plugin.json` + the plugin's script files).
+  /// Configured root folder holding user-installed launcher plugins
+  /// (`<plugins>\\<id>\\plugin.json` + the plugin's script files).
   static String getPluginsFolder() {
     final String directory = AppPaths.pluginsDirectory;
     Directory(directory).createSync(recursive: true);

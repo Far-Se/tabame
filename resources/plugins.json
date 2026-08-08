@@ -67,22 +67,6 @@
       }
     },
     {
-      "id": "kao",
-      "name": "Kaomoji Search",
-      "keyword": "kao",
-      "description": "Search Kaomoji (╯°□°）╯︵ ┻━┻",
-      "icon": "emoji",
-      "runtime": "node",
-      "author": "Far-Se",
-      "version": "1.0.0",
-      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/kaomoji",
-      "files": {
-        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/plugin.json",
-        "lib.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/lib.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/main.js"
-      }
-    },
-    {
       "id": "symbols",
       "name": "Symbols & Characters",
       "keyword": "sym",
@@ -725,7 +709,7 @@
       "id": "kaomoji",
       "name": "Kaomoji Search",
       "keyword": "kao",
-      "description": "Search kaomoji library",
+      "description": "Search Kaomoji (╯°□°）╯︵ ┻━┻",
       "icon": "emoji",
       "runtime": "node",
       "author": "Far-Se",
@@ -986,6 +970,52 @@
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/xprice2/plugin.json",
         "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/xprice2/main.py",
         "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/xprice2/README.md"
+      }
+    },
+    {
+      "id": "api-client",
+      "name": "API Client",
+      "keyword": "api",
+      "description": "Postman-lite API client — build, send, and save HTTP requests with history and environments",
+      "icon": "globe",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/api-client",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/api-client/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/api-client/main.py"
+      }
+    },
+    {
+      "id": "docker",
+      "name": "Docker",
+      "keyword": "docker",
+      "description": "Manage Docker containers, images, and volumes",
+      "icon": "server",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/docker",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/docker/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/docker/main.py"
+      }
+    },
+    {
+      "id": "ffmpeg-video-converter",
+      "name": "FFmpeg Video Converter",
+      "keyword": "ffmpeg",
+      "description": "Compress, convert, resize, and extract audio with FFmpeg.",
+      "icon": "video",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/ffmpeg-video-converter",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/ffmpeg-video-converter/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/ffmpeg-video-converter/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/ffmpeg-video-converter/README.md"
       }
     }
   ]

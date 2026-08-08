@@ -1,0 +1,11 @@
+{
+  "id": "ffmpeg-video-converter",
+  "name": "FFmpeg Video Converter",
+  "description": "Compress, convert, resize, and extract audio with FFmpeg.",
+  "keyword": "ffmpeg",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "icon": "video",
+  "dev": false
+}

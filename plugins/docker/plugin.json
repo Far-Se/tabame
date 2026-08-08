@@ -1,0 +1,10 @@
+{
+  "id": "docker",
+  "name": "Docker",
+  "description": "Manage Docker containers, images, and volumes",
+  "keyword": "docker",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "icon": "server"
+}
