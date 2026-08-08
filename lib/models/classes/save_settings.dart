@@ -142,7 +142,7 @@ class SavedStore {
   String get reloadSignalPath => AppPaths.settingsPath('reload.signal', forWrite: true);
 
   void _bumpReloadSignal() {
-    if (!signalOnWrite) return;
+    if (!signalOnWrite || !AppPaths.hasSettingsFile) return;
     // Throttle bursts (e.g. slider drags) to at most one marker write per 150ms.
     _signalTimer ??= Timer(const Duration(milliseconds: 150), () {
       _signalTimer = null;

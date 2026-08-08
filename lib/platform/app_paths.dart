@@ -91,6 +91,10 @@ class AppPaths {
 
   static bool get isInitialized => instance._rootPath != null;
 
+  /// Whether the persisted settings file exists. A settings directory alone
+  /// does not mean that first-run setup has been completed.
+  static bool get hasSettingsFile => File(settingsPath('settings.json')).existsSync();
+
   static String get root => instance._requireRoot();
   static String get legacyRoot => instance._requireLegacyRoot();
   static String get settingsDirectory => currentPath(

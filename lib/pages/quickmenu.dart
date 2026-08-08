@@ -297,7 +297,14 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
   /// Watches the settings folder for the Interface's reload marker and live-reloads
   /// (debounced) so hotkeys and settings changes apply without restarting the process.
   void _startSettingsWatcher() {
+    // First-run keeps all defaults in memory until setup is completed. Do not
+    // create or watch reload.signal before settings.json exists.
+    if (!AppPaths.hasSettingsFile) return;
+
     final String dir = AppPaths.settingsDirectory;
+    final Directory settingsDirectory = Directory(dir);
+    if (!settingsDirectory.existsSync()) return;
+
     final File signal = File(p.join(dir, 'reload.signal'));
     if (!signal.existsSync()) signal.writeAsStringSync("0"); // ensure the watch target exists
     _settingsWatchSub =

@@ -112,3 +112,5 @@ client_secret.json
 **/.cache/
 **/.pluginlibs/
 resources/logos_x/
+**/generated_*
+**/GeneratedPluginRegistrant*

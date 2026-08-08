@@ -84,4 +84,23 @@ void main() {
       p.join(workspace.path, 'canonical-2', 'Tabame', 'settings', 'settings.json'),
     );
   });
+
+  test('requires settings.json instead of only the settings directory', () async {
+    AppPaths.resetForTesting();
+    await AppPaths.initialize(
+      applicationSupportDirectory: () async => Directory(p.join(workspace.path, 'support-3')),
+      applicationCacheDirectory: () async => Directory(p.join(workspace.path, 'cache-3')),
+      temporaryDirectory: () async => hostTemp,
+      rootOverride: p.join(workspace.path, 'canonical-3', 'Tabame'),
+      legacyRootOverride: p.join(workspace.path, 'missing-legacy-3', 'Tabame'),
+      migrateLegacyData: false,
+    );
+
+    expect(AppPaths.hasSettingsFile, isFalse);
+    await Directory(AppPaths.settingsDirectory).create(recursive: true);
+    expect(AppPaths.hasSettingsFile, isFalse);
+
+    await File(AppPaths.settingsPath('settings.json', forWrite: true)).writeAsString('{}');
+    expect(AppPaths.hasSettingsFile, isTrue);
+  });
 }

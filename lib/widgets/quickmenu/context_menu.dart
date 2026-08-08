@@ -57,7 +57,7 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                           children: <Widget>[
                             _ContextMenuTile(
                               icon: Icons.keyboard_double_arrow_left_rounded,
-                              label: "Move",
+                              label: "Move Left",
                               accent: accent,
                               onTap: () async {
                                 await QuickMenuFunctions.hideQuickMenu();

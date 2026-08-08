@@ -137,7 +137,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
       currentPage = pages.indexWhere((PageClass element) => element.title == "Changelog");
     } else if (user.args.contains("-uninstall")) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "Settings");
-    } else if (Boxes.remap.isEmpty) {
+    } else if (!AppPaths.hasSettingsFile || Boxes.remap.isEmpty) {
       currentPage = pages.indexWhere((PageClass element) => element.title == "FirstRun");
       hideSidebar = true;
     }

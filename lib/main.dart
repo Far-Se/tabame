@@ -54,8 +54,7 @@ Future<void> main(List<String> arguments) async {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
-      final File settingsFile = File(AppPaths.settingsPath('settings.json'));
-      SaveSettings.suppressWrites = !settingsFile.existsSync();
+      SaveSettings.suppressWrites = !AppPaths.hasSettingsFile;
       await AppStartup.registerServices();
       AppStartup.registerHooks();
       if (await AppStartup.checkAdminAndRestart()) return;

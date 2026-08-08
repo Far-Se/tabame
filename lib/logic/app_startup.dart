@@ -136,7 +136,7 @@ class AppStartup {
         alwaysOnTop: false,
         title: "Tabame - Launcher - ${user.launcherSearchText.addDots(9)}",
       );
-    } else if (user.args.contains("-interface") || Boxes.remap.isEmpty) {
+    } else if (user.args.contains("-interface") || !AppPaths.hasSettingsFile || Boxes.remap.isEmpty) {
       late String title;
       if (user.args.contains("-wizardly")) {
         title = "Wizardly";

@@ -9,6 +9,7 @@ import '../models/classes/boxes.dart';
 import '../models/globals.dart';
 import '../models/settings.dart';
 import '../models/theme.dart';
+import '../platform/app_paths.dart';
 import 'interface.dart';
 import 'quickmenu.dart';
 
@@ -92,7 +93,7 @@ class _TabameState extends State<Tabame> {
                           itemBuilder: (BuildContext context, int index) {
                             Debug.add("Tabame: $index ${user.args.join(':')}");
                             if (Globals.isStandaloneLauncher) return const QuickMenu();
-                            if (user.args.contains("-interface") || Boxes.remap.isEmpty) {
+                            if (user.args.contains("-interface") || !AppPaths.hasSettingsFile || Boxes.remap.isEmpty) {
                               return const Interface();
                             }
                             if (index == Pages.interface.index) {
@@ -103,7 +104,7 @@ class _TabameState extends State<Tabame> {
                         )
                       : Globals.isStandaloneLauncher
                           ? const QuickMenu()
-                          : (user.args.contains("-interface") || Boxes.remap.isEmpty)
+                          : (user.args.contains("-interface") || !AppPaths.hasSettingsFile || Boxes.remap.isEmpty)
                               ? const Interface()
                               : const QuickMenu());
             },
