@@ -59,8 +59,9 @@ app.*.map.json
 pubspec.lock
 **/pubspec.lock
 .a.Release.lnk
+*.lnk
 .vscode
-*Release*
+# *Release*
 Tabame.lnk
 ##
 *.pem
