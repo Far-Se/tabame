@@ -568,11 +568,15 @@ final class MacOSPlatformChannel: NSObject, FlutterStreamHandler {
     var rawSize: CFTypeRef?
     guard AXUIElementCopyAttributeValue(window, kAXPositionAttribute as CFString, &rawPosition) == .success,
           AXUIElementCopyAttributeValue(window, kAXSizeAttribute as CFString, &rawSize) == .success,
-          let positionValue = rawPosition as? AXValue,
-          let sizeValue = rawSize as? AXValue else {
+          let rawPosition = rawPosition,
+          let rawSize = rawSize,
+          CFGetTypeID(rawPosition) == AXValueGetTypeID(),
+          CFGetTypeID(rawSize) == AXValueGetTypeID() else {
       return nil
     }
 
+    let positionValue = rawPosition as! AXValue
+    let sizeValue = rawSize as! AXValue
     var position = CGPoint.zero
     var size = CGSize.zero
     guard AXValueGetValue(positionValue, .cgPoint, &position),
@@ -668,7 +672,7 @@ final class MacOSPlatformChannel: NSObject, FlutterStreamHandler {
 
     for (index, prepared) in preparedBindings.enumerated() {
       let id = UInt32(index + 1)
-      var hotKeyID = EventHotKeyID(signature: Self.hotKeySignature, id: id)
+      let hotKeyID = EventHotKeyID(signature: Self.hotKeySignature, id: id)
       var reference: EventHotKeyRef?
       let status = RegisterEventHotKey(
         prepared.keyCode,
@@ -759,7 +763,7 @@ final class MacOSPlatformChannel: NSObject, FlutterStreamHandler {
             EventParamName(kEventParamDirectObject),
             EventParamType(typeEventHotKeyID),
             nil,
-            UInt32(MemoryLayout<EventHotKeyID>.size),
+            MemoryLayout<EventHotKeyID>.size,
             nil,
             &hotKeyID
           )
