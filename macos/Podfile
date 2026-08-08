@@ -1,5 +1,95 @@
 platform :osx, '13.0'
 
+# audiotags 1.4.5 ships an FRB v1 bridge_generated.h beside an FRB v2
+# libaudiotags.a. Replace the stale native anchor until the package publishes
+# a corrected macOS artifact.
+AUDIO_TAGS_FRB_V2_BRIDGE_HEADER = <<~'HEADER'
+  #include <stdint.h>
+
+  int64_t frb_get_rust_content_hash(void);
+  void frb_pde_ffi_dispatcher_primary(int64_t call_id, uint8_t* ptr_, int32_t rust_vec_len_, int32_t data_len_);
+  void frb_pde_ffi_dispatcher_sync(int64_t call_id, uint8_t* ptr_, int32_t rust_vec_len_, int32_t data_len_);
+  intptr_t frb_init_frb_dart_api_dl(void *obj);
+  void frb_dart_fn_deliver_output(int32_t call_id, int64_t port_);
+  void frb_rust_vec_u8_free(uint8_t *ptr, int32_t len, int32_t capacity);
+  uint8_t *frb_rust_vec_u8_new(void);
+  void frb_rust_vec_u8_resize(uint8_t *ptr, int32_t len, int32_t capacity, int32_t new_len);
+
+  static int64_t dummy_method_to_enforce_bundling(void) {
+      int64_t dummy_var = 0;
+      dummy_var ^= ((int64_t) (void*) frb_get_rust_content_hash);
+      dummy_var ^= ((int64_t) (void*) frb_pde_ffi_dispatcher_primary);
+      dummy_var ^= ((int64_t) (void*) frb_pde_ffi_dispatcher_sync);
+      dummy_var ^= ((int64_t) (void*) frb_init_frb_dart_api_dl);
+      dummy_var ^= ((int64_t) (void*) frb_dart_fn_deliver_output);
+      dummy_var ^= ((int64_t) (void*) frb_rust_vec_u8_free);
+      dummy_var ^= ((int64_t) (void*) frb_rust_vec_u8_new);
+      dummy_var ^= ((int64_t) (void*) frb_rust_vec_u8_resize);
+      return dummy_var;
+  }
+HEADER
+
+def audiotags_macos_bridge_headers
+  candidates = [
+    File.expand_path(
+      File.join(
+        'Flutter',
+        'ephemeral',
+        '.symlinks',
+        'plugins',
+        'audiotags',
+        'macos',
+        'Classes',
+        'bridge_generated.h'
+      ),
+      __dir__
+    ),
+    File.expand_path(
+      File.join('Pods', 'audiotags', 'Classes', 'bridge_generated.h'),
+      __dir__
+    ),
+  ]
+
+  candidates.uniq.select { |path| File.file?(path) }
+end
+
+def patch_audiotags_macos_bridge
+  headers = audiotags_macos_bridge_headers
+  headers.each do |header|
+    contents = File.read(header)
+    next unless contents.include?('dummy_method_to_enforce_bundling')
+    next if contents.include?('frb_pde_ffi_dispatcher_primary')
+
+    File.write(header, AUDIO_TAGS_FRB_V2_BRIDGE_HEADER)
+  end
+end
+
+def audiotags_macos_archive
+  header = audiotags_macos_bridge_headers.first
+  return unless header
+
+  archive = File.expand_path(
+    File.join(File.dirname(header), '..', 'Libs', 'libaudiotags.a')
+  )
+  File.realpath(archive) if File.file?(archive)
+end
+
+def add_audiotags_force_load(target, archive)
+  return unless archive
+
+  target.build_configurations.each do |configuration|
+    existing = configuration.build_settings['OTHER_LDFLAGS']
+    flags = existing.is_a?(Array) ? existing.dup : Array(existing)
+    flags << '$(inherited)' unless flags.any? { |flag| flag.to_s.include?('$(inherited)') }
+
+    unless flags.each_cons(2).any? { |flag, path| flag == '-force_load' && path == archive }
+      flags.concat(['-force_load', archive])
+    end
+
+    configuration.build_settings['OTHER_LDFLAGS'] = flags
+  end
+end
+
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
@@ -36,7 +126,11 @@ target 'Runner' do
 end
 
 post_install do |installer|
+  patch_audiotags_macos_bridge
+  audiotags_archive = audiotags_macos_archive
+
   installer.pods_project.targets.each do |target|
     flutter_additional_macos_build_settings(target)
+    add_audiotags_force_load(target, audiotags_archive) if target.name == 'audiotags'
   end
 end
