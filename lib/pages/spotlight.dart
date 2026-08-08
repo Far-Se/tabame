@@ -5,8 +5,9 @@ import 'dart:ui' as ui;
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import '../platform/windows/tabamewin32_api.dart';
+import '../platform/windows/win32_api.dart';
+import '../platform/windows/windows_hotkey_service.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../logic/app_startup.dart';
@@ -259,7 +260,7 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> with TabameListener
     final List<Map<String, dynamic>> hotkeys = <Map<String, dynamic>>[];
     for (final ScreenDrawHotkeyBinding binding in Boxes.screenDrawHotkeys) {
       if (!binding.enabled || !binding.isSpotlight) continue;
-      final int? keyVk = Hotkeys.keyToVirtualKey(binding.key);
+      final int? keyVk = WindowsHotkeyService.keyToVirtualKey(Hotkeys.normalizeKeyName(binding.key));
       if (keyVk == null) continue;
       hotkeys.add(<String, dynamic>{
         "name": binding.actionId,

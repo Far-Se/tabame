@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import '../../platform/audio_system_service.dart';
+import '../../platform/windows/tabamewin32_api.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
@@ -71,11 +72,12 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                               label: "Mute",
                               accent: accent,
                               onTap: () async {
-                                final List<ProcessVolume>? mixers = await Audio.enumAudioMixer();
-                                if (mixers != null) {
-                                  for (ProcessVolume m in mixers) {
-                                    if (m.processPath == window.process.exePath) {
-                                      Audio.setAudioMixerVolume(m.processId, m.maxVolume < 0.01 ? 1 : 0.001);
+                                final AudioSystemService service = AudioSystemService.instance;
+                                if (service.isAvailable && service.supportsPerProcessAudio) {
+                                  final List<PlatformAudioProcess> mixers = await service.listProcesses();
+                                  for (final PlatformAudioProcess mixer in mixers) {
+                                    if (mixer.processPath == window.process.exePath) {
+                                      await service.setProcessVolume(mixer.id, mixer.volume < 0.01 ? 1 : 0.001);
                                     }
                                   }
                                 }

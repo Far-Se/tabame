@@ -7,9 +7,10 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:intl/intl.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import '../../platform/windows/tabamewin32_api.dart';
 
 import '../../models/classes/boxes.dart';
+import '../../platform/app_paths.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win_utils.dart';
 import '../widgets/checkbox_widget.dart';
@@ -329,7 +330,7 @@ class TrktivityPageState extends State<TrktivityPage> {
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     secondary: InfoWidget("Press to open folder with saved data", onTap: () {
-                      WinUtils.open("${WinUtils.getTabameAppDataFolder()}\\trktivity");
+                      WinUtils.open(AppPaths.currentPath('trktivity'));
                     }),
                   ),
                   !user.trktivityEnabled
@@ -398,8 +399,7 @@ It records keystrokes, mouse movement and active Window.
                                         setState(() => showFilters = true);
                                       },
                                       icon: const Icon(Icons.add_rounded, size: 18),
-                                      label: Text("Add Rule",
-                                          style: TextStyle(fontSize: Design.baseFontSize + 2)),
+                                      label: Text("Add Rule", style: TextStyle(fontSize: Design.baseFontSize + 2)),
                                     )
                                   ],
                                 ],

@@ -5,12 +5,13 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:tabamewin32/tabamewin32.dart';
+import '../../platform/windows/tabamewin32_api.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/hotkeys.dart';
 import '../../models/classes/save_settings.dart';
 import '../../models/globals.dart';
+import '../../platform/app_paths.dart';
 import '../../models/settings.dart';
 import '../../models/util/main_hotkey.dart';
 import '../../models/win32/win32.dart';
@@ -55,7 +56,7 @@ class FirstRunState extends State<FirstRun> {
   int currentStep = 0;
 
   // ── Legacy copy-installation implementation (page 0 no longer invokes it) ──
-  String installLocation = WinUtils.getTabameAppDataFolder();
+  String installLocation = AppPaths.root;
   // ignore: unused_field
   bool _installing = false;
   // ignore: unused_field
@@ -1071,7 +1072,7 @@ class FirstRunState extends State<FirstRun> {
                           "Stores activity history locally, including keystrokes, mouse movement, and active window titles.",
                       value: user.trktivityEnabled,
                       trailing: InfoWidget("Open saved data folder", onTap: () {
-                        WinUtils.open(WinUtils.getTabameAppDataFolder());
+                        WinUtils.open(AppPaths.root);
                       }),
                       onChanged: (bool value) {
                         setState(() {
@@ -1462,9 +1463,9 @@ class FirstRunState extends State<FirstRun> {
         break;
       }
     }
-    final String fileName = "${WinUtils.getTempFolder()}\\tabame_${lastVersion["tag_name"]}.zip";
+    final String fileName = AppPaths.temporaryPath('tabame_${lastVersion["tag_name"]}.zip');
     await WinUtils.downloadFile(downloadLink, fileName, () {
-      final String dir = "${WinUtils.getTabameAppDataFolder()}";
+      final String dir = AppPaths.root;
       WinUtils.runPowerShell(<String>[
         'Expand-Archive -LiteralPath "$fileName" -DestinationPath "$dir" -Force;',
         'Remove-Item -LiteralPath "$fileName" -Force;',

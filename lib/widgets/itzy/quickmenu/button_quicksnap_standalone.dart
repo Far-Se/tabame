@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../models/classes/boxes/quick_menu_box.dart';
 import '../../../models/settings.dart';
-import '../../../models/win32/win32.dart';
-import '../../../models/win32/win_utils.dart';
+import '../../../platform/quick_snap_service.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class QuickSnapStandalone extends StatelessWidget {
@@ -11,19 +9,12 @@ class QuickSnapStandalone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final QuickSnapService service = QuickSnapService.instance;
     return QuickActionItem(
-      message: "Open QuickSnap Standalone",
+      message: service.supportsStandalone ? "Open QuickSnap Standalone" : service.unavailableReason,
       icon: const Icon(Icons.view_quilt_rounded),
       hoverColor: Design.accentHue(58, saturation: 0.92),
-      onTap: () {
-        final int hWnd = Win32.findWindow("Tabame QuickSnap");
-        if (hWnd != 0) {
-          Win32.closeWindow(hWnd);
-        } else {
-          QuickMenuFunctions.hideQuickMenu();
-          WinUtils.startTabame(closeCurrent: false, arguments: "-quickSnap", admin: true);
-        }
-      },
+      onTap: service.supportsStandalone ? () async => service.toggleStandalone() : null,
     );
   }
 }

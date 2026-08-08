@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../models/classes/boxes.dart';
+import '../../../platform/app_paths.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/modal_button.dart';
@@ -117,7 +118,7 @@ class NotionSearchCache {
   static bool _loaded = false;
 
   static String get apiKey => (Boxes.pref.getString(apiKeyKey) ?? "").trim();
-  static String get cachePath => "${WinUtils.getTabameAppDataFolder()}\\cache\\notion.json";
+  static String get cachePath => AppPaths.cachePath('notion.json');
 
   // ---------------------------------------------------------------------------
   // Persistence
@@ -954,9 +955,7 @@ class _NotionWidgetState extends State<NotionWidget> {
           Text(
             "Cache Management",
             style: TextStyle(
-                fontSize: Design.baseFontSize + 1,
-                fontWeight: FontWeight.bold,
-                color: onSurface.withAlpha(150)),
+                fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.bold, color: onSurface.withAlpha(150)),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
@@ -997,8 +996,7 @@ class _NotionWidgetState extends State<NotionWidget> {
                 color: Colors.redAccent.withAlpha(28),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(_browseError!,
-                  style: TextStyle(fontSize: Design.baseFontSize + 1, color: Colors.redAccent)),
+              child: Text(_browseError!, style: TextStyle(fontSize: Design.baseFontSize + 1, color: Colors.redAccent)),
             ),
           // List
           Flexible(
@@ -1010,8 +1008,7 @@ class _NotionWidgetState extends State<NotionWidget> {
                         child: Center(
                           child: Text(
                             'No sub-pages found here.',
-                            style: TextStyle(
-                                fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(120)),
+                            style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(120)),
                           ),
                         ),
                       )
@@ -1059,8 +1056,7 @@ class _NotionWidgetState extends State<NotionWidget> {
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
                       if (_breadcrumbs[i].emoji != null) ...<Widget>[
-                        Text(_breadcrumbs[i].emoji!,
-                            style: TextStyle(fontSize: Design.baseFontSize + 2)),
+                        Text(_breadcrumbs[i].emoji!, style: TextStyle(fontSize: Design.baseFontSize + 2)),
                         const SizedBox(width: 3),
                       ] else if (i == 0) ...<Widget>[
                         Icon(Icons.home_rounded,
@@ -1145,8 +1141,7 @@ class _NotionWidgetState extends State<NotionWidget> {
                   child: Center(
                     child: Text(
                       _currentQuery.isEmpty ? "No recent items" : "No results found for '$_currentQuery'",
-                      style: TextStyle(
-                          fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(120)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 2, color: onSurface.withAlpha(120)),
                     ),
                   ),
                 )

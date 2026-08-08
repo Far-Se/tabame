@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import 'package:path/path.dart' as p;
+import '../platform/windows/tabamewin32_api.dart';
 
 import '../logic/error_handler.dart';
 import '../models/settings.dart';
@@ -73,7 +74,7 @@ class RewindlyService {
   }
 
   Directory _monitorDir(int index) {
-    final Directory dir = Directory('${WinUtils.getRewindlyFolder()}\\$index');
+    final Directory dir = Directory(p.join(WinUtils.getRewindlyFolder(), '$index'));
     if (!dir.existsSync()) dir.createSync(recursive: true);
     return dir;
   }
@@ -117,8 +118,7 @@ class RewindlyService {
   }
 
   void _sweepRetention() {
-    final int cutoff =
-        DateTime.now().millisecondsSinceEpoch - user.rewindlyRetentionMinutes * 60 * 1000;
+    final int cutoff = DateTime.now().millisecondsSinceEpoch - user.rewindlyRetentionMinutes * 60 * 1000;
     for (int i = 0; i < _monitors.length; i++) {
       for (final FileSystemEntity entity in _monitorDir(i).listSync()) {
         if (entity is! File) continue;
@@ -190,12 +190,11 @@ class RewindlyService {
         for (int j = 0; j < segments.length; j++) {
           // A segment covers [start, nextStart); include it if that span reaches
           // into the requested window.
-          final int nextStart =
-              j + 1 < segments.length ? _epochOf(segments[j + 1].path)! : now;
+          final int nextStart = j + 1 < segments.length ? _epochOf(segments[j + 1].path)! : now;
           if (nextStart > cutoff) inputs.add(segments[j].path);
         }
         if (inputs.isEmpty) continue;
-        final String out = '$fancyshot\\rewindly_${stamp}_mon${i + 1}.mp4';
+        final String out = p.join(fancyshot, 'rewindly_${stamp}_mon${i + 1}.mp4');
         try {
           final bool ok = await concatScreenRecordings(inputs: inputs, outputPath: out);
           if (ok) exported.add(out);

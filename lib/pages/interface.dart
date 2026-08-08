@@ -14,6 +14,7 @@ import 'package:window_manager/window_manager.dart';
 import '../models/classes/boxes.dart';
 import '../models/classes/save_settings.dart';
 import '../models/globals.dart';
+import '../platform/app_paths.dart';
 import '../models/settings.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
@@ -147,9 +148,9 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
     if (sp != null) {
       sponsor.enabled = true;
       sponsor.url = sp;
-      if (File("${WinUtils.getTabameAppDataFolder()}\\sponsorLight.png").existsSync()) {
-        sponsorImageLight = File("${WinUtils.getTabameAppDataFolder()}\\sponsorLight.png");
-        sponsorImageDark = File("${WinUtils.getTabameAppDataFolder()}\\sponsorDark.png");
+      if (File(AppPaths.resolvePath('sponsorLight.png')).existsSync()) {
+        sponsorImageLight = File(AppPaths.resolvePath('sponsorLight.png'));
+        sponsorImageDark = File(AppPaths.resolvePath('sponsorDark.png'));
       }
     }
     checkForSponsor();
@@ -174,9 +175,9 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   }
 
   Future<void> checkForSponsor() async {
-    if (File("${WinUtils.getTabameAppDataFolder()}\\sponsorLight.png").existsSync()) {
-      sponsorImageLight = File("${WinUtils.getTabameAppDataFolder()}\\sponsorLight.png");
-      sponsorImageDark = File("${WinUtils.getTabameAppDataFolder()}\\sponsorDark.png");
+    if (File(AppPaths.resolvePath('sponsorLight.png')).existsSync()) {
+      sponsorImageLight = File(AppPaths.resolvePath('sponsorLight.png'));
+      sponsorImageDark = File(AppPaths.resolvePath('sponsorDark.png'));
     }
     final http.Response response = await http.get(Uri.parse(
         "https://raw.githubusercontent.com/Far-Se/tabame/main/resources/sponsor.json?e=${DateTime.now().hour}"));
@@ -196,11 +197,11 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
       if (((Boxes.pref.getString("sponsorName") ?? "") != json["name"]) || sponsorImageLight == null) {
         Boxes.pref.setString("sponsorName", json["name"]);
         Boxes.pref.setString("sponsorLink", json["url"]);
-        sponsorImageLight = File("${WinUtils.getTabameAppDataFolder()}\\sponsorLight.png");
+        sponsorImageLight = File(AppPaths.currentPath('sponsorLight.png'));
         final http.Response rsp = await http.get(Uri.parse(json["imageLight"]));
         if (rsp.statusCode == 200) sponsorImageLight!.writeAsBytesSync(rsp.bodyBytes);
 
-        sponsorImageDark = File("${WinUtils.getTabameAppDataFolder()}\\sponsorDark.png");
+        sponsorImageDark = File(AppPaths.currentPath('sponsorDark.png'));
         final http.Response rsp2 = await http.get(Uri.parse(json["imageDark"]));
         if (rsp2.statusCode == 200) sponsorImageDark!.writeAsBytesSync(rsp2.bodyBytes);
       }

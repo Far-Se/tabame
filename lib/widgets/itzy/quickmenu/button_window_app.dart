@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../models/classes/boxes/boxes_base.dart';
+import '../../../platform/app_paths.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/extracted_icon.dart';
@@ -189,7 +190,7 @@ class IconDiskCache {
 
   Future<void> init() async {
     if (_initialized) return;
-    _cacheDir = p.join(WinUtils.getTabameAppDataFolder(), 'cache', 'icon_cache');
+    _cacheDir = AppPaths.cachePath('icon_cache', forWrite: true);
     await Directory(_cacheDir).create(recursive: true);
     _initialized = true;
   }

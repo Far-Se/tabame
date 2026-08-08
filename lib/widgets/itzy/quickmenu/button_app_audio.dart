@@ -1,19 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
 
+import '../../../platform/audio_system_service.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
-import '../../../models/tray_watcher.dart';
-import '../../../models/win32/keys.dart';
-import '../../../models/win32/win32.dart';
-import '../../../models/win32/win_utils.dart';
-import '../../../models/win32/window.dart';
-import '../../../models/window_watcher.dart';
-import '../../quickmenu/task_bar.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class AppAudioButton extends StatefulWidget {
@@ -56,14 +48,17 @@ class _AppAudioButtonState extends State<AppAudioButton> {
     return Boxes.appAudioControls[widget.index];
   }
 
-  /// Checks the actual background process state.
+  /// Checks the current session state through the platform media adapter.
   void _checkForAppPlaying(Timer timer) {
     if (!QuickMenuFunctions.isQuickMenuVisible) return;
     if (!mounted) return;
     final AppAudioControl? ctl = _control;
-    if (ctl == null || !ctl.showAnimation) return;
+    if (ctl == null || !ctl.showAnimation || !MediaSessionService.instance.isAvailable) return;
+    unawaited(_refreshAppPlaying(ctl));
+  }
 
-    final bool isActuallyRunning = Caches.audioMixerExes.contains(ctl.exe);
+  Future<void> _refreshAppPlaying(AppAudioControl ctl) async {
+    final bool isActuallyRunning = await MediaSessionService.instance.isApplicationPlaying(_binding(ctl));
 
     // If the state hasn't changed, do nothing.
     if (_isAppPlaying == isActuallyRunning) return;
@@ -96,46 +91,22 @@ class _AppAudioButtonState extends State<AppAudioButton> {
     });
   }
 
-  ({int pid, int hWnd})? _getAppWindow() {
-    final AppAudioControl? ctl = _control;
-    if (ctl == null) return null;
-    final Window? win = WindowWatcher.list.firstWhereOrNull((Window element) => element.process.exe == ctl.exe);
-    if (win != null) {
-      return (hWnd: win.hWnd, pid: win.process.pId);
-    } else {
-      final TrayBarInfo? tray =
-          TrayWatcher.trayList.firstWhereOrNull((TrayBarInfo element) => element.processExe == ctl.exe);
-      if (tray != null) {
-        return (hWnd: tray.hWnd, pid: tray.processID);
-      }
-    }
-    return null;
+  PlatformMediaBinding _binding(AppAudioControl ctl) {
+    return PlatformMediaBinding(
+      applicationId: ctl.exe.isNotEmpty ? ctl.exe : ctl.name,
+      applicationPath: ctl.path,
+      hotkeyForward: ctl.hotkeyForward,
+      hotkeyRewind: ctl.hotkeyRewind,
+      hotkeyNext: ctl.hotkeyNext,
+      hotkeyPrevious: ctl.hotkeyPrev,
+      hotkeyPlayPause: ctl.hotkeyPause,
+    );
   }
 
-  void _launchApp() async {
+  Future<void> _launchApp() async {
     final AppAudioControl? ctl = _control;
     if (ctl == null) return;
-    await WindowWatcher.fetchWindows();
-    // 1. Check if the app has a regular window open
-    final Window? win = WindowWatcher.list.firstWhereOrNull((Window element) => element.process.exe == ctl.exe);
-    if (win != null) {
-      Win32.activateWindow(win.hWnd);
-      return;
-    }
-
-    // 2. Check if the app is in the system tray
-    await TrayWatcher.fetchTray();
-    final TrayBarInfo? tray =
-        TrayWatcher.trayList.firstWhereOrNull((TrayBarInfo element) => element.processExe == ctl.exe);
-    if (tray != null) {
-      WinTray.click(tray, clickType: TrayClickType.left);
-      return;
-    }
-
-    // 3. Fallback: Launch the app
-    if (ctl.path.isNotEmpty) {
-      WinUtils.open(ctl.path);
-    }
+    await MediaSessionService.instance.launchApplication(_binding(ctl));
   }
 
   // --- Actions ---
@@ -157,42 +128,32 @@ class _AppAudioButtonState extends State<AppAudioButton> {
     _lastDragPosition = details.localPosition.distance;
     final bool isUp = (details.primaryDelta ?? 0) < 0;
 
-    WinKeys.send(isUp ? ctl.hotkeyRewind : ctl.hotkeyForward);
+    unawaited(
+      MediaSessionService.instance.sendApplicationCommand(
+        _binding(ctl),
+        isUp ? PlatformMediaCommand.seekForward : PlatformMediaCommand.seekBackward,
+      ),
+    );
   }
 
   void _handleNextTrack() {
     final AppAudioControl? ctl = _control;
     if (ctl == null) return;
-    final ({int hWnd, int pid})? window = _getAppWindow();
-    if (window == null) {
-      WinKeys.single(VK.MEDIA_NEXT_TRACK, KeySentMode.normal);
-    } else {
-      WinKeys.send(ctl.hotkeyNext);
-    }
+    unawaited(MediaSessionService.instance.sendApplicationCommand(_binding(ctl), PlatformMediaCommand.next));
     _setFeedbackIcon(Icons.fast_forward);
   }
 
   void _handlePrevTrack() {
     final AppAudioControl? ctl = _control;
     if (ctl == null) return;
-    final ({int hWnd, int pid})? window = _getAppWindow();
-    if (window == null) {
-      WinKeys.single(VK.MEDIA_PREV_TRACK, KeySentMode.normal);
-    } else {
-      WinKeys.send(ctl.hotkeyPrev);
-    }
+    unawaited(MediaSessionService.instance.sendApplicationCommand(_binding(ctl), PlatformMediaCommand.previous));
     _setFeedbackIcon(Icons.fast_rewind);
   }
 
   void _handlePlayPause() {
     final AppAudioControl? ctl = _control;
     if (ctl == null) return;
-    final ({int hWnd, int pid})? window = _getAppWindow();
-    if (window == null) {
-      WinKeys.single(VK.MEDIA_PLAY_PAUSE, KeySentMode.normal);
-    } else {
-      WinKeys.send(ctl.hotkeyPause);
-    }
+    unawaited(MediaSessionService.instance.sendApplicationCommand(_binding(ctl), PlatformMediaCommand.playPause));
     _setFeedbackIcon(Icons.play_circle_outline);
   }
 
@@ -218,15 +179,16 @@ class _AppAudioButtonState extends State<AppAudioButton> {
       }
     }
 
+    final bool mediaAvailable = MediaSessionService.instance.isAvailable;
     return QuickActionItem(
-      onVerticalDragStart: (_) => _lastDragPosition = 0,
-      onVerticalDragEnd: (_) => _lastDragPosition = 0,
-      onVerticalDragUpdate: _handleVolumeDrag,
-      onSecondaryTap: _handleNextTrack,
-      onTertiaryTapDown: (_) => _handlePrevTrack(),
-      onTap: _handlePlayPause,
-      onDoubleTap: _launchApp,
-      message: ctl.name,
+      onVerticalDragStart: mediaAvailable ? (_) => _lastDragPosition = 0 : null,
+      onVerticalDragEnd: mediaAvailable ? (_) => _lastDragPosition = 0 : null,
+      onVerticalDragUpdate: mediaAvailable ? _handleVolumeDrag : null,
+      onSecondaryTap: mediaAvailable ? _handleNextTrack : null,
+      onTertiaryTapDown: mediaAvailable ? (_) => _handlePrevTrack() : null,
+      onTap: mediaAvailable ? _handlePlayPause : null,
+      onDoubleTap: mediaAvailable ? _launchApp : null,
+      message: mediaAvailable ? ctl.name : MediaSessionService.instance.unavailableReason,
       icon: content,
     );
   }

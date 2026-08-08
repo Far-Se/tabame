@@ -1,0 +1,74 @@
+name: Validate Desktop Platforms
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows
+            runner: windows-2022
+            desktop_flag: --enable-windows-desktop
+            entrypoint: lib/main.dart
+          - target: macos
+            runner: macos-13
+            desktop_flag: --enable-macos-desktop
+            entrypoint: lib/portable_main.dart
+          - target: linux
+            runner: ubuntu-22.04
+            desktop_flag: --enable-linux-desktop
+            entrypoint: lib/portable_main.dart
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Linux build dependencies
+        if: matrix.target == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            clang \
+            cmake \
+            libgtk-3-dev \
+            libnotify-dev \
+            libx11-dev \
+            ninja-build \
+            pkg-config
+
+      - name: Enable desktop target
+        run: flutter config ${{ matrix.desktop_flag }}
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Check shared Windows import boundary
+        run: dart run tool/check_shared_windows_imports.dart
+
+      - name: Analyze Dart and Flutter sources
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        run: flutter test
+
+      - name: Build release target
+        run: flutter build ${{ matrix.target }} --release -t ${{ matrix.entrypoint }}

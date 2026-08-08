@@ -4,8 +4,9 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
+import '../../platform/app_paths.dart';
+import '../../platform/sqlite_runtime.dart';
 import '../classes/music_server.dart';
-import '../win32/win_utils.dart';
 
 class MusicRoot {
   const MusicRoot({
@@ -100,7 +101,7 @@ class MusicLibraryDb {
 
   String get dbPath {
     if (_manualPath != null) return _manualPath!;
-    return p.join(WinUtils.getTabameAppDataFolder(), dbName);
+    return AppPaths.databasePath(dbName);
   }
 
   void setDatabasePath(String path) {
@@ -124,9 +125,9 @@ class MusicLibraryDb {
   }
 
   Database _openAndSetupDb(String path) {
+    SqliteRuntime.prepare();
     final File dbFile = File(path);
     if (!dbFile.parent.existsSync()) dbFile.parent.createSync(recursive: true);
-    WinUtils.copySqlite3IfItDoesntExistForFuckSake();
     final Database db = sqlite3.open(path);
     db.execute('PRAGMA cache_size = -2000;'); // Limit to 2 MB (default is 2000 pages)
     db.execute('PRAGMA temp_store = MEMORY;');
@@ -826,8 +827,13 @@ class MusicLibraryDb {
     );
   }
 
+  static p.Context _pathContext(String path) {
+    return Platform.isWindows || p.windows.isAbsolute(path) || path.contains('\\') ? p.windows : p.posix;
+  }
+
   static String normalizePath(String path) {
-    return p.normalize(path.trim()).replaceAll('/', '\\').toLowerCase();
+    final String trimmed = path.trim();
+    return _pathContext(trimmed).normalize(trimmed).toLowerCase();
   }
 
   void close() {
@@ -859,15 +865,16 @@ class MusicLibraryDb {
   }
 
   static String? _directChildFolder(String folderPath, String descendantParentPath) {
+    final p.Context context = _pathContext(folderPath);
     final String normalizedFolder = normalizePath(folderPath);
     final String normalizedDescendant = normalizePath(descendantParentPath);
-    if (!normalizedDescendant.startsWith('$normalizedFolder\\')) return null;
+    if (!normalizedDescendant.startsWith('$normalizedFolder${context.separator}')) return null;
 
     final String relative = descendantParentPath.substring(folderPath.length).replaceFirst(RegExp(r'^[\\/]+'), '');
     if (relative.isEmpty) return null;
-    final String firstSegment = relative.split(RegExp(r'[\\/]')).first;
+    final String firstSegment = relative.split(RegExp(r'[\\/]+')).first;
     if (firstSegment.isEmpty) return null;
-    return p.join(folderPath, firstSegment);
+    return context.join(folderPath, firstSegment);
   }
 
   static String _escapeLike(String value) {

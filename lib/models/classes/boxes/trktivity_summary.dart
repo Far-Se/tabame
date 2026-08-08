@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as p;
 
 import 'trktivity_box.dart';
 
@@ -84,7 +85,7 @@ Future<TrktivitySummary> computeTrktivitySummary(String date) async {
     }
   }
 
-  final File f = File("${Trktivity.instance.folder}\\$date.json");
+  final File f = File(p.join(Trktivity.instance.folder, '$date.json'));
   if (f.existsSync()) {
     final List<String> lines = await f.readAsLines();
     for (final String line in lines) {

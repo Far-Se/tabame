@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:path/path.dart' as p;
 
 import '../../../logic/error_handler.dart';
 import '../../../models/clipboard_history.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../../services/browser_bridge_service.dart';
+import '../../../services/notification_coordinator.dart';
 import 'plugin_debug.dart';
 import 'plugin_manifest.dart';
 import 'plugin_protocol.dart';
@@ -175,7 +177,7 @@ class LauncherPluginHost {
 
   /// Folder Tabame installs a plugin's vendored Python packages into. Kept
   /// inside the plugin folder so the plugin stays self-contained and portable.
-  static String _libsDir(PluginManifest manifest) => '${manifest.directory}${Platform.pathSeparator}.pluginlibs';
+  static String _libsDir(PluginManifest manifest) => p.join(manifest.directory, '.pluginlibs');
 
   /// Builds the child process environment: UTF-8 defaults, a `PYTHONPATH` that
   /// includes the vendored `.pluginlibs` folder (when present), then the
@@ -704,11 +706,10 @@ class LauncherPluginHost {
       case 'notify':
         // Works even from a background-finishing process — that's its point.
         final Object? title = command.data['title'];
-        WinUtils.showWindowsNotification(
+        unawaited(NotificationCoordinator.instance.show(
           title: title is String && title.trim().isNotEmpty ? title : manifest.name,
           body: command.text ?? '',
-          onClick: () {},
-        );
+        ));
         return true;
       case 'background':
         if (!live) return true;

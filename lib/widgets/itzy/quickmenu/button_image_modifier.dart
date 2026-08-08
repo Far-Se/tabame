@@ -2,15 +2,17 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../../../platform/clipboard_service.dart';
+import '../../../platform/file_picker_service.dart';
+import '../../../platform/platform_models.dart';
 import 'package:flutter/material.dart';
-
-import 'package:tabamewin32/tabamewin32.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../models/classes/boxes.dart';
+import '../../../platform/app_paths.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
-import '../../../models/win32/win_utils.dart';
+
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 
@@ -31,6 +33,12 @@ const String _kProfiles = 'imgconv.profiles';
 
 /// Runs [args] through `ffmpeg` directly, or via PowerShell if the direct
 /// call fails (e.g. ffmpeg not on PATH but available via winget shim).
+Future<Directory> _createImageTempDirectory(String prefix) async {
+  final Directory base = Directory(AppPaths.temporaryDirectory);
+  await base.create(recursive: true);
+  return base.createTemp(prefix);
+}
+
 Future<ProcessResult> _runFfmpeg(List<String> args) async {
   try {
     final ProcessResult r = await Process.run('ffmpeg', args);
@@ -76,15 +84,15 @@ Future<Uint8List> _ffmpegEncode({
   required int resizePercent,
   required int resizeWidth,
 }) async {
-  final Directory tmp = await Directory.systemTemp.createTemp('imgconv_');
+  final Directory tmp = await _createImageTempDirectory('imgconv_');
   try {
     // Write source to a temp file with its original extension so ffmpeg
     // can auto-detect the codec.
-    final File inFile = File('${tmp.path}\\in$srcExt');
+    final File inFile = File(p.join(tmp.path, 'in$srcExt'));
     await inFile.writeAsBytes(src);
 
     final String outExt = '.${format.ext}';
-    final File outFile = File('${tmp.path}\\out$outExt');
+    final File outFile = File(p.join(tmp.path, 'out$outExt'));
 
     // ── Build ffmpeg args ────────────────────────────────────────────────
     final List<String> args = <String>[
@@ -363,20 +371,20 @@ class _ImageConverterPanelState extends State<ImageConverterPanel> {
 
   Future<void> _checkClipboard() async {
     try {
-      final Uint8List? bytes = await ClipboardExtended.pasteImage();
+      final Uint8List? bytes = await ClipboardService.instance.readImage();
       if (!mounted) return;
       if (bytes != null && bytes.isNotEmpty) {
         // Persist clipboard bytes to a temp file so ffmpeg can read them
         // by path. We detect whether the data is a raw DIB (no PNG header)
         // and write it as BMP in that case; otherwise treat it as PNG.
-        final Directory tmpDir = await Directory.systemTemp.createTemp('imgconv_cb_');
+        final Directory tmpDir = await _createImageTempDirectory('imgconv_cb_');
         final bool isPng = bytes.length > 8 &&
             bytes[0] == 0x89 &&
             bytes[1] == 0x50 && // P
             bytes[2] == 0x4E && // N
             bytes[3] == 0x47; // G
         final String ext = isPng ? '.png' : '.bmp';
-        final File tmpFile = File('${tmpDir.path}\\clipboard$ext');
+        final File tmpFile = File(p.join(tmpDir.path, 'clipboard$ext'));
         await tmpFile.writeAsBytes(bytes);
         setState(() {
           _clipboardImageFile = tmpFile;
@@ -459,14 +467,16 @@ class _ImageConverterPanelState extends State<ImageConverterPanel> {
   Future<void> _copyImageToClipboard(File file) async {
     Directory? tmp;
     try {
-      tmp = await Directory.systemTemp.createTemp('imgconv_cp_');
+      tmp = await _createImageTempDirectory('imgconv_cp_');
       final String srcExt = file.path.contains('.') ? '.${file.path.split('.').last.toLowerCase()}' : '.png';
-      final File tmpSrc = File('${tmp.path}\\src$srcExt');
+      final File tmpSrc = File(p.join(tmp.path, 'src$srcExt'));
       await tmpSrc.writeAsBytes(await file.readAsBytes());
-      final File tmpBmp = File('${tmp.path}\\out.bmp');
+      final File tmpBmp = File(p.join(tmp.path, 'out.bmp'));
       final ProcessResult r = await _runFfmpeg(<String>['-y', '-i', tmpSrc.path, tmpBmp.path]);
       if (r.exitCode != 0) throw Exception('ffmpeg failed: ${r.stderr}');
-      await ClipboardExtended.copyImage(await tmpBmp.readAsBytes());
+      await ClipboardService.instance.writeContent(
+        PlatformClipboardContent(imageBytes: await tmpBmp.readAsBytes()),
+      );
     } catch (_) {
       // Silently ignore — could add a snackbar here if desired
     } finally {
@@ -477,7 +487,7 @@ class _ImageConverterPanelState extends State<ImageConverterPanel> {
   /// Copies the file path string to the system clipboard.
   Future<void> _copyImageFileToClipboard(File file) async {
     try {
-      await ClipboardExtension.copyFile(file.path);
+      await ClipboardService.instance.writeFile(file.path);
     } catch (_) {}
   }
 
@@ -904,8 +914,8 @@ class _ConverterPageState extends State<_ConverterPage> {
       ));
     } else if (widget.clipboardBytes != null) {
       // Fallback: write raw clipboard bytes to a temp BMP for ffmpeg
-      final Directory tmpDir = await Directory.systemTemp.createTemp('imgconv_cb2_');
-      final File tmpFile = File('${tmpDir.path}\\clipboard.bmp');
+      final Directory tmpDir = await _createImageTempDirectory('imgconv_cb2_');
+      final File tmpFile = File(p.join(tmpDir.path, 'clipboard.bmp'));
       await tmpFile.writeAsBytes(widget.clipboardBytes!);
       sources.add((file: tmpFile, bytes: null, label: 'clipboard', srcExt: '.bmp'));
     }
@@ -972,15 +982,15 @@ class _ConverterPageState extends State<_ConverterPage> {
         );
 
         if (_outputMode == OutputMode.clipboard) {
-          // ClipboardExtended.copyImage on Windows requires raw BMP/DIB bytes
-          // (CF_DIB). Formats like WebP or PNG cannot be pasted directly — we
+          // The Windows clipboard adapter requires raw BMP/DIB bytes (CF_DIB).
+          // Formats like WebP or PNG cannot be pasted directly — we
           // re-encode the output to BMP via a second ffmpeg pass, then copy.
           Directory? tmpOut;
           try {
-            tmpOut = await Directory.systemTemp.createTemp('imgconv_out_');
-            final File tmpSrcFile = File('${tmpOut.path}\\src.${_format.ext}');
+            tmpOut = await _createImageTempDirectory('imgconv_out_');
+            final File tmpSrcFile = File(p.join(tmpOut.path, 'src.${_format.ext}'));
             await tmpSrcFile.writeAsBytes(encoded);
-            final File tmpBmpFile = File('${tmpOut.path}\\out.bmp');
+            final File tmpBmpFile = File(p.join(tmpOut.path, 'out.bmp'));
             final ProcessResult bmpResult = await _runFfmpeg(<String>[
               '-y',
               '-i',
@@ -991,7 +1001,7 @@ class _ConverterPageState extends State<_ConverterPage> {
               throw Exception('ffmpeg BMP pass failed (exit ${bmpResult.exitCode}):\n${bmpResult.stderr}');
             }
             final Uint8List bmpBytes = await tmpBmpFile.readAsBytes();
-            await ClipboardExtended.copyImage(bmpBytes);
+            await ClipboardService.instance.writeContent(PlatformClipboardContent(imageBytes: bmpBytes));
           } finally {
             tmpOut?.delete(recursive: true).catchError((_) => Directory(''));
           }

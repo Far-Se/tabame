@@ -99,12 +99,12 @@ class LauncherActionsBuilder {
       LauncherAction(
         label: 'Copy Path',
         icon: Icons.content_copy_rounded,
-        onExecute: (_) => Clipboard.setData(ClipboardData(text: path)),
+        onExecute: (_) => ClipboardService.instance.writeText(path),
       ),
       LauncherAction(
         label: 'Copy File',
         icon: Icons.content_paste_go_outlined,
-        onExecute: (_) => ClipboardExtension.copyFile(path),
+        onExecute: (_) => ClipboardService.instance.writeFile(path),
       ),
       LauncherAction(
         label: 'Copy Filename',
@@ -204,12 +204,12 @@ class LauncherActionsBuilder {
       LauncherAction(
         label: 'Copy Path',
         icon: Icons.content_copy_rounded,
-        onExecute: (_) => Clipboard.setData(ClipboardData(text: path)),
+        onExecute: (_) => ClipboardService.instance.writeText(path),
       ),
       LauncherAction(
         label: 'Copy Folder',
         icon: Icons.content_paste_go_outlined,
-        onExecute: (_) => ClipboardExtension.copyFolder(path),
+        onExecute: (_) => ClipboardService.instance.writeFile(path),
       ),
       LauncherAction(
         label: 'Copy Folder Name',
@@ -300,41 +300,21 @@ class LauncherActionsBuilder {
     ];
   }
 
-  // == Windows ================================================================
+  // == Window service ==========================================================
 
-  static List<LauncherAction> _buildWindowActions(Window window) {
+  static List<LauncherAction> _buildWindowActions(PlatformWindow window) {
+    final WindowWatcherService watcher = WindowWatcherService.instance;
     return <LauncherAction>[
-      LauncherAction(
-        label: 'Focus Window',
-        icon: Icons.open_in_full_rounded,
-        kbdHint: '↵',
-        onExecute: (_) {
-          Win32Window.activateWindow(window.hWnd);
-          _closeLauncher();
-        },
-      ),
-      LauncherAction(
-        label: 'Minimize',
-        icon: Icons.minimize_rounded,
-        onExecute: (_) {
-          Win32Window.minimizeWindow(window.hWnd);
-        },
-      ),
-      LauncherAction(
-        label: 'Maximize / Restore',
-        icon: Icons.crop_square_rounded,
-        onExecute: (_) {
-          Win32Window.maximizeOrRestoreWindow(window.hWnd);
-        },
-      ),
-      LauncherAction(
-        label: 'Close Window',
-        icon: Icons.close_rounded,
-        isDestructive: true,
-        onExecute: (_) {
-          Win32Window.closeWindow(window.hWnd);
-        },
-      ),
+      if (watcher.isActivationAvailable)
+        LauncherAction(
+          label: 'Focus Window',
+          icon: Icons.open_in_full_rounded,
+          kbdHint: '↵',
+          onExecute: (_) async {
+            await watcher.activate(window);
+            _closeLauncher();
+          },
+        ),
       LauncherAction(
         label: 'Copy Window Title',
         icon: Icons.content_copy_rounded,
@@ -344,21 +324,17 @@ class LauncherActionsBuilder {
       LauncherAction(
         label: 'Copy Process Name',
         icon: Icons.content_copy_rounded,
-        subtitle: window.process.exe,
-        onExecute: (_) => Clipboard.setData(ClipboardData(text: window.process.exe)),
+        subtitle: window.executable.isNotEmpty ? window.executable : window.applicationName,
+        onExecute: (_) => Clipboard.setData(
+          ClipboardData(text: window.executable.isNotEmpty ? window.executable : window.applicationName),
+        ),
       ),
-      if (window.process.exePath.isNotEmpty)
+      if (window.executablePath.isNotEmpty)
         LauncherAction(
-          label: 'Open Executable Location',
-          icon: Icons.folder_open_rounded,
-          subtitle: window.process.exePath,
-          onExecute: (_) {
-            WinUtils.open(
-              'explorer.exe',
-              arguments: '/select,"${window.process.exePath}"',
-              parseParamaters: true,
-            );
-          },
+          label: 'Copy Executable Path',
+          icon: Icons.content_copy_rounded,
+          subtitle: window.executablePath,
+          onExecute: (_) => Clipboard.setData(ClipboardData(text: window.executablePath)),
         ),
     ];
   }

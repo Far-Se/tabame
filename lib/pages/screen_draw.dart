@@ -6,13 +6,15 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:ffi/ffi.dart';
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../platform/file_picker_service.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import '../platform/screen_capture_service.dart';
+import '../platform/windows/tabamewin32_api.dart';
+import '../platform/windows/win32_api.dart';
+import '../platform/windows/windows_hotkey_service.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../logic/app_startup.dart';
@@ -20,6 +22,9 @@ import '../models/classes/boxes.dart';
 import '../models/classes/hotkeys.dart';
 import '../models/classes/screen_draw_hotkeys.dart';
 import '../models/screen_utils.dart';
+import '../platform/app_paths.dart';
+import '../platform/clipboard_service.dart';
+import '../platform/platform_models.dart';
 import '../models/settings.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win_utils.dart';
@@ -86,7 +91,7 @@ Future<void> startScreenDraw() async {
 // Win32 helpers
 // ---------------------------------------------------------------------------
 class Settings {
-  static String get _path => '${WinUtils.getTabameAppDataFolder(settings: true)}\\screen_draw.json';
+  static String get _path => AppPaths.settingsPath('screen_draw.json');
   static Map<String, dynamic> _data = <String, dynamic>{};
 
   static void load() {
@@ -190,8 +195,7 @@ class ScreenDrawCapture {
   }
 
   static Future<void> _copyPngToClipboard(Uint8List pngBytes) async {
-    ClipboardExtended.copyImage(pngBytes);
-    return;
+    await ClipboardService.instance.writeContent(PlatformClipboardContent(imageBytes: pngBytes));
   }
 }
 // ---------------------------------------------------------------------------
@@ -1167,7 +1171,7 @@ class _AnnotationShellState extends State<AnnotationShell> with TabameListener, 
     final List<Map<String, dynamic>> hotkeys = <Map<String, dynamic>>[];
     for (final ScreenDrawHotkeyBinding binding in Boxes.screenDrawHotkeys) {
       if (!binding.enabled || !binding.isScreenDraw) continue;
-      final int? keyVk = Hotkeys.keyToVirtualKey(binding.key);
+      final int? keyVk = WindowsHotkeyService.keyToVirtualKey(Hotkeys.normalizeKeyName(binding.key));
       if (keyVk == null) continue;
       hotkeys.add(<String, dynamic>{
         "name": binding.actionId,
@@ -2702,6 +2706,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       );
       pngBytes = Uint8List.fromList(img.encodePng(image));
     }
+    final Uint8List rawPngBytes = pngBytes;
 
     // 2. Apply FancyShot profile if selected.
     final String? presetName = ctrl.captureSelectedFancyShotProfile;
@@ -2737,7 +2742,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         if (pngBytes != null) await ScreenDrawCapture._copyPngToClipboard(pngBytes);
       case ScreenDrawCaptureAction.copyFile:
         if (savedFilePath != null) {
-          ClipboardExtension.copyFile(savedFilePath);
+          await ClipboardService.instance.writeFile(savedFilePath);
         } else {
           // Fallback: copy image bytes
           if (pngBytes != null) await ScreenDrawCapture._copyPngToClipboard(pngBytes);
@@ -2747,7 +2752,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         if (host != null && savedFilePath != null) {
           await UploadUtils.runUploadHost(host, savedFilePath, onSuccess: (String url) async {
             if (host.uploadType != UploadHostType.custom) {
-              ClipboardExtended.copy(url);
+              await ClipboardService.instance.writeText(url);
               // await Process.start('cmd.exe', <String>['/c', 'start', '', url], mode: ProcessStartMode.detached);
             }
           }, onError: (_) {});
@@ -2756,14 +2761,12 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         }
       case ScreenDrawCaptureAction.copyTextOcr:
         try {
-          final String text = await getTextOCR(
-            screenRect.left.round(),
-            screenRect.top.round(),
-            screenRect.width.round().clamp(1, 1000000),
-            screenRect.height.round().clamp(1, 1000000),
-            ctrl.ocrCaptureType.index,
+          final Uint8List source = rawPngBytes;
+          final OcrResult? result = await OcrService.instance.recognizeImage(
+            CapturedImage(encodedBytes: source),
           );
-          await ClipboardExtended.copy(text);
+          if (result == null || !result.hasText) throw StateError('No text could be recognized.');
+          await ClipboardService.instance.writeText(result.text);
         } catch (_) {
           if (pngBytes != null) await ScreenDrawCapture._copyPngToClipboard(pngBytes);
         }
@@ -4605,6 +4608,7 @@ class _ScreenCaptureBtnWithPopupState extends State<_ScreenCaptureBtnWithPopup> 
   final List<FancyShotProfile> profiles = FancyShot.loadProfiles();
   Widget _buildOverlay() {
     final AnnotationController c = widget.ctrl;
+    final bool ocrAvailable = OcrService.instance.isAvailable;
 
     return Positioned(
       width: 260,
@@ -4659,20 +4663,21 @@ class _ScreenCaptureBtnWithPopupState extends State<_ScreenCaptureBtnWithPopup> 
                       _refresh();
                     },
                   ),
-                  _actionRow(
-                    icon: Icons.text_snippet_outlined,
-                    label: 'Copy OCR Text',
-                    selected: c.capturePostAction == ScreenDrawCaptureAction.copyTextOcr,
-                    onTap: () {
-                      c.capturePostAction = ScreenDrawCaptureAction.copyTextOcr;
-                      Settings.setInt("capturePostAction", c.capturePostAction.index);
-                      c.captureUploadHost = null;
-                      Settings.setString("captureUploadHost", c.captureUploadHost?.id);
-                      c.setTool(DrawTool.screenCapture);
-                      _refresh();
-                    },
-                  ),
-                  if (c.capturePostAction == ScreenDrawCaptureAction.copyTextOcr) ...<Widget>[
+                  if (ocrAvailable)
+                    _actionRow(
+                      icon: Icons.text_snippet_outlined,
+                      label: 'Copy OCR Text',
+                      selected: c.capturePostAction == ScreenDrawCaptureAction.copyTextOcr,
+                      onTap: () {
+                        c.capturePostAction = ScreenDrawCaptureAction.copyTextOcr;
+                        Settings.setInt("capturePostAction", c.capturePostAction.index);
+                        c.captureUploadHost = null;
+                        Settings.setString("captureUploadHost", c.captureUploadHost?.id);
+                        c.setTool(DrawTool.screenCapture);
+                        _refresh();
+                      },
+                    ),
+                  if (ocrAvailable && c.capturePostAction == ScreenDrawCaptureAction.copyTextOcr) ...<Widget>[
                     const SizedBox(height: 4),
                     _sectionLabel('OCR CAPTURE'),
                     _actionRow(

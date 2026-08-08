@@ -1,13 +1,15 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../../../platform/file_picker_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
-import 'package:tabamewin32/tabamewin32.dart';
+import 'package:path/path.dart' as p;
+import '../../../platform/windows/tabamewin32_api.dart';
 
 import '../../../models/classes/boxes.dart';
+import '../../../platform/app_paths.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/mixed.dart';
@@ -769,7 +771,7 @@ class _WallpaperThumbnailQueue {
 
   static const int _thumbnailWidth = 64;
   static const int _thumbnailHeight = 40;
-  static const String _thumbnailFolderName = r'cache\wallpaper thumb';
+  static const String _thumbnailFolderName = 'cache/wallpaper thumb';
 
   final Set<String> _inFlight = <String>{};
   final List<String> _queue = <String>[];
@@ -856,9 +858,7 @@ class _WallpaperThumbnailQueue {
   }
 
   String _thumbnailPathFor(String imagePath) {
-    final Directory thumbnailDirectory = Directory(
-      '${WinUtils.getTabameAppDataFolder()}\\$_thumbnailFolderName',
-    );
+    final Directory thumbnailDirectory = Directory(AppPaths.currentPath(p.normalize(_thumbnailFolderName)));
     if (!thumbnailDirectory.existsSync()) {
       thumbnailDirectory.createSync(recursive: true);
     }

@@ -3,7 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import '../platform/windows/tabamewin32_api.dart';
+import '../platform/windows/windows_bootstrap.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
@@ -12,7 +13,9 @@ import '../models/globals.dart';
 import '../models/settings.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
+import '../platform/app_paths.dart';
 import '../services/browser_bridge_service.dart';
+import '../services/clipboard_history_coordinator.dart';
 import 'error_handler.dart';
 
 class AppStartup {
@@ -78,7 +81,7 @@ class AppStartup {
       await BrowserBridgeService.instance.initialize();
       Debug.add("Registered: Browser bridge");
     }
-    if (File("${WinUtils.getTabameAppDataFolder()}\\enable_debug.txt").existsSync()) {
+    if (File(AppPaths.resolvePath('enable_debug.txt')).existsSync()) {
       Debug.methodDebug(clean: true);
     }
     Debug.add("Registered All");
@@ -171,7 +174,10 @@ class AppStartup {
       await windowManager.setAsFrameless();
       await windowManager.setHasShadow(false);
       await Win32.fetchMainWindowHandle();
-      if (!Globals.isStandaloneLauncher) await ClipboardHooks.start();
+      if (!Globals.isStandaloneLauncher) {
+        await ClipboardHistoryCoordinator.instance.start();
+        WindowsBootstrap.refreshCapabilities();
+      }
       Globals.fullLoaded.value = true;
       Debug.add("Set windowOptions");
     });

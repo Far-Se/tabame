@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
-import 'package:tabamewin32/tabamewin32.dart';
 
+/// Pixel buffer used only by the platform OCR adapter that needs BGRA input.
+/// The model itself is platform-neutral and contains no native identifiers.
 class OcrPixelBuffer {
   const OcrPixelBuffer({
     required this.pixels,
@@ -17,11 +18,9 @@ class OcrPixelBuffer {
   final int height;
 }
 
-OcrPixelBuffer? buildBgraPixelBufferFromCapturedPng(String path) {
-  final File file = File(path);
-  if (!file.existsSync()) return null;
+OcrPixelBuffer? buildBgraPixelBufferFromPngBytes(Uint8List bytes) {
+  if (bytes.isEmpty) return null;
 
-  final Uint8List bytes = file.readAsBytesSync();
   final img.Image? source = img.decodeImage(bytes);
   if (source == null) return null;
 
@@ -37,14 +36,9 @@ OcrPixelBuffer? buildBgraPixelBufferFromCapturedPng(String path) {
   return OcrPixelBuffer(pixels: pixels, width: source.width, height: source.height);
 }
 
-Future<String?> recognizeTextFromCapturedPng(String path) async {
-  final OcrPixelBuffer? buffer = await compute<String, OcrPixelBuffer?>(
-    buildBgraPixelBufferFromCapturedPng,
-    path,
-  );
-  if (buffer == null) return null;
-
-  final String text = await recognizeBgraPixels(buffer.pixels, buffer.width, buffer.height);
-  final String trimmed = text.trim();
-  return trimmed.isEmpty ? null : trimmed;
+/// Kept as a portable file helper for existing image-processing callers.
+OcrPixelBuffer? buildBgraPixelBufferFromCapturedPng(String path) {
+  final File file = File(path);
+  if (!file.existsSync()) return null;
+  return buildBgraPixelBufferFromPngBytes(file.readAsBytesSync());
 }

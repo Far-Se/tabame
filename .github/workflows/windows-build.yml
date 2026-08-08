@@ -82,6 +82,10 @@ jobs:
           $appVersion = $Matches[1]
           $shortSha = "${{ github.sha }}".Substring(0, 7)
           $dateStamp = Get-Date -Format "yyyyMMdd"
+          $sourceDateEpoch = (git log -1 --format=%ct).Trim()
+          if ($sourceDateEpoch -notmatch '^[0-9]+$') {
+            throw "Could not determine the release commit timestamp."
+          }
           $releaseType = "${{ inputs.release_type }}"
 
           if ("${{ github.event_name }}" -eq "push" -and "${{ github.ref_type }}" -eq "tag") {
@@ -122,6 +126,7 @@ jobs:
           "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
           "release_name=$releaseName" >> $env:GITHUB_OUTPUT
           "release_type=$releaseType" >> $env:GITHUB_OUTPUT
+          "source_date_epoch=$sourceDateEpoch" >> $env:GITHUB_OUTPUT
           "short_sha=$shortSha" >> $env:GITHUB_OUTPUT
           "tag_name=$tagName" >> $env:GITHUB_OUTPUT
 
@@ -138,27 +143,24 @@ jobs:
             throw "Could not find Flutter Windows release output."
           }
 
-          $sqliteDll = Join-Path $releaseDir "windows\sqlite3.dll"
-          if (Test-Path $sqliteDll) {
-            Move-Item -LiteralPath $sqliteDll -Destination (Join-Path $releaseDir "sqlite3.dll") -Force
-          } else {
-            Write-Warning "sqlite3.dll was not found in $releaseDir\windows; continuing without moving it."
-          }
-
           $distDir = "dist"
           New-Item -ItemType Directory -Force $distDir | Out-Null
           $zipPath = Join-Path $distDir "${{ steps.meta.outputs.asset_name }}"
-          if (Test-Path $zipPath) {
-            Remove-Item $zipPath -Force
-          }
-
-          Compress-Archive -Path (Join-Path $releaseDir "*") -DestinationPath $zipPath -CompressionLevel Optimal
-          $hash = (Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
-          $hashLine = "$hash  ${{ steps.meta.outputs.asset_name }}"
-          $hashLine | Set-Content -Path "$zipPath.sha256" -NoNewline
+          & .\tool\release\package-windows.ps1 `
+            -ReleaseDir $releaseDir `
+            -ZipPath $zipPath `
+            -Sha256Path "$zipPath.sha256" `
+            -SourceDateEpoch ([long]"${{ steps.meta.outputs.source_date_epoch }}")
 
           "zip_path=$zipPath" >> $env:GITHUB_OUTPUT
           "sha256_path=$zipPath.sha256" >> $env:GITHUB_OUTPUT
+
+      - name: Smoke-test Windows package layout
+        shell: pwsh
+        run: |
+          ./tool/release/verify-windows-package.ps1 `
+            -PackagePath "${{ steps.package.outputs.zip_path }}" `
+            -Sha256Path "${{ steps.package.outputs.sha256_path }}"
 
       - name: Move nightly tag to this commit
         if: ${{ steps.meta.outputs.release_type == 'nightly' }}

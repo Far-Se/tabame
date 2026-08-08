@@ -7,7 +7,8 @@ import 'package:intl/intl.dart';
 import '../../../models/classes/boxes/quick_menu_box.dart';
 import '../../../models/clipboard_history.dart';
 import '../../../models/settings.dart';
-import '../../../models/win32/win_utils.dart';
+import '../../../platform/clipboard_service.dart';
+import '../../../platform/platform_capabilities.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/mini_switch.dart';
 import '../../widgets/mix_widgets.dart';
@@ -21,6 +22,7 @@ class ClipboardHistoryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!PlatformCapabilities.current.clipboardMonitoring) return const SizedBox.shrink();
     return ModalButton(
       actionName: "Clipboard History",
       icon: const Icon(Icons.content_paste_search_rounded),
@@ -180,7 +182,7 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
 
   void _openImageFile(ClipboardHistoryEntry entry) {
     if (entry.imagePath.isEmpty || !File(entry.imagePath).existsSync()) return;
-    WinUtils.open('explorer.exe', arguments: '/select,"${entry.imagePath}"', parseParamaters: false);
+    unawaited(ClipboardService.instance.revealFile(entry.imagePath));
     QuickMenuFunctions.hideQuickMenu();
   }
 

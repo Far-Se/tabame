@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
-import 'package:win32/win32.dart';
+import '../../../platform/windows/win32_api.dart';
 
 import 'launcher_search_context.dart';
 import 'search_utils.dart';

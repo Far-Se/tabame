@@ -3,7 +3,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import '../../platform/platform_capabilities.dart';
+import '../../platform/windows/tabamewin32_api.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/hotkeys.dart';
@@ -51,6 +52,10 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final TextTheme texts = Theme.of(context).textTheme;
 
+    if (!PlatformCapabilities.current.globalHotkeys) {
+      return _buildUnavailablePage(colors, texts);
+    }
+
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 240),
       switchInCurve: Curves.easeOutCubic,
@@ -72,6 +77,28 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
                   key: const ValueKey<String>("global-hotkeys"),
                   child: _buildGlobalHotkeysPage(colors, texts),
                 ),
+    );
+  }
+
+  Widget _buildUnavailablePage(ColorScheme colors, TextTheme texts) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.keyboard_alt_outlined, size: 42, color: colors.onSurfaceVariant),
+            const SizedBox(height: 12),
+            Text('Global hotkeys are unavailable', style: texts.titleMedium),
+            const SizedBox(height: 6),
+            Text(
+              'Use the visible Tabame window, or grant the platform permission required for global shortcuts.',
+              textAlign: TextAlign.center,
+              style: texts.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

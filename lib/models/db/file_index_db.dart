@@ -5,7 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
-import '../win32/win_utils.dart';
+import '../../platform/app_paths.dart';
+import '../../platform/sqlite_runtime.dart';
 
 enum SearchResultEntryType {
   file,
@@ -50,8 +51,7 @@ class FileIndexDb {
   String dbName = kReleaseMode ? 'file_index.db' : 'file_index_debug.db';
   String get dbPath {
     if (_manualPath != null) return _manualPath!;
-    final Directory appDir = Directory(WinUtils.getTabameAppDataFolder());
-    return p.join(appDir.path, dbName);
+    return AppPaths.databasePath(dbName);
   }
 
   void setDatabasePath(String path) {
@@ -85,8 +85,7 @@ class FileIndexDb {
     if (_manualPath != null) {
       path = _manualPath!;
     } else {
-      final Directory appDir = Directory(WinUtils.getTabameAppDataFolder());
-      path = p.join(appDir.path, dbName);
+      path = AppPaths.databasePath(dbName);
     }
 
     try {
@@ -107,8 +106,7 @@ class FileIndexDb {
     _isClosed = false;
     _initCompleter = null;
 
-    final Directory appDir = Directory(WinUtils.getTabameAppDataFolder());
-    final String path = p.join(appDir.path, dbName);
+    final String path = dbPath;
 
     final File dbFile = File(path);
     if (await dbFile.exists()) {
@@ -143,8 +141,7 @@ class FileIndexDb {
   }
 
   Database _openAndSetupDb(String dbPath) {
-    WinUtils.copySqlite3IfItDoesntExistForFuckSake();
-
+    SqliteRuntime.prepare();
     final Database db = sqlite3.open(dbPath);
     db.execute('PRAGMA busy_timeout = 3000;');
     db.execute('PRAGMA journal_mode = WAL;');

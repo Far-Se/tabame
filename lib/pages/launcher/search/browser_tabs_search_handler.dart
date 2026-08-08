@@ -1,4 +1,4 @@
-import 'package:tabamewin32/tabamewin32.dart' show BrowserTab, BrowserTabs;
+import '../../../platform/windows/tabamewin32_api.dart' show BrowserTab, BrowserTabs;
 
 import '../../launcher_search_models.dart';
 import 'launcher_search_context.dart';
@@ -26,9 +26,7 @@ class BrowserTabsSearchHandler {
       final String query = context.normalizedQuery.toLowerCase();
       final List<LauncherSearchResultItem> results = <LauncherSearchResultItem>[];
       for (final BrowserTab tab in tabs) {
-        if (query.isEmpty ||
-            tab.title.toLowerCase().contains(query) ||
-            tab.browser.toLowerCase().contains(query)) {
+        if (query.isEmpty || tab.title.toLowerCase().contains(query) || tab.browser.toLowerCase().contains(query)) {
           results.add(LauncherSearchResultItem.browserTab(tab));
         }
       }

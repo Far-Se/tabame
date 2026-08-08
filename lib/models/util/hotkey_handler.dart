@@ -1,15 +1,19 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
-import 'package:tabamewin32/tabamewin32.dart';
-
-import '../classes/boxes.dart';
+import '../../platform/platform_models.dart';
 import '../classes/hotkeys.dart';
-import '../globals.dart';
-import '../settings.dart';
 
 class HotkeyHandler {
+  HotkeyHandler({
+    Iterable<Hotkeys> Function()? hotkeys,
+    bool Function()? enabled,
+  })  : _hotkeysProvider = hotkeys ?? (() => const <Hotkeys>[]),
+        _enabledProvider = enabled ?? (() => true);
+
+  final Iterable<Hotkeys> Function() _hotkeysProvider;
+  final bool Function() _enabledProvider;
+
   // ── State ──────────────────────────────────────────────────────────────────
 
   /// Cursor position captured at press time (used as movement baseline).
@@ -18,9 +22,6 @@ class HotkeyHandler {
   /// Dominant movement axis detected while the button is held.
   /// 0 = none, 1 = horizontal, 2 = vertical.
   int _movementAxis = 0;
-
-  /// Virtual key code of the currently held keyboard key (kbd-release tracking).
-  int _currentVK = -1;
 
   /// Hotkeys for which a movement action fired during the current press
   /// (prevents the release from also triggering a normal press action).
@@ -32,11 +33,11 @@ class HotkeyHandler {
 
   // ── Public entry point ────────────────────────────────────────────────────
 
-  Future<void> handle(HotkeyEvent event) async {
-    if (!kReleaseMode && !Globals.debugHotkeys) return;
+  Future<void> handle(PlatformHotkeyEvent event) async {
+    if (!_enabledProvider()) return;
 
     // Find the hotkey configuration that matches this event.
-    final List<Hotkeys> matches = Boxes.remap.where((Hotkeys h) => h.hotkey == event.hotkey).toList();
+    final List<Hotkeys> matches = _hotkeysProvider().where((Hotkeys h) => h.hotkey == event.hotkey).toList();
     if (matches.isEmpty) return;
     final Hotkeys hotkey = matches.first;
     switch (event.action) {
@@ -44,7 +45,7 @@ class HotkeyHandler {
         _handleKbdPress(event, hotkey);
         return;
       case 'releaseKbd':
-        await _handleKbdRelease(event);
+        await _handleRelease(event.copyWith(action: 'released'), hotkey);
         return;
       case 'pressed':
         _handlePress(event, hotkey);
@@ -60,33 +61,15 @@ class HotkeyHandler {
 
   // ── Action: pressedKbd ────────────────────────────────────────────────────
 
-  void _handleKbdPress(HotkeyEvent event, Hotkeys hotkey) {
-    final int vk = Hotkeys.keyToVirtualKey(hotkey.key) ?? -1;
-    if (vk == -1) return;
-    _currentVK = vk;
-
+  void _handleKbdPress(PlatformHotkeyEvent event, Hotkeys hotkey) {
     if (hotkey.hasMouseMovementTriggers) {
       _mousePressOrigin = event.mouse.start;
     }
   }
 
-  // ── Action: releaseKbd ────────────────────────────────────────────────────
-
-  Future<void> _handleKbdRelease(HotkeyEvent event) async {
-    if (event.vk != _currentVK) return;
-    _currentVK = -1;
-
-    // Re-dispatch as a synthetic 'released' for the keyboard listener path.
-    final HotkeyEvent syntheticRelease = event..action = 'released';
-    for (final TabameListener listener in NativeHooks.listeners) {
-      if (!NativeHooks.listenersObv.contains(listener)) continue;
-      listener.onHotKeyEvent(syntheticRelease);
-    }
-  }
-
   // ── Action: pressed ────────────────────────────────────────────────────────
 
-  void _handlePress(HotkeyEvent event, Hotkeys hotkey) {
+  void _handlePress(PlatformHotkeyEvent event, Hotkeys hotkey) {
     if (hotkey.hasMouseMovementTriggers) {
       _mousePressOrigin = event.mouse.start;
     }
@@ -94,7 +77,7 @@ class HotkeyHandler {
 
   // ── Action: moved ─────────────────────────────────────────────────────────
 
-  Future<void> _handleMoved(HotkeyEvent event, Hotkeys hotkey) async {
+  Future<void> _handleMoved(PlatformHotkeyEvent event, Hotkeys hotkey) async {
     // Determine the dominant axis once we have moved far enough.
     if (_movementAxis == 0) {
       final Point<int> delta = event.mouse.end - _mousePressOrigin;
@@ -112,7 +95,7 @@ class HotkeyHandler {
     final Point<int> delta = event.mouse.end - _mousePressOrigin;
 
     for (final KeyMap keyMap in movementStepMaps) {
-      if (!keyMap.isMouseInRegion) continue;
+      if (!await keyMap.isMouseInRegion()) continue;
 
       final int dir = keyMap.triggerInfo[0];
       final int threshold = keyMap.triggerInfo[1];
@@ -132,7 +115,7 @@ class HotkeyHandler {
 
   // ── Action: released ──────────────────────────────────────────────────────
 
-  Future<void> _handleRelease(HotkeyEvent event, Hotkeys hotkey) async {
+  Future<void> _handleRelease(PlatformHotkeyEvent event, Hotkeys hotkey) async {
     _movementAxis = 0;
     // If a movement action was triggered during this press, skip normal release handling.
     if (_firedMovement.remove(event.hotkey) != null) return;
@@ -149,13 +132,13 @@ class HotkeyHandler {
     // 6. Normal press (last resort).
     if (await _dispatchNormalPress(event, hotkey)) return;
     // 7. Double-press-only mappings still need a first release to compare against.
-    _primeDoublePressOnlyMapping(event, hotkey);
+    await _primeDoublePressOnlyMapping(event, hotkey);
   }
 
   // ── Release sub-dispatchers ───────────────────────────────────────────────
 
   /// Returns `true` if a direction-based release action fired.
-  Future<bool> _tryDispatchDirectionRelease(HotkeyEvent event, Hotkeys hotkey) async {
+  Future<bool> _tryDispatchDirectionRelease(PlatformHotkeyEvent event, Hotkeys hotkey) async {
     final List<KeyMap> directionMaps = _sortedByRegionFirst(hotkey.getHotkeysWithMovement);
     if (directionMaps.isEmpty) return false;
 
@@ -164,16 +147,16 @@ class HotkeyHandler {
     final int diffY = diff.y.abs();
 
     for (final KeyMap keyMap in directionMaps) {
-      if (!keyMap.isMouseInRegion) continue;
+      if (!await keyMap.isMouseInRegion()) continue;
 
       final int dir = keyMap.triggerInfo[0];
       final int minDist = keyMap.triggerInfo[1];
       final int maxDist = keyMap.triggerInfo[2];
 
-      final bool triggered = (dir == 0 && diff.x < 0 && diffX.isBetweenEqual(minDist, maxDist)) || // left
-          (dir == 1 && diff.x > 0 && diffX.isBetweenEqual(minDist, maxDist)) || // right
-          (dir == 2 && diff.y < 0 && diffY.isBetweenEqual(minDist, maxDist)) || // up
-          (dir == 3 && diff.y > 0 && diffY.isBetweenEqual(minDist, maxDist)); // down
+      final bool triggered = (dir == 0 && diff.x < 0 && _isBetweenEqual(diffX, minDist, maxDist)) || // left
+          (dir == 1 && diff.x > 0 && _isBetweenEqual(diffX, minDist, maxDist)) || // right
+          (dir == 2 && diff.y < 0 && _isBetweenEqual(diffY, minDist, maxDist)) || // up
+          (dir == 3 && diff.y > 0 && _isBetweenEqual(diffY, minDist, maxDist)); // down
 
       if (triggered) {
         await keyMap.applyActions(TriggerType.movement);
@@ -184,15 +167,15 @@ class HotkeyHandler {
   }
 
   /// Returns `true` if a duration-based action fired.
-  Future<bool> _tryDispatchDuration(HotkeyEvent event, Hotkeys hotkey) async {
+  Future<bool> _tryDispatchDuration(PlatformHotkeyEvent event, Hotkeys hotkey) async {
     final List<KeyMap> durationMaps = _sortedByRegionFirst(hotkey.getDurationKeys);
     if (durationMaps.isEmpty) return false;
 
     final int heldMs = event.time.duration;
 
     for (final KeyMap keyMap in durationMaps) {
-      if (!keyMap.isMouseInRegion) continue;
-      if (heldMs.isBetweenEqual(keyMap.triggerInfo[0], keyMap.triggerInfo[1])) {
+      if (!await keyMap.isMouseInRegion()) continue;
+      if (_isBetweenEqual(heldMs, keyMap.triggerInfo[0], keyMap.triggerInfo[1])) {
         await keyMap.applyActions(TriggerType.duration);
         return true;
       }
@@ -201,7 +184,7 @@ class HotkeyHandler {
   }
 
   /// Returns `true` if a region-bound double-press action fired.
-  Future<bool> _tryDispatchRegionDoublePress(HotkeyEvent event, Hotkeys hotkey) async {
+  Future<bool> _tryDispatchRegionDoublePress(PlatformHotkeyEvent event, Hotkeys hotkey) async {
     if (!_doublePressTimestamps.containsKey(hotkey.hotkey)) return false;
     if (event.name.isEmpty) return false;
 
@@ -210,7 +193,7 @@ class HotkeyHandler {
         .toList();
 
     for (final KeyMap keyMap in regionDoublePressKeys) {
-      if (!keyMap.isMouseInRegion) continue;
+      if (!await keyMap.isMouseInRegion()) continue;
 
       final int elapsed = event.time.end - _doublePressTimestamps[hotkey.hotkey]!;
       if (elapsed < 300) {
@@ -225,7 +208,7 @@ class HotkeyHandler {
   }
 
   /// Returns `true` if a region-bound normal press action fired.
-  Future<bool> _tryDispatchRegionPress(HotkeyEvent event, Hotkeys hotkey) async {
+  Future<bool> _tryDispatchRegionPress(PlatformHotkeyEvent event, Hotkeys hotkey) async {
     if (event.name.isEmpty) return false;
 
     final List<KeyMap> regionPressKeys = hotkey.keymaps
@@ -233,7 +216,7 @@ class HotkeyHandler {
         .toList();
 
     for (final KeyMap keyMap in regionPressKeys) {
-      if (!keyMap.isMouseInRegion) continue;
+      if (!await keyMap.isMouseInRegion()) continue;
 
       if (hotkey.hasDoublePress) {
         _doublePressTimestamps[hotkey.hotkey] = event.time.end;
@@ -247,14 +230,14 @@ class HotkeyHandler {
   final Map<String, Timer> _pendingPressTimers = <String, Timer>{};
 
   /// Returns `true` if a global double-press action fired.
-  Future<bool> _tryDispatchDoublePress(HotkeyEvent event, Hotkeys hotkey) async {
+  Future<bool> _tryDispatchDoublePress(PlatformHotkeyEvent event, Hotkeys hotkey) async {
     if (!_doublePressTimestamps.containsKey(hotkey.hotkey)) return false;
 
     final List<KeyMap> doublePressKeys = hotkey.getDoublePress;
     final int elapsed = event.time.end - _doublePressTimestamps[hotkey.hotkey]!;
 
     for (final KeyMap keyMap in doublePressKeys) {
-      if (!keyMap.isMouseInRegion) continue;
+      if (!await keyMap.isMouseInRegion()) continue;
       if (elapsed < 300) {
         // Cancel pending single press
         _pendingPressTimers[hotkey.hotkey]?.cancel();
@@ -271,11 +254,11 @@ class HotkeyHandler {
   }
 
   /// Dispatches the first matching normal press action.
-  Future<bool> _dispatchNormalPress(HotkeyEvent event, Hotkeys hotkey) async {
+  Future<bool> _dispatchNormalPress(PlatformHotkeyEvent event, Hotkeys hotkey) async {
     final List<KeyMap> pressKeys = hotkey.getPress;
 
     for (final KeyMap keyMap in pressKeys) {
-      if (!keyMap.isMouseInRegion) continue;
+      if (!await keyMap.isMouseInRegion()) continue;
       if (event.name.isNotEmpty && keyMap.name != event.name) continue;
 
       // OLD BEHAVIOR:
@@ -322,19 +305,24 @@ class HotkeyHandler {
     return false;
   }
 
-  void _primeDoublePressOnlyMapping(HotkeyEvent event, Hotkeys hotkey) {
+  Future<void> _primeDoublePressOnlyMapping(PlatformHotkeyEvent event, Hotkeys hotkey) async {
     if (!hotkey.hasDoublePress) return;
 
     final List<KeyMap> doublePressKeys = _sortedByRegionFirst(hotkey.getDoublePress);
     for (final KeyMap keyMap in doublePressKeys) {
       if (keyMap.boundToRegion && event.name.isEmpty) continue;
-      if (!keyMap.isMouseInRegion) continue;
+      if (!await keyMap.isMouseInRegion()) continue;
       _doublePressTimestamps[hotkey.hotkey] = event.time.end;
       return;
     }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  bool _isBetweenEqual(int value, int minimum, int maximum) {
+    if (minimum <= maximum) return minimum <= value && value <= maximum;
+    return value >= minimum || value <= maximum;
+  }
 
   List<KeyMap> _sortedByRegionFirst(List<KeyMap> keymaps) {
     return keymaps.toList()

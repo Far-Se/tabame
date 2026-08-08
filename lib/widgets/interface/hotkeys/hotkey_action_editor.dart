@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' hide TextInput;
 
 import '../../../models/classes/hotkeys.dart';
 import '../../../models/settings.dart';
+import '../../../platform/input_service.dart';
 import '../../widgets/checkbox_widget.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/mini_switch.dart';
@@ -646,25 +647,40 @@ class HotKeyActionState extends State<HotKeyAction> {
   }
 
   Widget _buildTriggerTypeSelector(ColorScheme colors) {
+    final bool supportsLowLevelInput = InputService.instance.supportsGlobalObservation;
+    final List<String> triggerOptions = supportsLowLevelInput ? HotKeyInfo.triggers : const <String>['Press'];
+    final String selectedTrigger =
+        supportsLowLevelInput ? HotKeyInfo.triggers[widget.hotkey.triggerType.index] : 'Press';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         ModernDropdown<String>(
           labelText: "Trigger Mechanism",
-          value: HotKeyInfo.triggers[widget.hotkey.triggerType.index],
+          value: selectedTrigger,
           prefixIcon: const Icon(Icons.bolt_rounded, size: 20),
-          onChanged: (String? n) => setState(() {
-            widget.hotkey.triggerType = TriggerType.values[HotKeyInfo.triggers.indexOf(n ?? "Press")];
-            widget.hotkey.triggerInfo = <int>[0, 0, 0];
-          }),
-          items: HotKeyInfo.triggers.map((String v) {
+          onChanged: supportsLowLevelInput
+              ? (String? n) => setState(() {
+                    widget.hotkey.triggerType = TriggerType.values[HotKeyInfo.triggers.indexOf(n ?? "Press")];
+                    widget.hotkey.triggerInfo = <int>[0, 0, 0];
+                  })
+              : (String? _) {},
+          items: triggerOptions.map((String v) {
             return ModernDropdownItem<String>(
               value: v,
               label: v,
             );
           }).toList(),
         ),
-        if (widget.hotkey.triggerType == TriggerType.duration)
+        if (!supportsLowLevelInput)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'Movement and hold triggers require low-level input permission on this platform.',
+              style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
+            ),
+          ),
+        if (supportsLowLevelInput && widget.hotkey.triggerType == TriggerType.duration)
           Padding(
             padding: const EdgeInsets.only(top: 16),
             child: Row(
@@ -685,7 +701,7 @@ class HotKeyActionState extends State<HotKeyAction> {
               ],
             ),
           ),
-        if (widget.hotkey.triggerType == TriggerType.movement)
+        if (supportsLowLevelInput && widget.hotkey.triggerType == TriggerType.movement)
           Padding(
             padding: const EdgeInsets.only(top: 16),
             child: Column(

@@ -1,7 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
 
-import 'package:tabamewin32/tabamewin32.dart';
+import '../../platform/windows/tabamewin32_api.dart';
 
 import 'boxes.dart';
 
@@ -32,8 +32,7 @@ class TextSnippet {
         enabled: (map['enabled'] as bool?) ?? true,
       );
 
-  factory TextSnippet.fromJson(String source) =>
-      TextSnippet.fromMap(jsonDecode(source) as Map<String, dynamic>);
+  factory TextSnippet.fromJson(String source) => TextSnippet.fromMap(jsonDecode(source) as Map<String, dynamic>);
 
   TextSnippet copyWith({String? trigger, String? text, bool? enabled}) => TextSnippet(
         trigger: trigger ?? this.trigger,
@@ -48,8 +47,7 @@ class TextSnippet {
 class TextSnippetsManager {
   static const String settingsKey = "textSnippets";
 
-  static List<TextSnippet> load() =>
-      Boxes.getSavedMap<TextSnippet>(TextSnippet.fromJson, settingsKey);
+  static List<TextSnippet> load() => Boxes.getSavedMap<TextSnippet>(TextSnippet.fromJson, settingsKey);
 
   static Future<void> save(List<TextSnippet> snippets) async {
     await Boxes.updateSettings(settingsKey, jsonEncode(snippets));

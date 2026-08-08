@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../../models/win32/keys.dart';
+import '../../../platform/audio_system_service.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class MediaControlButton extends StatefulWidget {
@@ -17,8 +17,20 @@ class _MediaControlButtonState extends State<MediaControlButton> {
   int _timers = 0;
   double _dragAccumulator = 0;
 
-  void _applyKey(String key, IconData feedbackIcon) {
-    WinKeys.single(key, KeySentMode.normal);
+  void _applyCommand(PlatformMediaCommand command, IconData feedbackIcon) {
+    if (!MediaSessionService.instance.isAvailable) return;
+    MediaSessionService.instance.sendGlobalCommand(command);
+    setState(() => icon = feedbackIcon);
+    _timers++;
+    Timer(const Duration(seconds: 1), () {
+      _timers--;
+      if (_timers <= 0 && mounted) {
+        setState(() => icon = Icons.play_arrow);
+      }
+    });
+  }
+
+  void _setVolumeFeedback(IconData feedbackIcon) {
     setState(() => icon = feedbackIcon);
     _timers++;
     Timer(const Duration(seconds: 1), () {
@@ -32,19 +44,28 @@ class _MediaControlButtonState extends State<MediaControlButton> {
   @override
   Widget build(BuildContext context) {
     return QuickActionItem(
-      message: "Media Control",
+      message:
+          MediaSessionService.instance.isAvailable ? "Media Control" : MediaSessionService.instance.unavailableReason,
       icon: Icon(icon, size: 16),
-      onTap: () => _applyKey(VK.MEDIA_PLAY_PAUSE, Icons.play_circle_outline),
-      onSecondaryTap: () => _applyKey(VK.MEDIA_NEXT_TRACK, Icons.fast_forward),
-      onTertiaryTapDown: (_) => _applyKey(VK.MEDIA_PREV_TRACK, Icons.fast_rewind),
+      onTap: MediaSessionService.instance.isAvailable
+          ? () => _applyCommand(PlatformMediaCommand.playPause, Icons.play_circle_outline)
+          : null,
+      onSecondaryTap: MediaSessionService.instance.isAvailable
+          ? () => _applyCommand(PlatformMediaCommand.next, Icons.fast_forward)
+          : null,
+      onTertiaryTapDown: MediaSessionService.instance.isAvailable
+          ? (_) => _applyCommand(PlatformMediaCommand.previous, Icons.fast_rewind)
+          : null,
       onVerticalDragStart: (_) => _dragAccumulator = 0,
       onVerticalDragUpdate: (DragUpdateDetails details) {
         _dragAccumulator -= details.delta.dy;
-        if (_dragAccumulator.abs() > 10) {
+        if (_dragAccumulator.abs() > 10 && AudioSystemService.instance.isAvailable) {
           if (_dragAccumulator > 0) {
-            _applyKey(VK.VOLUME_UP, Icons.volume_up);
+            AudioSystemService.instance.adjustVolume(AudioDeviceType.output, 0.05);
+            _setVolumeFeedback(Icons.volume_up);
           } else {
-            _applyKey(VK.VOLUME_DOWN, Icons.volume_down);
+            AudioSystemService.instance.adjustVolume(AudioDeviceType.output, -0.05);
+            _setVolumeFeedback(Icons.volume_down);
           }
           _dragAccumulator = 0;
         }

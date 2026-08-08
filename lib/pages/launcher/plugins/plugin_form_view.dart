@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../../../platform/file_picker_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
@@ -286,8 +286,7 @@ class _PluginFormViewState extends State<PluginFormView> {
 
   bool _isVisible(PluginFormField field, Map<String, Object?> values) => field.visibleWhen?.matches(values) ?? true;
 
-  bool _isEnabled(PluginFormField field, Map<String, Object?> values) =>
-      field.enabledWhen?.matches(values) ?? true;
+  bool _isEnabled(PluginFormField field, Map<String, Object?> values) => field.enabledWhen?.matches(values) ?? true;
 
   void _submit({String? button}) {
     if (!_validate()) return;

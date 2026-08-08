@@ -3,9 +3,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
 
 import '../../../logic/error_handler.dart';
-import '../../../models/win32/win_utils.dart';
+import '../../../platform/app_paths.dart';
 import 'plugin_manifest.dart';
 import 'plugin_registry.dart';
 
@@ -85,7 +86,7 @@ class PluginGalleryEntry {
 }
 
 /// Fetches the community plugin index and installs plugins into
-/// `%localappdata%\Tabame\plugins\<id>\`.
+/// Tabame's platform-correct plugin root.
 abstract final class PluginGallery {
   static const String indexUrl = 'https://raw.githubusercontent.com/Far-Se/tabame/main/resources/plugins.json';
 
@@ -124,7 +125,7 @@ abstract final class PluginGallery {
   /// Returns null on success, or a short human-readable error.
   static Future<String?> install(PluginGalleryEntry entry) async {
     try {
-      final Directory target = Directory('${WinUtils.getPluginsFolder()}\\${entry.id}');
+      final Directory target = Directory(p.join(AppPaths.pluginsDirectory, entry.id));
       String? error;
       if (entry.files.isNotEmpty) {
         error = await _installFromFiles(entry, target);
@@ -135,7 +136,7 @@ abstract final class PluginGallery {
       }
       if (error != null) return error;
 
-      if (!File('${target.path}\\plugin.json').existsSync()) {
+      if (!File(p.join(target.path, 'plugin.json')).existsSync()) {
         return 'Downloaded plugin has no plugin.json';
       }
       await PluginRegistry.load();
@@ -151,8 +152,12 @@ abstract final class PluginGallery {
     // cannot leave a half-written plugin folder behind.
     final Map<String, List<int>> downloaded = <String, List<int>>{};
     for (final MapEntry<String, String> file in entry.files.entries) {
-      final String relativePath = file.key.replaceAll('/', '\\');
-      if (relativePath.contains('..') || relativePath.contains(':') || relativePath.startsWith('\\')) {
+      final String relativePath = file.key.replaceAll('\\', '/');
+      final List<String> relativeSegments = relativePath.split('/');
+      if (relativePath.trim().isEmpty ||
+          relativeSegments.any((String segment) => segment.isEmpty || segment == '..') ||
+          p.isAbsolute(relativePath) ||
+          relativePath.contains(':')) {
         return 'Unsafe file path in index: ${file.key}';
       }
       final http.Response response = await http.get(Uri.parse(file.value)).timeout(const Duration(seconds: 30));
@@ -164,7 +169,8 @@ abstract final class PluginGallery {
 
     target.createSync(recursive: true);
     for (final MapEntry<String, List<int>> file in downloaded.entries) {
-      final File out = File('${target.path}\\${file.key}');
+      final List<String> relativeSegments = file.key.split('/');
+      final File out = File(p.joinAll(<String>[target.path, ...relativeSegments]));
       out.parent.createSync(recursive: true);
       await out.writeAsBytes(file.value);
     }
@@ -177,9 +183,11 @@ abstract final class PluginGallery {
 
     // Stage in the system temp dir — never inside the plugins folder, where the
     // registry could scan a half-extracted archive.
-    final Directory staging = Directory.systemTemp.createTempSync('tabame_plugin_');
-    final File zipFile = File('${staging.path}\\${entry.id}.zip');
-    final Directory extractDir = Directory('${staging.path}\\extract');
+    final Directory tempDirectory = Directory(AppPaths.temporaryDirectory);
+    if (!tempDirectory.existsSync()) tempDirectory.createSync(recursive: true);
+    final Directory staging = tempDirectory.createTempSync('plugin_');
+    final File zipFile = File(p.join(staging.path, '${entry.id}.zip'));
+    final Directory extractDir = Directory(p.join(staging.path, 'extract'));
     try {
       await zipFile.writeAsBytes(response.bodyBytes);
       final ProcessResult result = await Process.run('powershell', <String>[
@@ -195,9 +203,9 @@ abstract final class PluginGallery {
 
       // Accept both zip layouts: files at the root, or one wrapping folder.
       Directory sourceDir = extractDir;
-      if (!File('${sourceDir.path}\\plugin.json').existsSync()) {
+      if (!File(p.join(sourceDir.path, 'plugin.json')).existsSync()) {
         final List<Directory> subDirs = sourceDir.listSync().whereType<Directory>().toList();
-        if (subDirs.length == 1 && File('${subDirs.first.path}\\plugin.json').existsSync()) {
+        if (subDirs.length == 1 && File(p.join(subDirs.first.path, 'plugin.json')).existsSync()) {
           sourceDir = subDirs.first;
         } else {
           return 'Archive has no plugin.json';
@@ -217,11 +225,11 @@ abstract final class PluginGallery {
   static void _copyDirectory(Directory source, Directory destination) {
     destination.createSync(recursive: true);
     for (final FileSystemEntity entity in source.listSync(followLinks: false)) {
-      final String name = entity.path.split(Platform.pathSeparator).last;
+      final String name = p.basename(entity.path);
       if (entity is Directory) {
-        _copyDirectory(entity, Directory('${destination.path}\\$name'));
+        _copyDirectory(entity, Directory(p.join(destination.path, name)));
       } else if (entity is File) {
-        entity.copySync('${destination.path}\\$name');
+        entity.copySync(p.join(destination.path, name));
       }
     }
   }

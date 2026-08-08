@@ -13,14 +13,18 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
-import 'package:local_notifier/local_notifier.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+
+import '../platform/audio_system_service.dart';
+import '../platform/monitor_service.dart';
+import '../platform/quick_snap_service.dart';
+import '../platform/windows/tabamewin32_api.dart';
 import '../services/rewindly_service.dart';
 import 'classes/boxes.dart';
 import 'classes/saved_maps.dart';
 import 'globals.dart';
+import '../platform/app_paths.dart';
 import 'util/solar_calculator.dart';
-import 'win32/mixed.dart';
+
 import 'win32/win_utils.dart';
 
 enum TPage {
@@ -1411,8 +1415,10 @@ Future<void> registerAll() async {
   await initializeDateFormatting(locale);
   Debug.add("Registered: Locale");
 
-  // ? Monitor Handle
-  Monitor.fetchMonitors();
+  // QuickSnap receives monitor geometry through the neutral adapter.
+  if (MonitorService.instance.isAvailable) {
+    await MonitorService.instance.enumerate();
+  }
   Debug.add("Registered: Monitor");
   // Timer.periodic(const Duration(seconds: 10), (Timer timer) {
   //   if (!QuickMenuFunctions.isQuickMenuVisible) return;
@@ -1435,20 +1441,11 @@ Future<void> registerAll() async {
     SolarCalculator.updateSolarData();
   }
   Debug.add("Registered: ScheduleTheme");
-  enableViews(true);
+  await QuickSnapService.instance.enable();
   //
 
-  await Audio.detectAudioSupport(AudioDeviceType.output);
-  //Toast
-  Timer(const Duration(seconds: 2), () async {
-    if (!WinUtils.windowsNotificationRegistered) {
-      Debug.add("Registered: Toast");
-      await localNotifier.setup(appName: 'Tabame', shortcutPolicy: ShortcutPolicy.requireCreate);
-
-      Debug.add("Registered: Toast Done");
-      WinUtils.windowsNotificationRegistered = true;
-    }
-  });
+  await AudioSystemService.instance.initialize();
+  await MediaSessionService.instance.initialize();
 
   // Rewindly background DVR — main/QuickMenu process only, never the Interface
   // settings window (which runs as a separate process).
@@ -1619,7 +1616,7 @@ class Debug {
 
   static const int maxLines = 500;
 
-  static File theFile = File("${WinUtils.getTabameAppDataFolder()}\\debug.log");
+  static File get theFile => File(AppPaths.resolvePath('debug.log', forWrite: true));
 
   static bool enabled = false;
 
@@ -1630,7 +1627,7 @@ class Debug {
 
     theFile.writeAsStringSync("========\n", mode: clean ? FileMode.writeOnlyAppend : FileMode.append);
 
-    File("${WinUtils.getTabameAppDataFolder()}\\debug_cpp.log")
+    File(AppPaths.currentPath('debug_cpp.log'))
         .writeAsStringSync("=======\n", mode: clean ? FileMode.write : FileMode.append);
   }
 
@@ -1676,10 +1673,10 @@ class Debug {
   }
 
   static void methodDebug({bool clean = true}) {
-    File("${WinUtils.getTabameAppDataFolder()}\\debug_cpp.log")
-        .writeAsStringSync("=======\n", mode: clean ? FileMode.write : FileMode.append);
+    final String debugPath = AppPaths.currentPath('debug_cpp.log');
+    File(debugPath).writeAsStringSync("=======\n", mode: clean ? FileMode.write : FileMode.append);
 
-    enableDebug("${WinUtils.getTabameAppDataFolder()}\\debug_cpp.log");
+    enableDebug(debugPath);
   }
 }
 

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/db/file_index_db.dart';
-import '../../../models/win32/window.dart';
+import '../../../platform/platform_models.dart';
 import '../../../widgets/itzy/quickmenu/button_quickactions.dart';
 import '../../launcher/result/result_item_bookmark.dart';
 import '../../launcher_search_models.dart';
@@ -75,8 +75,8 @@ class MixedSearchHandler {
 
     // Phase 1: Immediate Results (Main Isolate)
     // Gather everything fast: Windows, Bookmarks, and Database Files
-    final List<Window> windowMatches = searchMode == LauncherSearchMode.filesOnly
-        ? <Window>[]
+    final List<PlatformWindow> windowMatches = searchMode == LauncherSearchMode.filesOnly
+        ? <PlatformWindow>[]
         : findWindowMatches(
             context.lowerQuery,
             includeAllOnEmpty: false,
@@ -167,8 +167,8 @@ class MixedSearchHandler {
       // captured BuildContext here because it may have become stale; instead we
       // reuse the already-captured snapshot which is still valid (it holds
       // plain data, not live widget references beyond what Flutter manages).
-      final List<Window> phase2WindowMatches = searchMode == LauncherSearchMode.filesOnly
-          ? <Window>[]
+      final List<PlatformWindow> phase2WindowMatches = searchMode == LauncherSearchMode.filesOnly
+          ? <PlatformWindow>[]
           : findWindowMatches(
               context.lowerQuery,
               includeAllOnEmpty: false,

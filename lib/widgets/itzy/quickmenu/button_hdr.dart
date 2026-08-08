@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import '../../../platform/windows/tabamewin32_api.dart';
 
 import '../../../models/settings.dart';
 import '../../widgets/mini_switch.dart';
@@ -239,9 +239,8 @@ class _HDRPanelState extends State<HDRPanel> {
                     fontSize: Design.baseFontSize - 0.5,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
-                    color: !supported
-                        ? Design.text.withAlpha(90)
-                        : (enabled ? Design.accent : Design.text.withAlpha(120)),
+                    color:
+                        !supported ? Design.text.withAlpha(90) : (enabled ? Design.accent : Design.text.withAlpha(120)),
                   ),
                 ),
               ],

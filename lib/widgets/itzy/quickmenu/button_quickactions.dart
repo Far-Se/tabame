@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import '../../../platform/audio_system_service.dart';
+import '../../../platform/windows/tabamewin32_api.dart' hide AudioDeviceType;
+import '../../../platform/windows/win32_api.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/hotkeys.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
-import '../../../models/tray_watcher.dart';
+
 import '../../../models/util/quick_action_list.dart';
 import '../../../models/util/quick_actions.dart';
 import '../../../models/win32/keys.dart';
 import '../../../models/win32/win_utils.dart';
-import '../../../models/win32/window.dart';
-import '../../../models/window_watcher.dart';
+
 import '../../widgets/modal_button.dart';
 import '../../widgets/mouse_scroll_widget.dart';
 import '../../widgets/quick_menu_panel.dart';
@@ -225,7 +225,7 @@ QuickActionMenuEntry? _buildCustomQuickActionEntry({
       searchTerms: searchTerms,
       onExecute: () {
         final double volume = (int.tryParse(item.value) ?? 100).toDouble();
-        Audio.setVolume(volume, AudioDeviceType.output);
+        AudioSystemService.instance.setVolume(AudioDeviceType.output, volume / 100);
         _currentVolumeLevel = volume / 100;
         onStateChanged?.call();
       },
@@ -236,7 +236,7 @@ QuickActionMenuEntry? _buildCustomQuickActionEntry({
           onSurface: onSurface,
           onTap: () {
             final double volume = (int.tryParse(item.value) ?? 100).toDouble();
-            Audio.setVolume(volume, AudioDeviceType.output);
+            AudioSystemService.instance.setVolume(AudioDeviceType.output, volume / 100);
             _currentVolumeLevel = volume / 100;
             onStateChanged?.call();
           },
@@ -453,55 +453,40 @@ bool _isConfiguredAppAudioControl(AppAudioControl control) {
   return control.exe.trim().isNotEmpty || control.path.trim().isNotEmpty;
 }
 
-({int pid, int hWnd})? _getAppAudioWindow(int index) {
-  if (index >= Boxes.appAudioControls.length) return null;
-  final AppAudioControl control = Boxes.appAudioControls[index];
-
-  for (final Window win in WindowWatcher.list) {
-    if (win.process.exe == control.exe) {
-      return (hWnd: win.hWnd, pid: win.process.pId);
-    }
-  }
-
-  for (final TrayBarInfo tray in TrayWatcher.trayList) {
-    if (tray.processExe == control.exe) {
-      return (hWnd: tray.hWnd, pid: tray.processID);
-    }
-  }
-  return null;
+PlatformMediaBinding _appAudioBinding(AppAudioControl control) {
+  return PlatformMediaBinding(
+    applicationId: control.exe.isNotEmpty ? control.exe : control.name,
+    applicationPath: control.path,
+    hotkeyForward: control.hotkeyForward,
+    hotkeyRewind: control.hotkeyRewind,
+    hotkeyNext: control.hotkeyNext,
+    hotkeyPrevious: control.hotkeyPrev,
+    hotkeyPlayPause: control.hotkeyPause,
+  );
 }
 
-void handleAppAudioNext(int index) {
+Future<void> handleAppAudioNext(int index) async {
   if (index >= Boxes.appAudioControls.length) return;
-  final AppAudioControl control = Boxes.appAudioControls[index];
-  final ({int hWnd, int pid})? window = _getAppAudioWindow(index);
-  if (window == null) {
-    WinKeys.single(VK.MEDIA_NEXT_TRACK, KeySentMode.normal);
-  } else {
-    WinKeys.send(control.hotkeyNext);
-  }
+  await MediaSessionService.instance.sendApplicationCommand(
+    _appAudioBinding(Boxes.appAudioControls[index]),
+    PlatformMediaCommand.next,
+  );
 }
 
-void handleAppAudioPrevious(int index) {
+Future<void> handleAppAudioPrevious(int index) async {
   if (index >= Boxes.appAudioControls.length) return;
-  final AppAudioControl control = Boxes.appAudioControls[index];
-  final ({int hWnd, int pid})? window = _getAppAudioWindow(index);
-  if (window == null) {
-    WinKeys.single(VK.MEDIA_PREV_TRACK, KeySentMode.normal);
-  } else {
-    WinKeys.send(control.hotkeyPrev);
-  }
+  await MediaSessionService.instance.sendApplicationCommand(
+    _appAudioBinding(Boxes.appAudioControls[index]),
+    PlatformMediaCommand.previous,
+  );
 }
 
-void handleAppAudioPlayPause(int index) {
+Future<void> handleAppAudioPlayPause(int index) async {
   if (index >= Boxes.appAudioControls.length) return;
-  final AppAudioControl control = Boxes.appAudioControls[index];
-  final ({int hWnd, int pid})? window = _getAppAudioWindow(index);
-  if (window == null) {
-    WinKeys.single(VK.MEDIA_PLAY_PAUSE, KeySentMode.normal);
-  } else {
-    WinKeys.send(control.hotkeyPause);
-  }
+  await MediaSessionService.instance.sendApplicationCommand(
+    _appAudioBinding(Boxes.appAudioControls[index]),
+    PlatformMediaCommand.playPause,
+  );
 }
 
 void executeQuickActionValue(int value) {
@@ -516,11 +501,10 @@ void executeQuickActionValue(int value) {
       WinUtils.toggleTaskbar();
       break;
     case 3:
-      WinKeys.single(VK.VOLUME_MUTE, KeySentMode.normal);
+      AudioOrchestrator(service: AudioSystemService.instance).toggleMute(AudioDeviceType.output);
       break;
     case 4:
-      Audio.getMuteAudioDevice(AudioDeviceType.input)
-          .then((bool value) => Audio.setMuteAudioDevice(!value, AudioDeviceType.input));
+      AudioOrchestrator(service: AudioSystemService.instance).toggleMute(AudioDeviceType.input);
       break;
     case 5:
       Globals.alwaysAwake = !Globals.alwaysAwake;
@@ -702,60 +686,66 @@ class QuickActionAudioDeviceState extends State<QuickActionAudioDevice> {
 
   @override
   Widget build(BuildContext context) {
+    final AudioSystemService service = AudioSystemService.instance;
+    if (!service.isAvailable) {
+      return QuickActionListItem(
+        name: service.unavailableReason,
+        accent: Design.accent,
+        onSurface: Theme.of(context).colorScheme.onSurface,
+      );
+    }
+    final AudioDeviceType type =
+        widget.item.type == "Audio Output Devices" ? AudioDeviceType.output : AudioDeviceType.input;
     return FutureBuilder<List<dynamic>>(
-        future: Future.wait(widget.item.type == "Audio Output Devices"
-            ? <Future<dynamic>>[
-                Audio.enumDevices(AudioDeviceType.output),
-                Audio.getDefaultDevice(AudioDeviceType.output)
-              ]
-            : <Future<dynamic>>[
-                Audio.enumDevices(AudioDeviceType.input),
-                Audio.getDefaultDevice(AudioDeviceType.input)
-              ]),
-        builder: (BuildContext context, AsyncSnapshot<List<dynamic>> out) {
-          if (!out.hasData) return Container();
-          final Color accent = Design.accent;
-          final Color onSurface = Theme.of(context).colorScheme.onSurface;
-          final List<AudioDevice>? devices = out.data![0];
-          final AudioDevice defaultDevice = out.data![1];
-          if (devices?.isEmpty ?? false) return Container();
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              QuickActionListItem(
-                name: widget.item.name,
+      future: Future.wait<dynamic>(<Future<dynamic>>[
+        service.listDevices(type),
+        service.getDefaultDevice(type),
+      ]),
+      builder: (BuildContext context, AsyncSnapshot<List<dynamic>> out) {
+        if (!out.hasData) return const SizedBox.shrink();
+        final Color accent = Design.accent;
+        final Color onSurface = Theme.of(context).colorScheme.onSurface;
+        final List<PlatformAudioDevice> devices = (out.data![0] as List<PlatformAudioDevice>);
+        final PlatformAudioDevice? defaultDevice = out.data![1] as PlatformAudioDevice?;
+        if (devices.isEmpty) return const SizedBox.shrink();
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            QuickActionListItem(
+              name: widget.item.name,
+              accent: accent,
+              onSurface: onSurface,
+            ),
+            ...List<Widget>.generate(devices.length, (int index) {
+              final PlatformAudioDevice device = devices[index];
+              return QuickActionListItem(
+                name: device.name,
                 accent: accent,
                 onSurface: onSurface,
-              ),
-              ...List<Widget>.generate(devices?.length ?? 0, (int index) {
-                final AudioDevice device = devices!.elementAt(index);
-                return QuickActionListItem(
-                  name: device.name,
-                  accent: accent,
-                  onSurface: onSurface,
-                  dense: true,
-                  leading: SizedBox(
-                    width: 18,
-                    child: defaultDevice.id == device.id ? Icon(Icons.check_rounded, size: 14, color: accent) : null,
-                  ),
-                  onTap: () {
-                    Audio.setDefaultDevice(
-                      device.id,
+                dense: true,
+                leading: SizedBox(
+                  width: 18,
+                  child: defaultDevice?.id == device.id ? Icon(Icons.check_rounded, size: 14, color: accent) : null,
+                ),
+                onTap: () async {
+                  await service.setDefaultDevice(
+                    type,
+                    device.id,
+                    targeting: AudioDeviceTargeting(
                       console: user.audioConsole,
                       multimedia: user.audioMultimedia,
                       communications: user.audioCommunications,
-                    ).then((int value) {
-                      if (mounted) {
-                        setState(() {});
-                      }
-                    });
-                  },
-                );
-              }),
-            ],
-          );
-        });
+                    ),
+                  );
+                  if (mounted) setState(() {});
+                },
+              );
+            }),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -770,7 +760,7 @@ class VolumeSliderState extends State<VolumeSlider> {
   @override
   void initState() {
     super.initState();
-    Audio.getVolume(AudioDeviceType.output).then((double value) {
+    AudioSystemService.instance.getVolume(AudioDeviceType.output).then((double value) {
       _currentVolumeLevel = value;
       if (mounted) setState(() {});
     });
@@ -820,7 +810,7 @@ class VolumeSliderState extends State<VolumeSlider> {
                           min: 0,
                           max: 1,
                           onChanged: (double e) {
-                            Audio.setVolume(e, AudioDeviceType.output);
+                            AudioSystemService.instance.setVolume(AudioDeviceType.output, e);
                             _currentVolumeLevel = e;
                             setState(() {});
                           }),

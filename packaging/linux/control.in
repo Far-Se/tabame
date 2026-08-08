@@ -1,0 +1,11 @@
+Package: tabame
+Version: @VERSION@
+Section: utils
+Priority: optional
+Architecture: @ARCH@
+Maintainer: Far Se <tabame-release@users.noreply.github.com>
+Depends: libgtk-3-0, libnotify4, libx11-6, libstdc++6
+Description: Tabame desktop launcher and quick menu
+ Tabame provides a searchable launcher, quick menu, plugins, and portable
+ desktop utilities. Advanced window and input features depend on the display
+ server and are reported as capabilities at runtime.

@@ -1,13 +1,10 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
 
+import '../../../platform/audio_system_service.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
-import '../../../models/win32/win32.dart';
-import '../../../models/win32/win_utils.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/extracted_icon.dart';
 import '../../widgets/panel_header.dart';
@@ -20,9 +17,8 @@ class AudioBox extends StatefulWidget {
 }
 
 class AudioInfo {
-  List<AudioDevice> devices = <AudioDevice>[];
-  AudioDevice defaultDevice = AudioDevice();
-  Map<String, ExtractedIcon> icons = <String, ExtractedIcon>{};
+  List<PlatformAudioDevice> devices = <PlatformAudioDevice>[];
+  PlatformAudioDevice? defaultDevice;
   Map<String, double> deviceVolumes = <String, double>{};
   bool isMuted = false;
   double volume = 0.0;
@@ -33,9 +29,9 @@ class AudioBoxState extends State<AudioBox> {
   final AudioInfo micInfo = AudioInfo();
   Timer? timerData;
   Timer? timerMixer;
-  List<ProcessVolume> audioMixer = <ProcessVolume>[];
-  Map<int, ExtractedIcon> audioMixerIcons = <int, ExtractedIcon>{};
-  Map<int, String> audioMixerNames = <int, String>{};
+  List<PlatformAudioProcess> audioMixer = <PlatformAudioProcess>[];
+  Map<String, Object?> audioMixerIcons = <String, Object?>{};
+  Map<String, String> audioMixerNames = <String, String>{};
 
   @override
   void initState() {
@@ -69,74 +65,56 @@ class AudioBoxState extends State<AudioBox> {
   }
 
   void fetchData() async {
-    audioInfo.devices = await Audio.enumDevices(AudioDeviceType.output) ?? <AudioDevice>[];
-    if (audioInfo.devices.isNotEmpty) {
-      audioInfo.defaultDevice = await Audio.getDefaultDevice(AudioDeviceType.output) ?? AudioDevice();
-      audioInfo.isMuted = await Audio.getMuteAudioDevice(AudioDeviceType.output);
-      audioInfo.volume = await Audio.getVolume(AudioDeviceType.output);
+    final AudioSystemService service = AudioSystemService.instance;
+    if (!await service.initialize()) {
+      if (mounted) setState(() {});
+      return;
     }
-    micInfo.devices = await Audio.enumDevices(AudioDeviceType.input) ?? <AudioDevice>[];
-    if (micInfo.devices.isNotEmpty) {
-      micInfo.defaultDevice = await Audio.getDefaultDevice(AudioDeviceType.input) ?? AudioDevice();
-      micInfo.isMuted = await Audio.getMuteAudioDevice(AudioDeviceType.input);
-      micInfo.volume = await Audio.getVolume(AudioDeviceType.input);
-    }
+    final AudioOrchestrator orchestrator = AudioOrchestrator(service: service);
+    final AudioEndpointSnapshot output = await orchestrator.readEndpoint(AudioDeviceType.output);
+    final AudioEndpointSnapshot input = await orchestrator.readEndpoint(AudioDeviceType.input);
+    _applyEndpoint(audioInfo, output);
+    _applyEndpoint(micInfo, input);
+    if (mounted) setState(() {});
+  }
 
-    for (AudioInfo inputType in <AudioInfo>[audioInfo, micInfo]) {
-      for (AudioDevice device in inputType.devices) {
-        inputType.deviceVolumes[device.id] = await Audio.getAudioDeviceVolume(device.id);
-        if (inputType.icons.containsKey(device.id)) continue;
-        inputType.icons[device.id] = WinUtils.extractIcon(device.iconPath, iconID: device.iconID)!;
-        //inputType.icons[device.id] = (await getExecutableIcon(device.iconPath, iconID: device.iconID))!;
-      }
-    }
-    if (mounted) {
-      setState(() {});
-    }
+  void _applyEndpoint(AudioInfo info, AudioEndpointSnapshot snapshot) {
+    info
+      ..devices = snapshot.devices
+      ..defaultDevice = snapshot.defaultDevice
+      ..deviceVolumes = snapshot.deviceVolumes
+      ..isMuted = snapshot.isMuted
+      ..volume = snapshot.volume;
   }
 
   Future<void> fetchAudioMixerData({bool onlyMetadata = false}) async {
-    final List<ProcessVolume> newData = await Audio.enumAudioMixer() ?? <ProcessVolume>[];
-
-    if (onlyMetadata) {
-      bool addedAny = false;
-      for (ProcessVolume device in newData) {
-        // if (audioMixerIcons.containsKey(device.processId)) continue;
-        addedAny = true;
-        ExtractedIcon icon;
-        final int hWnd = await findTopWindow(device.processId);
-        if (hWnd == 0) {
-          final ExtractedIcon fallbackIcon = WinUtils.extractIcon(device.processPath);
-          if (fallbackIcon != null) {
-            audioMixerIcons[device.processId] = fallbackIcon;
-          }
-          audioMixerNames[device.processId] = Win32.extractFileNameFromPath(device.processPath).toUpperCaseFirst();
-          continue;
-        }
-        final HwndInfo processPath = HwndPath.getFullPath(hWnd);
-        if (processPath.isAppx) {
-          final String appxLogo = Win32.getManifestIcon(processPath.path);
-          if (File(appxLogo).existsSync()) {
-            icon = File(appxLogo).readAsBytesSync();
-          } else {
-            icon = WinUtils.extractIcon(device.processPath);
-          }
-        } else {
-          icon = WinUtils.extractIcon(processPath.path);
-        }
-        audioMixerIcons[device.processId] = icon!;
-        audioMixerNames[device.processId] = Win32.extractFileNameFromPath(processPath.path).toUpperCaseFirst();
+    final AudioSystemService service = AudioSystemService.instance;
+    if (!service.isAvailable || !service.supportsPerProcessAudio) {
+      if (audioMixer.isNotEmpty || audioMixerNames.isNotEmpty) {
+        audioMixer = <PlatformAudioProcess>[];
+        audioMixerNames.clear();
+        audioMixerIcons.clear();
+        if (mounted) setState(() {});
       }
-      if (addedAny && mounted) setState(() {});
+      return;
+    }
+    final List<PlatformAudioProcess> newData = await service.listProcesses();
+
+    for (final PlatformAudioProcess process in newData) {
+      audioMixerNames[process.id] = process.displayName;
+      audioMixerIcons[process.id] = process.iconBytes;
+    }
+    if (onlyMetadata) {
+      if (mounted) setState(() {});
       return;
     }
 
-    // Peak volume updates - check for changes before setState
     bool changed = newData.length != audioMixer.length;
     if (!changed) {
       for (int i = 0; i < newData.length; i++) {
-        if ((newData[i].peakVolume - audioMixer[i].peakVolume).abs() > 0.02 ||
-            (newData[i].maxVolume - audioMixer[i].maxVolume).abs() > 0.02) {
+        if (newData[i].id != audioMixer[i].id ||
+            (newData[i].peakVolume - audioMixer[i].peakVolume).abs() > 0.02 ||
+            (newData[i].volume - audioMixer[i].volume).abs() > 0.02) {
           changed = true;
           break;
         }
@@ -151,7 +129,14 @@ class AudioBoxState extends State<AudioBox> {
 
   @override
   Widget build(BuildContext context) {
-    if (audioInfo.devices.isEmpty && micInfo.devices.isEmpty) {
+    final AudioSystemService service = AudioSystemService.instance;
+    if (!service.isAvailable) {
+      return Padding(
+        padding: const EdgeInsets.all(18),
+        child: Text(service.unavailableReason),
+      );
+    }
+    if (audioInfo.devices.isEmpty && micInfo.devices.isEmpty && audioMixer.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -188,13 +173,14 @@ class AudioBoxState extends State<AudioBox> {
             title: "Audio Settings",
             icon: Icons.volume_up_rounded,
             extraActions: <Widget>[
-              IconButton(
-                onPressed: () {
-                  WinUtils.runPowerShell(<String>["mmsys.cpl"]);
-                  Navigator.pop(context);
-                },
-                icon: const Icon(Icons.settings_applications_outlined),
-              ),
+              if (service.supportsSystemSettings)
+                IconButton(
+                  onPressed: () async {
+                    await service.openSystemSettings();
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  icon: const Icon(Icons.settings_applications_outlined),
+                ),
             ],
           ),
           Flexible(
@@ -383,9 +369,8 @@ class AudioBoxState extends State<AudioBox> {
                   color: Colors.transparent,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(8),
-                    onTap: () {
-                      Audio.setMuteAudioDevice(!info.isMuted, type);
-                      info.isMuted = !info.isMuted;
+                    onTap: () async {
+                      await AudioOrchestrator(service: AudioSystemService.instance).toggleMute(type);
                       fetchData();
                     },
                     child: AnimatedContainer(
@@ -438,12 +423,12 @@ class AudioBoxState extends State<AudioBox> {
   }
 
   Widget _buildDeviceRow({
-    required AudioDevice device,
+    required PlatformAudioDevice device,
     required AudioInfo info,
     required Color accent,
     required Color onSurface,
   }) {
-    final bool isSelected = device.id == info.defaultDevice.id;
+    final bool isSelected = device.id == info.defaultDevice?.id;
     final String actionText = isSelected ? "Current Default" : "Set as Default";
     final String deviceType = info == micInfo ? "Microphone" : "Speaker";
 
@@ -453,12 +438,15 @@ class AudioBoxState extends State<AudioBox> {
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(9),
-            onTap: () {
-              Audio.setDefaultDevice(
+            onTap: () async {
+              await AudioSystemService.instance.setDefaultDevice(
+                info == micInfo ? AudioDeviceType.input : AudioDeviceType.output,
                 device.id,
-                console: user.audioConsole,
-                multimedia: user.audioMultimedia,
-                communications: user.audioCommunications,
+                targeting: AudioDeviceTargeting(
+                  console: user.audioConsole,
+                  multimedia: user.audioMultimedia,
+                  communications: user.audioCommunications,
+                ),
               );
               fetchData();
             },
@@ -482,7 +470,7 @@ class AudioBoxState extends State<AudioBox> {
                       SizedBox(
                         width: 20,
                         child: buildExtractedIcon(
-                          info.icons[device.id],
+                          device.iconBytes,
                           width: 20,
                           gaplessPlayback: true,
                           errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => Icon(
@@ -545,7 +533,11 @@ class AudioBoxState extends State<AudioBox> {
                       child: Slider(
                         value: (info.deviceVolumes[device.id] ?? 0.0).clamp(0, 1),
                         onChanged: (double val) {
-                          Audio.setAudioDeviceVolume(device.id, val);
+                          AudioOrchestrator(service: AudioSystemService.instance).setDeviceVolume(
+                            info == micInfo ? AudioDeviceType.input : AudioDeviceType.output,
+                            device.id,
+                            val,
+                          );
                           info.deviceVolumes[device.id] = val;
                           setState(() {});
                         },
@@ -561,12 +553,11 @@ class AudioBoxState extends State<AudioBox> {
 
   Widget _buildMixerRow({
     required BuildContext context,
-    required ProcessVolume mix,
+    required PlatformAudioProcess mix,
     required Color accent,
     required Color onSurface,
   }) {
-    final String name =
-        audioMixerNames[mix.processId] ?? Win32.extractFileNameFromPath(mix.processPath).toUpperCaseFirst();
+    final String name = audioMixerNames[mix.id] ?? mix.displayName;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -579,13 +570,15 @@ class AudioBoxState extends State<AudioBox> {
           CustomTooltip(
             message: "Open Volume Mixer Settings",
             child: InkWell(
-              onTap: () => Win32.shellOpen("ms-settings:apps-volume"),
+              onTap: AudioSystemService.instance.supportsMixerSettings
+                  ? () => AudioSystemService.instance.openMixerSettings()
+                  : null,
               borderRadius: BorderRadius.circular(4),
               child: Container(
                 padding: const EdgeInsets.all(4), // Expanded hit area
                 width: 26,
                 child: buildExtractedIcon(
-                  audioMixerIcons[mix.processId],
+                  audioMixerIcons[mix.id],
                   width: 22,
                   gaplessPlayback: true,
                   errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) => Icon(
@@ -656,8 +649,11 @@ class AudioBoxState extends State<AudioBox> {
                           divisions: 25,
                           onChanged: (double e) {
                             if (e == 0.0) e = 0.001;
-                            Audio.setAudioMixerVolume(mix.processId, e);
-                            mix.maxVolume = e;
+                            AudioSystemService.instance.setProcessVolume(mix.id, e);
+                            audioMixer = audioMixer
+                                .map((PlatformAudioProcess process) =>
+                                    process.id == mix.id ? process.copyWith(volume: e) : process)
+                                .toList(growable: false);
                             setState(() {});
                           },
                         ),

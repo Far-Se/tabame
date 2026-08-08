@@ -1,0 +1,82 @@
+name: Linux Wayland Smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/wayland-smoke.yml'
+      - 'lib/**'
+      - 'linux/**'
+      - 'tool/linux_wayland_smoke.sh'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+
+permissions:
+  contents: read
+
+jobs:
+  wayland-smoke:
+    name: Reduced launcher under Weston Wayland
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Wayland desktop services
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            clang \
+            cmake \
+            dbus-x11 \
+            libgtk-3-dev \
+            libnotify-dev \
+            libx11-dev \
+            ninja-build \
+            pkg-config \
+            pipewire \
+            weston \
+            xdg-desktop-portal \
+            xdg-desktop-portal-gnome
+
+      - name: Enable Linux desktop target
+        run: flutter config --enable-linux-desktop
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build portable Linux bundle
+        run: flutter build linux --debug -t lib/portable_main.dart
+
+      - name: Launch under a headless Wayland compositor
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          runtime_dir="$RUNNER_TEMP/tabame-runtime"
+          mkdir -p "$runtime_dir"
+          chmod 700 "$runtime_dir"
+          dbus-run-session -- bash -Eeuo pipefail -c '
+            export XDG_RUNTIME_DIR="'$runtime_dir'"
+            export XDG_SESSION_TYPE=wayland
+            export XDG_CURRENT_DESKTOP=Weston
+            export GDK_BACKEND=wayland
+            weston --backend=headless-backend.so --socket=tabame-ci --idle-time=0 >"$XDG_RUNTIME_DIR/weston.log" 2>&1 &
+            weston_pid=$!
+            trap "kill $weston_pid 2>/dev/null || true" EXIT
+            for attempt in {1..20}; do
+              if [[ -S "$XDG_RUNTIME_DIR/tabame-ci" ]]; then break; fi
+              if ! kill -0 "$weston_pid" 2>/dev/null; then cat "$XDG_RUNTIME_DIR/weston.log"; exit 1; fi
+              sleep 1
+            done
+            [[ -S "$XDG_RUNTIME_DIR/tabame-ci" ]]
+            export WAYLAND_DISPLAY=tabame-ci
+            bash tool/linux_wayland_smoke.sh build/linux/x64/debug/bundle/tabame weston
+          '

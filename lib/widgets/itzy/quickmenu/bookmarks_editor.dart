@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../../../platform/file_picker_service.dart';
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/saved_maps.dart';

@@ -6,6 +6,8 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/app_opacity.dart';
+import '../../../platform/platform_capabilities.dart';
+import '../../../services/notification_coordinator.dart';
 import '../../widgets/mini_switch.dart';
 import '../../widgets/windows_scroll.dart';
 
@@ -553,6 +555,11 @@ class _ReminderBuilderState extends State<ReminderBuilder> {
   @override
   Widget build(BuildContext context) {
     final Color accent = widget.accent;
+    final bool visualNotificationsAvailable =
+        PlatformCapabilities.current.systemNotifications && NotificationCoordinator.instance.isAvailable;
+    final String visualNotificationReason = NotificationCoordinator.instance.unavailableReason.isNotEmpty
+        ? NotificationCoordinator.instance.unavailableReason
+        : 'Desktop notifications are unavailable.';
 
     return Container(
       decoration: BoxDecoration(
@@ -597,6 +604,8 @@ class _ReminderBuilderState extends State<ReminderBuilder> {
                       value: _reminder.voiceNotification,
                       accent: accent,
                       voiceVolume: _reminder.voiceVolume,
+                      visualAvailable: visualNotificationsAvailable,
+                      visualUnavailableReason: visualNotificationReason,
                       onTypeChanged: (bool v) => setState(() {
                         _reminder.voiceNotification = v;
                         _dirty = true;
@@ -922,6 +931,8 @@ class _NotificationTypeSelector extends StatelessWidget {
     required this.value,
     required this.accent,
     required this.voiceVolume,
+    required this.visualAvailable,
+    required this.visualUnavailableReason,
     required this.onTypeChanged,
     required this.onVolumeChanged,
   });
@@ -929,6 +940,8 @@ class _NotificationTypeSelector extends StatelessWidget {
   final bool value;
   final Color accent;
   final int voiceVolume;
+  final bool visualAvailable;
+  final String visualUnavailableReason;
   final ValueChanged<bool> onTypeChanged;
   final ValueChanged<int> onVolumeChanged;
 
@@ -942,10 +955,10 @@ class _NotificationTypeSelector extends StatelessWidget {
             child: _TypeCard(
               icon: Icons.visibility_rounded,
               label: "Visual",
-              sublabel: "Toast notification",
+              sublabel: visualAvailable ? "Desktop notification" : visualUnavailableReason,
               selected: !value,
               accent: accent,
-              onTap: () => onTypeChanged(false),
+              onTap: visualAvailable ? () => onTypeChanged(false) : null,
             ),
           ),
           const SizedBox(width: 8),
@@ -1032,18 +1045,21 @@ class _TypeCard extends StatelessWidget {
   final String sublabel;
   final bool selected;
   final Color accent;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final bool enabled = onTap != null;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: selected ? accent.withValues(alpha: 0.1) : theme.colorScheme.surfaceContainerLow,
+          color: selected
+              ? accent.withValues(alpha: enabled ? 0.1 : 0.04)
+              : theme.colorScheme.surfaceContainerLow.withValues(alpha: enabled ? 1 : 0.5),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? accent.withValues(alpha: 0.5) : Colors.transparent,
@@ -1052,7 +1068,13 @@ class _TypeCard extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            Icon(icon, size: 20, color: selected ? accent : theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+            Icon(
+              icon,
+              size: 20,
+              color: selected
+                  ? accent.withValues(alpha: enabled ? 1 : 0.4)
+                  : theme.colorScheme.onSurface.withValues(alpha: enabled ? 0.4 : 0.2),
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -1063,14 +1085,18 @@ class _TypeCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: selected ? accent : theme.colorScheme.onSurface,
+                      color: selected
+                          ? accent.withValues(alpha: enabled ? 1 : 0.45)
+                          : theme.colorScheme.onSurface.withValues(alpha: enabled ? 1 : 0.45),
                     ),
                   ),
                   Text(
                     sublabel,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 10,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                      color: theme.colorScheme.onSurface.withValues(alpha: enabled ? 0.4 : 0.55),
                     ),
                   ),
                 ],

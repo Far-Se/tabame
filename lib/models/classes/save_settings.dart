@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import '../win32/win_utils.dart';
+import '../../platform/app_paths.dart';
 
 class SaveSettings {
   SaveSettings._(this._preferenceCache);
@@ -129,7 +129,7 @@ class SavedStore {
   File? _localDataFilePath;
   String? _fileName;
   String get fileName {
-    _fileName ??= "${WinUtils.getTabameAppDataFolder(settings: true)}\\settings.json";
+    _fileName ??= AppPaths.settingsPath('settings.json');
     return _fileName!;
   }
 
@@ -139,7 +139,7 @@ class SavedStore {
   // QuickMenu itself never sets the flag, so its own frequent writes don't self-trigger.
   static bool signalOnWrite = false;
   Timer? _signalTimer;
-  String get reloadSignalPath => "${WinUtils.getTabameAppDataFolder(settings: true)}\\reload.signal";
+  String get reloadSignalPath => AppPaths.settingsPath('reload.signal', forWrite: true);
 
   void _bumpReloadSignal() {
     if (!signalOnWrite) return;
@@ -156,7 +156,28 @@ class SavedStore {
     if (_localDataFilePath != null) {
       return _localDataFilePath!;
     }
-    return _localDataFilePath = File(fileName);
+
+    final String readablePath = AppPaths.settingsPath('settings.json');
+    final String writablePath = AppPaths.settingsPath('settings.json', forWrite: true);
+    final File readableFile = File(readablePath);
+    final File writableFile = File(writablePath);
+    String activePath = writablePath;
+    if (readablePath != writablePath && readableFile.existsSync() && !writableFile.existsSync()) {
+      try {
+        await writableFile.parent.create(recursive: true);
+        await readableFile.copy(writableFile.path);
+        final File legacyBackup = File('$readablePath.bk');
+        final File writableBackup = File('$writablePath.bk');
+        if (legacyBackup.existsSync() && !writableBackup.existsSync()) {
+          await legacyBackup.copy(writableBackup.path);
+        }
+      } catch (_) {
+        // The read fallback remains usable if a legacy file is locked.
+        activePath = readablePath;
+      }
+    }
+    _fileName = activePath;
+    return _localDataFilePath = File(activePath);
   }
 
   void clearCache() => _cachedPreferences = null;

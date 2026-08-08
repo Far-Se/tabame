@@ -2,11 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../../../platform/file_picker_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../models/classes/boxes.dart';
+import '../../../platform/app_paths.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/mini_switch.dart';
@@ -122,8 +123,7 @@ class YtDlpOptions {
 
   static YtDlpOptions fromJson(Map<String, dynamic> j) {
     final YtDlpOptions o = YtDlpOptions();
-    o.outputMode = YtDlpOutputMode
-        .values[(j['outputMode'] as int? ?? 0).clamp(0, YtDlpOutputMode.values.length - 1)];
+    o.outputMode = YtDlpOutputMode.values[(j['outputMode'] as int? ?? 0).clamp(0, YtDlpOutputMode.values.length - 1)];
     o.videoContainer = j['videoContainer'] as String? ?? 'mp4';
     o.videoQuality = j['videoQuality'] as String? ?? 'best';
     o.audioFormat = j['audioFormat'] as String? ?? 'mp3';
@@ -164,9 +164,8 @@ class YtDlpOptions {
 
     switch (outputMode) {
       case YtDlpOutputMode.video:
-        final String fmt = videoQuality == 'best'
-            ? 'bv*+ba/b'
-            : 'bv*[height<=$videoQuality]+ba/b[height<=$videoQuality]';
+        final String fmt =
+            videoQuality == 'best' ? 'bv*+ba/b' : 'bv*[height<=$videoQuality]+ba/b[height<=$videoQuality]';
         args.addAll(<String>['-f', fmt, '--merge-output-format', videoContainer]);
         break;
       case YtDlpOutputMode.audio:
@@ -423,7 +422,7 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
     });
   }
 
-  String get _historyPath => '${WinUtils.getTabameAppDataFolder(settings: true)}\\$_kHistoryFile';
+  String get _historyPath => AppPaths.settingsPath(_kHistoryFile);
 
   Future<void> _loadHistory() async {
     try {
@@ -502,7 +501,10 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
       final ProcessResult r = await _YtDlpService.update();
       final String out = (r.stdout ?? '').toString().trim();
       final String err = (r.stderr ?? '').toString().trim();
-      _flash(r.exitCode == 0 ? (out.isEmpty ? 'yt-dlp is up to date' : out.split('\n').last) : (err.isEmpty ? 'Update failed' : err.split('\n').last),
+      _flash(
+          r.exitCode == 0
+              ? (out.isEmpty ? 'yt-dlp is up to date' : out.split('\n').last)
+              : (err.isEmpty ? 'Update failed' : err.split('\n').last),
           error: r.exitCode != 0);
     } catch (_) {
       _flash('Could not run yt-dlp -U. Check the path in Settings.', error: true);
@@ -513,11 +515,7 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
   // ── Queue execution ─────────────────────────
 
   List<String> _parseUrls(String raw) {
-    return raw
-        .split(RegExp(r'[\r\n]+'))
-        .map((String s) => s.trim())
-        .where((String s) => s.isNotEmpty)
-        .toList();
+    return raw.split(RegExp(r'[\r\n]+')).map((String s) => s.trim()).where((String s) => s.isNotEmpty).toList();
   }
 
   Future<void> _startQueue() async {
@@ -588,9 +586,7 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
       }
     } on ProcessException catch (e) {
       job.status = YtDlpJobStatus.error;
-      job.errorText = e.errorCode == 2
-          ? 'yt-dlp not found. Set its path in Settings or install it.'
-          : e.message;
+      job.errorText = e.errorCode == 2 ? 'yt-dlp not found. Set its path in Settings or install it.' : e.message;
     } catch (e) {
       job.status = YtDlpJobStatus.error;
       job.errorText = e.toString();
@@ -690,8 +686,8 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
     Boxes.updateSettings(_kFolder, dir.path);
   }
 
-  Future<void> _pickExe(TextEditingController controller, String key, String title, String filterLabel,
-      String filterPattern) async {
+  Future<void> _pickExe(
+      TextEditingController controller, String key, String title, String filterLabel, String filterPattern) async {
     QuickMenuFunctions.keepOpen = true;
     await Future<void>.delayed(const Duration(milliseconds: 50));
     final OpenFilePicker picker = OpenFilePicker()
@@ -805,7 +801,10 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
             const SizedBox(height: 12),
             _buildSectionLabel(label: "Queue", icon: Icons.playlist_play_rounded, count: _jobs.length),
             const SizedBox(height: 8),
-            ..._jobs.asMap().entries.map((MapEntry<int, YtDlpJob> e) => _buildJobRow(e.value, e.key == _activeJobIndex)),
+            ..._jobs
+                .asMap()
+                .entries
+                .map((MapEntry<int, YtDlpJob> e) => _buildJobRow(e.value, e.key == _activeJobIndex)),
           ],
           if (_history.isNotEmpty) ...<Widget>[
             const SizedBox(height: 12),
@@ -837,7 +836,8 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
             ),
           ),
           const SizedBox(width: 8),
-          _SmallButton(icon: Icons.tune_rounded, label: "Settings", onTap: () => setState(() => _view = _YtDlpView.settings)),
+          _SmallButton(
+              icon: Icons.tune_rounded, label: "Settings", onTap: () => setState(() => _view = _YtDlpView.settings)),
         ],
       ),
     );
@@ -1060,8 +1060,8 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
                   Expanded(
                     child: Text(
                       "Advanced",
-                      style: TextStyle(
-                          fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: Design.text),
+                      style:
+                          TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: Design.text),
                     ),
                   ),
                   Icon(_advancedOpen ? Icons.expand_less_rounded : Icons.expand_more_rounded,
@@ -1102,15 +1102,17 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
                 Expanded(child: _buildInlineField(label: "Rate limit", hint: '5M', controller: _rateLimitController)),
                 const SizedBox(width: 8),
                 Expanded(
-                    child: _buildInlineField(
-                        label: "Concurrent frags", hint: '4', controller: _concurrentController)),
+                    child: _buildInlineField(label: "Concurrent frags", hint: '4', controller: _concurrentController)),
               ],
             ),
             const SizedBox(height: 6),
-            _buildInlineField(label: "Output template", hint: '%(title)s.%(ext)s', controller: _outputTemplateController),
+            _buildInlineField(
+                label: "Output template", hint: '%(title)s.%(ext)s', controller: _outputTemplateController),
             const SizedBox(height: 6),
             _buildInlineField(
-                label: "Custom arguments", hint: '--write-description --sleep-interval 2', controller: _customArgsController),
+                label: "Custom arguments",
+                hint: '--write-description --sleep-interval 2',
+                controller: _customArgsController),
           ],
         ],
       ),
@@ -1176,12 +1178,14 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
                     job.displayTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: Design.text),
+                    style:
+                        TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: Design.text),
                   ),
                 ),
                 if (job.status == YtDlpJobStatus.downloading) ...<Widget>[
                   Text("${(job.percent * 100).toStringAsFixed(0)}%",
-                      style: TextStyle(fontSize: Design.baseFontSize, color: Design.accent, fontWeight: FontWeight.w700)),
+                      style:
+                          TextStyle(fontSize: Design.baseFontSize, color: Design.accent, fontWeight: FontWeight.w700)),
                   const SizedBox(width: 4),
                   InkWell(
                     borderRadius: BorderRadius.circular(99),
@@ -1222,7 +1226,8 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
               InkWell(
                 onTap: () => _openFolder(_downloadFolder),
                 child: Text("Open folder",
-                    style: TextStyle(fontSize: Design.baseFontSize - 0.5, color: Design.accent, fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        fontSize: Design.baseFontSize - 0.5, color: Design.accent, fontWeight: FontWeight.w600)),
               ),
             ],
           ],
@@ -1255,7 +1260,10 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
         const SizedBox(width: 6),
         Text("HISTORY",
             style: TextStyle(
-                fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: Design.text)),
+                fontSize: Design.baseFontSize + 1,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+                color: Design.text)),
         const SizedBox(width: 8),
         Expanded(child: Divider(height: 1, color: Design.text.withAlpha(20))),
         const SizedBox(width: 8),
@@ -1265,7 +1273,8 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             child: Text("Clear",
-                style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(150), fontWeight: FontWeight.w600)),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize, color: Design.text.withAlpha(150), fontWeight: FontWeight.w600)),
           ),
         ),
       ],
@@ -1391,7 +1400,8 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
             description: "Needed for merging & mp3 extraction. Empty uses PATH.",
             controller: _ffmpegPathController,
             hint: "ffmpeg",
-            onPick: () => _pickExe(_ffmpegPathController, _kFfmpegPath, "Select ffmpeg.exe", "ffmpeg.exe", "ffmpeg.exe"),
+            onPick: () =>
+                _pickExe(_ffmpegPathController, _kFfmpegPath, "Select ffmpeg.exe", "ffmpeg.exe", "ffmpeg.exe"),
           ),
           const SizedBox(height: 8),
           _buildSettingCard(
@@ -1415,14 +1425,14 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
               icon: Icons.download_rounded,
               title: "Install yt-dlp (winget)",
               subtitle: "winget install yt-dlp.yt-dlp",
-              onTap: () => WinUtils.open('cmd',
-                  arguments: '/k winget install --id yt-dlp.yt-dlp -e', parseParamaters: false)),
+              onTap: () =>
+                  WinUtils.open('cmd', arguments: '/k winget install --id yt-dlp.yt-dlp -e', parseParamaters: false)),
           _buildActionRow(
               icon: Icons.movie_filter_outlined,
               title: "Install ffmpeg (winget)",
               subtitle: "winget install Gyan.FFmpeg",
-              onTap: () => WinUtils.open('cmd',
-                  arguments: '/k winget install --id Gyan.FFmpeg -e', parseParamaters: false)),
+              onTap: () =>
+                  WinUtils.open('cmd', arguments: '/k winget install --id Gyan.FFmpeg -e', parseParamaters: false)),
           _buildActionRow(
               icon: Icons.open_in_new_rounded,
               title: "Open yt-dlp releases",
@@ -1447,8 +1457,8 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
           Container(
             width: 8,
             height: 8,
-            decoration: BoxDecoration(
-                color: found ? Colors.greenAccent.shade400 : Colors.orangeAccent, shape: BoxShape.circle),
+            decoration:
+                BoxDecoration(color: found ? Colors.greenAccent.shade400 : Colors.orangeAccent, shape: BoxShape.circle),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1483,7 +1493,8 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(title, style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: Design.text)),
+          Text(title,
+              style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: Design.text)),
           const SizedBox(height: 2),
           Text(description, style: TextStyle(fontSize: Design.baseFontSize - 0.5, color: Design.text.withAlpha(130))),
           const SizedBox(height: 8),
@@ -1542,7 +1553,8 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(title,
-                        style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: Design.text)),
+                        style: TextStyle(
+                            fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: Design.text)),
                     Text(subtitle, style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(130))),
                   ],
                 ),
@@ -1597,7 +1609,10 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
     return Text(
       label.toUpperCase(),
       style: TextStyle(
-          fontSize: Design.baseFontSize - 1, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: Design.text.withAlpha(150)),
+          fontSize: Design.baseFontSize - 1,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
+          color: Design.text.withAlpha(150)),
     );
   }
 
@@ -1657,7 +1672,8 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(label,
-                      style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: Design.text)),
+                      style: TextStyle(
+                          fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: Design.text)),
                   if (subtitle != null)
                     Text(subtitle,
                         style: TextStyle(fontSize: Design.baseFontSize - 0.5, color: Design.text.withAlpha(130))),

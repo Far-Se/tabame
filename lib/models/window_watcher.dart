@@ -1,12 +1,16 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first, non_constant_identifier_names
 
+// Windows compatibility watcher for the legacy taskbar, QuickSnap, workspace,
+// and layout surfaces. Portable launcher search uses
+// `platform/window_watcher_service.dart` and never imports this implementation.
+
 import 'dart:ffi' hide Size;
 import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import '../platform/windows/tabamewin32_api.dart';
+import '../platform/windows/win32_api.dart';
 
 import 'classes/boxes.dart';
 import 'settings.dart';

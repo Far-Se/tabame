@@ -2,16 +2,18 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../../platform/file_picker_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as p;
 import 'package:zip_flutter/zip_flutter.dart';
 
 import '../../models/classes/boxes.dart';
+import '../../platform/app_paths.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win_utils.dart';
 import '../widgets/checkbox_widget.dart';
@@ -1384,7 +1386,7 @@ class LoadFromGitWidget extends StatefulWidget {
 }
 
 class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
-  final String baseDir = "${WinUtils.getTabameAppDataFolder()}\\projectOverview";
+  final String baseDir = AppPaths.currentPath('projectOverview');
   String downloadMessage = "Download Project";
   bool isDownloading = false;
   String headerMsg = "Fetch repository content from GitHub or GitLab";
@@ -1494,7 +1496,7 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
       return;
     }
 
-    final String zipFileName = "$baseDir\\temp_archive.zip";
+    final String zipFileName = p.join(baseDir, 'temp_archive.zip');
     try {
       await _downloadFile(repoUrl, zipFileName, () async {
         setState(() => downloadMessage = "Extracting...");

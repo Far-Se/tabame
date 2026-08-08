@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tabame/models/util/secret_crypto.dart';
+import 'package:tabame/platform/secret_store.dart';
+import 'package:tabame/platform/windows_secret_store.dart';
 
 void main() {
   group('SecretCrypto password sealing (PBKDF2 + AES-GCM)', () {
@@ -39,42 +42,6 @@ void main() {
     });
   });
 
-  group('SecretCrypto machine-key sealing (DPAPI)', () {
-    test('round-trips the plaintext on this machine', () {
-      const String secret = '[{"issuer":"acme","secret":"JBSWY3DPEHPK3PXP"}]';
-      final Map<String, dynamic> envelope = SecretCrypto.sealWithMachineKey(secret);
-
-      expect(envelope['kdf'], SecretCrypto.dpapiKdf);
-      expect(envelope['data'], isNot(contains('JBSWY3DPEHPK3PXP')));
-      expect(SecretCrypto.openWithMachineKey(envelope), secret);
-    });
-  });
-
-  group('SecretCrypto field protection (DPAPI)', () {
-    test('protect/unprotect is an identity round-trip', () {
-      const String password = 's3rv3r-p@ss';
-      final String protectedValue = SecretCrypto.protectField(password);
-
-      expect(SecretCrypto.isProtectedField(protectedValue), isTrue);
-      expect(protectedValue, isNot(contains(password)));
-      expect(SecretCrypto.unprotectField(protectedValue), password);
-    });
-
-    test('empty stays empty and is never marked protected', () {
-      expect(SecretCrypto.protectField(''), '');
-      expect(SecretCrypto.isProtectedField(''), isFalse);
-    });
-
-    test('legacy plaintext passes through unprotectField unchanged', () {
-      expect(SecretCrypto.unprotectField('legacy-plaintext'), 'legacy-plaintext');
-    });
-
-    test('does not double-protect an already protected value', () {
-      final String once = SecretCrypto.protectField('value');
-      expect(SecretCrypto.protectField(once), once);
-    });
-  });
-
   group('SecretCrypto legacy migration read path', () {
     test('decrypts the old unsalted sha256 + AES-CBC format', () {
       // Reproduce exactly how vault/authenticator files used to be sealed.
@@ -94,4 +61,46 @@ void main() {
       );
     });
   });
+
+  group('SecretStore unavailable boundary', () {
+    test('keeps machine-bound storage explicit instead of downgrading it', () {
+      const UnavailableSecretStore store = UnavailableSecretStore();
+
+      expect(store.isAvailable, isFalse);
+      expect(store.requiresReentry, isTrue);
+      expect(
+        () => store.sealWithMachineKey('secret'),
+        throwsA(isA<SecretStoreUnavailableException>()),
+      );
+      expect(store.unprotectField('legacy-plaintext'), 'legacy-plaintext');
+      expect(
+        () => store.unprotectField('${SecretCrypto.dpapiFieldPrefix}not-readable-here'),
+        throwsA(isA<SecretStoreUnavailableException>()),
+      );
+    });
+  });
+
+  if (Platform.isWindows) {
+    group('WindowsSecretStore DPAPI adapter', () {
+      test('round-trips machine-key sealing on Windows', () {
+        const String secret = '[{"issuer":"acme","secret":"JBSWY3DPEHPK3PXP"}]';
+        final Map<String, dynamic> envelope = WindowsSecretStore.instance.sealWithMachineKey(secret);
+
+        expect(envelope['kdf'], SecretCrypto.dpapiKdf);
+        expect(envelope['data'], isNot(contains('JBSWY3DPEHPK3PXP')));
+        expect(WindowsSecretStore.instance.openWithMachineKey(envelope), secret);
+      });
+
+      test('protects and restores a field on Windows', () {
+        const String password = 's3rv3r-p@ss';
+        final String protectedValue = WindowsSecretStore.instance.protectField(password);
+
+        expect(SecretCrypto.isProtectedField(protectedValue), isTrue);
+        expect(protectedValue, isNot(contains(password)));
+        expect(WindowsSecretStore.instance.unprotectField(protectedValue), password);
+        expect(WindowsSecretStore.instance.protectField(''), '');
+        expect(SecretCrypto.isProtectedField('legacy-plaintext'), isFalse);
+      });
+    });
+  }
 }

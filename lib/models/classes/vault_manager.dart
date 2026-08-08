@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../../platform/app_paths.dart';
+import '../../platform/secret_store_registry.dart';
 import '../util/secret_crypto.dart';
-import '../win32/win_utils.dart';
 import 'vault_item.dart';
 
 /// Opaque, versioned on-disk envelope for a single vault. The shape depends on
@@ -17,7 +18,8 @@ class VaultMetadata {
 }
 
 class VaultManager {
-  static String get _filePath => "${WinUtils.getTabameAppDataFolder(settings: true)}\\vault.json";
+  static String get _filePath => AppPaths.settingsPath('vault.json');
+  static String get _writableFilePath => AppPaths.settingsPath('vault.json', forWrite: true);
 
   /// Sentinel the UI used for "no password" vaults. Legacy files were encrypted
   /// with `sha256("n0p@s5")` — a constant — so they are read here only to be
@@ -38,9 +40,10 @@ class VaultManager {
   }
 
   static Future<void> _persist(Map<String, VaultMetadata> all) async {
-    final File file = File(_filePath);
-    await file.writeAsString(
-        jsonEncode(all.map((String k, VaultMetadata v) => MapEntry<String, dynamic>(k, v.toJson()))));
+    final File file = File(_writableFilePath);
+    if (!file.existsSync()) await file.create(recursive: true);
+    await file
+        .writeAsString(jsonEncode(all.map((String k, VaultMetadata v) => MapEntry<String, dynamic>(k, v.toJson()))));
   }
 
   /// Seals a vault. An empty [password] binds the vault to the current Windows
@@ -48,7 +51,7 @@ class VaultManager {
   /// AES-256-GCM.
   static Future<void> saveVault(String name, String password, VaultData data) async {
     final Map<String, dynamic> envelope = password.isEmpty
-        ? SecretCrypto.sealWithMachineKey(data.toJson())
+        ? SecretStores.instance.sealWithMachineKey(data.toJson())
         : SecretCrypto.sealWithPassword(data.toJson(), password);
 
     final Map<String, VaultMetadata> all = await loadAllMetadata();
@@ -77,7 +80,7 @@ class VaultManager {
       try {
         final bool wasNoPassword = password.isEmpty || password == _legacyNoPassword;
         all[name] = VaultMetadata(wasNoPassword
-            ? SecretCrypto.sealWithMachineKey(plaintext)
+            ? SecretStores.instance.sealWithMachineKey(plaintext)
             : SecretCrypto.sealWithPassword(plaintext, password));
         await _persist(all);
       } catch (_) {
@@ -102,7 +105,9 @@ class VaultManager {
   static String? _open(Map<String, dynamic> envelope, String password) {
     switch (envelope['kdf']) {
       case SecretCrypto.dpapiKdf:
-        return SecretCrypto.openWithMachineKey(envelope);
+      case SecretCrypto.keychainKdf:
+      case SecretCrypto.secretServiceKdf:
+        return SecretStores.instance.openWithMachineKey(envelope);
       case SecretCrypto.pbkdf2Kdf:
         return SecretCrypto.openWithPassword(envelope, password);
       default:

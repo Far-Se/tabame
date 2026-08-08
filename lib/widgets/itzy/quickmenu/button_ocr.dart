@@ -1,22 +1,26 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:win32/win32.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
-import '../../../models/util/ocr_capture_decoder.dart';
-import '../../../models/win32/win32.dart';
-import '../../../models/win32/win_utils.dart';
+import '../../../platform/clipboard_service.dart';
+import '../../../platform/screen_capture_service.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
+import '../../widgets/quick_actions_item.dart';
 
 class OcrButton extends StatelessWidget {
   const OcrButton({super.key});
   @override
   Widget build(BuildContext context) {
+    final CaptureOcrCoordinator coordinator = CaptureOcrCoordinator();
+    if (!coordinator.isAvailable) {
+      return QuickActionItem(
+        message: 'OCR unavailable: ${coordinator.unavailableReason}',
+        icon: const Icon(Icons.text_snippet_outlined, color: Colors.white38),
+      );
+    }
     return ModalButton(actionName: "OCR", icon: const Icon(Icons.text_snippet_outlined), child: () => const OcrPanel());
   }
 }
@@ -50,32 +54,21 @@ class _OcrPanelState extends State<OcrPanel> {
       _infoMessage = 'Capture the text on screen.';
     });
 
-    final String capturePath = "${WinUtils.getTempFolder()}\\capture.png";
-
     try {
       QuickMenuFunctions.keepOpen = true;
-
-      ShowWindow(Win32.hWnd, SW_HIDE);
-      await WinUtils.screenCapture();
-
-      ShowWindow(Win32.hWnd, SW_SHOW);
-      Timer(const Duration(milliseconds: 1000), () async {
-        QuickMenuFunctions.keepOpen = false;
-      });
-
-      final File captureFile = File(capturePath);
-      if (!captureFile.existsSync()) {
-        throw const FormatException('No capture image was saved.');
+      final CaptureOcrCoordinator coordinator = CaptureOcrCoordinator();
+      if (!coordinator.isAvailable) {
+        throw FormatException(coordinator.unavailableReason);
       }
 
-      final String? recognized = await recognizeTextFromCapturedPng(capturePath);
-      if (recognized == null || recognized.isEmpty) {
+      final OcrResult? recognized = await coordinator.captureAndRecognize();
+      if (recognized == null || !recognized.hasText) {
         throw const FormatException('No text could be recognized from the capture.');
       }
 
       if (!mounted) return;
       setState(() {
-        _result = recognized;
+        _result = recognized.text;
         _infoMessage = 'Text recognized.';
       });
     } catch (e) {
@@ -85,10 +78,7 @@ class _OcrPanelState extends State<OcrPanel> {
         _infoMessage = null;
       });
     } finally {
-      final File captureFile = File(capturePath);
-      if (captureFile.existsSync()) {
-        captureFile.deleteSync();
-      }
+      QuickMenuFunctions.keepOpen = false;
       if (mounted) {
         setState(() {
           _busy = false;
@@ -101,7 +91,7 @@ class _OcrPanelState extends State<OcrPanel> {
     final String? result = _result;
     if (result == null || result.isEmpty) return;
 
-    await Clipboard.setData(ClipboardData(text: result));
+    await ClipboardService.instance.writeText(result);
     if (!mounted) return;
     setState(() => _copied = true);
     _copiedTimer?.cancel();

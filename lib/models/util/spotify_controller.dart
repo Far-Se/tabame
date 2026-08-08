@@ -1,6 +1,4 @@
-import 'package:tabamewin32/tabamewin32.dart' show MediaSession, MediaSessionPlugin, MediaSessionResult;
-
-import '../win32/win_utils.dart';
+import '../../platform/audio_system_service.dart';
 
 /// Thin wrapper over the SMTC (System Media Transport Controls) media session
 /// plugin, scoped to the Spotify desktop app. Both the launcher `sp ` mode and
@@ -31,23 +29,36 @@ class SpotifyController {
 
   /// Returns the current Spotify SMTC session, or null when Spotify isn't
   /// running / hasn't registered a session yet.
-  static Future<MediaSession?> fetchSession() async {
+  static Future<PlatformMediaSession?> fetchSession() async {
     try {
-      final MediaSessionResult result = await MediaSessionPlugin.getMediaSessions();
-      for (final MediaSession session in result.sessions) {
-        if (_isSpotifyId(session.id)) return session;
+      final PlatformMediaSessionResult result = await MediaSessionService.instance.listSessions();
+      for (final PlatformMediaSession session in result.sessions) {
+        if (_isSpotifyId(session.id) || _isSpotifyId(session.applicationName)) return session;
       }
     } catch (_) {}
     return null;
   }
 
   /// Sends [command] to the given Spotify [session]. No-op when [session] is
-  /// null.
-  static Future<void> command(MediaSession? session, String command) async {
+  /// null or the target adapter cannot express the command.
+  static Future<void> command(PlatformMediaSession? session, String command) async {
     if (session == null) return;
-    await MediaSessionPlugin.sendCommand(session.id, command);
+    final PlatformMediaCommand? operation = switch (command) {
+      cmdTogglePlayPause => PlatformMediaCommand.playPause,
+      cmdPlay => PlatformMediaCommand.play,
+      cmdPause => PlatformMediaCommand.pause,
+      cmdNext => PlatformMediaCommand.next,
+      cmdPrevious => PlatformMediaCommand.previous,
+      _ => null,
+    };
+    if (operation == null) return;
+    await MediaSessionService.instance.sendCommand(session, operation);
   }
 
-  /// Launches the Spotify desktop app via its URI protocol.
-  static void launchApp() => WinUtils.open('spotify:');
+  /// Launches the Spotify desktop app through the platform adapter.
+  static Future<bool> launchApp() {
+    return MediaSessionService.instance.launchApplication(
+      const PlatformMediaBinding(applicationId: 'spotify', applicationPath: 'spotify:'),
+    );
+  }
 }

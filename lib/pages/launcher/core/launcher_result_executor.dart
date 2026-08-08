@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:tabamewin32/tabamewin32.dart' show BrowserTab;
+import '../../../platform/windows/tabamewin32_api.dart' show BrowserTab;
 
-import '../../../models/win32/window.dart';
+import '../../../platform/platform_models.dart';
 import '../../../widgets/itzy/quickmenu/button_notion.dart';
 import '../../../widgets/itzy/quickmenu/button_obsidian.dart';
 import '../../../widgets/itzy/quickmenu/button_quickactions.dart';
@@ -32,7 +32,7 @@ class LauncherResultExecutor {
   final void Function(String folderPath) onBrowseFolder;
   final LauncherFileOpen onOpenFile;
   final LauncherAppOpen onOpenApp;
-  final void Function(Window window) onOpenWindow;
+  final void Function(PlatformWindow window) onOpenWindow;
   final void Function(BrowserTab browserTab) onOpenBrowserTab;
   final void Function(BookmarkSearchResult result) onOpenBookmark;
   final void Function(NotionResult result) onOpenNotion;
@@ -54,7 +54,7 @@ class LauncherResultExecutor {
         onOpenApp(appResult, nodeId: result.nodeId);
       case LauncherFileResult():
         return;
-      case LauncherWindowResult(window: final Window window):
+      case LauncherWindowResult(window: final PlatformWindow window):
         onOpenWindow(window);
       case LauncherBrowserTabResult(browserTab: final BrowserTab browserTab):
         onOpenBrowserTab(browserTab);

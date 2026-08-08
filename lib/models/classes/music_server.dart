@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../util/secret_crypto.dart';
+import '../../platform/secret_store_registry.dart';
 
 enum MusicServerType { subsonic, jellyfin }
 
@@ -49,7 +49,7 @@ class MusicServerConfig {
       'name': name,
       'url': url,
       'username': username,
-      'password': SecretCrypto.protectField(password),
+      'password': SecretStores.instance.protectField(password),
       'type': type.index,
       'isDefault': isDefault,
     };
@@ -61,7 +61,7 @@ class MusicServerConfig {
       name: map['name'] ?? '',
       url: map['url'] ?? '',
       username: map['username'] ?? '',
-      password: SecretCrypto.unprotectField((map['password'] ?? '') as String),
+      password: SecretStores.instance.unprotectField((map['password'] ?? '') as String),
       type: MusicServerType.values[map['type'] ?? 0],
       isDefault: map['isDefault'] ?? false,
     );

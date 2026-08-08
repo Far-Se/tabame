@@ -224,7 +224,9 @@ class MusicLocalIndexer {
     MusicRoot? bestMatch;
     for (final MusicRoot root in roots) {
       final String normalizedRoot = MusicLibraryDb.normalizePath(root.path);
-      final bool matches = normalizedFolder == normalizedRoot || normalizedFolder.startsWith('$normalizedRoot\\');
+      final String separator = root.path.contains('\\') ? '\\' : p.separator;
+      final bool matches =
+          normalizedFolder == normalizedRoot || normalizedFolder.startsWith('$normalizedRoot$separator');
       if (!matches) continue;
       if (bestMatch == null || root.path.length > bestMatch.path.length) bestMatch = root;
     }

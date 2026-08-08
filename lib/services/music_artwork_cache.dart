@@ -7,16 +7,17 @@ import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 
 import '../models/db/music_library_db.dart';
-import '../models/win32/win_utils.dart';
+import '../platform/app_paths.dart';
 
 class MusicArtworkCache {
   MusicArtworkCache({
     MusicLibraryDb? db,
     String? cacheDirectoryPath,
   })  : _db = db ?? MusicLibraryDb.instance,
-        _cacheDirectoryPath = cacheDirectoryPath ?? p.join(WinUtils.getTabameAppDataFolder(), 'cache', 'music_artwork');
+        _cacheDirectoryPath = cacheDirectoryPath ?? AppPaths.cachePath('music_artwork', forWrite: true);
 
-  static final MusicArtworkCache instance = MusicArtworkCache();
+  static MusicArtworkCache? _instance;
+  static MusicArtworkCache get instance => _instance ??= MusicArtworkCache();
 
   static const int smallSize = 96;
   static const int largeSize = 256;

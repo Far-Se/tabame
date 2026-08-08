@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:win32/win32.dart';
+import '../../platform/windows/win32_api.dart';
 
 import '../../models/settings.dart';
 import '../../models/win32/win_utils.dart';

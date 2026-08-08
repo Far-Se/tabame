@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 
-import '../models/win32/win_utils.dart';
+import '../platform/app_paths.dart';
 import 'package:stack_trace/stack_trace.dart';
 
 class ErrorLogger {
   static File get errorLog {
-    return File("${WinUtils.getTabameAppDataFolder()}\\errors.log");
+    return File(AppPaths.resolvePath('errors.log'));
   }
 
   static Future<void> log(
@@ -25,7 +25,10 @@ ERROR: $error
 STACK:
 $chain
 ''';
-      if (kReleaseMode) await errorLog.writeAsString(entry, mode: FileMode.append, flush: true);
+      if (kReleaseMode) {
+        await errorLog.parent.create(recursive: true);
+        await errorLog.writeAsString(entry, mode: FileMode.append, flush: true);
+      }
 
       // Also print in debug
       assert(() {
@@ -63,7 +66,9 @@ void handleErrors(FlutterErrorDetails details) async {
   }
   stack =
       "$stack\n${details.context?.toDescription()}\n${details.summary.toString()}\n${details.context.toString()}\n===============\n${DateTime.now().toString()}\n";
-  File("${WinUtils.getTabameAppDataFolder()}\\errors.log").writeAsStringSync("$error\n$stack", mode: FileMode.append);
+  final File errorFile = File(AppPaths.currentPath('errors.log'));
+  errorFile.parent.createSync(recursive: true);
+  errorFile.writeAsStringSync("$error\n$stack", mode: FileMode.append);
 }
 
 bool handlePlatformErrors(Object error, StackTrace stack2) {
@@ -73,7 +78,11 @@ bool handlePlatformErrors(Object error, StackTrace stack2) {
     stack = stackArr.take(10).join("\n");
   }
   stack = "$stack\n===============\n";
-  File("${WinUtils.getTabameAppDataFolder()}\\errors.log")
-      .writeAsStringSync("${DateTime.now().toString()}\n${error.toString()}\n$stack", mode: FileMode.append);
+  final File errorFile = File(AppPaths.currentPath('errors.log'));
+  errorFile.parent.createSync(recursive: true);
+  errorFile.writeAsStringSync(
+    "${DateTime.now().toString()}\n${error.toString()}\n$stack",
+    mode: FileMode.append,
+  );
   return true;
 }

@@ -1,49 +1,43 @@
 import 'dart:convert';
-import 'dart:ffi';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart';
-import 'package:ffi/ffi.dart';
-import 'package:win32/win32.dart' as win32;
 
-/// Versioned, authenticated secret-at-rest helpers shared by the vault and the
-/// authenticator.
+/// Portable password-based secret envelopes and legacy password migration.
 ///
-/// Two sealing strategies are provided:
-///
-///  * [sealWithPassword] / [openWithPassword] — PBKDF2-HMAC-SHA256 (salted, many
-///    iterations) feeding AES-256-**GCM**. Use when the user supplies a
-///    passphrase. GCM is authenticated, so tampering/corruption is detected on
-///    open (a wrong password simply fails the tag check and returns `null`).
-///
-///  * [sealWithMachineKey] / [openWithMachineKey] — Windows **DPAPI** in
-///    current-user scope. Use when there is no user passphrase. The ciphertext
-///    is bound to the Windows account and cannot be decrypted by other users or
-///    on another machine, which replaces the previous "encrypt with a constant
-///    password baked into the source" behaviour.
-///
-/// [protectField] / [unprotectField] wrap a single string value with DPAPI for
-/// places that must keep a usable secret around (e.g. a Subsonic password the
-/// app has to replay) but should not store it as plaintext.
+/// This file deliberately contains no operating-system API. Machine-bound
+/// sealing and field protection live behind [SecretStore] and its Windows
+/// implementation so password-protected data can be opened on every target.
 class SecretCrypto {
   SecretCrypto._();
 
   static const int envelopeVersion = 2;
   static const String pbkdf2Kdf = 'pbkdf2-sha256';
+
+  /// Format identifiers are kept here because shared envelope readers need to
+  /// recognize a Windows-bound value without implementing DPAPI.
   static const String dpapiKdf = 'dpapi';
+  static const String dpapiFieldPrefix = 'dpapi:v1:';
+
+  /// macOS uses a random AES key stored in the user's Keychain. The ciphertext
+  /// remains in the existing JSON/settings files so callers can keep their
+  /// synchronous SecretStore contract.
+  static const String keychainKdf = 'keychain-aes-gcm';
+  static const String keychainFieldPrefix = 'keychain:v1:';
+
+  /// Linux uses a random AES key stored in the freedesktop Secret Service.
+  /// Keep this distinct from the macOS Keychain envelope so a platform-bound
+  /// value is never mistaken for a value that can be opened by another adapter.
+  static const String secretServiceKdf = 'secret-service-aes-gcm';
+  static const String secretServiceFieldPrefix = 'secret-service:v1:';
 
   static const int _pbkdf2Iterations = 120000;
   static const int _saltLength = 16;
   static const int _ivLength = 12; // 96-bit GCM nonce (standard)
   static const int _keyLength = 32; // AES-256
   static const int _hashLength = 32; // SHA-256 output
-
-  // CRYPTPROTECT_UI_FORBIDDEN — the win32 package does not export the constant.
-  static const int _cryptProtectUiForbidden = 0x1;
-
-  static const String _fieldPrefix = 'dpapi:v1:';
 
   static final Random _random = Random.secure();
 
@@ -84,62 +78,44 @@ class SecretCrypto {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Machine-bound sealing (DPAPI, current-user scope)
-  // ---------------------------------------------------------------------------
-
-  static Map<String, dynamic> sealWithMachineKey(String plaintext) {
-    final Uint8List? sealed = _dpapi(Uint8List.fromList(utf8.encode(plaintext)), protect: true);
-    if (sealed == null) {
-      throw StateError('DPAPI CryptProtectData failed.');
-    }
+  /// Seals data with a random 256-bit key that is owned by a platform adapter.
+  /// The macOS and Linux adapters obtain that key from their desktop secret
+  /// stores during startup.
+  static Map<String, dynamic> sealWithKey(
+    String plaintext,
+    Uint8List key, {
+    String kdf = keychainKdf,
+  }) {
+    final IV iv = IV(_randomBytes(_ivLength));
+    final Encrypter encrypter = Encrypter(AES(Key(key), mode: AESMode.gcm));
+    final Encrypted encrypted = encrypter.encrypt(plaintext, iv: iv);
     return <String, dynamic>{
       'v': envelopeVersion,
-      'kdf': dpapiKdf,
-      'data': base64Encode(sealed),
+      'kdf': kdf,
+      'iv': iv.base64,
+      'data': encrypted.base64,
     };
   }
 
-  static String? openWithMachineKey(Map<String, dynamic> envelope) {
+  static String? openWithKey(Map<String, dynamic> envelope, Uint8List key) {
     try {
-      final Uint8List? plain = _dpapi(base64Decode(envelope['data'] as String), protect: false);
-      if (plain == null) return null;
-      return utf8.decode(plain);
+      final IV iv = IV.fromBase64(envelope['iv'] as String);
+      final Encrypter encrypter = Encrypter(AES(Key(key), mode: AESMode.gcm));
+      return encrypter.decrypt(Encrypted.fromBase64(envelope['data'] as String), iv: iv);
     } catch (_) {
       return null;
     }
   }
 
   // ---------------------------------------------------------------------------
-  // Single-field DPAPI protection (e.g. replayable server passwords)
+  // Shared format helpers
   // ---------------------------------------------------------------------------
 
-  static bool isProtectedField(String stored) => stored.startsWith(_fieldPrefix);
+  static bool isProtectedField(String stored) => stored.startsWith(dpapiFieldPrefix);
 
-  /// DPAPI-protects [value], returning a self-describing `dpapi:v1:<base64>`
-  /// string. Empty or already-protected values are returned unchanged. If DPAPI
-  /// is somehow unavailable the original value is returned so the caller does
-  /// not silently lose data (DPAPI does not fail in practice on Windows).
-  static String protectField(String value) {
-    if (value.isEmpty || isProtectedField(value)) return value;
-    final Uint8List? sealed = _dpapi(Uint8List.fromList(utf8.encode(value)), protect: true);
-    if (sealed == null) return value;
-    return '$_fieldPrefix${base64Encode(sealed)}';
-  }
+  static bool isKeychainProtectedField(String stored) => stored.startsWith(keychainFieldPrefix);
 
-  /// Reverses [protectField]. A value without the prefix is assumed to be legacy
-  /// plaintext and returned as-is (so existing configs keep working until the
-  /// next save re-protects them).
-  static String unprotectField(String stored) {
-    if (!isProtectedField(stored)) return stored;
-    try {
-      final Uint8List? plain = _dpapi(base64Decode(stored.substring(_fieldPrefix.length)), protect: false);
-      if (plain == null) return '';
-      return utf8.decode(plain);
-    } catch (_) {
-      return '';
-    }
-  }
+  static bool isSecretServiceProtectedField(String stored) => stored.startsWith(secretServiceFieldPrefix);
 
   // ---------------------------------------------------------------------------
   // Legacy read path — old format was unsalted sha256(password) + AES-CBC.
@@ -188,33 +164,5 @@ class SecretCrypto {
     }
 
     return Uint8List.sublistView(output, 0, keyLength);
-  }
-
-  static Uint8List? _dpapi(Uint8List input, {required bool protect}) {
-    if (input.isEmpty) return null;
-    return using<Uint8List?>((Arena arena) {
-      final Pointer<win32.CRYPT_INTEGER_BLOB> blobIn = arena<win32.CRYPT_INTEGER_BLOB>();
-      final Pointer<Uint8> inBuffer = arena<Uint8>(input.length);
-      inBuffer.asTypedList(input.length).setAll(0, input);
-      blobIn.ref
-        ..cbData = input.length
-        ..pbData = inBuffer;
-
-      final Pointer<win32.CRYPT_INTEGER_BLOB> blobOut = arena<win32.CRYPT_INTEGER_BLOB>();
-
-      final int ok = protect
-          ? win32.CryptProtectData(
-              blobIn, nullptr, nullptr, nullptr, nullptr, _cryptProtectUiForbidden, blobOut)
-          : win32.CryptUnprotectData(
-              blobIn, nullptr, nullptr, nullptr, nullptr, _cryptProtectUiForbidden, blobOut);
-      if (ok == 0) return null;
-
-      try {
-        return Uint8List.fromList(blobOut.ref.pbData.asTypedList(blobOut.ref.cbData));
-      } finally {
-        // The output buffer is allocated by Windows and must be released here.
-        win32.LocalFree(blobOut.ref.pbData);
-      }
-    });
   }
 }

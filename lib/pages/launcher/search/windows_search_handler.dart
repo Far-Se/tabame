@@ -1,11 +1,29 @@
 import 'dart:async';
-import '../../../models/window_watcher.dart';
+
+import 'package:flutter/material.dart';
+
+import '../../../platform/window_watcher_service.dart';
 import '../../launcher_search_models.dart';
 import 'launcher_search_context.dart';
 import 'search_utils.dart';
 
 class WindowsSearchHandler {
   static void handle(LauncherSearchContext context) {
+    final WindowWatcherService watcher = WindowWatcherService.instance;
+    if (!watcher.isAvailable) {
+      context.setResults(<LauncherSearchResultItem>[
+        LauncherSearchResultItem.info(
+          LauncherInfoResult(
+            id: 'window-search-unavailable',
+            title: 'Window search unavailable',
+            subtitle: watcher.unavailableReason,
+            icon: Icons.window_rounded,
+          ),
+        ),
+      ], isSearching: false);
+      return;
+    }
+
     context.setSearching(true);
 
     Timer(const Duration(milliseconds: 40), () {
@@ -23,7 +41,7 @@ class WindowsSearchHandler {
       // Guard before the async gap.
       if (!context.isActiveSearch(context.requestId, context.query)) return;
 
-      await WindowWatcher.fetchWindows();
+      await watcher.refresh();
 
       // Guard after the async gap: the query may have changed or the widget
       // may have been disposed while fetchWindows was running.

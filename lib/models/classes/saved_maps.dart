@@ -6,8 +6,8 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
+import '../../platform/app_paths.dart';
 import '../settings.dart';
-import '../win32/win_utils.dart';
 
 abstract class SavedMap {
   const SavedMap();
@@ -1158,7 +1158,7 @@ class ViewsSettings {
   Color bgColor = const Color(0xff202020);
   ViewsSettings();
   Future<void> load() async {
-    final String file = "${WinUtils.getTabameAppDataFolder(settings: true)}\\views.json";
+    final String file = AppPaths.settingsPath('views.json');
     if (!File(file).existsSync()) File(file).createSync();
     String fileData = File(file).readAsStringSync();
     if (fileData.isEmpty) {
@@ -1179,7 +1179,7 @@ class ViewsSettings {
   }
 
   Future<void> save() async {
-    final String file = "${WinUtils.getTabameAppDataFolder(settings: true)}\\views.json";
+    final String file = AppPaths.settingsPath('views.json', forWrite: true);
     if (!File(file).existsSync()) File(file).createSync();
     File(file).writeAsStringSync(toJson());
   }

@@ -4,10 +4,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 // import 'package:rich_clipboard/rich_clipboard.dart';
 // ignore: implementation_imports
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import '../platform/audio_system_service.dart';
+import '../platform/windows/tabamewin32_api.dart' hide AudioDeviceType;
+import '../platform/windows/win32_api.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
@@ -15,6 +17,11 @@ import '../models/classes/saved_maps.dart';
 import '../models/classes/text_snippet.dart';
 import '../models/clipboard_history.dart';
 import '../models/globals.dart';
+import '../platform/app_paths.dart';
+import '../platform/hotkey_coordinator.dart';
+import '../platform/monitor_service.dart';
+import '../platform/platform_models.dart';
+import '../platform/quick_snap_service.dart';
 import '../models/settings.dart';
 import '../models/util/hotkey_handler.dart';
 import '../models/util/window_layout_snapshots.dart';
@@ -32,7 +39,7 @@ import 'emoji_page.dart';
 import 'launcher.dart';
 import 'quickclick.dart';
 import 'quickmenu_designs/designs.dart';
-import 'quicksnap_overlay.dart';
+import '../platform/windows/windows_quicksnap_overlay.dart';
 import 'screen_capture.dart';
 
 class QuickMenu extends StatefulWidget {
@@ -82,20 +89,24 @@ Future<int> windowsSetupQuickMenu() async {
   return 1;
 }
 
-class QuickMenuState extends State<QuickMenu>
-    with ClipboardEventListener, TabameListener, WindowListener, QuickMenuTriggers {
+class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTriggers implements TabameListener {
   // --------------------------------------------------------------------------
   // Variables
   // --------------------------------------------------------------------------
   final Future<int> quickMenuWindow = windowsSetupQuickMenu();
   final FocusNode focusNode = FocusNode();
   StreamSubscription<FileSystemEvent>? _settingsWatchSub;
+  StreamSubscription<PlatformQuickSnapEvent>? _quickSnapEvents;
   Timer? _settingsReloadDebounce;
-  final HotkeyHandler handler = HotkeyHandler();
+  final HotkeyHandler handler = HotkeyHandler(
+    hotkeys: () => Boxes.remap,
+    enabled: () => kReleaseMode || Globals.debugHotkeys,
+  );
+  late final HotkeyCoordinator hotkeyCoordinator;
   final Trktivity trk = Trktivity.instance;
 
   Timer? _quickMenuFocusRetryTimer;
-  Size? _savedQuickMenuSize;
+  PlatformQuickSnapOverlayState? _quickSnapOverlayState;
 
   /// Click-through-when-outside-content: the window is a fixed 555px tall while
   /// the actual QuickMenu/Launcher content is shorter, leaving a transparent gap
@@ -124,6 +135,7 @@ class QuickMenuState extends State<QuickMenu>
   @override
   void initState() {
     super.initState();
+    hotkeyCoordinator = HotkeyCoordinator(onEvent: handler.handle);
     _initState();
   }
 
@@ -182,7 +194,22 @@ class QuickMenuState extends State<QuickMenu>
   void onForegroundWindowChanged(int hWnd) => _onForegroundWindowChanged(hWnd);
 
   @override
-  void onHotKeyEvent(HotkeyEvent hotkeyInfo) => _onHotKeyEvent(hotkeyInfo);
+  void onHotKeyEvent(HotkeyEvent hotkeyInfo) {
+    // WindowsHotkeyService forwards this event through the neutral coordinator.
+    // Keep the legacy listener attached for the other native event families.
+  }
+
+  @override
+  void onViewsEvent(ViewsAction action, int hWnd) {}
+
+  @override
+  void onQuickClickEvent(String eventName, Map<String, String> params) {}
+
+  @override
+  void onKeyVizEvent(KeyVizEvent event) {}
+
+  @override
+  void onMouseGesture(String button, String pattern, int durationMs) {}
   @override
   void onDisplayChange(MonitorEvent hotkeyInfo) => _onDisplayChange(hotkeyInfo);
 
@@ -191,8 +218,6 @@ class QuickMenuState extends State<QuickMenu>
 
   @override
   void onWinEventReceived(int hWnd, WinEventType type) => trk.onWinEventReceived(hWnd, type);
-  @override
-  void onViewsEvent(ViewsAction action, int hWnd) => _onViewsEvent(action, hWnd);
 
   // --------------------------------------------------------------------------
   // Private Implementations
@@ -211,13 +236,13 @@ class QuickMenuState extends State<QuickMenu>
     }
     NativeHooks.unHook();
     NativeHooks.addListener(this);
-    ClipboardHooks.addListener(this);
-    ClipboardHooks.start();
+    _quickSnapEvents = QuickSnapService.instance.events.listen(_onQuickSnapEvent, onError: (_) {});
+    unawaited(hotkeyCoordinator.start());
     QuickMenuFunctions.addListener(this);
     WindowManager.instance.addListener(this);
     QuickMenuFunctions.syncSelectedBackdrop();
 
-    WinHotkeys.update();
+    unawaited(WinHotkeys.update());
     TextSnippetsManager.pushToNative();
     _startSettingsWatcher();
     ClipboardHistoryStore.clearCache();
@@ -228,7 +253,7 @@ class QuickMenuState extends State<QuickMenu>
     FileIndexer.instance.init();
     WindowLayoutSnapshots.rememberCurrentSignature();
     MouseGesturesService.instance.init();
-    WinUtils.deleteOldFiles("${WinUtils.getTabameAppDataFolder()}/cache/icon_cache", days: 4);
+    WinUtils.deleteOldFiles(AppPaths.cachePath('icon_cache', forWrite: true), days: 4);
     if (kDebugMode) {
       Timer(const Duration(milliseconds: 2000), () async {
         final Size size = await windowManager.getSize();
@@ -258,7 +283,9 @@ class QuickMenuState extends State<QuickMenu>
     _clearRam?.cancel();
     PaintingBinding.instance.imageCache.clear();
     NativeHooks.removeListener(this);
-    ClipboardHooks.removeListener(this);
+    unawaited(_quickSnapEvents?.cancel());
+    _quickSnapEvents = null;
+    unawaited(hotkeyCoordinator.stop());
     QuickMenuFunctions.removeListener(this);
     WindowManager.instance.removeListener(this);
     _quickMenuFocusRetryTimer?.cancel();
@@ -270,8 +297,8 @@ class QuickMenuState extends State<QuickMenu>
   /// Watches the settings folder for the Interface's reload marker and live-reloads
   /// (debounced) so hotkeys and settings changes apply without restarting the process.
   void _startSettingsWatcher() {
-    final String dir = WinUtils.getTabameAppDataFolder(settings: true);
-    final File signal = File("$dir\\reload.signal");
+    final String dir = AppPaths.settingsDirectory;
+    final File signal = File(p.join(dir, 'reload.signal'));
     if (!signal.existsSync()) signal.writeAsStringSync("0"); // ensure the watch target exists
     _settingsWatchSub =
         Directory(dir).watch(events: FileSystemEvent.modify | FileSystemEvent.create).listen((FileSystemEvent event) {
@@ -331,70 +358,29 @@ class QuickMenuState extends State<QuickMenu>
     });
   }
 
-  DateTime _lastClipboard = DateTime.now();
-  @override
-  void onClipboardUpdate() async {
-    final DateTime now = DateTime.now();
-    if (now.difference(_lastClipboard).inMilliseconds < 500) {
-      return;
-    }
-    _lastClipboard = now;
-    await ClipboardHistoryStore.recordCurrentClipboard();
-  }
-
-  Future<void> _onViewsEvent(ViewsAction action, int hWnd) async {
-    if (action == ViewsAction.open) {
-      if (!user.quickSnapOverlay) return;
-      if (Boxes.quickGrids.isEmpty && !user.quickSnapGrid) return;
-      if (Navigator.of(context).canPop()) Navigator.of(context).pop();
-      _savedQuickMenuSize = await windowManager.getSize();
-
-      final int exstyle = GetWindowLong(Win32.hWnd, GWL_EXSTYLE);
-      SetWindowLongPtr(Win32.hWnd, GWL_EXSTYLE, exstyle | WS_EX_LAYERED);
-      SetLayeredWindowAttributes(Win32.hWnd, 0, 0, LWA_ALPHA);
-
-      if (mounted) setState(() => Globals.quickMenuPage = QuickMenuPage.quickSnap);
-
-      Monitor.fetchMonitors();
-      final Square? monitor = Monitor.monitorSizes[Win32.getCursorMonitor()];
-      SetWindowLongPtr(Win32.hWnd, GWL_EXSTYLE, exstyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
-
-      final ({int? x, int? y, int? width, int? height}) sizeData =
-          Win32.setDPIAware(Win32.hWnd, monitor!.x, monitor.y, monitor.width, monitor.height);
-
-      if (sizeData.x != null && sizeData.y != null && sizeData.width != null && sizeData.height != null) {
-        SetWindowPos(Win32.hWnd, HWND_TOP, sizeData.x!, sizeData.y!, sizeData.width!, sizeData.height!,
-            SWP_NOZORDER | SWP_NOACTIVATE);
-      }
-
-      Future<void>.delayed(const Duration(milliseconds: 50), () {
-        Monitor.fetchMonitors();
-        SetLayeredWindowAttributes(Win32.hWnd, 0, 255, LWA_ALPHA);
-      });
-    } else if (action == ViewsAction.moveEnd) {
-      if (Globals.quickMenuPage == QuickMenuPage.quickSnap) {
+  Future<void> _onQuickSnapEvent(PlatformQuickSnapEvent event) async {
+    final QuickSnapService service = QuickSnapService.instance;
+    switch (event.type) {
+      case PlatformQuickSnapEventType.open:
+        if (!user.quickSnapOverlay) return;
+        if (Boxes.quickGrids.isEmpty && !user.quickSnapGrid) return;
+        if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+        final PlatformMonitor? monitor = await MonitorService.instance.cursorMonitor();
+        if (monitor == null) return;
+        _quickSnapOverlayState = await service.prepareOverlay(monitor);
+        if (mounted) setState(() => Globals.quickMenuPage = QuickMenuPage.quickSnap);
+      case PlatformQuickSnapEventType.moveEnd:
+        if (Globals.quickMenuPage != QuickMenuPage.quickSnap) return;
         if (mounted) setState(() => Globals.quickMenuPage = QuickMenuPage.quickMenu);
-
-        SetLayeredWindowAttributes(Win32.hWnd, 0, 0, LWA_ALPHA);
-
-        Future<void>.delayed(const Duration(milliseconds: 32), () async {
-          if (_savedQuickMenuSize != null) {
-            await windowManager.setSize(_savedQuickMenuSize!);
-            _savedQuickMenuSize = null;
-          }
-          final int exstyle = GetWindowLong(Win32.hWnd, GWL_EXSTYLE);
-          SetWindowLongPtr(Win32.hWnd, GWL_EXSTYLE, exstyle & ~WS_EX_TRANSPARENT & ~WS_EX_LAYERED & ~WS_EX_TOOLWINDOW);
-          SetLayeredWindowAttributes(Win32.hWnd, 0, 255, LWA_ALPHA);
-        });
-      }
-    } else if (action == ViewsAction.moveStart) {
-      if (Globals.snappedWindowOriginalSizes.containsKey(hWnd)) {
-        final List<int>? originalSize = Globals.snappedWindowOriginalSizes[hWnd];
-        if (originalSize != null) {
-          WinUtils.restoreAndReattachDrag(hWnd, originalSize[0], originalSize[1]);
-          Globals.snappedWindowOriginalSizes.remove(hWnd);
-        }
-      }
+        final PlatformQuickSnapOverlayState? state = _quickSnapOverlayState;
+        _quickSnapOverlayState = null;
+        await service.restoreOverlay(state);
+      case PlatformQuickSnapEventType.moveStart:
+      case PlatformQuickSnapEventType.selecting:
+      case PlatformQuickSnapEventType.selected:
+      case PlatformQuickSnapEventType.switchUp:
+      case PlatformQuickSnapEventType.switchDown:
+        break;
     }
   }
 
@@ -591,19 +577,19 @@ class QuickMenuState extends State<QuickMenu>
           }
           if (RegExp(def.match, caseSensitive: false).hasMatch(stringCheck)) {
             if (user.volumeSetBack) {
-              Audio.getVolume(AudioDeviceType.output).then((double value) {
+              AudioSystemService.instance.getVolume(AudioDeviceType.output).then((double value) {
                 previousVolume = value;
-                Audio.setVolume(def.volume / 100, AudioDeviceType.output);
+                AudioSystemService.instance.setVolume(AudioDeviceType.output, def.volume / 100);
               });
             } else {
-              Audio.setVolume(def.volume / 100, AudioDeviceType.output);
+              AudioSystemService.instance.setVolume(AudioDeviceType.output, def.volume / 100);
             }
             break;
           }
         }
       }
       if (setting == false && previousVolume != 0.0) {
-        Audio.setVolume(previousVolume, AudioDeviceType.output);
+        AudioSystemService.instance.setVolume(AudioDeviceType.output, previousVolume);
         previousVolume = 0.0;
       }
     }
@@ -625,10 +611,6 @@ class QuickMenuState extends State<QuickMenu>
     Future<void>.delayed(const Duration(milliseconds: 700), () {
       if (user.hideTaskbarOnStartup) WinUtils.toggleTaskbar(visible: false);
     });
-  }
-
-  void _onHotKeyEvent(HotkeyEvent hotkeyInfo) {
-    handler.handle(hotkeyInfo);
   }
 
   // --------------------------------------------------------------------------

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import '../platform/windows/tabamewin32_api.dart';
 
 import '../models/classes/boxes/boxes_base.dart';
 import '../models/settings.dart';

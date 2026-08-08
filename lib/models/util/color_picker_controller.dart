@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-import '../win32/win_utils.dart';
+import '../../platform/app_paths.dart';
 
 class ColorGridSample {
   const ColorGridSample({
@@ -110,7 +110,5 @@ class ColorPickerController extends ChangeNotifier {
     return null;
   }
 
-  Directory get _appDataDirectory => Directory(WinUtils.getTabameAppDataFolder());
-
-  File get _gridFile => File('${_appDataDirectory.path}\\cache\\grid.json');
+  File get _gridFile => File(AppPaths.cachePath('grid.json'));
 }

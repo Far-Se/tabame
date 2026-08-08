@@ -7,6 +7,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/classes/hotkeys.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
+import '../../../platform/platform_capabilities.dart';
 import '../../../services/mouse_gestures_service.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
@@ -17,6 +18,7 @@ class MouseControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!PlatformCapabilities.current.inputInjection) return const SizedBox.shrink();
     return ModalButton(
       actionName: 'Hot Corners & Gestures',
       icon: const Icon(Icons.gesture),

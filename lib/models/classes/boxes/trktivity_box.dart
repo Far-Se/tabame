@@ -3,11 +3,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:intl/intl.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import 'package:path/path.dart' as p;
+import '../../../platform/windows/tabamewin32_api.dart';
 
+import '../../../platform/app_paths.dart';
+import '../../../services/notification_coordinator.dart';
 import '../../settings.dart';
 import '../../win32/win32.dart';
-import '../../win32/win_utils.dart';
 import '../boxes.dart';
 
 // --------------------------------------------------------------------------
@@ -216,7 +218,7 @@ class Trktivity {
   String lastTitle = "emptytitlehere";
   List<TrktivityFilter> _filters = <TrktivityFilter>[];
   List<TrktivitySave> saved = <TrktivitySave>[];
-  String folder = "${WinUtils.getTabameAppDataFolder()}\\trktivity";
+  String get folder => AppPaths.currentPath('trktivity');
 
   set filters(List<TrktivityFilter> list) => _filters = list;
 
@@ -281,11 +283,10 @@ class Trktivity {
       if (rule.exe.toLowerCase() != exe.toLowerCase()) continue;
       if ((todaySeconds[exe] ?? 0) >= rule.dailyMinutes * 60) {
         _notifiedToday.add(exe);
-        WinUtils.showWindowsNotification(
+        unawaited(NotificationCoordinator.instance.show(
           title: "Tabame · Time budget reached",
           body: "You've spent ${rule.dailyMinutes} min in $exe today.",
-          onClick: () {},
-        );
+        ));
       }
       break;
     }
@@ -388,13 +389,12 @@ class Trktivity {
     }
 
     if (saved.length > 10) {
-      WinUtils.getTabameAppDataFolder();
       final String date = DateFormat("yyyy-MM-dd").format(DateTime.now());
       String output = "";
       for (TrktivitySave tr in saved) {
         output += "${tr.toJson()}\n";
       }
-      File("$folder\\$date.json").writeAsStringSync(output, mode: FileMode.append);
+      File(p.join(folder, '$date.json')).writeAsStringSync(output, mode: FileMode.append);
       saved.clear();
     }
   }

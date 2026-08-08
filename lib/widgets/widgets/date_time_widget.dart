@@ -20,7 +20,7 @@ class DateTimeWidget extends StatefulWidget {
 class _DateTimeWidgetState extends State<DateTimeWidget> with QuickMenuTriggers {
   static const Duration _refreshInterval = Duration(seconds: 1);
 
-  final DateFormat _dateTimeFormat = DateFormat('d MMM yyyy').add_jms();
+  final DateFormat _dateTimeFormat = DateFormat('EEE d MMM').add_jms();
   DateTime _now = DateTime.now();
   Timer? _timer;
 

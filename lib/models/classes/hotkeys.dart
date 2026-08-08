@@ -1,27 +1,13 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
-import 'dart:async';
 import 'dart:convert';
-import 'dart:ffi';
-import 'dart:math';
 
-import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
 
-import '../../pages/color_picker/win32_helper.dart';
-import '../../pages/screen_capture.dart';
-import '../globals.dart';
-import '../settings.dart';
-import '../win32/keys.dart';
-import '../win32/mixed.dart';
-import '../win32/win32.dart';
-import '../win32/win_utils.dart';
-import '../window_watcher.dart';
-import 'boxes.dart';
-import 'text_snippet.dart';
+import '../../platform/hotkey_action_service.dart';
+import '../../platform/input_service.dart';
+import '../../platform/platform_models.dart';
 
 class Hotkeys {
   // Modifier tokens are ordered family-first so normalizeModifiers produces a
@@ -333,11 +319,6 @@ class Hotkeys {
     return normalizeKeyName(logicalKey.keyLabel);
   }
 
-  static int? keyToVirtualKey(String key) {
-    final String normalized = normalizeKeyName(key);
-    return keyMap['VK_$normalized'];
-  }
-
   static String formatHotkey({required String key, Iterable<String> modifiers = const <String>[]}) {
     final List<String> normalizedModifiers = normalizeModifiers(modifiers);
     final String normalizedKey = normalizeKeyName(key);
@@ -497,7 +478,7 @@ enum TriggerType {
   duration,
 }
 
-class KeyMap with TabameListener {
+class KeyMap {
   bool enabled;
   bool windowUnderMouse;
   String name;
@@ -558,17 +539,20 @@ class KeyMap with TabameListener {
   // Purpose: Evaluate whether a keymap should react for the current mouse position.
   // --------------------------------------------------------------------------
 
-  bool get isMouseInRegion {
-    if (!boundToRegion) return true;
-
-    final Point<int> mousePoint = HotKeyInfo.getMouseBounds(windowUnderMouse, region.anchorType, region.asPercentage);
-    if (mousePoint.x >= region.x1 &&
-        mousePoint.x <= region.x2 &&
-        mousePoint.y >= region.y1 &&
-        mousePoint.y <= region.y2) {
-      return true;
-    }
-    return false;
+  Future<bool> isMouseInRegion() {
+    if (!boundToRegion) return Future<bool>.value(true);
+    return InputService.instance.isPointerInRegion(
+      windowUnderCursor: windowUnderMouse,
+      region: PlatformHotkeyRegion(
+        asPercentage: region.asPercentage,
+        onScreen: regionOnScreen,
+        x1: region.x1,
+        x2: region.x2,
+        y1: region.y1,
+        y2: region.y2,
+        anchorType: region.anchorType.index + 1,
+      ),
+    );
   }
 
   // --------------------------------------------------------------------------
@@ -576,184 +560,19 @@ class KeyMap with TabameListener {
   // Purpose: Validate runtime conditions and execute the configured keymap actions.
   // --------------------------------------------------------------------------
 
-  Future<void> applyActions(TriggerType type) async {
-    if (variableCheck.isNotEmpty && variableCheck[0].isNotEmpty) {
-      final String storedVariableValue = Boxes.pref.getString("k_${variableCheck[0]}") ?? "";
-      if (storedVariableValue.isNotEmpty) {
-        if (storedVariableValue != variableCheck[1]) {
-          return;
-        }
-      } else {
-        Boxes.pref.setString("k_${variableCheck[0]}", variableCheck[1]);
-      }
-    }
-
-    int targetWindowHandle = GetForegroundWindow();
-
-    if (windowUnderMouse) {
-      final Pointer<POINT> cursorPointPointer = calloc<POINT>();
-      GetCursorPos(cursorPointPointer);
-      targetWindowHandle = GetAncestor(WindowFromPoint(cursorPointPointer.ref), 3);
-      free(cursorPointPointer);
-    }
-
-    // 1. Check if the target window matches the configured window type and criteria
-    if (windowsInfo[0] != "any") {
-      String valueToCheck = "";
-      switch (windowsInfo[0].toLowerCase()) {
-        case "exe":
-          valueToCheck = Win32.getWindowExePath(targetWindowHandle);
-          break;
-        case "class":
-          valueToCheck = Win32.getClass(targetWindowHandle);
-          break;
-        case "title":
-          valueToCheck = Win32.getTitle(targetWindowHandle);
-          break;
-      }
-
-      final RegExp matcher = RegExp(windowsInfo[1], caseSensitive: false);
-      if (!matcher.hasMatch(valueToCheck)) {
-        return;
-      }
-    }
-
-    // 2. If the window is under mouse but not foreground, activate it before sending keys
-    if (windowUnderMouse && GetForegroundWindow() != targetWindowHandle) {
-      Win32.activateWindow(targetWindowHandle);
-
-      int pollCount = 0;
-      while (pollCount < 200 && GetForegroundWindow() != targetWindowHandle) {
-        pollCount++;
-        await Future<void>.delayed(const Duration(milliseconds: 2));
-      }
-
-      if (GetForegroundWindow() == targetWindowHandle) {
-        await applyActionsForWindow(type);
-      }
-      return;
-    }
-
-    await applyActionsForWindow(type);
-  }
-
-  Future<void> applyActionsForWindow(TriggerType type) async {
-    for (final KeyAction action in actions) {
-      switch (action.type) {
-        case ActionType.hotkey:
-          _processHotkey(action.value);
-          break;
-        case ActionType.sendKeys:
-          if (action.value == "{WIN}") {
-            int trayWindowHandle = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
-            if (trayWindowHandle == 0) trayWindowHandle = GetDesktopWindow();
-            SetForegroundWindow(trayWindowHandle);
-          }
-          WinKeys.safeSendHotkey(() => WinKeys.send(action.value));
-
-          break;
-        case ActionType.openQuickMenuPage:
-          if (HotKeyInfo.quickMenuPopups.contains(action.value)) {
-            if (action.value == "Interface" || action.value == "Launcher") {
-              QuickMenuFunctions.toggleQuickMenu(type: QuickMenuPage.launcher, center: true);
-            } else {
-              QuickMenuFunctions.openQuickMenuWithAction(action.value, center: true);
-            }
-          }
-          break;
-        case ActionType.wait:
-          await Future<void>.delayed(Duration(milliseconds: int.tryParse(action.value) ?? 0));
-          break;
-        case ActionType.sendClick:
-          _processSendClick(action.value);
-          break;
-        case ActionType.tabameFunction:
-          if (HotKeyInfo.tabameFunctionsMap.containsKey(action.value)) {
-            HotKeyInfo.tabameFunctionsMap[action.value]!();
-          }
-          break;
-        case ActionType.setVar:
-          if (action.value.isNotEmpty) _processSetVar(action.value);
-          break;
-        case ActionType.openLauncherWithPrefix:
-          if (action.value.isNotEmpty) {
-            QuickMenuFunctions.openQuickMenuWithAction(action.value, center: true, useSlash: false);
-          }
-          break;
-      }
-    }
-  }
-
-  void _processHotkey(String value) {
-    final String serialized = value.split('+').map((String p) => p.length > 1 ? "{#$p}" : p).join();
-
-    WinKeys.safeSendHotkey(() => WinKeys.send(serialized));
-    // WinKeys.send(serialized);
-  }
-
-  void _processSendClick(String value) {
-    int targetWindowHandle = GetForegroundWindow();
-    final Pointer<POINT> cursorPointPointer = calloc<POINT>();
-    GetCursorPos(cursorPointPointer);
-
-    if (windowUnderMouse) {
-      targetWindowHandle = GetAncestor(WindowFromPoint(cursorPointPointer.ref), 2);
-    }
-
-    final int originalCursorX = cursorPointPointer.ref.x;
-    final int originalCursorY = cursorPointPointer.ref.y;
-    free(cursorPointPointer);
-
-    final Pointer<RECT> windowRectPointer = calloc<RECT>();
-    GetWindowRect(targetWindowHandle, windowRectPointer);
-
-    final ClickAction clickAction = ClickAction.fromJson(value);
-    int clickX = 0;
-    int clickY = 0;
-
-    switch (clickAction.anchorType) {
-      case AnchorType.topLeft:
-        clickX = windowRectPointer.ref.left + clickAction.x;
-        clickY = windowRectPointer.ref.top + clickAction.y;
-        break;
-      case AnchorType.topRight:
-        clickX = windowRectPointer.ref.right - clickAction.x;
-        clickY = windowRectPointer.ref.top + clickAction.y;
-        break;
-      case AnchorType.bottomLeft:
-        clickX = windowRectPointer.ref.left + clickAction.x;
-        clickY = windowRectPointer.ref.bottom - clickAction.y;
-        break;
-      case AnchorType.bottomRight:
-        clickX = windowRectPointer.ref.right - clickAction.x;
-        clickY = windowRectPointer.ref.bottom - clickAction.y;
-        break;
-    }
-    free(windowRectPointer);
-
-    SetCursorPos(clickX, clickY);
-    Future<void>.delayed(const Duration(milliseconds: 500), () {
-      final Pointer<INPUT> inputPointer = calloc<INPUT>();
-      inputPointer.ref.type = INPUT_MOUSE;
-      inputPointer.ref.mi.dwFlags = (MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP);
-      inputPointer.ref.mi.mouseData = 0;
-      inputPointer.ref.mi.dwExtraInfo = NULL;
-      inputPointer.ref.mi.time = 0;
-      SendInput(1, inputPointer, sizeOf<INPUT>());
-      SetCursorPos(originalCursorX, originalCursorY);
-      free(inputPointer);
-    });
-  }
-
-  void _processSetVar(String value) {
-    try {
-      final List<dynamic> variableAssignment = jsonDecode(value);
-      if (variableAssignment.length == 2) {
-        Boxes.pref.setString("k_${variableAssignment[0]}", variableAssignment[1].toString());
-      }
-    } catch (e) {
-      Debug.add("Hotkey: Error setting variable $e");
-    }
+  Future<void> applyActions(TriggerType type) {
+    return HotkeyActionService.instance.execute(
+      PlatformHotkeyExecution(
+        name: name,
+        windowUnderCursor: windowUnderMouse,
+        windowMatch: List<String>.from(windowsInfo),
+        variableCheck: List<String>.from(variableCheck),
+        trigger: type.name,
+        actions: actions
+            .map((KeyAction action) => PlatformHotkeyAction(type: action.type.name, value: action.value))
+            .toList(growable: false),
+      ),
+    );
   }
 
   // --------------------------------------------------------------------------
@@ -878,248 +697,48 @@ enum ActionType {
 }
 
 class HotKeyInfo {
-  static const List<String> windowInfo = <String>["any", "exe", "class", "title"];
+  static const List<String> windowInfo = <String>['any', 'exe', 'class', 'title'];
   static const Map<String, String> windowInfoNames = <String, String>{
-    "any": "Any Window",
-    "exe": "Exe Contains",
-    "class": "Class Contains",
-    "title": "Title Contains",
+    'any': 'Any Window',
+    'exe': 'Exe Contains',
+    'class': 'Class Contains',
+    'title': 'Title Contains',
   };
-  static const List<String> triggers = <String>["Press", "Double Press", "Mouse Movement", "Hold Duration"];
-  static const List<String> mouseDirections = <String>["Left", "Right", "Up", "Down"];
-  static List<String> quickMenuPopups = <String>[
-    "Apps",
-    "Audio Control",
-    "Authenticator",
-    "Bookmarks",
-    "Calculator",
-    "Cli Book",
-    "Block Keyboard",
-    "Clipboard History",
-    "Color Picker",
-    "Countdown",
-    "Currency Converter",
-    "Custom Chars",
-    "Disk Cleanup",
-    "Memos",
-    "Notion",
-    "QR Scanner",
-    "Quick Actions",
-    "QuickMenu Design",
-    "Interface",
-    "Shutdown",
-    "Time Zone",
-    "Translator",
-    "Vaults",
-    "Wallpapers",
-    "Weather",
-    "Workspaces",
-    "Timers",
+  static const List<String> triggers = <String>['Press', 'Double Press', 'Mouse Movement', 'Hold Duration'];
+  static const List<String> mouseDirections = <String>['Left', 'Right', 'Up', 'Down'];
+  static const List<String> quickMenuPopups = <String>[
+    'Apps',
+    'Audio Control',
+    'Authenticator',
+    'Bookmarks',
+    'Calculator',
+    'Cli Book',
+    'Block Keyboard',
+    'Clipboard History',
+    'Color Picker',
+    'Countdown',
+    'Currency Converter',
+    'Custom Chars',
+    'Disk Cleanup',
+    'Memos',
+    'Notion',
+    'QR Scanner',
+    'Quick Actions',
+    'QuickMenu Design',
+    'Interface',
+    'Shutdown',
+    'Time Zone',
+    'Translator',
+    'Vaults',
+    'Wallpapers',
+    'Weather',
+    'Workspaces',
+    'Timers',
   ];
-  static Map<String, Function> tabameFunctionsMap = <String, Function>{
-    "ToggleQuickMenu": () {
-      if (QuickMenuFunctions.isQuickMenuVisible) {
-        final Offset position = Win32.getPosition();
-        if (position.dx < -99) return QuickMenuFunctions.toggleQuickMenu(visible: true);
-        QuickMenuFunctions.hideQuickMenu();
-        if (GetForegroundWindow() == Win32.hWnd) WindowWatcher.focusFirstWindow();
-        return () => <dynamic, dynamic>{};
-      }
-      return QuickMenuFunctions.toggleQuickMenu();
-    },
-    "ShowQuickMenuInCenter": () => QuickMenuFunctions.toggleQuickMenu(center: true),
-    "OpenLauncher": () {
-      if (QuickMenuFunctions.isQuickMenuVisible) {
-        if (Globals.quickMenuPage == QuickMenuPage.launcher) {
-          QuickMenuFunctions.hideQuickMenu();
 
-          Win32.activateWindow(Globals.lastFocusedWinHWND);
-          return () => <dynamic, dynamic>{};
-        }
-      }
-      return QuickMenuFunctions.toggleQuickMenu(type: QuickMenuPage.launcher, center: true, visible: true);
-    },
-    "ToggleTaskbar": () => WinUtils.toggleTaskbar(),
-    "OpenColorPicker": () => WinUtils.startTabame(closeCurrent: false, arguments: "-colorPicker"),
-    "OpenQuickSnapStandalone": () {
-      final int windowHwnd = Win32.findWindow("Tabame QuickSnap");
-      if (windowHwnd != 0) {
-        Win32.closeWindow(windowHwnd);
-      } else {
-        WinUtils.startTabame(closeCurrent: false, arguments: "-quickSnap", admin: true);
-      }
-    },
-    "OpenScreenDraw": () {
-      final int windowHwnd = Win32.findWindow("Tabame Screen Draw");
-      if (windowHwnd != 0) {
-        Win32.closeWindow(windowHwnd);
-        // Win32.activateWindow(windowHwnd);
-      } else {
-        WinUtils.startTabame(closeCurrent: false, arguments: "-screenDraw", admin: false);
-      }
-    },
-    "OpenScreenRecording": () {
-      final int windowHwnd = Win32.findWindow("Tabame Screen Recording");
-      if (windowHwnd != 0) {
-        Win32.closeWindow(windowHwnd);
-      } else {
-        WinUtils.startTabame(closeCurrent: false, arguments: "-screenRecording");
-      }
-    },
-    "OpenSpotlight": () {
-      final int windowHwnd = Win32.findWindow("Tabame Spotlight");
-      if (windowHwnd != 0) {
-        Win32.closeWindow(windowHwnd);
-      } else {
-        WinUtils.startTabame(closeCurrent: false, arguments: "-spotlight");
-      }
-    },
-    "OpenLiveFancyShot": () async {
-      if (QuickMenuFunctions.isQuickMenuVisible) {
-        WinUtils.startTabame(closeCurrent: false, arguments: "-screenCapture");
-        return;
-        // QuickMenuFunctions.hideQuickMenu();
-        // await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
-      Globals.quickMenuPage = QuickMenuPage.fancyShotLive;
-      QuickMenuFunctions.refreshQuickMenu();
-    },
-    "OpenFrozenFancyShot": () async {
-      if (QuickMenuFunctions.isQuickMenuVisible) {
-        WinUtils.startTabame(closeCurrent: false, arguments: "-screenCapture -frozen");
-        return;
-        // await QuickMenuFunctions.hideQuickMenu();
-        // await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
-      Globals.quickMenuPage = QuickMenuPage.fancyShotFreeze;
-      await FancyShotCaptureWidget.captureScreenshots();
-      QuickMenuFunctions.refreshQuickMenu();
-    },
-    "OpenColorPickerInstant": () async {
-      if (QuickMenuFunctions.isQuickMenuVisible) {
-        QuickMenuFunctions.hideQuickMenu();
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
-      await Win32Helper.instantColorPicker();
-    },
-    "OpenEmojiPicker": () async {
-      if (QuickMenuFunctions.isQuickMenuVisible) {
-        QuickMenuFunctions.hideQuickMenu();
-        await Future<void>.delayed(const Duration(milliseconds: 160));
-      }
+  static Map<String, Function> get tabameFunctionsMap => HotkeyActionRegistry.functions;
+  static List<String> get tabameFunctions => HotkeyActionRegistry.functionNames;
 
-      if (Debug.enabled) {
-        final CaretDebugInfo caretDebug = await getFocusedElementCaretRectDebug();
-        Debug.add("OpenEmojiPicker caret debug: $caretDebug");
-        print(caretDebug);
-        Globals.focusedRect = caretDebug.best;
-      } else {
-        Globals.focusedRect = await getFocusedElementCaretRect();
-      }
-      await QuickMenuFunctions.toggleQuickMenu(
-          visible: true, type: QuickMenuPage.emojiPicker, forcePop: true, forceReposition: false);
-    },
-    "OpenQuickClick": () async {
-      await Future<void>.delayed(const Duration(milliseconds: 160));
-      if (Globals.quickMenuPage == QuickMenuPage.quickClick) {
-        // Win32.setWindowInvisible(true);
-        Win32.setPosition(const Offset(-99999, -99999));
-        await QuickMenuFunctions.hideQuickMenu();
-        // Win32.setWindowInvisible(false);
-        return;
-      }
-
-      Win32.setWindowInvisible(true);
-      if (QuickMenuFunctions.isQuickMenuVisible) {
-        QuickMenuFunctions.hideQuickMenu();
-        await Future<void>.delayed(const Duration(milliseconds: 160));
-      }
-      await QuickMenuFunctions.toggleQuickMenu(
-          visible: true, type: QuickMenuPage.quickClick, forcePop: true, forceReposition: false);
-    },
-    "BlockKeyboard": () async {
-      await QuickMenuFunctions.openQuickMenuWithAction("BlockKeyboard", center: true);
-
-      await Future<void>.delayed(const Duration(milliseconds: 300), () {
-        QuickMenuFunctions.triggerQuickAction("StartBlockingKeyboard");
-      });
-    },
-    "ShowStartMenu": () {
-      int trayWindowHandle = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
-      if (trayWindowHandle != 0) {
-        final int monitorId = Monitor.getMonitorNumber(Monitor.getCursorMonitor());
-        if (monitorId > 1) trayWindowHandle = FindWindow(TEXT("Shell_SecondaryTrayWnd"), nullptr);
-        if (trayWindowHandle == 0) trayWindowHandle = FindWindow(TEXT("Shell_TrayWnd"), nullptr);
-
-        final int startButtonHandle = FindWindowEx(trayWindowHandle, 0, TEXT("Start"), nullptr);
-        if (startButtonHandle != 0) {
-          SetForegroundWindow(startButtonHandle);
-          WinKeys.send("{SPACE}");
-        } else {
-          SetForegroundWindow(trayWindowHandle);
-          WinKeys.send("{#SHIFT}{TAB}{|}{#SHIFT}{TAB}{|}{SPACE}");
-        }
-      }
-    },
-    "ShowLastActiveWindow": () {
-      QuickMenuFunctions.hideQuickMenu();
-      WindowWatcher.focusSecondWindow();
-      Future<void>.delayed(const Duration(milliseconds: 320), () {
-        QuickMenuFunctions.hideQuickMenu();
-      });
-    },
-    "ShowSecondWindowUnderCursor": () {
-      QuickMenuFunctions.hideQuickMenu();
-      WindowWatcher.showSecondWindowUnderCursor();
-      Future<void>.delayed(const Duration(milliseconds: 320), () {
-        QuickMenuFunctions.hideQuickMenu();
-      });
-    },
-    "ShowLastWindowUnderCursor": () {
-      QuickMenuFunctions.hideQuickMenu();
-      WindowWatcher.showLastWindowUnderCursor();
-      Future<void>.delayed(const Duration(milliseconds: 320), () {
-        QuickMenuFunctions.hideQuickMenu();
-      });
-    },
-    "ToggleAlwaysOnTopForWindow": () {
-      Win32.setAlwaysOnTop(GetForegroundWindow());
-    },
-    "ExpandSnippet": () => TextSnippetsManager.expand(),
-    "ToggleHiddenFiles": () => WinUtils.toggleHiddenFiles(),
-    "ToggleDesktopFiles": () => WinUtils.toggleDesktopFiles(),
-    "SwitchAudioOutput": () => Audio.switchDefaultDevice(
-          AudioDeviceType.output,
-          console: user.audioConsole,
-          multimedia: user.audioMultimedia,
-          communications: user.audioCommunications,
-        ),
-    "SwitchMicrophoneInput": () => Audio.switchDefaultDevice(
-          AudioDeviceType.input,
-          console: user.audioConsole,
-          multimedia: user.audioMultimedia,
-          communications: user.audioCommunications,
-        ),
-    "ToggleMicrophone": () => Audio.getMuteAudioDevice(AudioDeviceType.input)
-        .then((bool isMuted) => Audio.setMuteAudioDevice(!isMuted, AudioDeviceType.input)),
-    "SwitchDesktopToRight": () => WinUtils.moveDesktop(DesktopDirection.right),
-    "SwitchDesktopToLeft": () => WinUtils.moveDesktop(DesktopDirection.left),
-    "ToggleWallpaper": () async {
-      final DesktopBackgroundType currentBackgroundType = WinUtils.getDesktopBackgroundType();
-
-      if (currentBackgroundType == DesktopBackgroundType.wallpaper) {
-        await WinUtils.toggleDesktopWallpaper(false);
-        // await setWallpaperColor(0x00000000);
-        return;
-      }
-
-      await WinUtils.toggleDesktopWallpaper(true);
-    },
-  };
-
-  static List<String> tabameFunctions = tabameFunctionsMap.keys.toList();
-
-  //keymap.keymaps[index].actions[0].type
   static const Map<ActionType, IconData> actionTypeIcons = <ActionType, IconData>{
     ActionType.hotkey: Icons.tag,
     ActionType.sendClick: Icons.mouse,
@@ -1136,99 +755,6 @@ class HotKeyInfo {
     TriggerType.duration: Icons.schedule,
     TriggerType.movement: Icons.gps_fixed,
   };
-
-  // --------------------------------------------------------------------------
-  // Group: Cursor and window coordinate helpers
-  // Purpose: Resolve mouse position relative to the desktop or the active target window.
-  // --------------------------------------------------------------------------
-
-  static Point<int> getMouseBounds(bool windowUnderMouse, AnchorType anchorType, bool asPercentage) {
-    final Pointer<POINT> cursorPtr = calloc<POINT>();
-    GetCursorPos(cursorPtr);
-    final int cursorX = cursorPtr.ref.x;
-    final int cursorY = cursorPtr.ref.y;
-
-    int refLeft = 0, refTop = 0, refRight = 0, refBottom = 0;
-
-    if (!windowUnderMouse) {
-      // ── Desktop / screen-relative mode ─────────────────────────────────────
-      // Use the monitor that the cursor is currently on, not GetDesktopWindow(),
-      // which only covers the primary monitor and breaks multi-monitor setups.
-      final int monitorHandle = MonitorFromPoint(cursorPtr.ref, MONITOR_DEFAULTTONEAREST);
-      free(cursorPtr);
-
-      if (Monitor.monitorSizes.containsKey(monitorHandle)) {
-        final Square sq = Monitor.monitorSizes[monitorHandle]!;
-        refLeft = sq.x;
-        refTop = sq.y;
-        refRight = sq.x + sq.width;
-        refBottom = sq.y + sq.height;
-      } else {
-        // Fallback: refresh monitor list and try again.
-        Monitor.fetchMonitors();
-        if (Monitor.monitorSizes.containsKey(monitorHandle)) {
-          final Square sq = Monitor.monitorSizes[monitorHandle]!;
-          refLeft = sq.x;
-          refTop = sq.y;
-          refRight = sq.x + sq.width;
-          refBottom = sq.y + sq.height;
-        }
-      }
-    } else {
-      // ── Window-relative mode ────────────────────────────────────────────────
-      final Pointer<RECT> rectPtr = calloc<RECT>();
-      final int hWnd = GetAncestor(WindowFromPoint(cursorPtr.ref), 2);
-      free(cursorPtr);
-      GetWindowRect(hWnd, rectPtr);
-      refLeft = rectPtr.ref.left;
-      refTop = rectPtr.ref.top;
-      refRight = rectPtr.ref.right;
-      refBottom = rectPtr.ref.bottom;
-      free(rectPtr);
-    }
-
-    final int refWidth = refRight - refLeft;
-    final int refHeight = refBottom - refTop;
-
-    // Compute distances from each edge.
-    final int fromLeft = cursorX - refLeft;
-    final int fromTop = cursorY - refTop;
-    final int fromRight = cursorX - refRight;
-    final int fromBottom = cursorY - refBottom;
-
-    int resolvedX = 0;
-    int resolvedY = 0;
-
-    switch (anchorType) {
-      case AnchorType.topLeft:
-        resolvedX = fromLeft;
-        resolvedY = fromTop;
-        break;
-      case AnchorType.topRight:
-        resolvedX = fromRight;
-        resolvedY = fromTop;
-        break;
-      case AnchorType.bottomLeft:
-        resolvedX = fromLeft;
-        resolvedY = fromBottom;
-        break;
-      case AnchorType.bottomRight:
-        resolvedX = fromRight;
-        resolvedY = fromBottom;
-        break;
-    }
-
-    // Distances are always treated as non-negative magnitudes for region checks.
-    resolvedX = resolvedX.abs();
-    resolvedY = resolvedY.abs();
-
-    if (asPercentage) {
-      if (refWidth > 0) resolvedX = ((resolvedX / refWidth) * 100).ceil();
-      if (refHeight > 0) resolvedY = ((resolvedY / refHeight) * 100).ceil();
-    }
-
-    return Point<int>(resolvedX, resolvedY);
-  }
 }
 
 class KeyAction {

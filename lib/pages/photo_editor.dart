@@ -3,19 +3,20 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
 
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../platform/file_picker_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image/image.dart' as img;
-import 'package:win32/win32.dart';
+import '../platform/windows/win32_api.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../logic/app_startup.dart';
 import '../models/classes/boxes/boxes_base.dart';
 import '../models/classes/saved_maps.dart';
+import '../platform/app_paths.dart';
 import '../models/settings.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
@@ -1418,7 +1419,7 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
       await windowManager.focus();
       if (!captured) return;
 
-      final File file = File('${WinUtils.getTempFolder()}\\capture.png');
+      final File file = File(AppPaths.temporaryPath('capture.png'));
       if (!file.existsSync()) return;
       final Uint8List pngBytes = await file.readAsBytes();
       final img.Image? image = img.decodeImage(pngBytes);

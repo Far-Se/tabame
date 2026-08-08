@@ -5,7 +5,7 @@ import 'dart:ffi';
 import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
-import 'package:win32/win32.dart';
+import '../../platform/windows/win32_api.dart';
 
 final _user32 = DynamicLibrary.open('user32.dll');
 

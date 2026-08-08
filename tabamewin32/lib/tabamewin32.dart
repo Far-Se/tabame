@@ -1498,7 +1498,7 @@ class KeyVizEvent {
   bool get isClick => kind == "click";
 }
 
-abstract class TabameListener {
+mixin TabameListener {
   void onHotKeyEvent(HotkeyEvent hotkeyInfo) {}
   void onDisplayChange(MonitorEvent hotkeyInfo) {}
   void onForegroundWindowChanged(int hWnd) {}
@@ -1716,11 +1716,11 @@ class NativeHooks {
 
   static Future<void> runHotkeys(List<Map<String, dynamic>> hotkeys) async {
     if (isRegistered) await unHook();
-    resetHotkeys();
+    await resetHotkeys();
     for (Map<String, dynamic> i in hotkeys) {
       await addHotkey(i);
     }
-    hook();
+    await hook();
   }
 }
 

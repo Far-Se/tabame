@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
 
+import '../../../platform/audio_system_service.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
@@ -34,21 +34,30 @@ class MicMuteButtonState extends State<MicMuteButton> with QuickMenuTriggers {
 
   @override
   Widget build(BuildContext context) {
+    final AudioSystemService service = AudioSystemService.instance;
+    if (!service.isAvailable) {
+      return QuickActionItem(
+        message: service.unavailableReason,
+        icon: const Icon(Icons.mic_off, size: 16),
+      );
+    }
     return FutureBuilder<bool>(
-      future: Audio.getMuteAudioDevice(AudioDeviceType.input),
+      future: service.getMute(AudioDeviceType.input),
       initialData: false,
       builder: (BuildContext context, AsyncSnapshot<bool> snapshot) => QuickActionItem(
         message: "Mic Mute",
         icon: Icon(
-          switchedDefaultDevice ? Icons.published_with_changes : (snapshot.data! == true ? Icons.mic_off : Icons.mic),
-          color: snapshot.data! == true ? Colors.deepOrange : Theme.of(context).iconTheme.color,
+          switchedDefaultDevice ? Icons.published_with_changes : (snapshot.data == true ? Icons.mic_off : Icons.mic),
+          color: snapshot.data == true ? Colors.deepOrange : Theme.of(context).iconTheme.color,
         ),
         onSecondaryTap: () async {
-          await Audio.switchDefaultDevice(
+          await service.switchDefaultDevice(
             AudioDeviceType.input,
-            console: user.audioConsole,
-            multimedia: user.audioMultimedia,
-            communications: user.audioCommunications,
+            targeting: AudioDeviceTargeting(
+              console: user.audioConsole,
+              multimedia: user.audioMultimedia,
+              communications: user.audioCommunications,
+            ),
           );
           switchedDefaultDevice = true;
           setState(() {});

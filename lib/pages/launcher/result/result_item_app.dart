@@ -1,8 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 
-import '../../../models/win32/win_utils.dart';
+import '../../../platform/app_paths.dart';
 import '../../launcher_search_models.dart';
 import 'result_row.dart';
 
@@ -18,7 +19,7 @@ class AppResultIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final File file = File('${WinUtils.getTabameAppDataFolder()}/cache/icon_cache/app_${app.iconCacheKey}.png');
+    final File file = File(AppPaths.cachePath(p.join('icon_cache', 'app_${app.iconCacheKey}.png')));
     if (file.existsSync()) {
       return Image.file(
         file,

@@ -4,8 +4,10 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 
+import '../../platform/app_paths.dart';
+import '../../platform/secret_store.dart';
+import '../../platform/secret_store_registry.dart';
 import '../util/secret_crypto.dart';
-import '../win32/win_utils.dart';
 import 'authenticator_entry.dart';
 
 class AuthenticatorStorageInfo {
@@ -26,7 +28,8 @@ class AuthenticatorManager {
   /// meant the file was effectively unprotected. It is kept only so existing
   /// files can be read and migrated onto the device key (DPAPI).
   static const String _legacyDefaultPassword = 'encrypted';
-  static String get _filePath => "${WinUtils.getTabameAppDataFolder(settings: true)}\\authenticator.json";
+  static String get _filePath => AppPaths.settingsPath('authenticator.json');
+  static String get _writableFilePath => AppPaths.settingsPath('authenticator.json', forWrite: true);
 
   static Future<AuthenticatorStorageInfo> getStorageInfo() async {
     final File file = File(_filePath);
@@ -51,6 +54,12 @@ class AuthenticatorManager {
           requiresPasswordPrompt: !openableWithoutPassword,
         );
       }
+    } on SecretStoreUnavailableException {
+      return const AuthenticatorStorageInfo(
+        exists: true,
+        isEncrypted: true,
+        requiresPasswordPrompt: true,
+      );
     } catch (_) {
       return const AuthenticatorStorageInfo(
         exists: true,
@@ -97,6 +106,8 @@ class AuthenticatorManager {
           .toList();
       _sortEntries(entries);
       return entries;
+    } on SecretStoreUnavailableException {
+      rethrow;
     } on FormatException {
       rethrow;
     } catch (_) {
@@ -110,7 +121,7 @@ class AuthenticatorManager {
   static Future<List<AuthenticatorEntry>> saveEntries(List<AuthenticatorEntry> entries, {String? password}) async {
     _sortEntries(entries);
 
-    final File file = File(_filePath);
+    final File file = File(_writableFilePath);
     if (!file.existsSync()) {
       await file.create(recursive: true);
     }
@@ -127,7 +138,7 @@ class AuthenticatorManager {
     // Empty password => bind to this Windows account via DPAPI instead of the
     // old constant key; otherwise derive a key with PBKDF2 and seal with GCM.
     final Map<String, dynamic> envelope = password.isEmpty
-        ? SecretCrypto.sealWithMachineKey(plaintext)
+        ? SecretStores.instance.sealWithMachineKey(plaintext)
         : SecretCrypto.sealWithPassword(plaintext, password);
     envelope['encrypted'] = true; // marker preserved for getStorageInfo()/back-compat
     await file.writeAsString(jsonEncode(envelope));
@@ -373,7 +384,9 @@ class AuthenticatorManager {
     String? plaintext;
     switch (payload['kdf']) {
       case SecretCrypto.dpapiKdf:
-        plaintext = SecretCrypto.openWithMachineKey(payload);
+      case SecretCrypto.keychainKdf:
+      case SecretCrypto.secretServiceKdf:
+        plaintext = SecretStores.instance.openWithMachineKey(payload);
         break;
       case SecretCrypto.pbkdf2Kdf:
         if (password == null || password.isEmpty) return null; // needs the user's password

@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart' show BrowserTab;
+import '../../../platform/windows/tabamewin32_api.dart' show BrowserTab;
 
-import '../../../models/win32/window.dart';
+import '../../../platform/platform_models.dart';
 import '../../../widgets/itzy/quickmenu/button_notion.dart';
 import '../../../widgets/itzy/quickmenu/button_obsidian.dart';
 import '../../../widgets/itzy/quickmenu/button_quickactions.dart';
@@ -68,7 +68,7 @@ sealed class LauncherSearchResultItem {
   const factory LauncherSearchResultItem.file(FileSystemEntity entity, [int? nodeId]) = LauncherFileResult.file;
   const factory LauncherSearchResultItem.app(LauncherAppResult appResult, [int? nodeId]) = LauncherFileResult.app;
   const factory LauncherSearchResultItem.quickAction(QuickActionMenuEntry quickAction) = LauncherActionResult;
-  const factory LauncherSearchResultItem.window(Window window) = LauncherWindowResult;
+  const factory LauncherSearchResultItem.window(PlatformWindow window) = LauncherWindowResult;
   const factory LauncherSearchResultItem.browserTab(BrowserTab browserTab) = LauncherBrowserTabResult;
   const factory LauncherSearchResultItem.bookmark(BookmarkSearchResult bookmarkResult) =
       LauncherBookmarkResult.bookmark;
@@ -82,7 +82,7 @@ sealed class LauncherSearchResultItem {
   int? get nodeId => null;
   LauncherAppResult? get appResult => null;
   QuickActionMenuEntry? get quickAction => null;
-  Window? get window => null;
+  PlatformWindow? get window => null;
   BrowserTab? get browserTab => null;
   BookmarkSearchResult? get bookmarkResult => null;
   NotionResult? get notionResult => null;
@@ -188,13 +188,13 @@ final class LauncherWindowResult extends LauncherSearchResultItem {
   const LauncherWindowResult(this.window);
 
   @override
-  final Window window;
+  final PlatformWindow window;
 
   @override
   bool get isWindow => true;
 
   @override
-  String get id => 'window:${window.hWnd}';
+  String get id => 'window:${window.identity}';
 }
 
 final class LauncherBrowserTabResult extends LauncherSearchResultItem {

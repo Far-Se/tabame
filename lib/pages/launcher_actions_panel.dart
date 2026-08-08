@@ -1,12 +1,16 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../platform/clipboard_service.dart';
+import '../platform/file_picker_service.dart';
+import '../platform/platform_models.dart';
+import '../platform/window_watcher_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:path/path.dart' as p;
-import 'package:tabamewin32/tabamewin32.dart';
+import '../platform/windows/tabamewin32_api.dart';
 // tabamewin32 import removed - shell context menu now uses win32 5.x directly.
 // See win32_context_menu_bridge.dart.
 
@@ -16,7 +20,7 @@ import '../models/classes/saved_maps.dart';
 import '../models/settings.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
-import '../models/win32/window.dart';
+
 import '../widgets/itzy/quickmenu/button_notion.dart';
 import '../widgets/itzy/quickmenu/button_obsidian.dart';
 import '../widgets/itzy/quickmenu/button_quickactions.dart';
@@ -418,7 +422,7 @@ class _ActionsHeader extends StatelessWidget {
       return (
         Icons.window_rounded,
         item.window!.title,
-        item.window!.process.exe,
+        item.window!.executable.isNotEmpty ? item.window!.executable : item.window!.applicationName,
       );
     }
     if (item.isBookmark) {
@@ -723,7 +727,7 @@ class _CliRunSheetState extends State<_CliRunSheet> {
   }
 
   void _copyToClipboard() {
-    Clipboard.setData(ClipboardData(text: _resolve()));
+    unawaited(ClipboardService.instance.writeText(_resolve()));
     Navigator.of(context).pop();
   }
 

@@ -2,14 +2,18 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 import 'package:pool/pool.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import '../../../platform/clipboard_service.dart';
+import '../../../platform/platform_models.dart';
+import '../../../platform/screen_capture_service.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
+import '../../widgets/quick_actions_item.dart';
 // ─────────────────────────────────────────────
 //  Button
 // ─────────────────────────────────────────────
@@ -19,6 +23,13 @@ class FancyShotBrowserButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ScreenCaptureService capture = ScreenCaptureService.instance;
+    if (!capture.isAvailable) {
+      return QuickActionItem(
+        message: 'FancyShot Browser unavailable: ${capture.unavailableReason}',
+        icon: const Icon(Icons.photo_camera_outlined, color: Colors.white38),
+      );
+    }
     return ModalButton(
       actionName: "FancyShot Browser",
       icon: const Icon(Icons.photo_camera_outlined),
@@ -176,9 +187,10 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
 
   // ── Helpers ───────────────────────────────
 
-  String get _rootFolder => _mediaType == _MediaType.screenshots
-      ? '${WinUtils.getFancyshotFolder()}\\screenshots'
-      : '${WinUtils.getFancyshotFolder()}\\recordings';
+  String get _rootFolder => p.join(
+        WinUtils.getFancyshotFolder(),
+        _mediaType == _MediaType.screenshots ? 'screenshots' : 'recordings',
+      );
 
   bool _isMediaFile(String path) {
     final String ext = _extension(path);
@@ -669,12 +681,12 @@ class _MediaTileState extends State<_MediaTile> {
   Future<void> _copyImage() async {
     try {
       final Uint8List bytes = await widget.file.readAsBytes();
-      await ClipboardExtended.copyImage(bytes);
+      await ClipboardService.instance.writeContent(PlatformClipboardContent(imageBytes: bytes));
     } catch (_) {}
   }
 
   void _copyFilePath() {
-    ClipboardExtension.copyFile(widget.file.path);
+    unawaited(ClipboardService.instance.writeFile(widget.file.path));
   }
 
   void _openFile() {

@@ -4,8 +4,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import '../../platform/windows/tabamewin32_api.dart';
+import '../../platform/windows/win32_api.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';

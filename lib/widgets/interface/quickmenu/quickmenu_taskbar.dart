@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../../../platform/file_picker_service.dart';
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import '../../../platform/windows/tabamewin32_api.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';

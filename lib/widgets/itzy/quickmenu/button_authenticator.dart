@@ -2,16 +2,18 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../../../platform/file_picker_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:win32/win32.dart';
+import 'package:path/path.dart' as p;
+import '../../../platform/windows/win32_api.dart';
 
 import '../../../models/classes/authenticator_entry.dart';
 import '../../../models/classes/authenticator_manager.dart';
 import '../../../models/classes/boxes.dart';
+import '../../../platform/app_paths.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/qr_capture_decoder.dart';
 import '../../../models/win32/win32.dart';
@@ -176,7 +178,7 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
       Timer(const Duration(milliseconds: 1000), () async {
         QuickMenuFunctions.keepOpen = false;
       });
-      final String capturePath = "${WinUtils.getTempFolder()}\\capture.png";
+      final String capturePath = AppPaths.temporaryPath('capture.png');
       final File captureFile = File(capturePath);
       if (!captureFile.existsSync()) {
         throw const FormatException('No capture image was saved.');
@@ -197,7 +199,7 @@ class _AuthenticatorPanelState extends State<AuthenticatorPanel> {
         _errorMessage = e is FormatException ? e.message : 'Unable to capture and scan the QR code.';
       });
     } finally {
-      final String capturePath = "${WinUtils.getTempFolder()}\\capture.png";
+      final String capturePath = AppPaths.temporaryPath('capture.png');
       final File captureFile = File(capturePath);
       if (captureFile.existsSync()) {
         captureFile.deleteSync();
@@ -1487,9 +1489,9 @@ class AuthenticatorLogoStore {
     await file.writeAsString('miss', flush: true);
   }
 
-  String get _logoDirectoryPath => '${WinUtils.getTabameAppDataFolder()}\\cache\\authenticator logos';
+  String get _logoDirectoryPath => AppPaths.cachePath('authenticator logos', forWrite: true);
 
-  String _logoFilePathForQuery(String query) => '$_logoDirectoryPath\\${_safeName(query)}.png';
+  String _logoFilePathForQuery(String query) => p.join(_logoDirectoryPath, '${_safeName(query)}.png');
 
   String _missFilePath(String query) => '$_logoDirectoryPath\\${_safeName(query)}.miss';
 

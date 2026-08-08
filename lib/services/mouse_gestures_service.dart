@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import '../platform/windows/tabamewin32_api.dart';
+import '../platform/windows/win32_api.dart';
 
 import '../logic/error_handler.dart';
 import '../models/classes/boxes.dart';
@@ -28,7 +28,7 @@ import '../pages/color_picker/win32_helper.dart';
 /// then down). On release the matching binding fires. The button is only
 /// observed — never swallowed — so ordinary right-clicks are untouched; if a
 /// context menu popped on release, it is dismissed with an Escape keypress.
-class MouseGesturesService extends TabameListener {
+class MouseGesturesService with TabameListener {
   MouseGesturesService._();
   static final MouseGesturesService instance = MouseGesturesService._();
 

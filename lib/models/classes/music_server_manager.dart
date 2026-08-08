@@ -8,10 +8,11 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
+import 'package:path/path.dart' as p;
 
+import '../../platform/app_paths.dart';
 import '../../services/music_local_indexer.dart';
 import '../db/music_library_db.dart';
-import '../win32/win_utils.dart';
 import 'music_server.dart';
 
 class MusicServerManager {
@@ -19,10 +20,10 @@ class MusicServerManager {
   static const String localSourceName = 'Local';
   static const Duration _maxSongDuration = Duration(hours: 24);
 
-  static String get _filePath => "${WinUtils.getTabameAppDataFolder(settings: true)}\\music_servers.json";
-  static String get _activeSourcePath => "${WinUtils.getTabameAppDataFolder(settings: true)}\\music_active_source.txt";
+  static String get _filePath => AppPaths.settingsPath('music_servers.json');
+  static String get _activeSourcePath => AppPaths.settingsPath('music_active_source.txt');
   static String get _queueFilePath =>
-      "${WinUtils.getTabameAppDataFolder()}\\cache${kDebugMode ? "\\debug" : ""}\\music_queue.json";
+      AppPaths.cachePath(kDebugMode ? p.join('debug', 'music_queue.json') : 'music_queue.json');
 
   static List<MusicServerConfig> _configs = <MusicServerConfig>[];
   static String? _activeConfigId;
@@ -56,8 +57,7 @@ class MusicServerManager {
   static StreamSubscription<ProcessingState>? _sleepProcSub;
   static final ValueNotifier<Duration?> sleepRemainingNotifier = ValueNotifier<Duration?>(null);
 
-  static String get _playbackPrefsPath =>
-      "${WinUtils.getTabameAppDataFolder(settings: true)}\\music_playback_prefs.json";
+  static String get _playbackPrefsPath => AppPaths.settingsPath('music_playback_prefs.json');
 
   static List<MusicServerConfig> get configs => _configs;
   static String? get activeConfigId => _activeConfigId;

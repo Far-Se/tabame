@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import '../../../platform/windows/tabamewin32_api.dart';
 
 import '../../../models/settings.dart';
 import '../../widgets/modal_button.dart';

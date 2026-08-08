@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.farse.tabame</id>
+  <name>Tabame</name>
+  <summary>Launcher and quick menu for the desktop</summary>
+  <description>
+    <p>Search and launch applications, files, and plugins from a configurable desktop quick menu.</p>
+  </description>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <url type="homepage">https://github.com/Far-Se/tabame</url>
+  <launchable type="desktop-id">tabame.desktop</launchable>
+  <provides>
+    <binary>tabame</binary>
+  </provides>
+  <releases>
+    <release version="@VERSION@" date="@DATE@" />
+  </releases>
+</component>

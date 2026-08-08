@@ -1,0 +1,8 @@
+#include "../../Flutter/Flutter-Release.xcconfig"
+#include "Warnings.xcconfig"
+
+// The final Developer ID signature is applied after Flutter embeds every
+// framework by tool/release/package-macos-dmg.sh. Keep the release build's
+// entitlements explicit and prevent Xcode from injecting debug entitlements.
+CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO
+MACOSX_DEPLOYMENT_TARGET = 13.0

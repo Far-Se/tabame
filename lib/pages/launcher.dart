@@ -7,8 +7,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart' hide Row;
-import 'package:tabamewin32/tabamewin32.dart' show BrowserTab, BrowserTabs, MediaSession;
+import '../platform/windows/tabamewin32_api.dart' show BrowserTab, BrowserTabs;
+import '../platform/audio_system_service.dart';
 import 'package:window_manager/window_manager.dart';
 import '../models/tray_watcher.dart';
 import '../models/util/quickmenu_modal.dart';
@@ -20,6 +22,8 @@ import '../models/classes/saved_maps.dart';
 import '../models/converter.dart';
 import '../models/db/file_index_db.dart';
 import '../models/globals.dart';
+import '../platform/app_paths.dart';
+import '../platform/clipboard_service.dart';
 import '../models/google_translator.dart';
 import '../models/settings.dart';
 import '../models/util/theme_colors.dart';
@@ -28,8 +32,8 @@ import '../models/util/system_power.dart';
 import '../models/win32/keys.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
-import '../models/win32/window.dart';
-import '../models/window_watcher.dart';
+import '../platform/platform_models.dart';
+import '../platform/window_watcher_service.dart';
 import '../services/file_indexer.dart';
 import '../widgets/itzy/quickmenu/button_currency_converter.dart';
 import '../widgets/itzy/quickmenu/button_notion.dart';
@@ -474,12 +478,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       }
 
       // Commit all queued files to the clipboard immediately.
-      if (_copiedFiles.length == 1) {
-        final bool isDir = item.entity is Directory;
-        isDir ? ClipboardExtension.copyFolder(path) : ClipboardExtension.copyFile(path);
-      } else {
-        ClipboardExtension.copyMultipleFiles(List<String>.unmodifiable(_copiedFiles));
-      }
+      unawaited(ClipboardService.instance.writeFiles(List<String>.unmodifiable(_copiedFiles)));
 
       if (mounted) setState(() {});
     }
@@ -1445,12 +1444,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
   /// Launcher home shortcuts plus a discovery hint per installed plugin.
   List<LauncherSearchResultItem> _shortcutResults() {
+    final List<LauncherSearchResultItem> availableShortcuts = WindowWatcherService.instance.isAvailable
+        ? _launcherShortcuts
+        : _launcherShortcuts
+            .where((LauncherSearchResultItem item) => item.shortcut?.prefix != '.')
+            .toList(growable: false);
     final List<PluginManifest> enabledPlugins =
         PluginRegistry.manifests.where((PluginManifest manifest) => manifest.enabled).toList(growable: false);
-    if (enabledPlugins.isEmpty) return _launcherShortcuts;
+    if (enabledPlugins.isEmpty) return availableShortcuts;
     enabledPlugins.sort((PluginManifest a, PluginManifest b) => a.name.compareTo(b.name));
     return <LauncherSearchResultItem>[
-      ..._launcherShortcuts,
+      ...availableShortcuts,
       for (final (int index, PluginManifest plugin) in enabledPlugins.indexed)
         LauncherSearchResultItem.shortcut(LauncherShortcut(
           label: plugin.keyword,
@@ -2058,8 +2062,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _windowRefreshTimer = Timer.periodic(const Duration(milliseconds: 900), (Timer timer) async {
       if (!mounted || Globals.quickMenuPage != QuickMenuPage.launcher) return;
 
-      final bool updated = await WindowWatcher.fetchWindows();
-      if (WindowWatcher.list.any((Window e) => e.process.exe.toLowerCase() == "taskmgr.exe")) {
+      final WindowWatcherService watcher = WindowWatcherService.instance;
+      final bool updated = await watcher.refresh();
+      if (watcher.containsExecutable('taskmgr.exe')) {
         await TrayWatcher.fetchTray();
       }
       if (!mounted || !updated || Globals.quickMenuPage != QuickMenuPage.launcher) return;
@@ -2077,14 +2082,14 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     if (_isSearching) return;
 
     bool changed = false;
-    final Map<int, Window> latestWindows = <int, Window>{
-      for (final Window window in WindowWatcher.list) window.hWnd: window,
+    final Map<PlatformWindow, PlatformWindow> latestWindows = <PlatformWindow, PlatformWindow>{
+      for (final PlatformWindow window in WindowWatcherService.instance.windows) window: window,
     };
 
     final List<LauncherSearchResultItem> nextResults = <LauncherSearchResultItem>[];
 
     for (final LauncherSearchResultItem result in _results) {
-      final Window? currentWindow = result.window;
+      final PlatformWindow? currentWindow = result.window;
 
       // Not a window item — keep as-is
       if (currentWindow == null) {
@@ -2092,7 +2097,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         continue;
       }
 
-      final Window? latestWindow = latestWindows[currentWindow.hWnd];
+      final PlatformWindow? latestWindow = latestWindows[currentWindow];
 
       // Window no longer exists — drop it
       if (latestWindow == null) {
@@ -2102,7 +2107,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
       // Window exists but something changed — update it
       if (latestWindow.title != currentWindow.title ||
-          latestWindow.process.exe != currentWindow.process.exe ||
+          latestWindow.executable != currentWindow.executable ||
           latestWindow.isPinned != currentWindow.isPinned ||
           latestWindow.helpText != currentWindow.helpText) {
         changed = true;
@@ -2917,7 +2922,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   void _executeMediaCommand(_MediaCommandAction action, int? audioIndex) {
     if (audioIndex != null && audioIndex >= 0 && audioIndex < Boxes.appAudioControls.length) {
       final AppAudioControl ctl = Boxes.appAudioControls[audioIndex];
-      final bool hasWindow = WindowWatcher.list.any((Window w) => w.process.exe == ctl.exe) ||
+      final bool hasWindow = WindowWatcherService.instance.containsExecutable(ctl.exe) ||
           TrayWatcher.trayList.any((TrayBarInfo t) => t.processExe == ctl.exe);
       final String? appHotkey = switch (action.id) {
         'next' => ctl.hotkeyNext,
@@ -2968,7 +2973,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   Future<void> _handleSpotifyCommand(LauncherSearchContext context) async {
     context.setSearching(true);
 
-    final MediaSession? session = await SpotifyController.fetchSession();
+    final PlatformMediaSession? session = await SpotifyController.fetchSession();
     if (!context.isActiveSearch(context.requestId, context.query)) return;
 
     if (session == null) {
@@ -3025,8 +3030,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     context.setResults(results, isSearching: false);
   }
 
-  QuickActionMenuEntry _buildSpotifyNowPlaying(MediaSession session) {
-    final ImageProvider? art = session.thumbnailImage;
+  QuickActionMenuEntry _buildSpotifyNowPlaying(PlatformMediaSession session) {
+    final ImageProvider? art = session.artworkBytes == null ? null : MemoryImage(session.artworkBytes!);
     return QuickActionMenuEntry(
       id: 'spotify:nowPlaying',
       title: session.title,
@@ -3097,7 +3102,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     );
   }
 
-  void _executeSpotifyCommand(MediaSession session, String command) {
+  void _executeSpotifyCommand(PlatformMediaSession session, String command) {
     unawaited(SpotifyController.command(session, command));
     _finishLauncherFunctionExecution();
   }
@@ -3123,7 +3128,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
     if (mounted) {
       _controller.clear();
-      _setResults(_launcherShortcuts, isSearching: false);
+      _setResults(_shortcutResults(), isSearching: false);
       _focusSearch();
     }
 
@@ -3277,7 +3282,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         LauncherSearchResultItem.quickAction(_buildFunctionAction(
           id: 'function-clear-icon-cache',
           title: 'Clear icon cache',
-          subtitle: '${WinUtils.getTabameAppDataFolder()}\\cache\\icon_cache'.lastChars(35),
+          subtitle: AppPaths.cachePath('icon_cache').lastChars(35),
           icon: Icons.cleaning_services_rounded,
           searchTerms: const <String>['clear', 'cache', 'icon'],
           onExecute: () => unawaited(_clearCacheFolder('icon_cache')),
@@ -3289,10 +3294,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         LauncherSearchResultItem.quickAction(_buildFunctionAction(
           id: 'function-clear-help-icon-extension',
           title: 'Removes Icon Cache for Extensions only',
-          subtitle: '${WinUtils.getTabameAppDataFolder()}\\cache\\icon_cache\\file_formats'.lastChars(35),
+          subtitle: AppPaths.cachePath(p.join('icon_cache', 'file_formats')).lastChars(35),
           icon: Icons.cleaning_services_rounded,
           searchTerms: const <String>['clear', 'cache', 'icon', 'ext'],
-          onExecute: () => unawaited(_clearCacheFolder('icon_cache\\file_formats')),
+          onExecute: () => unawaited(_clearCacheFolder(p.join('icon_cache', 'file_formats'))),
         )),
       ];
     } else if (input.trim().toLowerCase() == 'authlogo') {
@@ -3300,7 +3305,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         LauncherSearchResultItem.quickAction(_buildFunctionAction(
           id: 'function-clear-authlogo-cache',
           title: 'Clear authlogo cache',
-          subtitle: '${WinUtils.getTabameAppDataFolder()}\\cache\\authenticator logos'.lastChars(35),
+          subtitle: AppPaths.cachePath('authenticator logos').lastChars(35),
           icon: Icons.cleaning_services_rounded,
           searchTerms: const <String>['clear', 'cache', 'icon'],
           onExecute: () => unawaited(_clearCacheFolder('authenticator logos')),
@@ -3311,7 +3316,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         LauncherSearchResultItem.quickAction(_buildFunctionAction(
           id: 'function-clear-all',
           title: 'Clear all cache folder',
-          subtitle: '${WinUtils.getTabameAppDataFolder()}\\cache'.lastChars(35),
+          subtitle: AppPaths.cachePath('').lastChars(35),
           icon: Icons.cleaning_services_rounded,
           searchTerms: const <String>['clear', 'cache'],
           onExecute: () => unawaited(_clearCacheFolder("")),
@@ -3322,7 +3327,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   }
 
   Future<void> _clearCacheFolder(String folder) async {
-    final Directory cacheDirectory = Directory('${WinUtils.getTabameAppDataFolder()}\\cache\\$folder');
+    final Directory cacheDirectory = Directory(AppPaths.cachePath(folder, forWrite: true));
     if (cacheDirectory.existsSync()) {
       cacheDirectory.deleteSync(recursive: true);
       cacheDirectory.createSync();
@@ -4284,10 +4289,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     }
   }
 
-  Future<void> _openWindow(Window window) async {
+  Future<void> _openWindow(PlatformWindow window) async {
     await QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
-    Win32.activateWindow(window.hWnd);
-    Globals.lastFocusedWinHWND = window.hWnd;
+    await WindowWatcherService.instance.activate(window);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     user.launcherSearchText = '';
   }
@@ -5513,7 +5517,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   }
 
   Widget _buildWindowResult(
-      BuildContext context, ThemeData theme, Window window, int index, bool isSelected, bool isRepeatingKey) {
+      BuildContext context, ThemeData theme, PlatformWindow window, int index, bool isSelected, bool isRepeatingKey) {
     final Color accent = Design.accent;
     return WindowSearchListItem(
       window: window,

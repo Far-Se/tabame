@@ -1,13 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
 
+import '../../../platform/audio_system_service.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
-import '../../../models/win32/keys.dart';
 import '../../widgets/quick_actions_item.dart';
 import 'audio_modal.dart';
 
@@ -39,26 +38,31 @@ class _AudioButtonState extends State<AudioButton> with QuickMenuTriggers {
     _dragAccumulator += details.delta.dy;
     if (_dragAccumulator.abs() >= _kDragThreshold) {
       final bool isUp = _dragAccumulator < 0;
-      WinKeys.single(isUp ? VK.VOLUME_UP : VK.VOLUME_DOWN, KeySentMode.normal);
+      unawaited(AudioSystemService.instance.adjustVolume(AudioDeviceType.output, isUp ? 0.05 : -0.05));
       _dragAccumulator = 0;
       _setFeedbackIcon(isUp ? Icons.volume_up : Icons.volume_down);
     }
   }
 
-  void _handleMute() {
-    WinKeys.single(VK.VOLUME_MUTE, KeySentMode.normal);
+  Future<void> _handleMute() async {
+    final bool success =
+        await AudioOrchestrator(service: AudioSystemService.instance).toggleMute(AudioDeviceType.output);
+    if (!success || !mounted) return;
     muteState = !muteState;
     _setFeedbackIcon(muteState ? Icons.volume_off : Icons.volume_up);
     setState(() {});
   }
 
-  void _handleSwitchDevice() {
-    Audio.switchDefaultDevice(
+  Future<void> _handleSwitchDevice() async {
+    await AudioSystemService.instance.switchDefaultDevice(
       AudioDeviceType.output,
-      console: user.audioConsole,
-      multimedia: user.audioMultimedia,
-      communications: user.audioCommunications,
+      targeting: AudioDeviceTargeting(
+        console: user.audioConsole,
+        multimedia: user.audioMultimedia,
+        communications: user.audioCommunications,
+      ),
     );
+    if (!mounted) return;
     switchedDefaultDevice = true;
     _setFeedbackIcon(Icons.published_with_changes);
     setState(() {});
@@ -82,12 +86,19 @@ class _AudioButtonState extends State<AudioButton> with QuickMenuTriggers {
   void initState() {
     super.initState();
     QuickMenuFunctions.addListener(this);
+    unawaited(_initializeAudio());
     Debug.add("QuickMenu: Topbar: AudioButton");
+  }
+
+  Future<void> _initializeAudio() async {
+    await AudioSystemService.instance.initialize();
+    if (mounted) setState(() {});
   }
 
   @override
   Future<void> onQuickMenuVisible(QuickMenuPage type, bool center) async {
-    muteState = await Audio.getMuteAudioDevice(AudioDeviceType.output);
+    await AudioSystemService.instance.initialize();
+    muteState = await AudioSystemService.instance.getMute(AudioDeviceType.output);
     if (mounted) {
       setState(() {});
     }
@@ -109,6 +120,14 @@ class _AudioButtonState extends State<AudioButton> with QuickMenuTriggers {
 
   @override
   Widget build(BuildContext context) {
+    final AudioSystemService service = AudioSystemService.instance;
+    if (!service.isAvailable) {
+      return QuickActionItem(
+        message: service.unavailableReason,
+        icon: const Icon(Icons.volume_off_rounded, size: 16),
+      );
+    }
+
     IconData displayIcon;
 
     if (_feedbackIcon != null) {

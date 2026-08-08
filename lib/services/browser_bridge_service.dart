@@ -4,10 +4,11 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
 import '../models/classes/boxes.dart';
-import '../models/win32/win_utils.dart';
+import '../platform/app_paths.dart';
 
 enum BrowserBridgePhase { disabled, starting, waiting, connected, error }
 
@@ -715,8 +716,8 @@ class BrowserBridgeService {
   }
 
   _BrowserBridgeConfig _readOrCreateConfig() {
-    final File shared = File('${WinUtils.getTabameAppDataFolder()}\\browser-bridge.json');
-    final File legacy = File('${WinUtils.getPluginsFolder()}\\browser\\bridge-config.json');
+    final File shared = File(AppPaths.currentPath('browser-bridge.json'));
+    final File legacy = File(AppPaths.resolvePath(p.join('plugins', 'browser', 'bridge-config.json')));
     final _BrowserBridgeConfig? existing = _readConfig(shared) ?? _readConfig(legacy);
     final _BrowserBridgeConfig config = existing ??
         _BrowserBridgeConfig(

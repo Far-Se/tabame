@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import '../../../platform/windows/tabamewin32_api.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../../models/classes/boxes.dart';
@@ -727,8 +727,7 @@ class _WorkspaceEditorState extends State<_WorkspaceEditor> {
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration:
-                    BoxDecoration(color: Design.accent.withAlpha(20), borderRadius: BorderRadius.circular(999)),
+                decoration: BoxDecoration(color: Design.accent.withAlpha(20), borderRadius: BorderRadius.circular(999)),
                 child: Text(
                   '${_workspace.areas.length} item${_workspace.areas.length == 1 ? '' : 's'}',
                   style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w700, color: Design.accent),
@@ -1048,7 +1047,9 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
   Widget build(BuildContext context) {
     final bool hasHookTo = _area.hooks.contains('hook_to');
     final String headerTitle = _titleController.text.isEmpty
-        ? (widget.area.executable.split('\\').last.isEmpty ? 'Untitled Window' : widget.area.executable.split('\\').last)
+        ? (widget.area.executable.split('\\').last.isEmpty
+            ? 'Untitled Window'
+            : widget.area.executable.split('\\').last)
         : _titleController.text;
 
     return Container(
@@ -1062,9 +1063,8 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
         children: <Widget>[
           InkWell(
             onTap: widget.onToggleExpanded,
-            borderRadius: widget.expanded
-                ? const BorderRadius.vertical(top: Radius.circular(12))
-                : BorderRadius.circular(12),
+            borderRadius:
+                widget.expanded ? const BorderRadius.vertical(top: Radius.circular(12)) : BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(10, 9, 8, 9),
               child: Row(
@@ -1228,8 +1228,7 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(label,
-            style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(150))),
+        Text(label, style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(150))),
         const SizedBox(height: 4),
         Container(
           decoration: BoxDecoration(
@@ -1424,8 +1423,7 @@ class _WorkspaceRowState extends State<_WorkspaceRow> {
                             style: TextStyle(
                                 fontSize: Design.baseFontSize + 3, fontWeight: FontWeight.w700, color: Design.text)),
                         const SizedBox(height: 2),
-                        Text(meta,
-                            style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(150))),
+                        Text(meta, style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(150))),
                       ],
                     ),
                   ),

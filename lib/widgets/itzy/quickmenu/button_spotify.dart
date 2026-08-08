@@ -1,7 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart' show MediaSession;
+
+import '../../../platform/audio_system_service.dart';
 
 import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
@@ -27,11 +28,11 @@ class SpotifyButton extends StatelessWidget {
       ),
       // Quick transport straight from the top bar without opening the panel.
       onSecondaryTap: () async {
-        final MediaSession? s = await SpotifyController.fetchSession();
+        final PlatformMediaSession? s = await SpotifyController.fetchSession();
         await SpotifyController.command(s, SpotifyController.cmdTogglePlayPause);
       },
       onTertiaryTapDown: (_) async {
-        final MediaSession? s = await SpotifyController.fetchSession();
+        final PlatformMediaSession? s = await SpotifyController.fetchSession();
         await SpotifyController.command(s, SpotifyController.cmdNext);
       },
     );
@@ -46,7 +47,7 @@ class SpotifyPanel extends StatefulWidget {
 }
 
 class _SpotifyPanelState extends State<SpotifyPanel> {
-  MediaSession? _session;
+  PlatformMediaSession? _session;
   bool _loading = true;
   Timer? _pollTimer;
 
@@ -66,7 +67,7 @@ class _SpotifyPanelState extends State<SpotifyPanel> {
 
   Future<void> _refresh({bool silent = false}) async {
     if (!silent && mounted) setState(() => _loading = true);
-    final MediaSession? session = await SpotifyController.fetchSession();
+    final PlatformMediaSession? session = await SpotifyController.fetchSession();
     if (!mounted) return;
     setState(() {
       _session = session;
@@ -158,8 +159,8 @@ class _SpotifyPanelState extends State<SpotifyPanel> {
     );
   }
 
-  Widget _buildPlayer(MediaSession session) {
-    final ImageProvider? art = session.thumbnailImage;
+  Widget _buildPlayer(PlatformMediaSession session) {
+    final ImageProvider? art = session.artworkBytes == null ? null : MemoryImage(session.artworkBytes!);
     final String title = session.title.isEmpty ? 'Spotify' : session.title;
     final String artist = session.artist.isEmpty ? 'Unknown artist' : session.artist;
 

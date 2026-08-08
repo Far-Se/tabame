@@ -11,8 +11,11 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:intl/intl.dart' as intl;
 import 'package:just_audio/just_audio.dart';
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import 'package:path/path.dart' as p;
+import '../platform/clipboard_service.dart';
+import '../platform/platform_models.dart';
+
+import '../platform/windows/win32_api.dart';
 
 import '../models/win32/win_utils.dart';
 import '../widgets/interface/fancyshot.dart';
@@ -207,7 +210,9 @@ class ScreenUtils {
 
     String shortMonth = intl.DateFormat('MMM').format(date);
 
-    final Directory dir = Directory('${WinUtils.getFancyshotFolder()}\\screenshots\\${date.year} - $shortMonth');
+    final Directory dir = Directory(
+      p.join(WinUtils.getFancyshotFolder(), 'screenshots', '${date.year} - $shortMonth'),
+    );
     if (!dir.existsSync()) {
       dir.createSync(recursive: true);
       WinUtils.setSortByDateModifiedDesc(dir.path);
@@ -296,12 +301,12 @@ class ScreenRegionCapture {
 
   /// Copy the PNG to the system clipboard as a bitmap.
   static Future<void> copyPngToClipboard(Uint8List pngBytes) async {
-    ClipboardExtended.copyImage(pngBytes);
+    await ClipboardService.instance.writeContent(PlatformClipboardContent(imageBytes: pngBytes));
   }
 
   /// Copy a file path to the clipboard (as a file drop).
   static Future<void> copyFileToClipboard(String filePath) async {
-    ClipboardExtension.copyFile(filePath);
+    await ClipboardService.instance.writeFile(filePath);
   }
 
   /// Save [pngBytes] to %localappdata%\Tabame\screenshots\<year - Mon>\<ts>.png
@@ -310,7 +315,7 @@ class ScreenRegionCapture {
     final DateTime date = DateTime.now();
     final String shortMonth = intl.DateFormat('MMM').format(date);
     final Directory dir = Directory(
-      '${WinUtils.getFancyshotFolder()}\\screenshots\\${date.year} - $shortMonth',
+      p.join(WinUtils.getFancyshotFolder(), 'screenshots', '${date.year} - $shortMonth'),
     );
     if (!dir.existsSync()) {
       dir.createSync(recursive: true);
@@ -394,7 +399,7 @@ class UploadUtils {
 
       if (response.statusCode == 200 && responseBody.startsWith('https://')) {
         final String url = responseBody.trim();
-        ClipboardExtended.copy(url);
+        await ClipboardService.instance.writeText(url);
         // await Process.start(
         //   'cmd.exe',
         //   <String>['/c', 'start', '', url],

@@ -1,12 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ffi';
 import 'dart:io';
 
-import 'package:ffi/ffi.dart';
-import 'package:win32/win32.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../logic/error_handler.dart';
+import '../../../platform/secret_store_registry.dart';
 import 'plugin_manifest.dart';
 
 /// Per-plugin persistent key-value storage, backed by the `storage` command.
@@ -23,8 +22,7 @@ class PluginStorage {
   /// `plugin_host.dart`) so storage writes don't restart the plugin.
   static const String storeFileName = '.tabame-store.json';
 
-  static File _storeFile(PluginManifest manifest) =>
-      File('${manifest.directory}${Platform.pathSeparator}$storeFileName');
+  static File _storeFile(PluginManifest manifest) => File(p.join(manifest.directory, storeFileName));
 
   static Map<String, dynamic> _readStore(PluginManifest manifest) {
     try {
@@ -48,7 +46,7 @@ class PluginStorage {
 
   /// Returns the stored value for [key] (any JSON value), or null when absent.
   static Object? get(PluginManifest manifest, String key, {bool secret = false}) {
-    if (secret) return _readSecret(_credTarget(manifest.id, key));
+    if (secret) return SecretStores.instance.readPluginSecret(manifest.id, key);
     return _readStore(manifest)[key];
   }
 
@@ -59,7 +57,7 @@ class PluginStorage {
       return;
     }
     if (secret) {
-      _writeSecret(_credTarget(manifest.id, key), value is String ? value : jsonEncode(value));
+      SecretStores.instance.writePluginSecret(manifest.id, key, value is String ? value : jsonEncode(value));
       return;
     }
     final Map<String, dynamic> store = _readStore(manifest);
@@ -69,7 +67,7 @@ class PluginStorage {
 
   static void delete(PluginManifest manifest, String key, {bool secret = false}) {
     if (secret) {
-      _deleteSecret(_credTarget(manifest.id, key));
+      SecretStores.instance.deletePluginSecret(manifest.id, key);
       return;
     }
     final Map<String, dynamic> store = _readStore(manifest);
@@ -80,45 +78,5 @@ class PluginStorage {
   /// enumerable by design).
   static List<String> keys(PluginManifest manifest) => _readStore(manifest).keys.toList(growable: false);
 
-  // ── Windows Credential Manager (secrets) ────────────────────────────────────
-
-  static String _credTarget(String pluginId, String key) => 'Tabame:plugin:$pluginId:$key';
-
-  static void _writeSecret(String target, String value) {
-    using((Arena arena) {
-      final List<int> blob = utf8.encode(value);
-      final Pointer<Uint8> blobPtr = arena<Uint8>(blob.length);
-      blobPtr.asTypedList(blob.length).setAll(0, blob);
-      final Pointer<CREDENTIAL> cred = arena<CREDENTIAL>();
-      cred.ref
-        ..Type = CRED_TYPE_GENERIC
-        ..TargetName = target.toNativeUtf16(allocator: arena)
-        ..CredentialBlobSize = blob.length
-        ..CredentialBlob = blobPtr
-        ..Persist = CRED_PERSIST_LOCAL_MACHINE
-        ..UserName = 'tabame-plugin'.toNativeUtf16(allocator: arena);
-      if (CredWrite(cred, 0) == 0) {
-        unawaited(ErrorLogger.log('PluginStorage', 'CredWrite failed for $target (error ${GetLastError()})', null));
-      }
-    });
-  }
-
-  static String? _readSecret(String target) {
-    return using((Arena arena) {
-      final Pointer<Pointer<CREDENTIAL>> out = arena<Pointer<CREDENTIAL>>();
-      if (CredRead(target.toNativeUtf16(allocator: arena), CRED_TYPE_GENERIC, 0, out) == 0) return null;
-      final CREDENTIAL cred = out.value.ref;
-      final String value =
-          cred.CredentialBlobSize == 0 ? '' : utf8.decode(cred.CredentialBlob.asTypedList(cred.CredentialBlobSize));
-      CredFree(out.value);
-      return value;
-    });
-  }
-
-  static void _deleteSecret(String target) {
-    using((Arena arena) {
-      // Failure (usually "not found") is not an error worth surfacing.
-      CredDelete(target.toNativeUtf16(allocator: arena), CRED_TYPE_GENERIC, 0);
-    });
-  }
+  // Machine-bound plugin secrets are delegated to the platform secret boundary.
 }

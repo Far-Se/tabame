@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
 import '../../../logic/error_handler.dart';
-import '../../../models/win32/win_utils.dart';
+import '../../../platform/app_paths.dart';
 import 'plugin_manifest.dart';
 
 /// Scans the plugins folder and answers keyword lookups for the launcher.
@@ -19,12 +21,12 @@ abstract final class PluginRegistry {
   static List<PluginManifest> get manifests => _manifests;
   static bool get isLoaded => _loaded;
 
-  /// Rescans `%localappdata%\Tabame\plugins`. Malformed manifests are logged and
-  /// skipped rather than aborting the whole scan.
+  /// Rescans Tabame's platform-correct plugin root. Malformed manifests are
+  /// logged and skipped rather than aborting the whole scan.
   static Future<void> load() async {
     final List<PluginManifest> found = <PluginManifest>[];
     try {
-      final Directory root = Directory(WinUtils.getPluginsFolder());
+      final Directory root = Directory(AppPaths.resolvePath('plugins'));
       if (root.existsSync()) {
         final List<FileSystemEntity> pluginDirectories = root
             .listSync(followLinks: false)
@@ -33,12 +35,12 @@ abstract final class PluginRegistry {
           ..sort((FileSystemEntity a, FileSystemEntity b) => a.path.compareTo(b.path));
         for (final FileSystemEntity entity in pluginDirectories) {
           if (entity is! Directory) continue;
-          final File manifestFile = File('${entity.path}\\plugin.json');
+          final File manifestFile = File(p.join(entity.path, 'plugin.json'));
           if (!manifestFile.existsSync()) continue;
           try {
             final Object? decoded = jsonDecode(await manifestFile.readAsString());
             if (decoded is! Map) continue;
-            final String folderName = entity.path.split(Platform.pathSeparator).last;
+            final String folderName = p.basename(entity.path);
             final PluginManifest manifest = PluginManifest.fromJson(
               decoded.cast<String, dynamic>(),
               directory: entity.path,
@@ -102,14 +104,14 @@ abstract final class PluginRegistry {
 
   static Future<PluginManifest?> _renameKeyword(PluginManifest manifest, String keyword) async {
     try {
-      final File manifestFile = File('${manifest.directory}\\plugin.json');
+      final File manifestFile = File(p.join(manifest.directory, 'plugin.json'));
       final Object? decoded = jsonDecode(await manifestFile.readAsString());
       if (decoded is! Map) return null;
       final Map<String, dynamic> json = decoded.cast<String, dynamic>();
       json['keyword'] = keyword;
       const JsonEncoder encoder = JsonEncoder.withIndent('  ');
       await manifestFile.writeAsString(encoder.convert(json));
-      final String folderName = manifest.directory.split(Platform.pathSeparator).last;
+      final String folderName = p.basename(manifest.directory);
       return PluginManifest.fromJson(json, directory: manifest.directory, folderName: folderName);
     } catch (error, stack) {
       unawaited(
@@ -124,7 +126,7 @@ abstract final class PluginRegistry {
   /// state matches disk. Returns whether the write succeeded.
   static Future<bool> setEnabled(PluginManifest manifest, bool enabled) async {
     try {
-      final File manifestFile = File('${manifest.directory}\\plugin.json');
+      final File manifestFile = File(p.join(manifest.directory, 'plugin.json'));
       if (!manifestFile.existsSync()) return false;
       final Object? decoded = jsonDecode(await manifestFile.readAsString());
       if (decoded is! Map) return false;
@@ -154,7 +156,7 @@ abstract final class PluginRegistry {
     if (alreadyUsed) return 'That keyword is already used by another plugin.';
 
     try {
-      final File manifestFile = File('${manifest.directory}\\plugin.json');
+      final File manifestFile = File(p.join(manifest.directory, 'plugin.json'));
       if (!manifestFile.existsSync()) return 'Plugin manifest not found.';
       final Object? decoded = jsonDecode(await manifestFile.readAsString());
       if (decoded is! Map) return 'Plugin manifest is invalid.';

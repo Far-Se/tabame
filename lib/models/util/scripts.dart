@@ -1,7 +1,9 @@
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
+import '../../platform/app_paths.dart';
 import '../win32/win32.dart';
-import '../win32/win_utils.dart';
 
 void writeScript(Scripts script) {
   String? scriptCode;
@@ -505,11 +507,11 @@ function Cleanup {
     scriptCode = """""";
   }
 
-  final Directory scriptsFolder = Directory("${WinUtils.getTabameAppDataFolder()}\\scripts");
+  final Directory scriptsFolder = Directory(AppPaths.currentPath('scripts'));
   if (!scriptsFolder.existsSync()) {
     scriptsFolder.createSync(recursive: true);
   }
   if (scriptCode == null) return;
-  final String scriptPath = "${scriptsFolder.path}\\${script.fileName}";
+  final String scriptPath = p.join(scriptsFolder.path, script.fileName);
   File(scriptPath).writeAsStringSync(scriptCode);
 }

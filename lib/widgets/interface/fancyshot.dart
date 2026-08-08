@@ -5,18 +5,20 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'dart:math';
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../../platform/file_picker_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // ignore: depend_on_referenced_packages
 import 'package:image/image.dart' as img;
+import 'package:path/path.dart' as p;
 import 'package:screenshot/screenshot.dart';
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import '../../platform/windows/tabamewin32_api.dart';
+import '../../platform/windows/win32_api.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
+import '../../platform/app_paths.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win_utils.dart';
 import '../widgets/mini_switch.dart';
@@ -950,7 +952,7 @@ class FancyshotState extends State<Fancyshot> {
           _HeaderButton(
             icon: Icons.folder_open_rounded,
             label: 'Screenshots',
-            onPressed: () => WinUtils.open('${WinUtils.getFancyshotFolder()}\\screenshots'),
+            onPressed: () => WinUtils.open(p.join(WinUtils.getFancyshotFolder(), 'screenshots')),
           ),
         ],
       ),
@@ -2575,7 +2577,7 @@ class FancyShot {
       profile: filters.copyWith(),
     );
 
-    final String path = "${WinUtils.getTempFolder()}/copy.png";
+    final String path = AppPaths.temporaryPath('copy.png');
     File(path).writeAsBytesSync(output);
     await winClipboard.copyImageToClipboard(path);
     Beep(1000, 200);
@@ -2584,9 +2586,9 @@ class FancyShot {
   }
 
   void loadCaptureFile() async {
-    final String temp = WinUtils.getTempFolder();
-    if (File("$temp\\capture.png").existsSync()) {
-      capture = File("$temp\\capture.png").readAsBytesSync();
+    final String capturePath = AppPaths.temporaryPath('capture.png');
+    if (File(capturePath).existsSync()) {
+      capture = File(capturePath).readAsBytesSync();
       photo = img.decodeImage(capture!);
       img.Pixel pixel32 = photo!.getPixelSafe(0, 0);
       int hex =

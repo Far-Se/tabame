@@ -4,10 +4,10 @@ import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:win32/win32.dart';
+import '../../platform/windows/win32_api.dart';
 
 import '../../models/classes/boxes/quick_menu_box.dart';
-import '../../models/win32/win_utils.dart';
+import '../../platform/app_paths.dart';
 
 /// Pixel data for one grid cell.
 class PixelColor {
@@ -162,11 +162,12 @@ class Win32Helper {
         'grid': rows,
       };
 
-      final String exeDir = WinUtils.getTabameAppDataFolder();
-      if (!Directory('$exeDir/cache').existsSync()) {
-        Directory('$exeDir/cache').createSync(recursive: true);
+      final String cacheDirectory = AppPaths.cacheDirectory;
+      if (!Directory(cacheDirectory).existsSync()) {
+        Directory(cacheDirectory).createSync(recursive: true);
       }
-      File('$exeDir/cache/grid.json').writeAsStringSync(const JsonEncoder.withIndent('  ').convert(payload));
+      File(AppPaths.cachePath('grid.json', forWrite: true))
+          .writeAsStringSync(const JsonEncoder.withIndent('  ').convert(payload));
     } catch (_) {
       // Non-fatal — just skip the file write.
     }

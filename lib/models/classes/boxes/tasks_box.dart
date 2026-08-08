@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../../settings.dart';
+import '../../../services/notification_coordinator.dart';
 import '../../win32/win_utils.dart';
 import '../boxes.dart';
 import '../saved_maps.dart';
@@ -83,11 +84,10 @@ class Tasks {
     if (reminder.voiceNotification) {
       WinUtils.textToSpeech(reminder.message, repeat: -1, volume: reminder.voiceVolume);
     } else {
-      WinUtils.showWindowsNotification(
+      unawaited(NotificationCoordinator.instance.show(
         title: "Tabame Reminder",
         body: "Reminder: ${reminder.message}",
-        onClick: () {},
-      );
+      ));
     }
     if (reminder.persistent) {
       user.persistentReminders.add(
@@ -107,11 +107,10 @@ class Tasks {
       if (reminder.voiceNotification) {
         WinUtils.textToSpeech(reminder.message, repeat: -1, volume: reminder.voiceVolume);
       } else {
-        WinUtils.showWindowsNotification(
+        unawaited(NotificationCoordinator.instance.show(
           title: "Tabame Reminder",
           body: "Reminder: ${reminder.message}",
-          onClick: () {},
-        );
+        ));
       }
       if (reminder.persistent) {
         user.persistentReminders.add(
@@ -147,11 +146,10 @@ class Tasks {
       if (reminder.voiceNotification) {
         WinUtils.textToSpeech(reminder.message, repeat: -1, volume: reminder.voiceVolume);
       } else {
-        WinUtils.showWindowsNotification(
+        unawaited(NotificationCoordinator.instance.show(
           title: "Tabame Reminder",
           body: "Reminder: ${reminder.message}",
-          onClick: () {},
-        );
+        ));
       }
       if (reminder.persistent) {
         user.persistentReminders.add("${reminder.message} at ${reminder.time.formatTime()}");

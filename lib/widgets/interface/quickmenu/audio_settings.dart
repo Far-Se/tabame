@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+
+import '../../../platform/audio_system_service.dart';
+
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
@@ -405,6 +407,9 @@ class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsP
   }
 
   Widget _buildAppAudioBanner(BuildContext context) {
+    if (!MediaSessionService.instance.supportsApplicationControls) {
+      return _buildWarningCard(MediaSessionService.instance.unavailableReason);
+    }
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
 
@@ -534,8 +539,8 @@ class _InterfaceQMAudioSettingsPageState extends State<InterfaceQMAudioSettingsP
                   children: <Widget>[
                     _buildAppAudioBanner(context),
                     const SizedBox(height: 16),
-                    if (!Audio.canRunAudioModule) ...<Widget>[
-                      _buildWarningCard('Audio Module unavailable on this Windows install. Investigating...'),
+                    if (!AudioSystemService.instance.isAvailable) ...<Widget>[
+                      _buildWarningCard(AudioSystemService.instance.unavailableReason),
                       const SizedBox(height: 16),
                     ],
                     _buildTargetingCard(),

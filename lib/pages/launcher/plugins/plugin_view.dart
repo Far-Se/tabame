@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image/image.dart' as image;
 import 'package:markdown_widget/markdown_widget.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import '../../../platform/clipboard_service.dart';
+import '../../../platform/platform_models.dart';
 
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
@@ -1869,7 +1872,7 @@ class _PluginViewState extends State<PluginView> {
 
   Future<void> _copyMarkdownImage(String url, {required bool isSvg}) async {
     if (isSvg) {
-      await Clipboard.setData(ClipboardData(text: url));
+      await ClipboardService.instance.writeText(url);
       return;
     }
     try {
@@ -1884,11 +1887,13 @@ class _PluginViewState extends State<PluginView> {
       }
       final image.Image? decoded = image.decodeImage(Uint8List.fromList(bytes));
       if (decoded == null) throw const FormatException('Unsupported image format');
-      // await ClipboardExtended.copyImage(Uint8List.fromList(image.encodeBmp(decoded)));
-      await ClipboardExtended.copyImage(Uint8List.fromList(bytes));
+      // Keep the adapter responsible for any platform-specific image format conversion.
+      await ClipboardService.instance.writeContent(
+        PlatformClipboardContent(imageBytes: Uint8List.fromList(bytes)),
+      );
     } catch (_) {
       // Preserve a useful result when an image cannot be decoded or fetched.
-      await Clipboard.setData(ClipboardData(text: url));
+      await ClipboardService.instance.writeText(url);
     }
   }
 
@@ -1990,7 +1995,7 @@ class _CodeBlockWrapperState extends State<_CodeBlockWrapper> {
   }
 
   void _copy() {
-    Clipboard.setData(ClipboardData(text: widget.code));
+    unawaited(ClipboardService.instance.writeText(widget.code));
     setState(() => _copied = true);
     _resetTimer?.cancel();
     _resetTimer = Timer(const Duration(milliseconds: 1400), () {

@@ -2,7 +2,7 @@ import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
-import 'package:win32/win32.dart';
+import '../../platform/windows/win32_api.dart';
 
 /// Represents a requested access right.
 enum AccessRights {

@@ -6,8 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import '../../platform/audio_system_service.dart';
+
+import '../../platform/windows/tabamewin32_api.dart' hide AudioDeviceType;
+import '../../platform/windows/windows_quick_snap_service.dart';
+import '../../platform/windows/win32_api.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/music_server.dart';
@@ -157,19 +160,27 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   // --- LOGIC ---
 
   Future<void> _handleAudio() async {
-    final List<ProcessVolume> audioMixer = await Audio.enumAudioMixer() ?? <ProcessVolume>[];
+    final AudioSystemService service = AudioSystemService.instance;
+    if (!service.isAvailable || !service.supportsPerProcessAudio) {
+      Caches.audioMixer.clear();
+      Caches.audioMixerExes.clear();
+      return;
+    }
+    final List<PlatformAudioProcess> audioMixer = await service.listProcesses();
 
     Caches.audioMixer.clear();
     Caches.audioMixerExes.clear();
 
     if (audioMixer.isEmpty) return;
 
-    Caches.audioMixer =
-        audioMixer.where((ProcessVolume e) => e.peakVolume > 0.005).map((ProcessVolume x) => x.processId).toList();
+    Caches.audioMixer = audioMixer
+        .where((PlatformAudioProcess process) => process.peakVolume > 0.005)
+        .map((PlatformAudioProcess process) => process.processId)
+        .toList();
 
     Caches.audioMixerExes = audioMixer
-        .where((ProcessVolume e) => e.peakVolume > 0.01)
-        .map((ProcessVolume x) => x.processPath.split('\\').last)
+        .where((PlatformAudioProcess process) => process.peakVolume > 0.01)
+        .map((PlatformAudioProcess process) => process.processPath.replaceAll('\\', '/').split('/').last)
         .toList();
   }
 
@@ -770,13 +781,14 @@ class _TaskBarItemState extends State<TaskBarItem> {
   }
 
   void _muteWindow() async {
-    final List<ProcessVolume>? mixers = await Audio.enumAudioMixer();
-    if (mixers == null) return;
+    final AudioSystemService service = AudioSystemService.instance;
+    if (!service.isAvailable || !service.supportsPerProcessAudio) return;
+    final List<PlatformAudioProcess> mixers = await service.listProcesses();
 
-    for (ProcessVolume mixer in mixers) {
+    for (final PlatformAudioProcess mixer in mixers) {
       if (mixer.processPath == widget.window.process.exePath) {
-        double targetVol = mixer.maxVolume < 0.01 ? 1.0 : 0.001;
-        Audio.setAudioMixerVolume(mixer.processId, targetVol);
+        final double targetVolume = mixer.volume < 0.01 ? 1.0 : 0.001;
+        await service.setProcessVolume(mixer.id, targetVolume);
       }
     }
   }
@@ -858,7 +870,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
     showQuickMenuModal(
       context: context,
       maxWidth: 450,
-      child: QuickSnapPicker(hWnd: widget.window.hWnd),
+      child: QuickSnapPicker(window: WindowsQuickSnapService.fromLegacyWindow(widget.window)),
     );
   }
 }
@@ -878,7 +890,7 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickM
   late PageController _pageController;
   int _currentPage = 0;
 
-  List<MediaSession> _lastMediaSessions = <MediaSession>[];
+  List<PlatformMediaSession> _lastMediaSessions = <PlatformMediaSession>[];
 
   // Perceptual (average) hash of each session's last-seen thumbnail, keyed by
   // session id. SMTC re-encodes the artwork stream on every read, so raw bytes
@@ -887,13 +899,13 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickM
   final Map<String, int?> _lastThumbHash = <String, int?>{};
   static const int _kThumbHashThreshold = 6; // Hamming distance (out of 64).
 
-  List<Widget> _buildPages(MusicItem? musicItem, List<MediaSession> sessions) {
+  List<Widget> _buildPages(MusicItem? musicItem, List<PlatformMediaSession> sessions) {
     final List<Widget> pages = <Widget>[];
     if (musicItem != null && user.musicPlayerInTaskbar) {
       pages.add(TaskBarMusicItem(item: musicItem));
     }
     if (user.mediaSessionsInTaskbar) {
-      for (final MediaSession session in sessions) {
+      for (final PlatformMediaSession session in sessions) {
         pages.add(TaskBarMediaSessionItem(session: session));
       }
     }
@@ -928,7 +940,7 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickM
     }
   }
 
-  void _emitSessions(List<MediaSession> sessions) {
+  void _emitSessions(List<PlatformMediaSession> sessions) {
     if (!mounted) return;
     setState(() => _lastMediaSessions = sessions);
   }
@@ -936,20 +948,22 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickM
   void _pollMediaSession({bool forced = false}) async {
     if (!QuickMenuFunctions.isQuickMenuVisible) return;
     try {
-      final MediaSessionResult result = await MediaSessionPlugin.getMediaSessions();
-      final List<MediaSession> sessions = result.sessions.where((MediaSession s) => s.title.isNotEmpty).toList();
+      await MediaSessionService.instance.initialize();
+      final PlatformMediaSessionResult result = await MediaSessionService.instance.listSessions();
+      final List<PlatformMediaSession> sessions =
+          result.sessions.where((PlatformMediaSession session) => session.title.isNotEmpty).toList();
 
       // Perceptual hash of each thumbnail this fetch (null when no artwork).
       final Map<String, int?> newHashes = <String, int?>{
-        for (final MediaSession s in sessions) s.id: _thumbnailHash(s.thumbnail),
+        for (final PlatformMediaSession s in sessions) s.id: _thumbnailHash(s.artworkBytes),
       };
 
       // Emit only when something meaningful changed to avoid rebuilds.
       bool changed = sessions.length != _lastMediaSessions.length;
       if (!changed) {
         for (int i = 0; i < sessions.length; i++) {
-          final MediaSession n = sessions[i];
-          final MediaSession o = _lastMediaSessions[i];
+          final PlatformMediaSession n = sessions[i];
+          final PlatformMediaSession o = _lastMediaSessions[i];
           if (n.id != o.id || n.playbackStatus != o.playbackStatus || n.title != o.title || n.artist != o.artist) {
             changed = true;
             break;
@@ -973,7 +987,7 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickM
       // SMTC unavailable — emit empty list so the UI hides the carousel.
       _lastThumbHash.clear();
       if (_lastMediaSessions.isNotEmpty) {
-        _emitSessions(<MediaSession>[]);
+        _emitSessions(<PlatformMediaSession>[]);
       }
     }
   }
@@ -1395,7 +1409,7 @@ class _MusicProgressBarState extends State<MusicProgressBar> {
 // -----------------------------------------------------------------------------
 
 class TaskBarMediaSessionItem extends StatefulWidget {
-  final MediaSession session;
+  final PlatformMediaSession session;
   const TaskBarMediaSessionItem({super.key, required this.session});
 
   @override
@@ -1486,7 +1500,8 @@ class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
 
   Widget _buildCoverArt() {
     final double size = user.expandedTaskbar ? 32 : 20;
-    final ImageProvider<Object>? image = widget.session.thumbnailImage;
+    final ImageProvider<Object>? image =
+        widget.session.artworkBytes == null ? null : MemoryImage(widget.session.artworkBytes!);
     return Container(
       width: size,
       height: size,
@@ -1514,19 +1529,28 @@ class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
         if (widget.session.canSkipPrevious)
           _ControlBtn(
             icon: Icons.skip_previous_rounded,
-            onTap: () => MediaSessionPlugin.sendCommand(widget.session.id, 'skipPrevious'),
+            onTap: () => MediaSessionService.instance.sendCommand(
+              widget.session,
+              PlatformMediaCommand.previous,
+            ),
             accent: accent,
           ),
         _ControlBtn(
           icon: widget.session.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-          onTap: () => MediaSessionPlugin.sendCommand(widget.session.id, widget.session.isPlaying ? 'pause' : 'play'),
+          onTap: () => MediaSessionService.instance.sendCommand(
+            widget.session,
+            widget.session.isPlaying ? PlatformMediaCommand.pause : PlatformMediaCommand.play,
+          ),
           accent: accent,
           isMain: true,
         ),
         if (widget.session.canSkipNext)
           _ControlBtn(
             icon: Icons.skip_next_rounded,
-            onTap: () => MediaSessionPlugin.sendCommand(widget.session.id, 'skipNext'),
+            onTap: () => MediaSessionService.instance.sendCommand(
+              widget.session,
+              PlatformMediaCommand.next,
+            ),
             accent: accent,
           ),
       ],

@@ -10,15 +10,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:local_notifier/local_notifier.dart';
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+
+import '../../platform/windows/tabamewin32_api.dart';
+import '../../platform/windows/win32_api.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../classes/boxes.dart';
 import '../globals.dart';
 import '../settings.dart';
 import '../util/scripts.dart';
+import '../../platform/app_paths.dart';
 import 'imports.dart';
 import 'keys.dart';
 import 'mixed.dart';
@@ -31,13 +32,13 @@ class WinUtils {
   WinUtils._();
   static int _isAdministrator = -1;
   static String _programFilesPath = "";
-  static bool windowsNotificationRegistered = false;
+
   static const Set<String> _perPathIconExtensions = <String>{'.exe', '.lnk', '.url', '.ico'};
   static const Duration _iconCacheMaxAge = Duration(days: 7);
   static ExtractedIcon _defaultFolderIcon;
 
   static Directory _iconCacheDirectory() {
-    return Directory('${getTabameAppDataFolder()}/cache/icon_cache');
+    return Directory(AppPaths.cachePath('icon_cache', forWrite: true));
   }
 
   static Directory fileFormatIconCacheDirectory() {
@@ -236,66 +237,33 @@ class WinUtils {
     return taskManagerPath;
   }
 
-  static String getTempFolder() {
-    final LPWSTR tempPathBuffer = wsalloc(MAX_PATH);
-    final LPWSTR longPathBuffer = wsalloc(MAX_PATH);
-
-    try {
-      GetTempPath(MAX_PATH, tempPathBuffer);
-
-      final int result = GetLongPathName(
-        tempPathBuffer,
-        longPathBuffer,
-        MAX_PATH,
-      );
-
-      if (result == 0) {
-        // fallback if conversion fails
-        return tempPathBuffer.toDartString();
-      }
-
-      return longPathBuffer.toDartString();
-    } finally {
-      free(tempPathBuffer);
-      free(longPathBuffer);
-    }
-  }
+  static String getTempFolder() => AppPaths.temporaryDirectory;
 
   static String getTabameAppDataFolder({bool settings = false}) {
-    final String appDataFolder = "${WinUtils.getKnownFolder(FOLDERID_LocalAppData)}\\Tabame";
-    if (!Directory(appDataFolder).existsSync()) {
-      Directory(appDataFolder).createSync(recursive: true);
-    }
-    if (settings == true) {
-      const String settingsFolderName = kDebugMode ? "settings\\debug" : "settings";
-      final String settingsDirectoryPath = "$appDataFolder\\$settingsFolderName";
-      if (!Directory(settingsDirectoryPath).existsSync()) {
-        Directory(settingsDirectoryPath).createSync(recursive: true);
-      }
-      return settingsDirectoryPath;
-    }
-    return appDataFolder;
+    final String directory = settings ? AppPaths.settingsDirectory : AppPaths.root;
+    Directory(directory).createSync(recursive: true);
+    return directory;
   }
 
   /// Root folder holding user-installed launcher plugins
-  /// (`<root>\plugins\<id>\plugin.json` + the plugin's script files).
+  /// (`<root>\\plugins\\<id>\\plugin.json` + the plugin's script files).
   static String getPluginsFolder() {
-    final String dir = '${WinUtils.getTabameAppDataFolder()}\\plugins';
-    if (!Directory(dir).existsSync()) Directory(dir).createSync(recursive: true);
-    return dir;
+    final String directory = AppPaths.pluginsDirectory;
+    Directory(directory).createSync(recursive: true);
+    return directory;
   }
 
   static String getFancyshotFolder() {
-    if (user.fancyshotFolder.isEmpty) return '${WinUtils.getTabameAppDataFolder()}\\fancyshot';
+    if (user.fancyshotFolder.isEmpty) return AppPaths.fancyshotDirectory;
     return user.fancyshotFolder;
   }
 
   /// Root folder holding Rewindly's rolling segment buffer
-  /// (`<root>\<monitorIndex>\seg_<epochMs>.mp4`). Exported clips go to FancyShot.
+  /// (`<root>\\<monitorIndex>\\seg_<epochMs>.mp4`). Exported clips go to FancyShot.
   static String getRewindlyFolder() {
-    final String dir = '${WinUtils.getTabameAppDataFolder()}\\rewindly';
-    if (!Directory(dir).existsSync()) Directory(dir).createSync(recursive: true);
-    return dir;
+    final String directory = AppPaths.rewindlyDirectory;
+    Directory(directory).createSync(recursive: true);
+    return directory;
   }
 
   static Future<String> folderPicker() async {
@@ -737,7 +705,7 @@ class WinUtils {
 
   // Scripts and process launching
   static String getScript(Scripts script) {
-    final Directory scriptsDirectory = Directory("${WinUtils.getTabameAppDataFolder()}\\scripts");
+    final Directory scriptsDirectory = Directory(AppPaths.currentPath('scripts'));
     if (!scriptsDirectory.existsSync()) {
       scriptsDirectory.createSync(recursive: true);
     }
@@ -747,7 +715,7 @@ class WinUtils {
       return "";
     }
 
-    final String scriptPath = "${scriptsDirectory.path}\\$scriptName";
+    final String scriptPath = p.join(scriptsDirectory.path, scriptName);
     if (!File(scriptPath).existsSync()) {
       writeScript(script);
     }
@@ -759,7 +727,7 @@ class WinUtils {
 
   static void runScript(Scripts script, {String? arguments}) {
     WinUtils.runPowerShell(<String>[
-      "Set-Location -Path \"${WinUtils.getTabameAppDataFolder()}\\scripts\";",
+      "Set-Location -Path \"${AppPaths.currentPath('scripts')}\";",
       '.\\${getScript(script)} ${arguments ?? ""}',
     ]);
   }
@@ -1021,20 +989,6 @@ class WinUtils {
     await WinUtils.runPowerShell(powerShellCommands);
   }
 
-  static void showWindowsNotification(
-      {required String title, required String body, required Null Function() onClick}) async {
-    if (!windowsNotificationRegistered) {
-      windowsNotificationRegistered = true;
-      await localNotifier.setup(appName: 'Tabame', shortcutPolicy: ShortcutPolicy.requireCreate);
-    }
-    final LocalNotification notification = LocalNotification(
-      title: title,
-      body: body,
-    );
-    notification.onClick = () => onClick();
-    await notification.show();
-  }
-
   // Downloads, capture, and icons
 /*   static Future<String> getCountryCityFromIP(String defaultResult) async {
     final http.Response ip = await http.get(Uri.parse("http://ifconfig.me/ip"));
@@ -1169,8 +1123,7 @@ class WinUtils {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
 
-    final String tempFolder = getTempFolder();
-    await WinClipboard().saveClipboardToPng("$tempFolder\\capture.png");
+    await WinClipboard().saveClipboardToPng(AppPaths.temporaryPath('capture.png'));
 
     return true;
   }
@@ -2033,251 +1986,10 @@ class WinUtils {
     SetForegroundWindow(hwnd);
   }
 
-  static void copySqlite3IfItDoesntExistForFuckSake() {
-    if (Platform.isWindows) {
-      final String exeDir = p.dirname(Platform.resolvedExecutable);
-      final String dllPath = p.join(exeDir, 'sqlite3.dll');
-      if (!File(dllPath).existsSync()) {
-        final String fallbackDll = p.join(exeDir, 'windows', 'sqlite3.dll');
-        if (File(fallbackDll).existsSync()) {
-          try {
-            File(fallbackDll).renameSync(dllPath);
-          } catch (e) {
-            debugPrint('FileIndexDb: Error moving sqlite3.dll: $e');
-          }
-        }
-      }
-    }
-  }
-
   static String shellUser() {
     final String name = Platform.environment['USERNAME'] ?? 'user';
     final String clean = name.replaceAll(RegExp(r'\s+'), '').toLowerCase();
     return clean.isEmpty ? 'user' : clean;
-  }
-}
-
-class ClipboardExtension {
-  static Future<void> copyFile(String filePath) async {
-    final List<int> pathUnits = filePath.codeUnits;
-    final int bytesNeeded = sizeOf<DROPFILES>() + ((pathUnits.length + 2) * sizeOf<Uint16>());
-    final Pointer<NativeType> hMem = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, bytesNeeded);
-    if (hMem.address == 0) {
-      throw Exception('Failed to allocate clipboard memory.');
-    }
-
-    final Pointer<DROPFILES> dropFiles = GlobalLock(hMem).cast<DROPFILES>();
-    if (dropFiles.address == 0) {
-      GlobalFree(hMem);
-      throw Exception('Failed to lock clipboard memory.');
-    }
-
-    try {
-      dropFiles.ref.pFiles = sizeOf<DROPFILES>();
-      dropFiles.ref.pt.x = 0;
-      dropFiles.ref.pt.y = 0;
-      dropFiles.ref.fNC = 0;
-      dropFiles.ref.fWide = 1;
-
-      final Pointer<Uint16> fileListPtr = (dropFiles.cast<Uint8>() + sizeOf<DROPFILES>()).cast<Uint16>();
-      for (int i = 0; i < pathUnits.length; i++) {
-        fileListPtr[i] = pathUnits[i];
-      }
-      fileListPtr[pathUnits.length] = 0;
-      fileListPtr[pathUnits.length + 1] = 0;
-    } finally {
-      GlobalUnlock(hMem);
-    }
-
-    if (OpenClipboard(NULL) == 0) {
-      GlobalFree(hMem);
-      throw Exception('Failed to open clipboard.');
-    }
-
-    try {
-      EmptyClipboard();
-      final int result = SetClipboardData(CF_HDROP, hMem.address);
-      if (result == 0) {
-        GlobalFree(hMem);
-        throw Exception('Failed to set clipboard file data.');
-      }
-    } finally {
-      CloseClipboard();
-    }
-  }
-
-  static Future<void> copyMultipleFiles(List<String> files) async {
-    if (files.isEmpty) {
-      throw Exception('No files provided.');
-    }
-
-    final List<int> allUnits = <int>[];
-    for (final String file in files) {
-      final String normalized = file.endsWith(Platform.pathSeparator) ? file.substring(0, file.length - 1) : file;
-      allUnits.addAll(normalized.codeUnits);
-      allUnits.add(0);
-    }
-    allUnits.add(0); // double-null terminator
-
-    final int bytesNeeded = sizeOf<DROPFILES>() + (allUnits.length * 2);
-    final Pointer<NativeType> hMem = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, bytesNeeded);
-    if (hMem.address == 0) {
-      throw Exception('Failed to allocate clipboard memory.');
-    }
-
-    final Pointer<DROPFILES> dropFiles = GlobalLock(hMem).cast<DROPFILES>();
-    if (dropFiles.address == 0) {
-      GlobalFree(hMem);
-      throw Exception('Failed to lock clipboard memory.');
-    }
-
-    try {
-      dropFiles.ref.pFiles = sizeOf<DROPFILES>();
-      dropFiles.ref.pt.x = 0;
-      dropFiles.ref.pt.y = 0;
-      dropFiles.ref.fNC = 0;
-      dropFiles.ref.fWide = 1;
-
-      final Pointer<Uint16> fileListPtr = (dropFiles.cast<Uint8>() + sizeOf<DROPFILES>()).cast<Uint16>();
-      for (int i = 0; i < allUnits.length; i++) {
-        fileListPtr[i] = allUnits[i];
-      }
-    } finally {
-      GlobalUnlock(hMem);
-    }
-
-    // ✅ Fix #3: non-blocking retry
-    int opened = 0;
-    for (int attempt = 0; attempt < 5 && opened == 0; attempt++) {
-      opened = OpenClipboard(NULL);
-      if (opened == 0) {
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
-    }
-    if (opened == 0) {
-      GlobalFree(hMem);
-      throw Exception('Failed to open clipboard after retries.');
-    }
-
-    try {
-      EmptyClipboard();
-
-      final int result = SetClipboardData(CF_HDROP, hMem.address);
-      if (result == 0) {
-        // Clipboard does NOT own hMem yet on failure
-        GlobalFree(hMem);
-        throw Exception('Failed to set clipboard file data.');
-      }
-      // Clipboard now owns hMem — do NOT free it
-
-      // ✅ Fix #2: register the format dynamically
-      final int cfPreferredDropEffect = RegisterClipboardFormat(
-        TEXT('Preferred DropEffect'),
-      );
-
-      const int dropEffectCopy = 1;
-      final Pointer<NativeType> hEffect = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, sizeOf<Uint32>());
-      if (hEffect.address != 0) {
-        final Pointer<Uint32> effectPtr = GlobalLock(hEffect).cast<Uint32>();
-        if (effectPtr.address != 0) {
-          effectPtr.value = dropEffectCopy;
-          GlobalUnlock(hEffect);
-          SetClipboardData(cfPreferredDropEffect, hEffect.address);
-          // Clipboard owns hEffect now
-        } else {
-          GlobalFree(hEffect);
-        }
-      }
-    } finally {
-      CloseClipboard();
-    }
-  }
-
-  static Future<void> copyFolder(String folderPath) async {
-    // Normalize path: remove trailing separator if present
-    final String normalizedPath =
-        folderPath.endsWith(Platform.pathSeparator) ? folderPath.substring(0, folderPath.length - 1) : folderPath;
-
-    final List<int> pathUnits = normalizedPath.codeUnits;
-
-    // DROPFILES struct + wide-char path + double null terminator
-    final int bytesNeeded = sizeOf<DROPFILES>() + ((pathUnits.length + 2) * sizeOf<Uint16>());
-
-    final Pointer<NativeType> hMem = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, bytesNeeded);
-    if (hMem.address == 0) {
-      throw Exception('Failed to allocate clipboard memory.');
-    }
-
-    final Pointer<DROPFILES> dropFiles = GlobalLock(hMem).cast<DROPFILES>();
-    if (dropFiles.address == 0) {
-      GlobalFree(hMem);
-      throw Exception('Failed to lock clipboard memory.');
-    }
-
-    try {
-      dropFiles.ref.pFiles = sizeOf<DROPFILES>();
-      dropFiles.ref.pt.x = 0;
-      dropFiles.ref.pt.y = 0;
-      dropFiles.ref.fNC = 0;
-      dropFiles.ref.fWide = 1; // Wide-char (UTF-16) paths
-
-      final Pointer<Uint16> fileListPtr = (dropFiles.cast<Uint8>() + sizeOf<DROPFILES>()).cast<Uint16>();
-
-      for (int i = 0; i < pathUnits.length; i++) {
-        fileListPtr[i] = pathUnits[i];
-      }
-      // Double null terminator required by DROPFILES spec
-      fileListPtr[pathUnits.length] = 0;
-      fileListPtr[pathUnits.length + 1] = 0;
-    } finally {
-      GlobalUnlock(hMem);
-    }
-
-    // --- Open clipboard with retry (another window may hold it briefly) ---
-    int opened = 0;
-    for (int attempt = 0; attempt < 5 && opened == 0; attempt++) {
-      opened = OpenClipboard(NULL);
-      if (opened == 0) sleep(const Duration(milliseconds: 50));
-    }
-    if (opened == 0) {
-      GlobalFree(hMem);
-      throw Exception('Failed to open clipboard after retries.');
-    }
-
-    try {
-      EmptyClipboard();
-
-      // CF_HDROP works for both files and folders — Explorer will happily
-      // paste a folder just like a file drop.
-      final int result = SetClipboardData(CF_HDROP, hMem.address);
-      if (result == 0) {
-        GlobalFree(hMem);
-        throw Exception('Failed to set clipboard folder data.');
-      }
-
-      // ----------------------------------------------------------------
-      // BONUS: set the "Preferred DropEffect" so the shell knows whether
-      // this should be a Copy (DROPEFFECT_COPY = 1) or Cut/Move (= 2).
-      // Without this some apps default to Move on paste.
-      // ----------------------------------------------------------------
-      const int dropEffectCopy = 1;
-      const int cfPrefferedDropEffect = 0xC004; // well-known registered format
-
-      final Pointer<NativeType> hEffect = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, sizeOf<Uint32>());
-      if (hEffect.address != 0) {
-        final Pointer<Uint32> effectPtr = GlobalLock(hEffect).cast<Uint32>();
-        if (effectPtr.address != 0) {
-          effectPtr.value = dropEffectCopy;
-          GlobalUnlock(hEffect);
-          SetClipboardData(cfPrefferedDropEffect, hEffect.address);
-          // Ownership transferred to clipboard; do NOT free hEffect.
-        } else {
-          GlobalFree(hEffect);
-        }
-      }
-    } finally {
-      CloseClipboard();
-    }
   }
 }
 

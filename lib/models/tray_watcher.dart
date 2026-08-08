@@ -2,8 +2,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import '../platform/windows/tabamewin32_api.dart';
+import '../platform/windows/win32_api.dart';
 
 import 'classes/boxes.dart';
 import 'win32/win32.dart';

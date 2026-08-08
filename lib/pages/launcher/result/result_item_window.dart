@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../models/win32/window.dart';
-import '../../../models/window_watcher.dart';
+import '../../../platform/platform_models.dart';
+
 import '../../../widgets/widgets/extracted_icon.dart';
 import 'result_row.dart';
 
@@ -17,7 +17,7 @@ class WindowSearchListItem extends StatelessWidget {
     required this.onHover,
   });
 
-  final Window window;
+  final PlatformWindow window;
   final bool isSelected;
   final bool isRepeating;
   final Color accent;
@@ -38,7 +38,7 @@ class WindowSearchListItem extends StatelessWidget {
         width: 20,
         height: 20,
         child: buildExtractedIcon(
-          WindowWatcher.icons[window.hWnd],
+          window.icon,
           width: 20,
           height: 20,
           gaplessPlayback: true,
@@ -47,10 +47,10 @@ class WindowSearchListItem extends StatelessWidget {
         ),
       ),
       title: window.title,
-      subtitle: window.process.exe.replaceFirst('.exe', ''),
+      subtitle: (window.executable.isNotEmpty ? window.executable : window.applicationName).replaceFirst('.exe', ''),
       badge: LauncherKindBadge(
         icon: Icons.window_rounded,
-        label: 'WIN',
+        label: 'WINDOW',
         color: Colors.black45,
         accent: accent,
       ),

@@ -5,17 +5,16 @@ import 'dart:math' show min, max;
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import 'tabamewin32_api.dart';
+import 'win32_api.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../models/classes/boxes.dart';
-import '../models/classes/quick_snap_apply.dart';
-import '../models/classes/saved_maps.dart';
-import '../models/globals.dart';
-import '../models/settings.dart';
-import '../models/win32/mixed.dart';
-import '../models/win32/win32.dart';
+import '../../models/classes/boxes.dart';
+import '../../models/classes/saved_maps.dart';
+import '../../models/settings.dart';
+import '../../models/win32/mixed.dart';
+import '../../models/win32/win32.dart';
+import 'windows_quick_snap_service.dart';
 
 class ViewsScreen extends StatefulWidget {
   final void Function(List<Space> spaces)? onPicked;
@@ -346,12 +345,7 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
       final QuickGrid preset = Boxes.quickGrids[_activeIndex];
       final double mw = monitor.width.toDouble();
       final double mh = monitor.height.toDouble();
-      if (!Globals.snappedWindowOriginalSizes.containsKey(hWnd)) {
-        Globals.snappedWindowOriginalSizes[hWnd] = <int>[
-          Win32.getSize(hwnd: hWnd).width,
-          Win32.getSize(hwnd: hWnd).height,
-        ];
-      }
+
       for (final QuickGridRect zone in preset.zones) {
         if (rx >= zone.left * mw && rx <= zone.right * mw && ry >= zone.top * mh && ry <= zone.bottom * mh) {
           _applyQuickSnapZone(hWnd, zone, preset);
@@ -372,13 +366,6 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
       visible = false;
       hideViews();
       return;
-    }
-
-    if (!Globals.snappedWindowOriginalSizes.containsKey(hWnd)) {
-      Globals.snappedWindowOriginalSizes[hWnd] = <int>[
-        Win32.getSize(hwnd: hWnd).width,
-        Win32.getSize(hwnd: hWnd).height,
-      ];
     }
 
     // BUG FIX #1: compute true min/max instead of relying on .first/.last order,
@@ -595,10 +582,7 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
   }
 
   void _applyQuickSnapZone(int hWnd, QuickGridRect zone, QuickGrid preset) {
-    if (!Globals.snappedWindowOriginalSizes.containsKey(hWnd)) {
-      Globals.snappedWindowOriginalSizes[hWnd] = <int>[nowPos.gridX, nowPos.gridY];
-    }
-    QuickSnapApply.apply(hWnd, zone, preset.gap, currentMonitor);
+    unawaited(WindowsQuickSnapService.applyToHandle(hWnd, zone, preset.gap, currentMonitor));
     visible = false;
     if (mounted) setState(() {});
     WidgetsBinding.instance.addPostFrameCallback((_) => hideViews());

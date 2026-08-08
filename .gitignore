@@ -61,6 +61,11 @@ pubspec.lock
 .a.Release.lnk
 .vscode
 *Release*
+!.github/workflows/release-packaging.yml
+# The macOS target references these source-controlled release settings.
+!macos/Flutter/Flutter-Release.xcconfig
+!macos/Runner/Configs/Release.xcconfig
+!macos/Runner/Release.entitlements
 Tabame.lnk
 ##
 *.pem
@@ -74,6 +79,17 @@ MICROSOFT*
 .fdemon/settings.local.toml
 docs/design-system/
 docs/
+!docs/
+docs/*
+!docs/macos-permissions.md
+!docs/audio-platform.md
+!docs/release/
+!docs/release/**
+# Phase 9 packaging and release assets are source-controlled.
+!packaging/
+!packaging/**
+!tool/release/
+!tool/release/**
 # website/
 .agent/
 ISSUES.md

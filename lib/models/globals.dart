@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import '../platform/windows/tabamewin32_api.dart';
 
 import '../widgets/widgets/custom_cursor.dart';
 import 'countdown_manager.dart';
@@ -65,7 +65,6 @@ class Globals {
   static bool isWindowActive = false;
   static final Heights heights = Heights();
   static final CountdownManager countdownManager = CountdownManager();
-  static Map<int, List<int>> snappedWindowOriginalSizes = <int, List<int>>{};
 
   static int lastFocusedWinHWND = 0;
   static bool alwaysAwake = false;

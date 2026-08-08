@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Tabame
+GenericName=Launcher and quick menu
+Comment=Search and launch applications, files, and plugins
+Exec=tabame %U
+TryExec=tabame
+Icon=tabame
+Terminal=false
+Categories=Utility;Accessibility;
+StartupNotify=true
+StartupWMClass=com.farse.tabame

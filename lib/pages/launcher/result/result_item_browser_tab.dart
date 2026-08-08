@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart' show BrowserTab;
+import '../../../platform/windows/tabamewin32_api.dart' show BrowserTab;
 
 import 'result_row.dart';
 

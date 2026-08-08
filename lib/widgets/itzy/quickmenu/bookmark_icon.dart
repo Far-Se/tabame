@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../models/classes/saved_maps.dart';
+import '../../../platform/app_paths.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/extracted_icon.dart';
 import 'button_window_app.dart';
@@ -58,7 +60,7 @@ class BookmarkIcon extends StatelessWidget {
               lowerPath.endsWith('.url') ||
               lowerPath.endsWith('.lnk'))) {
         File? file = WinUtils.getCachedFileFormatIcon(path);
-        file ??= File('${WinUtils.getTabameAppDataFolder()}/cache/icon_cache/${path.hashCode}.ico');
+        file ??= File(AppPaths.cachePath(p.join('icon_cache', '${path.hashCode}.ico')));
         if (!lowerPath.endsWith('.exe') && !lowerPath.endsWith('.url') && !lowerPath.endsWith('.lnk')) {
           final String ext = path.split('.').last.toLowerCase();
           if (iconExtCache.containsKey(ext)) {

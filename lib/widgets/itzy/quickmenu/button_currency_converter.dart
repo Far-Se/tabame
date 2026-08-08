@@ -9,8 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../models/classes/boxes.dart';
+import '../../../platform/app_paths.dart';
 import '../../../models/settings.dart';
-import '../../../models/win32/win_utils.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 
@@ -948,7 +948,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
     return _rates[_toCurrency];
   }
 
-  String get _historyCachePath => "${WinUtils.getTabameAppDataFolder(settings: true)}\\$_historyFileName";
+  String get _historyCachePath => AppPaths.settingsPath(_historyFileName);
 
   Future<void> _initialize() async {
     await _loadHistoryCacheFile();

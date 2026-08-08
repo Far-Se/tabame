@@ -229,13 +229,13 @@ class _Win98Footer extends StatelessWidget {
             ),
           ),
         ),
-        SizedBox(width: 3),
+        const SizedBox(width: 3),
         Expanded(
           child: _Win98Bevel(
             raised: false,
             child: ColoredBox(
               color: _Win98Colors.face,
-              child: Padding(
+              child: const Padding(
                 padding: EdgeInsets.fromLTRB(2, 1, 2, 1),
                 child: BottomBar(),
               ),

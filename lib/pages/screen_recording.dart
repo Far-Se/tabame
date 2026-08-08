@@ -10,12 +10,15 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart' as intl;
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import 'package:path/path.dart' as p;
+import '../platform/windows/tabamewin32_api.dart';
+import '../platform/windows/win32_api.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../logic/app_startup.dart';
 import '../models/classes/boxes.dart';
+import '../platform/app_paths.dart';
+import '../platform/clipboard_service.dart';
 import '../models/settings.dart' as settings_model;
 import '../models/settings.dart';
 import '../models/win32/mixed.dart';
@@ -48,7 +51,7 @@ Future<void> startScreenRecordingPage() async {
 }
 
 class RecordingSettingsStore {
-  static String get _path => '${WinUtils.getTabameAppDataFolder(settings: true)}\\screen_recording.json';
+  static String get _path => AppPaths.settingsPath('screen_recording.json');
   static Map<String, dynamic> _data = <String, dynamic>{};
 
   static void load() {
@@ -489,7 +492,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   }
 
   String _defaultRecordingFolder() {
-    return '${WinUtils.getFancyshotFolder()}\\recordings';
+    return p.join(WinUtils.getFancyshotFolder(), 'recordings');
   }
 
   Future<String> _buildOutputPath() async {
@@ -822,7 +825,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
   //   }
   // }
 
-  static String get _ffmpegDebugLogPath => '${WinUtils.getTabameAppDataFolder(settings: true)}\\ffmpeg_debug.log';
+  static String get _ffmpegDebugLogPath => AppPaths.settingsPath('ffmpeg_debug.log', forWrite: true);
 
   void _ffmpegLog(String message) {
     try {
@@ -1354,7 +1357,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
         await launchWithExplorer(filePath);
         break;
       case RecordingAfterAction.copyFilePath:
-        await ClipboardExtension.copyFile(filePath);
+        await ClipboardService.instance.writeFile(filePath);
         break;
     }
     windowManager.close();

@@ -1,28 +1,24 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:win32/win32.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/classes/quick_snap_apply.dart';
 import '../../models/classes/saved_maps.dart';
-import '../../models/globals.dart';
+
 import '../../models/settings.dart';
-import '../../models/win32/mixed.dart';
-import '../../models/win32/win32.dart';
+import '../../platform/monitor_service.dart';
+import '../../platform/platform_models.dart';
+import '../../platform/quick_snap_service.dart';
+import '../../platform/window_service.dart';
 
 // ignore_for_file: public_member_api_docs
 
-/// Shown when middle-clicking a taskbar item.
-///
-/// Flow:
-///   1. List of [QuickGrid] presets (thumbnails).
-///   2. After selecting a preset → grid of individual zones to pick.
-///   3. Picking a zone → `Win32.changePosition` on [hWnd] and pop.
+/// Shown when selecting a zone for a neutral [PlatformWindow] snapshot.
 class QuickSnapPicker extends StatefulWidget {
-  const QuickSnapPicker({super.key, required this.hWnd});
+  const QuickSnapPicker({super.key, required this.window});
 
-  final int hWnd;
+  final PlatformWindow window;
 
   @override
   State<QuickSnapPicker> createState() => _QuickSnapPickerState();
@@ -33,81 +29,35 @@ class _QuickSnapPickerState extends State<QuickSnapPicker> {
 
   List<QuickGrid> get _presets => Boxes.quickGrids;
 
-  // ── Apply logic ──────────────────────────────────────────────────────────────
-
-  // ignore: unused_element
-  void _applyZone2(QuickGridRect zone) {
-    // Determine which monitor the window currently lives on.
-    // NOTE: we use widget.hWnd (the target window) not Win32.hWnd (tabame itself).
-    final int monitorId = Win32.getWindowMonitor(Win32.hWnd);
-    Square? monSize = Monitor.monitorSizes[monitorId];
-
-    // Fallback: use the primary / first monitor
-    if (monSize == null && Monitor.monitorSizes.isNotEmpty) {
-      monSize = Monitor.monitorSizes.values.first;
-    }
-
-    if (monSize == null) return;
-
-    final int mx = monSize.x;
-    final int my = monSize.y;
-    final int mw = monSize.width;
-    final int mh = monSize.height;
-
-    // ── Restore maximized state first so the window has real borders ──────────
-    Win32.restoreIfMaximized(widget.hWnd);
-
-    // ── Measure invisible border (Win10/11 shadow/gutter) ────────────────────
-    // GetWindowRect includes ~8px invisible resize handles on left/right/bottom.
-    // setWindowPos uses those same coordinates, so two adjacent zones with no
-    // gap would still have a visible gap equal to borderLeft + borderRight.
-    // We compensate by expanding each dimension by the invisible border widths.
-    final ({int left, int top, int right, int bottom}) border = Win32.getInvisibleBorder(widget.hWnd);
-
-    // ── Compute target rect from fractional zone + monitor ───────────────────
-    final int g = (_selectedPreset?.gap ?? 0);
-    final int half = g ~/ 2;
-
-    // Zone pixel rect (no border compensation yet)
-    final int zx = mx + (zone.left * mw).round();
-    final int zy = my + (zone.top * mh).round();
-    final int zw = ((zone.right - zone.left) * mw).round();
-    final int zh = ((zone.bottom - zone.top) * mh).round();
-
-    // Expand the SetWindowPos rect by invisible borders so the *visible* area
-    // aligns perfectly with zone boundaries. Then inset by gap/2.
-    final int x = zx - border.left + half;
-    final int y = zy - border.top + half;
-    final int w = (zw + border.left + border.right - g).clamp(100, mw);
-    final int h = (zh + border.top + border.bottom - g).clamp(60, mh);
-    QuickMenuFunctions.keepOpen = true;
-    SetForegroundWindow(widget.hWnd);
-    if (!Globals.snappedWindowOriginalSizes.containsKey(widget.hWnd)) {
-      Globals.snappedWindowOriginalSizes[widget.hWnd] = <int>[
-        Win32.getSize(hwnd: widget.hWnd).width,
-        Win32.getSize(hwnd: widget.hWnd).height,
-      ];
-    }
-
-    Win32.setPosDPI(widget.hWnd, PointXY(X: x, Y: y), logicalWidth: w, logicalHeight: h);
-    // Win32.changePosition(widget.hWnd, x, y, w, h);
-    Timer(const Duration(milliseconds: 1000), () => QuickMenuFunctions.keepOpen = false);
-    Navigator.of(context).pop();
-  }
-
   void _applyZone(QuickGridRect zone) {
-    final int monitorId = Win32.getWindowMonitor(Win32.hWnd);
+    unawaited(_applyZoneAsync(zone));
+  }
 
+  Future<void> _applyZoneAsync(QuickGridRect zone) async {
+    final QuickGrid? preset = _selectedPreset;
+    if (preset == null) return;
+    final QuickSnapService service = QuickSnapService.instance;
+    if (!service.isAvailable) return;
+    final List<PlatformMonitor> monitors = await MonitorService.instance.enumerate();
+    final PlatformMonitor? monitor =
+        QuickSnapGeometry.monitorForWindow(widget.window, monitors) ?? await MonitorService.instance.cursorMonitor();
+    if (monitor == null) return;
+    await WindowService.instance.activate(widget.window);
+    final bool applied = await QuickSnapApply.apply(widget.window, monitor, zone, preset.gap);
+    if (!applied || !mounted) return;
     QuickMenuFunctions.keepOpen = true;
-    SetForegroundWindow(widget.hWnd);
-    QuickSnapApply.apply(widget.hWnd, zone, _selectedPreset?.gap ?? 0, monitorId);
     Timer(const Duration(milliseconds: 1000), () => QuickMenuFunctions.keepOpen = false);
     Navigator.of(context).pop();
   }
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    if (!QuickSnapService.instance.isAvailable) {
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(QuickSnapService.instance.unavailableReason, textAlign: TextAlign.center),
+      );
+    }
     if (_selectedPreset != null || _presets.length == 1) {
       _selectedPreset ??= _presets.first;
       user.lastQuickSnapZoneId = _selectedPreset!.id;
@@ -130,9 +80,8 @@ class _QuickSnapPickerState extends State<QuickSnapPicker> {
             setState(() => _selectedPreset = null);
           },
         );
-      } else {
-        user.lastQuickSnapZoneId = "";
       }
+      user.lastQuickSnapZoneId = "";
     }
     return _PresetList(
       presets: _presets,

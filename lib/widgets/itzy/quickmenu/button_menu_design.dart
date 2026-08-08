@@ -10,9 +10,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/globals.dart';
+import '../../../platform/app_paths.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/theme_colors.dart';
-import '../../../models/win32/win_utils.dart';
 import '../../interface/theme_setup.dart';
 import '../../widgets/color_picker.dart';
 import '../../widgets/custom_tooltip.dart';
@@ -21,7 +21,7 @@ import '../../widgets/font_picker/ui/font_picker.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 import '../../widgets/panel_opacity_gradient_editor.dart';
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../../../platform/file_picker_service.dart';
 
 class QuickMenuDesignButton extends StatelessWidget {
   const QuickMenuDesignButton({super.key});
@@ -219,7 +219,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     });
     if (results.isEmpty) return;
 
-    final String backdropsDir = "${WinUtils.getTabameAppDataFolder()}\\cache\\backdrops";
+    final String backdropsDir = AppPaths.cachePath('backdrops', forWrite: true);
     if (!Directory(backdropsDir).existsSync()) {
       Directory(backdropsDir).createSync(recursive: true);
     }

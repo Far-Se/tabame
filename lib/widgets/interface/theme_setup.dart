@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../../platform/file_picker_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,10 +11,10 @@ import 'package:image/image.dart' as img;
 import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
 import '../../models/globals.dart' show Globals;
+import '../../platform/app_paths.dart';
 import '../../models/settings.dart';
 import '../../models/theme.dart';
 import '../../models/util/theme_colors.dart';
-import '../../models/win32/win_utils.dart';
 import '../widgets/color_picker.dart';
 import '../widgets/custom_tooltip.dart';
 import '../widgets/font_picker/models/picker_font.dart';
@@ -468,7 +468,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
     final List<File> results = picker.getFiles();
     if (results.isEmpty) return;
 
-    final String backdropsDir = "${WinUtils.getTabameAppDataFolder()}\\cache\\backdrops";
+    final String backdropsDir = AppPaths.cachePath('backdrops', forWrite: true);
     if (!Directory(backdropsDir).existsSync()) {
       Directory(backdropsDir).createSync(recursive: true);
     }
@@ -911,7 +911,7 @@ class _ThemeSetupWidgetState extends State<ThemeSetupWidget> {
         children: <Widget>[
           Row(
             children: <Widget>[
-              if (leading != null) ...[leading, const SizedBox(width: 10)],
+              if (leading != null) ...<Widget>[leading, const SizedBox(width: 10)],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

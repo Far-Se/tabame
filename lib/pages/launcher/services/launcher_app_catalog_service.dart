@@ -1,15 +1,13 @@
-import 'dart:async';
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:pool/pool.dart';
 import 'package:sqlite3/sqlite3.dart';
-import 'package:tabamewin32/tabamewin32.dart' as native;
 
 import '../../../models/db/file_index_db.dart';
-import '../../../models/win32/win_utils.dart';
+import '../../../platform/app_catalog_service.dart';
+import '../../../platform/app_paths.dart';
 
 class LauncherAppCatalogService {
   LauncherAppCatalogService._();
@@ -30,7 +28,12 @@ class LauncherAppCatalogService {
     try {
       final Database db = await FileIndexDb.instance.database;
       final Directory iconCacheDirectory = await _ensureIconCacheDirectory();
-      final List<native.AppInfo> apps = _dedupe(await native.AppEnumeration.getAllApps());
+      final AppCatalogSnapshot snapshot = await AppCatalogService.instance.discover();
+      if (!snapshot.complete) {
+        debugPrint('Launcher: App catalog unavailable; keeping the existing catalog. ${snapshot.error ?? ''}');
+        return;
+      }
+      final List<AppCatalogRecord> apps = _dedupe(snapshot.records);
 
       final int rootId = FileIndexDb.instance.findNode(null, FileIndexDb.launcherAppsRootName) ??
           FileIndexDb.instance.insertNode(
@@ -56,12 +59,12 @@ class LauncherAppCatalogService {
 
       final Set<int> matchedNodeIds = <int>{};
       final Set<String> expectedIconFiles = <String>{
-        for (final native.AppInfo app in apps) _iconFileName(app.appUserModelId),
+        for (final AppCatalogRecord app in apps) _iconFileName(app.appUserModelId),
       };
 
       db.execute('BEGIN IMMEDIATE TRANSACTION');
       try {
-        for (final native.AppInfo app in apps) {
+        for (final AppCatalogRecord app in apps) {
           final String name = app.name.trim().isEmpty ? app.appUserModelId : app.name.trim();
           final String subtitle = app.executable.trim().isNotEmpty ? app.executable.trim() : app.appUserModelId;
           final String stableIdentity = _stableIdentity(app);
@@ -141,21 +144,28 @@ class LauncherAppCatalogService {
       return;
     }
 
-    await _cacheIconData(
-      appUserModelId: appUserModelId,
-      parsingName: parsingName,
-      iconFile: iconFile,
+    await _cacheIcon(
+      AppCatalogRecord(
+        stableId: 'windows:aumid:$appUserModelId',
+        name: appUserModelId,
+        launchTarget: buildLaunchTarget(appUserModelId),
+        sourcePath: parsingName,
+        subtitle: appUserModelId,
+        appUserModelId: appUserModelId,
+        parsingName: parsingName,
+      ),
+      iconFile,
     );
   }
 
-  List<native.AppInfo> _dedupe(List<native.AppInfo> apps) {
-    final Map<String, native.AppInfo> byAumid = <String, native.AppInfo>{};
+  List<AppCatalogRecord> _dedupe(List<AppCatalogRecord> apps) {
+    final Map<String, AppCatalogRecord> byAumid = <String, AppCatalogRecord>{};
 
-    for (final native.AppInfo app in apps) {
+    for (final AppCatalogRecord app in apps) {
       final String aumid = app.appUserModelId.trim();
       if (aumid.isEmpty) continue;
 
-      final native.AppInfo? existing = byAumid[aumid];
+      final AppCatalogRecord? existing = byAumid[aumid];
       if (existing == null ||
           (existing.parsingName.trim().isEmpty && app.parsingName.trim().isNotEmpty) ||
           (existing.executable.trim().isEmpty && app.executable.trim().isNotEmpty)) {
@@ -163,8 +173,8 @@ class LauncherAppCatalogService {
       }
     }
 
-    final List<native.AppInfo> deduped = byAumid.values.toList(growable: false);
-    deduped.sort((native.AppInfo a, native.AppInfo b) {
+    final List<AppCatalogRecord> deduped = byAumid.values.toList(growable: false);
+    deduped.sort((AppCatalogRecord a, AppCatalogRecord b) {
       final int byName = a.name.toLowerCase().compareTo(b.name.toLowerCase());
       if (byName != 0) return byName;
       return a.appUserModelId.toLowerCase().compareTo(b.appUserModelId.toLowerCase());
@@ -173,14 +183,15 @@ class LauncherAppCatalogService {
   }
 
   Future<Directory> _ensureIconCacheDirectory() async {
-    final Directory directory = Directory(p.join(WinUtils.getTabameAppDataFolder(), 'cache', 'icon_cache'));
+    final Directory directory = Directory(AppPaths.cachePath('icon_cache', forWrite: true));
     if (!await directory.exists()) {
       await directory.create(recursive: true);
     }
     return directory;
   }
 
-  String _stableIdentity(native.AppInfo app) {
+  String _stableIdentity(AppCatalogRecord app) {
+    if (app.stableIdentity.trim().isNotEmpty) return app.stableIdentity.trim();
     final String executableName = app.executable.trim().isNotEmpty
         ? p.basenameWithoutExtension(app.executable.trim())
         : p.basenameWithoutExtension(app.parsingName.trim());
@@ -198,10 +209,10 @@ class LauncherAppCatalogService {
 
   String _iconFileName(String appUserModelId) => '$_iconPrefix${appUserModelId.hashCode}.png';
 
-  Future<void> _cacheMissingIcons(List<native.AppInfo> apps, Directory iconCacheDirectory) async {
+  Future<void> _cacheMissingIcons(List<AppCatalogRecord> apps, Directory iconCacheDirectory) async {
     final Pool pool = Pool(3);
 
-    await Future.wait(apps.map((native.AppInfo app) async {
+    await Future.wait(apps.map((AppCatalogRecord app) async {
       final File iconFile = File(p.join(iconCacheDirectory.path, _iconFileName(app.appUserModelId)));
       if (await iconFile.exists()) return;
 
@@ -211,56 +222,13 @@ class LauncherAppCatalogService {
     await pool.close();
   }
 
-  Future<void> _cacheIcon(native.AppInfo app, File iconFile) async {
-    await _cacheIconData(
-      appUserModelId: app.appUserModelId,
-      parsingName: app.parsingName,
-      iconFile: iconFile,
-    );
-  }
-
-  Future<void> _cacheIconData({
-    required String appUserModelId,
-    required String parsingName,
-    required File iconFile,
-  }) async {
-    if (parsingName.trim().isEmpty) return;
-
+  Future<void> _cacheIcon(AppCatalogRecord app, File iconFile) async {
     try {
-      final native.AppIconData? icon = await native.AppEnumeration.getAppIcon(parsingName, size: 128);
-      if (icon == null || icon.width <= 0 || icon.height <= 0 || icon.pixels.isEmpty) return;
-
-      final ByteData? pngBytes = await _convertIconToPng(icon);
-      if (pngBytes == null) return;
-
-      await iconFile.writeAsBytes(pngBytes.buffer.asUint8List(), flush: true);
+      await AppCatalogService.instance.cacheIcon(app, iconFile.path);
     } catch (error, stackTrace) {
-      debugPrint('Launcher: Failed to cache icon for $appUserModelId: $error');
+      debugPrint('Launcher: Failed to cache icon for ${app.appUserModelId}: $error');
       debugPrintStack(stackTrace: stackTrace);
     }
-  }
-
-  Future<ByteData?> _convertIconToPng(native.AppIconData icon) {
-    final Completer<ByteData?> completer = Completer<ByteData?>();
-
-    ui.decodeImageFromPixels(
-      icon.pixels,
-      icon.width,
-      icon.height,
-      ui.PixelFormat.bgra8888,
-      (ui.Image image) async {
-        try {
-          final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
-          completer.complete(data);
-        } catch (error, stackTrace) {
-          completer.completeError(error, stackTrace);
-        } finally {
-          image.dispose();
-        }
-      },
-    );
-
-    return completer.future;
   }
 
   Future<void> _removeStaleIcons(Directory iconCacheDirectory, Set<String> expectedIconFiles) async {

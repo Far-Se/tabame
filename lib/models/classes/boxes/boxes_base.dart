@@ -5,10 +5,12 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import '../../../platform/windows/tabamewin32_api.dart';
+import '../../../platform/windows/win32_api.dart';
 
 import '../../../logic/error_handler.dart';
+import '../../../platform/app_paths.dart';
+import '../../../services/notification_coordinator.dart';
 import '../../globals.dart';
 import '../../settings.dart';
 import '../../util/quick_action_list.dart';
@@ -220,8 +222,9 @@ class Boxes {
       Debug.add("Registered: shortcut Installed");
     }
 
-    if (!Directory("${WinUtils.getTabameAppDataFolder()}\\trktivity").existsSync()) {
-      Directory("${WinUtils.getTabameAppDataFolder()}\\trktivity").createSync(recursive: true);
+    final Directory trktivityDirectory = Directory(AppPaths.currentPath('trktivity'));
+    if (!trktivityDirectory.existsSync()) {
+      trktivityDirectory.createSync(recursive: true);
       Debug.add("Registered: Trktivity");
     }
 
@@ -341,7 +344,7 @@ class Boxes {
   }
 
   static void clearIconCache() {
-    final Directory iconCacheDir = Directory("${WinUtils.getTabameAppDataFolder()}/cache/icon_cache");
+    final Directory iconCacheDir = Directory(AppPaths.cachePath('icon_cache', forWrite: true));
     final Directory formatIconCache = WinUtils.fileFormatIconCacheDirectory();
     if (formatIconCache.existsSync()) {
       formatIconCache.deleteSync(recursive: true);
@@ -1139,11 +1142,10 @@ class Boxes {
       } else if (quickTimer.type == 1) {
         WinUtils.msgBox("Tabame Quick Timer", quickTimer.name, speak: "${quickTimer.name}");
       } else if (quickTimer.type == 2) {
-        WinUtils.showWindowsNotification(
+        unawaited(NotificationCoordinator.instance.show(
           title: "Tabame Quick Timer",
           body: "Timer Expired: ${quickTimer.name}",
-          onClick: () {},
-        );
+        ));
       } else if (quickTimer.type == 3) {
         // Claude-usage reset alarm: pop the QuickMenu on the usage panel and
         // let the Claude Usage button sound the beep (see onClaudeResetTimer).
@@ -1262,7 +1264,7 @@ class Boxes {
 
   static Future<void> installUpdate(String downloadLink, String tagName) async {
     try {
-      final String updateArchivePath = "${WinUtils.getTempFolder()}\\tabame_$tagName.zip";
+      final String updateArchivePath = AppPaths.temporaryPath('tabame_$tagName.zip');
       await WinUtils.downloadFile(downloadLink, updateArchivePath, () {
         final String installDirectory = File(Platform.resolvedExecutable).parent.path;
         WinUtils.open(

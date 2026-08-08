@@ -5,22 +5,23 @@ import 'dart:ffi' hide Size;
 import 'package:ffi/ffi.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import 'tabamewin32_api.dart';
+import 'win32_api.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../logic/app_startup.dart';
-import '../models/classes/boxes.dart';
-import '../models/classes/quick_snap_apply.dart';
-import '../models/classes/saved_maps.dart';
-import '../models/screen_utils.dart';
-import '../models/settings.dart';
-import '../models/win32/imports.dart';
-import '../models/win32/mixed.dart';
-import '../models/win32/win32.dart';
-import '../models/win32/window.dart';
-import '../models/window_watcher.dart';
-import '../widgets/widgets/extracted_icon.dart';
+import '../../logic/app_startup.dart';
+import '../../models/classes/boxes.dart';
+import '../../models/classes/saved_maps.dart';
+import '../../models/screen_utils.dart';
+import '../../models/settings.dart';
+import '../../models/win32/imports.dart';
+import '../../models/win32/mixed.dart';
+import '../../models/win32/win32.dart';
+import '../../models/win32/window.dart';
+import '../../models/window_watcher.dart';
+import '../../widgets/widgets/extracted_icon.dart';
+import '../quick_snap_service.dart';
+import 'windows_quick_snap_service.dart';
 
 Future<void> startQuickSnap() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,8 +54,7 @@ Future<void> startQuickSnap() async {
   // drag never registers (no live mouse-based zone highlight) and the drop never
   // snaps/resizes the window. Right-click-to-trigger is turned off: this view is
   // driven purely by plain title-bar window drags.
-  await enableViews(true, rightClickToTrigger: false);
-  await NativeHooks.hook();
+  await QuickSnapService.instance.enableStandalone();
   runApp(const QuickSnapStandAlone());
 }
 
@@ -294,7 +294,13 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
       if (IsWindow(hWnd) == 0) continue;
       if (Win32.getWindowMonitor(hWnd) != monitorId) continue;
       final int targetZone = entry.value < grid.zones.length ? entry.value : grid.zones.length - 1;
-      QuickSnapApply.apply(hWnd, grid.zones[targetZone], grid.gap, monitorId, topInsetPhysical: stripHeight);
+      unawaited(WindowsQuickSnapService.applyToHandle(
+        hWnd,
+        grid.zones[targetZone],
+        grid.gap,
+        monitorId,
+        topInsetPhysical: stripHeight,
+      ));
     }
     _canonicalSlot.removeWhere((int hWnd, _) => IsWindow(hWnd) == 0);
   }
@@ -334,7 +340,13 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
       if (targetZone < 0) continue;
 
       _canonicalSlot[w.hWnd] = targetZone;
-      QuickSnapApply.apply(w.hWnd, grid.zones[targetZone], grid.gap, monitorId, topInsetPhysical: stripHeight);
+      unawaited(WindowsQuickSnapService.applyToHandle(
+        w.hWnd,
+        grid.zones[targetZone],
+        grid.gap,
+        monitorId,
+        topInsetPhysical: stripHeight,
+      ));
     }
     if (mounted) setState(() {});
   }
@@ -492,7 +504,13 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
     final QuickGrid? grid = _gridFor(target.monitorId);
     if (grid == null) return;
 
-    QuickSnapApply.apply(hWnd, grid.zones[target.zoneIndex], grid.gap, target.monitorId, topInsetPhysical: stripHeight);
+    unawaited(WindowsQuickSnapService.applyToHandle(
+      hWnd,
+      grid.zones[target.zoneIndex],
+      grid.gap,
+      target.monitorId,
+      topInsetPhysical: stripHeight,
+    ));
     _canonicalSlot[hWnd] = target.zoneIndex;
     _maxZonesSeen = _maxZonesSeen > grid.zones.length ? _maxZonesSeen : grid.zones.length;
   }

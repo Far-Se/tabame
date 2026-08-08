@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
-import 'package:win32/win32.dart';
+import '../../platform/windows/win32_api.dart';
 
 List<Display> enumerateDisplays() {
   final List<Display> displays = <Display>[];

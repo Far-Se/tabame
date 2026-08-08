@@ -11,13 +11,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import '../platform/windows/tabamewin32_api.dart';
+import '../platform/windows/win32_api.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../logic/app_startup.dart';
 import '../models/classes/boxes.dart';
 import '../models/globals.dart';
+import '../platform/app_paths.dart';
+import '../platform/clipboard_service.dart';
+import '../platform/platform_models.dart';
 import '../models/screen_utils.dart';
 import '../models/settings.dart';
 import '../models/win32/imports.dart';
@@ -312,7 +315,7 @@ Future<void> openPhotoEditorForCapture({
 }
 
 class Settings {
-  static String get _path => '${WinUtils.getTabameAppDataFolder(settings: true)}\\screen_capture.json';
+  static String get _path => AppPaths.settingsPath('screen_capture.json');
   static Map<String, dynamic> _data = <String, dynamic>{};
 
   static void load() {
@@ -449,11 +452,11 @@ class ScreenCapture {
   }
 
   static Future<void> copyPngToClipboard(Uint8List pngBytes) async {
-    ClipboardExtended.copyImage(pngBytes);
+    await ClipboardService.instance.writeContent(PlatformClipboardContent(imageBytes: pngBytes));
   }
 
   static Future<void> copyFileToClipboard(String filePath) async {
-    ClipboardExtension.copyFile(filePath);
+    await ClipboardService.instance.writeFile(filePath);
   }
 
   /// Save PNG to %localappdata%\Tabame\screenshots\<timestamp>.png
@@ -2253,7 +2256,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       await hideQuickMenuOffScreen();
       await UploadUtils.runUploadHost(choice.uploadHost!, filePath, onSuccess: (String url) async {
         if (choice.uploadHost!.uploadType != UploadHostType.custom) {
-          ClipboardExtended.copy(url);
+          await ClipboardService.instance.writeText(url);
           // Process.start('cmd.exe', <String>['/c', 'start', '', url], mode: ProcessStartMode.detached);
           await _finishPostCaptureAction();
         }

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:tabamewin32/tabamewin32.dart';
+import '../platform/windows/tabamewin32_api.dart';
 
 import '../models/classes/boxes/boxes_base.dart';
 import '../models/classes/saved_maps.dart';

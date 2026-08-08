@@ -10,8 +10,8 @@ import '../../../models/classes/saved_maps.dart';
 import '../../../models/db/file_index_db.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
-import '../../../models/win32/window.dart';
-import '../../../models/window_watcher.dart';
+import '../../../platform/platform_models.dart';
+import '../../../platform/window_watcher_service.dart';
 import '../../../widgets/itzy/quickmenu/button_quickactions.dart';
 import '../../launcher/result/result_item_bookmark.dart';
 import '../../launcher_search_models.dart';
@@ -55,7 +55,7 @@ List<QuickActionMenuEntry> _allQuickActionEntries(BuildContext context) {
 
 List<LauncherSearchResultItem> composeResults({
   required List<QuickActionMenuEntry> quickActionMatches,
-  required List<Window> windowMatches,
+  required List<PlatformWindow> windowMatches,
   required List<LauncherSearchResultItem> fileMatches,
   required List<BookmarkSearchResult> bookmarkMatches,
 }) {
@@ -189,10 +189,10 @@ List<QuickActionMenuEntry> findQuickActionMatches(
   return matches.take(5).toList();
 }
 
-List<Window> findWindowMatches(String query, {bool includeAllOnEmpty = false}) {
-  final List<Window> windows = List<Window>.from(WindowWatcher.list);
+List<PlatformWindow> findWindowMatches(String query, {bool includeAllOnEmpty = false}) {
+  final List<PlatformWindow> windows = List<PlatformWindow>.from(WindowWatcherService.instance.windows);
   if (query.isEmpty) {
-    if (!includeAllOnEmpty) return <Window>[];
+    if (!includeAllOnEmpty) return <PlatformWindow>[];
     return windows;
   }
 
@@ -200,14 +200,11 @@ List<Window> findWindowMatches(String query, {bool includeAllOnEmpty = false}) {
   // that passes a mixed-case query and would otherwise get zero matches.
   final String lowerQuery = query.toLowerCase();
 
-  final List<Window> matches = windows.where((Window window) {
-    final String title = window.title.toLowerCase();
-    final String exe = window.process.exe.toLowerCase();
-    final String path = window.process.exePath.toLowerCase();
-    return title.contains(lowerQuery) || exe.contains(lowerQuery) || path.contains(lowerQuery);
+  final List<PlatformWindow> matches = windows.where((PlatformWindow window) {
+    return window.searchText.contains(lowerQuery);
   }).toList();
 
-  matches.sort((Window a, Window b) {
+  matches.sort((PlatformWindow a, PlatformWindow b) {
     final int rank = windowMatchRank(a, lowerQuery).compareTo(windowMatchRank(b, lowerQuery));
     if (rank != 0) return rank;
     return a.title.toLowerCase().compareTo(b.title.toLowerCase());
@@ -282,12 +279,13 @@ bool shouldRunFilesystemSearch({
   return normalizedQuery.length >= 3;
 }
 
-int windowMatchRank(Window window, String query) {
+int windowMatchRank(PlatformWindow window, String query) {
   final String title = window.title.toLowerCase();
-  final String exe = window.process.exe.toLowerCase().replaceFirst('.exe', '');
+  final String executable = window.executable.toLowerCase().replaceFirst('.exe', '');
+  final String application = window.applicationName.toLowerCase();
 
-  if (title == query || exe == query) return 0;
-  if (title.startsWith(query) || exe.startsWith(query)) return 1;
+  if (title == query || executable == query || application == query) return 0;
+  if (title.startsWith(query) || executable.startsWith(query) || application.startsWith(query)) return 1;
   return 2;
 }
 

@@ -3,16 +3,16 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:filepicker_windows/filepicker_windows.dart';
+import '../../../platform/file_picker_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 
 import '../../../models/classes/boxes.dart';
+import '../../../platform/app_paths.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
-import '../../../models/win32/win_utils.dart';
 import '../../widgets/mini_switch.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
@@ -192,7 +192,7 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
       );
 
       // Save result as a temp PNG in cache
-      final String cacheDir = '${WinUtils.getTabameAppDataFolder()}\\cache\\folder_icons';
+      final String cacheDir = AppPaths.cachePath('folder_icons', forWrite: true);
       final Directory dir = Directory(cacheDir);
       if (!dir.existsSync()) dir.createSync(recursive: true);
 
@@ -242,7 +242,7 @@ class FolderIconWidgetState extends State<FolderIconWidget> {
         _processAndSaveIcon,
         <String, String>{
           'imagePath': sourceImage,
-          'cacheDir': '${WinUtils.getTabameAppDataFolder()}\\cache\\folder_icons',
+          'cacheDir': AppPaths.cachePath('folder_icons', forWrite: true),
         },
       );
 

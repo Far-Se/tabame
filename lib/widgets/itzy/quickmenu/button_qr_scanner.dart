@@ -5,10 +5,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
-import 'package:tabamewin32/tabamewin32.dart';
-import 'package:win32/win32.dart';
+import '../../../platform/clipboard_service.dart';
+import '../../../platform/platform_models.dart';
+import '../../../platform/windows/win32_api.dart';
 
 import '../../../models/classes/boxes.dart';
+import '../../../platform/app_paths.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/qr_capture_decoder.dart';
 import '../../../models/util/qr_generator.dart';
@@ -90,7 +92,7 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
       //   QuickMenuFunctions.triggerQuickAction("QrScanner");
       // });
 
-      final String capturePath = "${WinUtils.getTempFolder()}\\capture.png";
+      final String capturePath = AppPaths.temporaryPath('capture.png');
       final File captureFile = File(capturePath);
       if (!captureFile.existsSync()) {
         throw const FormatException('No capture image was saved.');
@@ -178,7 +180,7 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
     final Uint8List? pngBytes = _generatedPngBytes;
     if (pngBytes == null) return;
 
-    await ClipboardExtended.copyImage(pngBytes);
+    await ClipboardService.instance.writeContent(PlatformClipboardContent(imageBytes: pngBytes));
     if (!mounted) return;
     setState(() => _generatedImageCopied = true);
     _generatedCopiedTimer?.cancel();
@@ -239,9 +241,7 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
             type: MaterialType.transparency,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(12),
-              child: _mode == _QrMode.scan
-                  ? _buildScanBody(accent, onSurface)
-                  : _buildGenerateBody(accent, onSurface),
+              child: _mode == _QrMode.scan ? _buildScanBody(accent, onSurface) : _buildGenerateBody(accent, onSurface),
             ),
           ),
         ),
@@ -359,7 +359,10 @@ class _QrScannerPanelState extends State<QrScannerPanel> {
           ),
         ],
         const SizedBox(height: 12),
-        if (_generatedPngBytes == null) _buildGenerateEmptyState(accent, onSurface) else _buildGeneratedCard(accent, onSurface),
+        if (_generatedPngBytes == null)
+          _buildGenerateEmptyState(accent, onSurface)
+        else
+          _buildGeneratedCard(accent, onSurface),
       ],
     );
   }

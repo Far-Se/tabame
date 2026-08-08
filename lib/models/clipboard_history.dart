@@ -1,18 +1,43 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter/services.dart';
-import 'package:tabamewin32/tabamewin32.dart';
+import 'package:path/path.dart' as p;
 
-import 'classes/boxes.dart';
-import 'settings.dart';
-import 'win32/win_utils.dart';
+import '../platform/app_paths.dart';
+import '../platform/clipboard_service.dart';
+import '../platform/platform_models.dart';
+import 'classes/save_settings.dart';
 
 enum ClipboardHistoryType {
   text,
   richText,
   image,
+}
+
+String _resolveClipboardImagePath(String storedPath) {
+  if (storedPath.trim().isEmpty) return storedPath;
+  try {
+    final String normalizedStored = p.normalize(File(storedPath).absolute.path);
+    final String normalizedLegacyRoot = p.normalize(
+      AppPaths.legacyPath(p.join('cache', 'clipboard_images')),
+    );
+    final String comparisonStored = Platform.isWindows ? normalizedStored.toLowerCase() : normalizedStored;
+    final String comparisonLegacy = Platform.isWindows ? normalizedLegacyRoot.toLowerCase() : normalizedLegacyRoot;
+    final bool isLegacyImage =
+        comparisonStored == comparisonLegacy || comparisonStored.startsWith('$comparisonLegacy${p.separator}');
+    if (!isLegacyImage) return storedPath;
+
+    final String relative = p.relative(normalizedStored, from: normalizedLegacyRoot);
+    final String migratedPath = p.join(
+      AppPaths.cachePath('clipboard_images', forWrite: true),
+      relative,
+    );
+    return File(migratedPath).existsSync() ? migratedPath : storedPath;
+  } catch (_) {
+    return storedPath;
+  }
 }
 
 class ClipboardHistoryEntry {
@@ -75,7 +100,7 @@ class ClipboardHistoryEntry {
       createdAt: DateTime.tryParse((map['createdAt'] ?? '') as String) ?? DateTime.fromMillisecondsSinceEpoch(0),
       text: text,
       html: html,
-      imagePath: (map['imagePath'] ?? '') as String,
+      imagePath: _resolveClipboardImagePath((map['imagePath'] ?? '') as String),
       byteLength: (map['byteLength'] ?? 0) as int,
       pinned: (map['pinned'] ?? false) as bool,
       textLength: tLen,
@@ -128,21 +153,35 @@ class ClipboardHistoryStore {
   /// Storing hashes instead of full entries keeps RAM usage negligible.
   static final List<String> _recentCache = <String>[];
   static bool _recentCacheLoaded = false;
+  static bool _fallbackEnabled = true;
+  static int _fallbackCacheDays = defaultCacheDays;
 
-  static bool get enabled => Boxes.pref.getBool(enabledKey) ?? true;
-  static int get cacheDays => Boxes.pref.getInt(cacheDaysKey) ?? defaultCacheDays;
+  static bool get enabled => _readPersistedBool(enabledKey) ?? _fallbackEnabled;
 
-  static String get cacheDirectoryPath => '${WinUtils.getTabameAppDataFolder()}\\cache';
-  static String get imageDirectoryPath => '$cacheDirectoryPath\\clipboard_images';
-  static String get historyFilePath => '$cacheDirectoryPath\\clipboard.json';
-  static String get pinnedFilePath => '$cacheDirectoryPath\\pinned_clipboard.json';
+  static int get cacheDays => _readPersistedInt(cacheDaysKey) ?? _fallbackCacheDays;
+
+  static String get cacheDirectoryPath => AppPaths.cacheDirectory;
+  static String get imageDirectoryPath => AppPaths.cachePath('clipboard_images', forWrite: true);
+  static String get historyFilePath => AppPaths.cachePath('clipboard.json');
+  static String get pinnedFilePath => AppPaths.cachePath('pinned_clipboard.json');
+  static String get _writableHistoryFilePath => AppPaths.cachePath('clipboard.json', forWrite: true);
+  static String get _writablePinnedFilePath => AppPaths.cachePath('pinned_clipboard.json', forWrite: true);
 
   static Future<void> setEnabled(bool value) async {
-    await Boxes.updateSettings(enabledKey, value);
+    _fallbackEnabled = value;
+    try {
+      final SaveSettings settings = await SaveSettings.getInstance();
+      await settings.setBool(enabledKey, value);
+    } catch (_) {}
   }
 
   static Future<void> setCacheDays(int value) async {
-    await Boxes.updateSettings(cacheDaysKey, value.clamp(1, 365));
+    final int clamped = value.clamp(1, 365);
+    _fallbackCacheDays = clamped;
+    try {
+      final SaveSettings settings = await SaveSettings.getInstance();
+      await settings.setInt(cacheDaysKey, clamped);
+    } catch (_) {}
     // Pruning is intentionally NOT done automatically here.
     // Call clearCache() explicitly when desired.
   }
@@ -215,7 +254,7 @@ class ClipboardHistoryStore {
 
       return entries;
     } catch (error) {
-      Debug.print('ClipboardHistory: load failed $error');
+      _log('ClipboardHistory: load failed $error');
       return <ClipboardHistoryEntry>[];
     }
   }
@@ -278,7 +317,7 @@ class ClipboardHistoryStore {
       }
       return entries;
     } catch (error) {
-      Debug.print('ClipboardHistory: _loadAllFull failed $error');
+      _log('ClipboardHistory: _loadAllFull failed $error');
       return <ClipboardHistoryEntry>[];
     }
   }
@@ -304,50 +343,64 @@ class ClipboardHistoryStore {
       }
       return entries;
     } catch (error) {
-      Debug.print('ClipboardHistory: _loadPinnedFull failed $error');
+      _log('ClipboardHistory: _loadPinnedFull failed $error');
       return <ClipboardHistoryEntry>[];
     }
   }
 
-  /// Record the current clipboard contents.
-  ///
-  /// - Reads the clipboard once.
-  /// - Checks the last [_recentCacheSize] items for duplicates.
-  /// - If not a duplicate, appends a single JSON line to [historyFilePath].
-  /// - Images are saved to [imageDirectoryPath].
+  /// Record the current clipboard contents through the neutral platform
+  /// contract. Native format probing is owned by the active adapter.
   static Future<void> recordCurrentClipboard() async {
-    if (!enabled || _recording) return;
-    _recording = true;
-    try {
+    await _recordEntry(() async {
       ClipboardHistoryEntry? entry = await _readImage();
       entry ??= await _readImageFromRichText();
       entry ??= await _readTextOrRichText();
+      return entry;
+    });
+  }
+
+  /// Record a watcher payload without assuming that the event source exposes a
+  /// native clipboard identifier. Empty events trigger a full read so image-only
+  /// Windows changes can still be captured by the adapter.
+  static Future<void> recordClipboardChange(PlatformClipboardText change) async {
+    if (change.text.trim().isEmpty) {
+      await recordCurrentClipboard();
+      return;
+    }
+
+    await _recordEntry(() async {
+      final PlatformClipboardContent? content = await _tryClipboardRead<PlatformClipboardContent?>(
+        'changed clipboard content',
+        () => ClipboardService.instance.readContent(),
+      );
+      if (content != null && (content.text.isNotEmpty || content.html.isNotEmpty)) {
+        return _entryFromContent(content);
+      }
+      return _entryFromContent(PlatformClipboardContent(text: change.text));
+    });
+  }
+
+  static Future<void> _recordEntry(Future<ClipboardHistoryEntry?> Function() readEntry) async {
+    if (!enabled || _recording) return;
+    _recording = true;
+    try {
+      final ClipboardHistoryEntry? entry = await readEntry();
       if (entry == null) return;
 
-      // Lazy-load the recent cache from disk (only the first time).
       await _ensureRecentCacheLoaded();
-
-      // Duplicate check against the recent in-memory window.
       final String entryHash = _contentHash(entry);
-      final bool isDuplicate = _recentCache.contains(entryHash);
-      if (isDuplicate) return;
+      if (_recentCache.contains(entryHash)) return;
 
-      // Update lengths before appending
       final ClipboardHistoryEntry entryWithLengths = entry.copyWith(
         textLength: entry.text.length,
         htmlLength: entry.html.length,
       );
-
-      // Append one NDJSON line — no full file read/write needed.
       await _appendEntry(entryWithLengths);
 
-      // Update in-memory recent cache with the hash only.
       _recentCache.insert(0, entryHash);
-      if (_recentCache.length > _recentCacheSize) {
-        _recentCache.removeLast();
-      }
+      if (_recentCache.length > _recentCacheSize) _recentCache.removeLast();
     } catch (error) {
-      Debug.print('ClipboardHistory: record failed $error');
+      _log('ClipboardHistory: record failed $error');
     } finally {
       _recording = false;
     }
@@ -376,7 +429,7 @@ class ClipboardHistoryStore {
         ..clear()
         ..addAll(keptHistory.take(_recentCacheSize).map(_contentHash));
     } catch (error) {
-      Debug.print('ClipboardHistory: clearCache failed $error');
+      _log('ClipboardHistory: clearCache failed $error');
     }
   }
 
@@ -392,15 +445,18 @@ class ClipboardHistoryStore {
     if (fullEntry.type == ClipboardHistoryType.image) {
       final File file = File(fullEntry.imagePath);
       if (file.existsSync()) {
-        await ClipboardExtended.copyImage(await file.readAsBytes());
+        await ClipboardService.instance.writeContent(
+          PlatformClipboardContent(imageBytes: await file.readAsBytes()),
+        );
       }
       return;
     }
-    if (fullEntry.html.isNotEmpty) {
-      await ClipboardExtended.copyRichText(text: fullEntry.text, html: _htmlFragment(fullEntry.html));
-      return;
-    }
-    await ClipboardExtended.copy(fullEntry.text);
+    await ClipboardService.instance.writeContent(
+      PlatformClipboardContent(
+        text: fullEntry.text,
+        html: _htmlFragment(fullEntry.html),
+      ),
+    );
   }
 
   /// Remove a single entry from disk.
@@ -499,7 +555,7 @@ class ClipboardHistoryStore {
       cacheDir.createSync(recursive: true);
     }
 
-    final File file = File(historyFilePath);
+    final File file = File(_writableHistoryFilePath);
     final String line = '\n${jsonEncode(entry.toMap())}';
     await file.writeAsString(line, mode: FileMode.append);
   }
@@ -509,7 +565,13 @@ class ClipboardHistoryStore {
     final Directory cacheDir = Directory(cacheDirectoryPath);
     if (!cacheDir.existsSync()) cacheDir.createSync(recursive: true);
 
-    final File file = File(path ?? historyFilePath);
+    final String requestedPath = path ?? historyFilePath;
+    final String targetPath = requestedPath == historyFilePath
+        ? _writableHistoryFilePath
+        : requestedPath == pinnedFilePath
+            ? _writablePinnedFilePath
+            : requestedPath;
+    final File file = File(targetPath);
     final StringBuffer buffer = StringBuffer();
 
     for (final ClipboardHistoryEntry entry in entries) {
@@ -559,14 +621,16 @@ class ClipboardHistoryStore {
   static String _normalizedPath(String path) => File(path).absolute.path.toLowerCase();
 
   static Future<ClipboardHistoryEntry?> _readTextOrRichText() async {
-    final Map<String, dynamic>? data = await _tryClipboardRead<Map<String, dynamic>?>(
+    final PlatformClipboardContent? content = await _tryClipboardRead<PlatformClipboardContent?>(
       'rich text',
-      () => ClipboardExtended.pasteRichText(),
+      () => ClipboardService.instance.readContent(),
     );
-    if (data == null) return null;
+    return content == null ? null : _entryFromContent(content);
+  }
 
-    final String text = (data['text'] as String?)?.trim() ?? '';
-    final String html = _htmlFragment((data['html'] as String?)?.trim() ?? '');
+  static ClipboardHistoryEntry? _entryFromContent(PlatformClipboardContent content) {
+    final String text = content.text.trim();
+    final String html = _htmlFragment(content.html.trim());
     if (text.isEmpty && html.isEmpty) return null;
 
     final DateTime now = DateTime.now();
@@ -581,13 +645,13 @@ class ClipboardHistoryStore {
   }
 
   static Future<ClipboardHistoryEntry?> _readImageFromRichText() async {
-    final Map<String, dynamic>? data = await _tryClipboardRead<Map<String, dynamic>?>(
+    final PlatformClipboardContent? content = await _tryClipboardRead<PlatformClipboardContent?>(
       'rich text image',
-      () => ClipboardExtended.pasteRichText(),
+      () => ClipboardService.instance.readContent(),
     );
-    if (data == null) return null;
+    if (content == null) return null;
 
-    final String html = _htmlFragment((data['html'] as String?)?.trim() ?? '');
+    final String html = _htmlFragment(content.html.trim());
     if (html.isEmpty) return null;
 
     final Uint8List? bytes = _extractEmbeddedImageBytes(html);
@@ -601,15 +665,15 @@ class ClipboardHistoryStore {
     final String id = _entryId(now);
     final Directory imageDir = Directory(imageDirectoryPath);
     if (!imageDir.existsSync()) imageDir.createSync(recursive: true);
-    final String imagePath = '${imageDir.path}\\$id.png';
+    final String imagePath = p.join(imageDir.path, '$id.png');
 
     // The native side captures, encodes, and writes the PNG on a background
     // thread and returns only metadata — the image bytes never reach this
     // isolate. That keeps the whole operation off the platform thread (which
     // owns the global mouse hook), so copying an image no longer freezes input.
-    final ClipboardImageInfo? info = await _tryClipboardRead<ClipboardImageInfo?>(
+    final PlatformClipboardImageInfo? info = await _tryClipboardRead<PlatformClipboardImageInfo?>(
       'image',
-      () => ClipboardExtended.saveImageToFile(imagePath),
+      () => ClipboardService.instance.saveImageToFile(imagePath),
     );
     if (info == null) return null;
 
@@ -630,7 +694,7 @@ class ClipboardHistoryStore {
     final String id = _entryId(now);
     final Directory imageDir = Directory(imageDirectoryPath);
     if (!imageDir.existsSync()) imageDir.createSync(recursive: true);
-    final String imagePath = '${imageDir.path}\\$id.png';
+    final String imagePath = p.join(imageDir.path, '$id.png');
     final File imageFile = File(imagePath);
     await imageFile.writeAsBytes(bytes, flush: true);
     if (!imageFile.existsSync()) return null;
@@ -715,19 +779,12 @@ class ClipboardHistoryStore {
     for (int attempt = 0; attempt < _clipboardReadAttempts; attempt++) {
       try {
         return await read();
-      } on PlatformException catch (error) {
-        final bool clipboardBusy = error.message?.contains('open clipboard') ?? false;
-        final bool noImage = error.code == 'PASTE_IMAGE_ERROR';
-        if (noImage) return null;
-        if (!clipboardBusy || attempt == _clipboardReadAttempts - 1) {
-          Debug.print('ClipboardHistory: $label read failed ${error.code}: ${error.message}');
+      } catch (error) {
+        if (attempt == _clipboardReadAttempts - 1) {
+          _log('ClipboardHistory: $label read failed $error');
           return null;
         }
-      } catch (error) {
-        Debug.print('ClipboardHistory: $label read failed $error');
-        return null;
       }
-
       await Future<void>.delayed(Duration(milliseconds: 40 + (attempt * 35)));
     }
     return null;
@@ -758,4 +815,39 @@ class ClipboardHistoryStore {
   }
 
   static String _entryId(DateTime now) => now.microsecondsSinceEpoch.toString();
+
+  static bool? _readPersistedBool(String key) {
+    final dynamic value = _readPersistedValue(key);
+    return value is bool ? value : null;
+  }
+
+  static int? _readPersistedInt(String key) {
+    final dynamic value = _readPersistedValue(key);
+    return value is num ? value.toInt() : int.tryParse('$value');
+  }
+
+  static dynamic _readPersistedValue(String key) {
+    try {
+      final File file = File(AppPaths.settingsPath('settings.json'));
+      if (!file.existsSync()) return null;
+      final dynamic decoded = jsonDecode(file.readAsStringSync());
+      if (decoded is! Map<dynamic, dynamic>) return null;
+      return decoded['flutter.$key'] ?? decoded[key];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static void _log(String message) {
+    // Keep the history model independent from the Windows settings/debug graph.
+    print(message);
+  }
+
+  static void resetForTesting() {
+    _recording = false;
+    _recentCache.clear();
+    _recentCacheLoaded = false;
+    _fallbackEnabled = true;
+    _fallbackCacheDays = defaultCacheDays;
+  }
 }
