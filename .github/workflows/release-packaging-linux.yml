@@ -1,0 +1,357 @@
+name: Package Linux Releases
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release-packaging-linux.yml"
+      - "linux/**"
+      - "packaging/**"
+      - "tool/release/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "lib/**"
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Choose how this build is published."
+        required: true
+        default: nightly
+        type: choice
+        options:
+          - nightly
+          - official
+      tag_name:
+        description: "Optional official release tag. Nightly always uses the exact Nightly tag."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tabame-linux-release-${{ inputs.tag_name || (inputs.release_type == 'nightly') || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  metadata:
+    name: Resolve release metadata
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    outputs:
+      app_version: ${{ steps.metadata.outputs.app_version }}
+      package_version: ${{ steps.metadata.outputs.package_version }}
+      publish: ${{ steps.metadata.outputs.publish }}
+      release_name: ${{ steps.metadata.outputs.release_name }}
+      release_tag: ${{ steps.metadata.outputs.release_tag }}
+      release_type: ${{ steps.metadata.outputs.release_type }}
+      source_date_epoch: ${{ steps.metadata.outputs.source_date_epoch }}
+      source_sha: ${{ steps.metadata.outputs.source_sha }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read release metadata
+        id: metadata
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          RELEASE_TYPE_INPUT: ${{ inputs.release_type }}
+          TAG_NAME_INPUT: ${{ inputs.tag_name }}
+        run: |
+          set -Eeuo pipefail
+          app_version="$(awk '$1 == "version:" { print $2; exit }' pubspec.yaml)"
+          [[ -n "$app_version" ]] || { echo 'Could not read version from pubspec.yaml.' >&2; exit 1; }
+
+          release_type="${RELEASE_TYPE_INPUT:-}"
+          release_tag="${TAG_NAME_INPUT:-}"
+          publish=false
+
+          if [[ "$EVENT_NAME" == 'push' && "$REF_TYPE" == 'tag' && "$REF_NAME" == v* ]]; then
+            release_type=official
+            release_tag="$REF_NAME"
+            publish=true
+          elif [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then
+            case "$release_type" in
+              nightly|official) ;;
+              *) echo 'release_type must be nightly or official.' >&2; exit 2 ;;
+            esac
+            publish=true
+
+            if [[ "$release_type" == nightly ]]; then
+              if [[ -z "$release_tag" ]]; then
+                release_tag='Nightly'
+              fi
+              [[ "$release_tag" == 'Nightly' ]] || {
+                echo 'Nightly releases must use the exact Nightly tag.' >&2
+                exit 2
+              }
+            else
+              if [[ -z "$release_tag" ]]; then
+                release_tag="v$app_version"
+              fi
+              [[ "$release_tag" != 'Nightly' ]] || {
+                echo 'The Nightly tag is reserved for nightly releases.' >&2
+                exit 2
+              }
+            fi
+          else
+            release_type=validation
+            release_tag=''
+          fi
+
+          if [[ -n "$release_tag" && ! "$release_tag" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            echo "Unsupported release tag: $release_tag" >&2
+            exit 2
+          fi
+
+          if [[ "$release_type" == nightly ]]; then
+            release_name='Tabame Nightly'
+          elif [[ "$release_type" == official ]]; then
+            release_name="Tabame $release_tag"
+          else
+            release_name='Tabame Linux validation build'
+          fi
+
+          {
+            echo "app_version=$app_version"
+            echo "package_version=$(printf '%s' "$app_version" | tr '+' '~')"
+            echo "publish=$publish"
+            echo "release_name=$release_name"
+            echo "release_tag=$release_tag"
+            echo "release_type=$release_type"
+            echo "source_date_epoch=$(git log -1 --format=%ct)"
+            echo "source_sha=$GITHUB_SHA"
+          } >> "$GITHUB_OUTPUT"
+
+  linux-deb:
+    name: Linux ${{ matrix.deb_arch }} .deb
+    needs: metadata
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            flutter_arch: x64
+            deb_arch: amd64
+          - runner: ubuntu-24.04-arm
+            flutter_arch: arm64
+            deb_arch: arm64
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Linux build and smoke dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            appstream \
+            clang \
+            dbus-x11 \
+            desktop-file-utils \
+            dpkg-dev \
+            libgtk-3-dev \
+            libnotify-dev \
+            libx11-dev \
+            ninja-build \
+            pkg-config \
+            xvfb
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          architecture: ${{ matrix.flutter_arch }}
+          cache: true
+
+      - name: Enable Linux desktop target
+        run: flutter config --enable-linux-desktop
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Check shared Windows import boundary
+        run: dart run tool/check_shared_windows_imports.dart
+
+      - name: Run Linux release regression tests
+        run: flutter test test/app_paths_test.dart test/secret_crypto_test.dart test/linux_platform_test.dart test/portable_mvp_test.dart
+
+      - name: Build Linux release bundle
+        run: flutter build linux --release -t lib/portable_main.dart
+
+      - name: Validate desktop metadata
+        run: |
+          desktop-file-validate packaging/linux/tabame.desktop
+          appstreamcli validate packaging/linux/tabame.metainfo.xml.in || true
+
+      - name: Build reproducible Debian package
+        env:
+          SOURCE_DATE_EPOCH: ${{ needs.metadata.outputs.source_date_epoch }}
+        run: |
+          bash tool/release/package-linux-deb.sh \
+            --bundle "build/linux/${{ matrix.flutter_arch }}/release/bundle" \
+            --version '${{ needs.metadata.outputs.app_version }}' \
+            --arch '${{ matrix.deb_arch }}' \
+            --source-date-epoch "$SOURCE_DATE_EPOCH"
+
+      - name: Rebuild Linux package and compare bytes
+        env:
+          SOURCE_DATE_EPOCH: ${{ needs.metadata.outputs.source_date_epoch }}
+        run: |
+          bash tool/release/check-linux-reproducibility.sh \
+            --bundle "build/linux/${{ matrix.flutter_arch }}/release/bundle" \
+            --version '${{ needs.metadata.outputs.app_version }}' \
+            --arch '${{ matrix.deb_arch }}' \
+            --source-date-epoch "$SOURCE_DATE_EPOCH"
+
+      - name: Validate Debian package contents
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          package="dist/tabame_${{ needs.metadata.outputs.package_version }}_${{ matrix.deb_arch }}.deb"
+          dpkg-deb --info "$package"
+          extracted="$RUNNER_TEMP/tabame-deb-check"
+          rm -rf "$extracted"
+          mkdir -p "$extracted"
+          dpkg-deb --extract "$package" "$extracted"
+          desktop-file-validate "$extracted/usr/share/applications/tabame.desktop"
+          appstreamcli validate "$extracted/usr/share/metainfo/com.farse.tabame.metainfo.xml"
+
+      - name: Exercise Debian install, upgrade, and uninstall lifecycle
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          package="dist/tabame_${{ needs.metadata.outputs.package_version }}_${{ matrix.deb_arch }}.deb"
+          sudo apt-get install --yes "./$package"
+          dpkg-query --showformat='${Status}\n' --show tabame | grep -Fxq 'install ok installed'
+          sudo apt-get install --yes "./$package"
+          test -x /opt/tabame/tabame
+          test -x /usr/bin/tabame
+          sudo apt-get remove --yes tabame
+          if dpkg-query --show tabame >/dev/null 2>&1; then
+            echo 'tabame remained installed after the uninstall check.' >&2
+            exit 1
+          fi
+
+      - name: Run installed-layout and cold-start smoke test
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          package="dist/tabame_${{ needs.metadata.outputs.package_version }}_${{ matrix.deb_arch }}.deb"
+          xvfb-run -a dbus-run-session -- bash -c \
+            'export XDG_SESSION_TYPE=x11; bash tool/release/smoke-linux.sh --package "$1" --duration 5' \
+            smoke "$package"
+
+      - name: Upload Linux release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tabame-${{ needs.metadata.outputs.app_version }}-linux-${{ matrix.deb_arch }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish-linux-assets:
+    name: Publish Linux assets
+    if: ${{ needs.metadata.outputs.publish == 'true' }}
+    needs:
+      - metadata
+      - linux-deb
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download packaged assets
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tabame-*-linux-*
+          path: dist
+          merge-multiple: true
+
+      - name: Publish Linux assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_NAME: ${{ needs.metadata.outputs.release_name }}
+          RELEASE_TAG: ${{ needs.metadata.outputs.release_tag }}
+          RELEASE_TYPE: ${{ needs.metadata.outputs.release_type }}
+          SOURCE_SHA: ${{ needs.metadata.outputs.source_sha }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          if [[ "$RELEASE_TYPE" == nightly ]]; then
+            git tag -f "$RELEASE_TAG" "$SOURCE_SHA"
+            git push origin "refs/tags/$RELEASE_TAG" --force
+          elif git ls-remote --exit-code origin "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            git fetch --force origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+            existing_sha="$(git rev-list -n 1 "${RELEASE_TAG}^{commit}")"
+            [[ "$existing_sha" == "$SOURCE_SHA" ]] || {
+              echo "Existing tag $RELEASE_TAG points to $existing_sha, not $SOURCE_SHA." >&2
+              exit 1
+            }
+          else
+            git tag "$RELEASE_TAG" "$SOURCE_SHA"
+            git push origin "refs/tags/$RELEASE_TAG"
+          fi
+
+          release_exists=0
+          for _ in $(seq 1 30); do
+            if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+              release_exists=1
+              break
+            fi
+            sleep 2
+          done
+
+          if (( ! release_exists )); then
+            create_args=(
+              release create "$RELEASE_TAG"
+              --target "$SOURCE_SHA"
+              --title "$RELEASE_NAME"
+              --generate-notes
+            )
+            if [[ "$RELEASE_TYPE" == nightly ]]; then
+              create_args+=(--prerelease --latest=false)
+            else
+              create_args+=(--latest)
+            fi
+            if gh "${create_args[@]}"; then
+              release_exists=1
+            else
+              for _ in $(seq 1 30); do
+                if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+                  release_exists=1
+                  break
+                fi
+                sleep 2
+              done
+            fi
+          fi
+          (( release_exists )) || { echo "Could not create or find release $RELEASE_TAG." >&2; exit 1; }
+
+          if [[ "$RELEASE_TYPE" == nightly ]]; then
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_NAME" --prerelease --latest=false
+          else
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_NAME" --prerelease=false --latest
+          fi
+
+          mapfile -t assets < <(find dist -type f \( -name '*.deb' -o -name '*.sha256' \) -print | sort)
+          (( ${#assets[@]} > 0 )) || { echo 'No Linux release assets were downloaded.' >&2; exit 1; }
+          gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber

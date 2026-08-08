@@ -1234,7 +1234,9 @@ class Boxes {
 
       final Map<String, dynamic> latestRelease = releasePayload[0];
       if (latestRelease["tag_name"] == Globals.version) return 0;
-      if (latestRelease["tag_name"] == "nightly") return 0;
+      if (latestRelease["tag_name"] == "Nightly" || latestRelease["tag_name"] == "nightly") {
+        return 0;
+      }
 
       String assetDownloadLink = "";
       for (final Map<String, dynamic> releaseAsset in latestRelease["assets"]) {

@@ -1,0 +1,353 @@
+name: Package macOS Releases
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release-packaging-macos.yml"
+      - "macos/**"
+      - "packaging/**"
+      - "tool/release/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "lib/**"
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Choose how this build is published."
+        required: true
+        default: nightly
+        type: choice
+        options:
+          - nightly
+          - official
+      tag_name:
+        description: "Optional official release tag. Nightly always uses the exact Nightly tag."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tabame-macos-release-${{ inputs.tag_name || (inputs.release_type == 'nightly' && 'Nightly') || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  metadata:
+    name: Resolve release metadata
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    outputs:
+      app_version: ${{ steps.metadata.outputs.app_version }}
+      publish: ${{ steps.metadata.outputs.publish }}
+      release_name: ${{ steps.metadata.outputs.release_name }}
+      release_tag: ${{ steps.metadata.outputs.release_tag }}
+      release_type: ${{ steps.metadata.outputs.release_type }}
+      source_sha: ${{ steps.metadata.outputs.source_sha }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read release metadata
+        id: metadata
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          RELEASE_TYPE_INPUT: ${{ inputs.release_type }}
+          TAG_NAME_INPUT: ${{ inputs.tag_name }}
+        run: |
+          set -Eeuo pipefail
+          app_version="$(awk '$1 == "version:" { print $2; exit }' pubspec.yaml)"
+          [[ -n "$app_version" ]] || { echo 'Could not read version from pubspec.yaml.' >&2; exit 1; }
+
+          release_type="${RELEASE_TYPE_INPUT:-}"
+          release_tag="${TAG_NAME_INPUT:-}"
+          publish=false
+
+          if [[ "$EVENT_NAME" == 'push' && "$REF_TYPE" == 'tag' && "$REF_NAME" == v* ]]; then
+            release_type=official
+            release_tag="$REF_NAME"
+            publish=true
+          elif [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then
+            case "$release_type" in
+              nightly|official) ;;
+              *) echo 'release_type must be nightly or official.' >&2; exit 2 ;;
+            esac
+            publish=true
+
+            if [[ "$release_type" == nightly ]]; then
+              if [[ -z "$release_tag" ]]; then
+                release_tag='Nightly'
+              fi
+              [[ "$release_tag" == 'Nightly' ]] || {
+                echo 'Nightly releases must use the exact Nightly tag.' >&2
+                exit 2
+              }
+            else
+              if [[ -z "$release_tag" ]]; then
+                release_tag="v$app_version"
+              fi
+              [[ "$release_tag" != 'Nightly' ]] || {
+                echo 'The Nightly tag is reserved for nightly releases.' >&2
+                exit 2
+              }
+            fi
+          else
+            release_type=validation
+            release_tag=''
+          fi
+
+          if [[ -n "$release_tag" && ! "$release_tag" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            echo "Unsupported release tag: $release_tag" >&2
+            exit 2
+          fi
+
+          if [[ "$release_type" == nightly ]]; then
+            release_name='Tabame Nightly'
+          elif [[ "$release_type" == official ]]; then
+            release_name="Tabame $release_tag"
+          else
+            release_name='Tabame macOS validation build'
+          fi
+
+          {
+            echo "app_version=$app_version"
+            echo "publish=$publish"
+            echo "release_name=$release_name"
+            echo "release_tag=$release_tag"
+            echo "release_type=$release_type"
+            echo "source_sha=$GITHUB_SHA"
+          } >> "$GITHUB_OUTPUT"
+
+  macos:
+    name: macOS ${{ matrix.arch }} DMG
+    needs: metadata
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-13
+            arch: x86_64
+          - runner: macos-14
+            arch: arm64
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable macOS desktop target
+        run: flutter config --enable-macos-desktop
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Check shared Windows import boundary
+        run: dart run tool/check_shared_windows_imports.dart
+
+      - name: Run macOS release regression tests
+        run: flutter test test/app_paths_test.dart test/secret_crypto_test.dart test/macos_platform_test.dart test/portable_mvp_test.dart
+
+      - name: Build macOS release bundle
+        run: flutter build macos --release -t lib/portable_main.dart
+
+      - name: Import Developer ID signing certificate
+        if: ${{ needs.metadata.outputs.release_type == 'official' }}
+        env:
+          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.TABAME_APPLE_CERTIFICATE_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.TABAME_APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_KEYCHAIN_PASSWORD: ${{ secrets.TABAME_APPLE_KEYCHAIN_PASSWORD }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ -n "${APPLE_CERTIFICATE_P12_BASE64:-}" ]] || { echo 'Missing TABAME_APPLE_CERTIFICATE_P12_BASE64.' >&2; exit 1; }
+          [[ -n "${APPLE_CERTIFICATE_PASSWORD:-}" ]] || { echo 'Missing TABAME_APPLE_CERTIFICATE_PASSWORD.' >&2; exit 1; }
+          [[ -n "${APPLE_KEYCHAIN_PASSWORD:-}" ]] || { echo 'Missing TABAME_APPLE_KEYCHAIN_PASSWORD.' >&2; exit 1; }
+          keychain="$RUNNER_TEMP/tabame-signing.keychain-db"
+          certificate="$RUNNER_TEMP/tabame-developer-id.p12"
+          printf '%s' "$APPLE_CERTIFICATE_P12_BASE64" | base64 --decode > "$certificate"
+          security create-keychain -p "$APPLE_KEYCHAIN_PASSWORD" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$APPLE_KEYCHAIN_PASSWORD" "$keychain"
+          security import "$certificate" -k "$keychain" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security list-keychains -d user -s "$keychain"
+          security default-keychain -s "$keychain"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$APPLE_KEYCHAIN_PASSWORD" "$keychain"
+
+      - name: Prepare notarization key
+        if: ${{ needs.metadata.outputs.release_type == 'official' }}
+        env:
+          APPLE_NOTARY_PRIVATE_KEY: ${{ secrets.TABAME_APPLE_NOTARY_PRIVATE_KEY }}
+          APPLE_NOTARY_KEY_ID: ${{ secrets.TABAME_APPLE_NOTARY_KEY_ID }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ -n "${APPLE_NOTARY_PRIVATE_KEY:-}" ]] || { echo 'Missing TABAME_APPLE_NOTARY_PRIVATE_KEY.' >&2; exit 1; }
+          [[ -n "${APPLE_NOTARY_KEY_ID:-}" ]] || { echo 'Missing TABAME_APPLE_NOTARY_KEY_ID.' >&2; exit 1; }
+          notary_key="$RUNNER_TEMP/AuthKey_${APPLE_NOTARY_KEY_ID}.p8"
+          printf '%s' "$APPLE_NOTARY_PRIVATE_KEY" > "$notary_key"
+          chmod 600 "$notary_key"
+          echo "TABAME_NOTARY_KEY_PATH=$notary_key" >> "$GITHUB_ENV"
+
+      - name: Package and sign macOS DMG
+        env:
+          RELEASE_TYPE: ${{ needs.metadata.outputs.release_type }}
+          TABAME_MACOS_SIGNING_IDENTITY: ${{ secrets.TABAME_MACOS_SIGNING_IDENTITY }}
+          TABAME_NOTARY_KEY_ID: ${{ secrets.TABAME_APPLE_NOTARY_KEY_ID }}
+          TABAME_NOTARY_ISSUER_ID: ${{ secrets.TABAME_APPLE_NOTARY_ISSUER_ID }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          args=(
+            --app build/macos/Build/Products/Release/tabame.app
+            --version '${{ needs.metadata.outputs.app_version }}'
+            --arch '${{ matrix.arch }}'
+          )
+          if [[ "$RELEASE_TYPE" == official ]]; then
+            [[ -n "${TABAME_MACOS_SIGNING_IDENTITY:-}" ]] || { echo 'Missing TABAME_MACOS_SIGNING_IDENTITY.' >&2; exit 1; }
+            [[ -n "${TABAME_NOTARY_KEY_PATH:-}" ]] || { echo 'Notarization key was not prepared.' >&2; exit 1; }
+            [[ -n "${TABAME_NOTARY_KEY_ID:-}" && -n "${TABAME_NOTARY_ISSUER_ID:-}" ]] || { echo 'Notarization issuer/key ID secrets are required.' >&2; exit 1; }
+            args+=(
+              --signing-identity "$TABAME_MACOS_SIGNING_IDENTITY"
+              --require-signed
+              --notarize
+              --notary-key "$TABAME_NOTARY_KEY_PATH"
+              --notary-key-id "$TABAME_NOTARY_KEY_ID"
+              --notary-issuer "$TABAME_NOTARY_ISSUER_ID"
+            )
+          fi
+          bash tool/release/package-macos-dmg.sh "${args[@]}"
+
+      - name: Run macOS DMG smoke test
+        env:
+          RELEASE_TYPE: ${{ needs.metadata.outputs.release_type }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          args=(
+            --dmg "dist/tabame-${{ needs.metadata.outputs.app_version }}-macos-${{ matrix.arch }}.dmg"
+            --arch '${{ matrix.arch }}'
+          )
+          if [[ "$RELEASE_TYPE" == official ]]; then
+            args+=(--require-signed)
+          fi
+          bash tool/release/smoke-macos.sh "${args[@]}"
+
+      - name: Upload macOS release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tabame-${{ needs.metadata.outputs.app_version }}-macos-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish-macos-assets:
+    name: Publish macOS assets
+    if: ${{ needs.metadata.outputs.publish == 'true' }}
+    needs:
+      - metadata
+      - macos
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download packaged assets
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tabame-*-macos-*
+          path: dist
+          merge-multiple: true
+
+      - name: Publish macOS assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_NAME: ${{ needs.metadata.outputs.release_name }}
+          RELEASE_TAG: ${{ needs.metadata.outputs.release_tag }}
+          RELEASE_TYPE: ${{ needs.metadata.outputs.release_type }}
+          SOURCE_SHA: ${{ needs.metadata.outputs.source_sha }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          if [[ "$RELEASE_TYPE" == nightly ]]; then
+            git tag -f "$RELEASE_TAG" "$SOURCE_SHA"
+            git push origin "refs/tags/$RELEASE_TAG" --force
+          elif git ls-remote --exit-code origin "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            git fetch --force origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+            existing_sha="$(git rev-list -n 1 "${RELEASE_TAG}^{commit}")"
+            [[ "$existing_sha" == "$SOURCE_SHA" ]] || {
+              echo "Existing tag $RELEASE_TAG points to $existing_sha, not $SOURCE_SHA." >&2
+              exit 1
+            }
+          else
+            git tag "$RELEASE_TAG" "$SOURCE_SHA"
+            git push origin "refs/tags/$RELEASE_TAG"
+          fi
+
+          release_exists=0
+          for _ in $(seq 1 30); do
+            if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+              release_exists=1
+              break
+            fi
+            sleep 2
+          done
+
+          if (( ! release_exists )); then
+            create_args=(
+              release create "$RELEASE_TAG"
+              --target "$SOURCE_SHA"
+              --title "$RELEASE_NAME"
+              --generate-notes
+            )
+            if [[ "$RELEASE_TYPE" == nightly ]]; then
+              create_args+=(--prerelease --latest=false)
+            else
+              create_args+=(--latest)
+            fi
+            if gh "${create_args[@]}"; then
+              release_exists=1
+            else
+              for _ in $(seq 1 30); do
+                if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+                  release_exists=1
+                  break
+                fi
+                sleep 2
+              done
+            fi
+          fi
+          (( release_exists )) || { echo "Could not create or find release $RELEASE_TAG." >&2; exit 1; }
+
+          if [[ "$RELEASE_TYPE" == nightly ]]; then
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_NAME" --prerelease --latest=false
+          else
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_NAME" --prerelease=false --latest
+          fi
+
+          mapfile -t assets < <(find dist -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.sha256' \) -print | sort)
+          (( ${#assets[@]} > 0 )) || { echo 'No macOS release assets were downloaded.' >&2; exit 1; }
+          gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber

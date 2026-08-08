@@ -6,7 +6,7 @@
 
 ![promote](https://raw.githubusercontent.com/far-se/tabame/main/resources/poster2.png)
 
-# PSA: You can grab the [nightly build](https://github.com/Far-Se/tabame/releases/tag/nightly)
+# PSA: You can grab the [nightly build](https://github.com/Far-Se/tabame/releases/tag/Nightly)
 
 ## 🤔 What is this?
 

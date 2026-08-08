@@ -12,7 +12,7 @@ on:
           - nightly
           - official
       tag_name:
-        description: "Optional release tag. Official defaults to v<pubspec version>; nightly defaults to nightly."
+        description: "Optional official release tag. Nightly always uses the exact Nightly tag."
         required: false
         type: string
       run_tests:
@@ -28,7 +28,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: windows-release-${{ github.ref_name }}
+  group: tabame-windows-release-${{ inputs.tag_name || (inputs.release_type == 'nightly' && 'Nightly') || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -95,15 +95,23 @@ jobs:
           }
 
           $tagName = "${{ inputs.tag_name }}"
-          if ([string]::IsNullOrWhiteSpace($tagName)) {
-            if ($releaseType -eq "official") {
+          if ($releaseType -eq "official") {
+            if ([string]::IsNullOrWhiteSpace($tagName)) {
               if ("${{ github.ref_type }}" -eq "tag") {
                 $tagName = "${{ github.ref_name }}"
               } else {
                 $tagName = "v$appVersion"
               }
-            } else {
-              $tagName = "nightly"
+            }
+            if ($tagName -eq "Nightly") {
+              throw "The Nightly tag is reserved for nightly releases."
+            }
+          } else {
+            if ([string]::IsNullOrWhiteSpace($tagName)) {
+              $tagName = "Nightly"
+            }
+            if ($tagName -ne "Nightly") {
+              throw "Nightly releases must use the exact Nightly tag."
             }
           }
 
@@ -162,7 +170,7 @@ jobs:
             -PackagePath "${{ steps.package.outputs.zip_path }}" `
             -Sha256Path "${{ steps.package.outputs.sha256_path }}"
 
-      - name: Move nightly tag to this commit
+      - name: Move Nightly tag to this commit
         if: ${{ steps.meta.outputs.release_type == 'nightly' }}
         shell: pwsh
         run: |
@@ -206,26 +214,17 @@ jobs:
           ZIP_PATH: ${{ steps.package.outputs.zip_path }}
           SHA256_PATH: ${{ steps.package.outputs.sha256_path }}
         run: |
-          $releaseExists = $true
-          gh release view $env:RELEASE_TAG *> $null
-          if ($LASTEXITCODE -ne 0) {
-            $releaseExists = $false
+          $releaseExists = $false
+          for ($attempt = 0; $attempt -lt 30; $attempt++) {
+            gh release view $env:RELEASE_TAG *> $null
+            if ($LASTEXITCODE -eq 0) {
+              $releaseExists = $true
+              break
+            }
+            Start-Sleep -Seconds 2
           }
 
-          if ($releaseExists) {
-            $editArgs = @(
-              "release", "edit", $env:RELEASE_TAG,
-              "--title", $env:RELEASE_NAME,
-              "--notes-file", "release-notes.md"
-            )
-            if ($env:PRERELEASE -eq "true") {
-              $editArgs += "--prerelease"
-            }
-            if ($env:LATEST -eq "true") {
-              $editArgs += "--latest"
-            }
-            gh @editArgs
-          } else {
+          if (-not $releaseExists) {
             $createArgs = @(
               "release", "create", $env:RELEASE_TAG,
               "--target", "${{ github.sha }}",
@@ -241,6 +240,39 @@ jobs:
               $createArgs += "--latest"
             }
             gh @createArgs
+            if ($LASTEXITCODE -eq 0) {
+              $releaseExists = $true
+            } else {
+              for ($attempt = 0; $attempt -lt 30; $attempt++) {
+                gh release view $env:RELEASE_TAG *> $null
+                if ($LASTEXITCODE -eq 0) {
+                  $releaseExists = $true
+                  break
+                }
+                Start-Sleep -Seconds 2
+              }
+            }
           }
+
+          if (-not $releaseExists) {
+            throw "Could not create or find release $env:RELEASE_TAG."
+          }
+
+          $editArgs = @(
+            "release", "edit", $env:RELEASE_TAG,
+            "--title", $env:RELEASE_NAME,
+            "--notes-file", "release-notes.md"
+          )
+          if ($env:PRERELEASE -eq "true") {
+            $editArgs += "--prerelease"
+          } else {
+            $editArgs += "--prerelease=false"
+          }
+          if ($env:LATEST -eq "true") {
+            $editArgs += "--latest"
+          } else {
+            $editArgs += "--latest=false"
+          }
+          gh @editArgs
 
           gh release upload $env:RELEASE_TAG $env:ZIP_PATH $env:SHA256_PATH --clobber

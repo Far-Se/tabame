@@ -14,7 +14,7 @@ behavior.
 | Windows | `tabame-nightly-windows.zip` for nightly builds; `tabame-v<version>-windows.zip` for official builds | Existing Windows workflow and Windows 10/11-era native integrations | Extract the ZIP and run `tabame.exe`; the existing `install.ps1` remains a local developer helper | Stop Tabame, extract the new ZIP over the existing install directory, and keep `%LOCALAPPDATA%\Tabame`; the existing workflow and tag semantics are unchanged |
 | macOS Intel | `tabame-<version>-macos-x86_64.dmg` and matching ZIP | macOS 13 Ventura or newer, x86_64 | Open the DMG and copy `tabame.app` to `/Applications` | Replace the app bundle with the newer signed/notarized bundle; user data is outside the app bundle |
 | macOS Apple Silicon | `tabame-<version>-macos-arm64.dmg` and matching ZIP | macOS 13 Ventura or newer, arm64 | Open the DMG and copy `tabame.app` to `/Applications` | Replace the app bundle with the newer signed/notarized bundle; user data is outside the app bundle |
-| Linux | `tabame_<version>_<arch>.deb` (first supported package format; `amd64` is built in CI) | Ubuntu 22.04+ with GTK 3; X11 is the advanced integration target | `sudo apt install ./tabame_<version>_<arch>.deb` | Install the newer `.deb` with the same command; `dpkg` replaces `/opt/tabame` and preserves user data |
+| Linux | `tabame_<version>_<arch>.deb` for `amd64` and `arm64` | Ubuntu 22.04+ with GTK 3; X11 is the advanced integration target | `sudo apt install ./tabame_<version>_<arch>.deb` | Install the newer `.deb` with the same command; `dpkg` replaces `/opt/tabame` and preserves user data |
 
 Linux AppImage and Flatpak are deliberately not release artifacts in Phase 9.
 The `.deb` gives the MVP a package-manager-visible install, upgrade, and
@@ -94,7 +94,7 @@ bash tool/release/smoke-macos.sh \
 ```
 
 Unsigned DMGs are allowed for PR/build smoke jobs only. A tagged release must
-provide all signing/notarization values to `.github/workflows/release-packaging.yml`;
+provide all signing/notarization values to `.github/workflows/release-packaging-macos.yml`;
 the job then imports the certificate, signs with hardened runtime, submits the
 DMG to `xcrun notarytool`, staples the ticket, and runs the signed smoke check.
 The required GitHub Actions secrets are:
@@ -123,7 +123,7 @@ release publication. Its behavior is preserved:
 
 - `workflow_dispatch` still offers `nightly` and `official` release types.
 - A `v*` tag still creates an official release named from that tag.
-- A nightly build still moves the `nightly` tag and uploads
+- A nightly build still moves the `Nightly` tag and uploads
   `tabame-nightly-windows.zip` plus its SHA-256 file.
 - Official builds still upload `tabame-v<version>-windows.zip` plus its
   SHA-256 file.
@@ -221,11 +221,13 @@ replace, the manual permission and desktop-session checks.
 
 The repeatable CI entry points are:
 
-- `.github/workflows/windows-build.yml` for the unchanged Windows nightly and
-  official release paths.
-- `.github/workflows/release-packaging.yml` for macOS DMG/ZIP and Linux `.deb`
-  builds, package checks, migration regression tests, and tagged-release asset
+- `.github/workflows/windows-build.yml` for Windows nightly and official
+  release paths.
+- `.github/workflows/release-packaging-linux.yml` for native Linux amd64/arm64
+  `.deb` builds, package checks, migration regression tests, and release asset
   upload.
+- `.github/workflows/release-packaging-macos.yml` for macOS Intel/Apple Silicon
+  DMG/ZIP builds, signing checks, and release asset upload.
 - `.github/workflows/wayland-smoke.yml` for the reduced Wayland startup
   contract.
 
