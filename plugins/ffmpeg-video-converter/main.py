@@ -854,7 +854,9 @@ def run_conversion(job: dict[str, Any]) -> None:
             }[result["status"]]
             command("notify", title=PLUGIN_NAME, text=status_text[:400])
         else:
-            if result["status"] == "cancelled":
+            if result["status"] == "success":
+                command("toast", text=f"Finished: {output_path.name}", style="success")
+            elif result["status"] == "cancelled":
                 command("toast", text="Conversion cancelled.", style="info")
             elif result["status"] == "error":
                 command("toast", text="Conversion failed.", style="error")
@@ -1167,28 +1169,37 @@ def handle_message(message: dict[str, Any]) -> bool:
 
 
 def main() -> None:
-    for raw in sys.stdin:
-        raw = raw.strip()
-        if not raw:
-            continue
-        try:
-            message = json.loads(raw)
-            if not isinstance(message, dict):
+    global UI_CLOSED
+    try:
+        for raw in sys.stdin:
+            raw = raw.strip()
+            if not raw:
                 continue
-            if not handle_message(message):
-                break
-        except json.JSONDecodeError as exc:
-            log(f"Invalid JSON from host: {exc}")
-        except Exception as exc:
-            log(f"Unhandled message error: {exc}")
-            send(
-                {
-                    "type": "render",
-                    "rev": 0,
-                    "view": "detail",
-                    "detail": {"markdown": f"# Plugin error\n\n```text\n{exc}\n```"},
-                }
-            )
+            try:
+                message = json.loads(raw)
+                if not isinstance(message, dict):
+                    continue
+                if not handle_message(message):
+                    break
+            except json.JSONDecodeError as exc:
+                log(f"Invalid JSON from host: {exc}")
+            except Exception as exc:
+                log(f"Unhandled message error: {exc}")
+                send(
+                    {
+                        "type": "render",
+                        "rev": 0,
+                        "view": "detail",
+                        "detail": {"markdown": f"# Plugin error\n\n```text\n{exc}\n```"},
+                    }
+                )
+    finally:
+        # A broken host pipe is equivalent to the launcher closing. This keeps
+        # a still-running worker on its notification path instead of trying to
+        # render its result into a UI that no longer exists.
+        with JOB_LOCK:
+            if CURRENT_JOB is not None:
+                UI_CLOSED = True
 
 
 if __name__ == "__main__":

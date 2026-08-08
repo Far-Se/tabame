@@ -414,9 +414,9 @@ Notes:
 - Commands are fire-and-forget: **no `rev`**, no response.
 - Combine effects by printing several lines — the classic "Enter = copy and
   dismiss" is `copy` followed by `hide`.
-- `hide` and `paste` close the launcher, which **shuts your plugin down** (you
-  get `close`). Print any final frames/commands before or immediately with them;
-  don't expect to keep running afterwards.
+- `hide` and `paste` close the launcher and send `close`. For long-running work,
+  send `background` first; the process then remains alive during the grace
+  period and can still send `notify`. Without `background`, expect shutdown.
 - A `copy` followed by `hide` skips the toast — the launcher is gone before it
   would render.
 
@@ -1295,15 +1295,18 @@ send({"type":"command","command":"storage","op":"get","key":"token",
 
 ### Finishing work after the launcher closes
 
-For uploads/syncs that outlive the UI: send `background` (grace in seconds),
-then `hide`; keep working (a thread is fine) and fire `notify` when done. Join
-the worker before exiting on `close`:
+If an action may outlive the UI (for example, an upload, sync, or video
+conversion), declare background work before hiding the launcher. Tabame sends
+`close` but keeps the Python/Node/Bun process supervised for the requested grace
+period, so a worker can finish. Send `notify` when it completes; this becomes a
+native desktop notification even though the launcher is closed. Use a non-daemon
+worker or join it before exiting on `close`:
 
 ```python
-send({"type":"command","command":"background","timeout":60})
+send({"type":"command","command":"background","timeout":300})
 send({"type":"command","command":"hide"})
 # … work …
-send({"type":"command","command":"notify","title":"Sync","text":"Done — 42 items."})
+send({"type":"command","command":"notify","title":"Conversion","text":"Finished successfully."})
 ```
 
 ### Error handling

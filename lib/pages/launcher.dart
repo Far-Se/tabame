@@ -792,6 +792,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         if (target.isNotEmpty) WinUtils.open(target);
         break;
       case 'hide':
+        // Deactivate before hiding so a plugin that requested background work
+        // receives `close` and its detached completion notifications remain
+        // supervised by the host.
+        _deactivatePlugin();
         unawaited(QuickMenuFunctions.hideQuickMenu());
         break;
       case 'toast':
@@ -844,6 +848,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   /// previously focused window), then sends Ctrl+V — the emoji picker's flow.
   Future<void> _pastePluginText(String text) async {
     if (text.isEmpty) return;
+    // `paste` is also a launcher-closing command. Use the same lifecycle path
+    // as `hide`, rather than leaving a live plugin attached to a hidden window.
+    _deactivatePlugin();
     await Clipboard.setData(ClipboardData(text: text));
     await QuickMenuFunctions.hideQuickMenu();
     await Future<void>.delayed(const Duration(milliseconds: 60));
@@ -1790,6 +1797,18 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   }
 
   @override
+  Future<void> onQuickMenuSwitchedPage(QuickMenuPage newType, QuickMenuPage oldType, bool visible) async {
+    if (oldType == QuickMenuPage.launcher && newType != QuickMenuPage.launcher) {
+      _deactivatePlugin();
+    }
+  }
+
+  @override
+  Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
+    if (!visible) _deactivatePlugin();
+  }
+
+  @override
   void dispose() {
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     QuickMenuFunctions.removeListener(this);
@@ -1798,6 +1817,14 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _pluginToastTimer?.cancel();
     _pluginDetailScroll.dispose();
     _pluginHost.dispose();
+    // The host owns the process shutdown. Clear launcher-owned state here
+    // without calling _exitPlugin after the controller has been disposed.
+    _activePlugin = null;
+    _pluginFrame = null;
+    _pluginSelectedIdsByScope.clear();
+    _pluginPageSelectionIds.clear();
+    _pluginPageHistory.clear();
+    Globals.isLauncherPluginActive = false;
     _pluginWindowTransitionVersion++;
     _pluginWindowTransitionController.stop();
     _restorePluginWindowWidth(animate: false);
@@ -1832,7 +1859,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _resultsFocusNode.dispose();
     _scrollController.dispose();
     _activeIndexNotifier.dispose();
-    _exitPlugin(); // <- this.
     super.dispose();
   }
 

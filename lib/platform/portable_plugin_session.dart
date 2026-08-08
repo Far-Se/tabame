@@ -32,12 +32,20 @@ class PortablePluginSession {
   Process? _process;
   StreamSubscription<String>? _stdout;
   StreamSubscription<String>? _stderr;
+  Completer<void>? _stdoutDone;
+  Completer<void>? _stderrDone;
   Future<void> _writeChain = Future<void>.value();
+  int _generation = 0;
+  bool _closing = false;
+  Duration? _backgroundGrace;
 
   bool get isRunning => _process != null;
 
   Future<void> start(String query) async {
     await stop();
+    _closing = false;
+    _backgroundGrace = null;
+    final int generation = ++_generation;
     try {
       final Process process = await Process.start(
         manifest.runtime,
@@ -48,22 +56,29 @@ class PortablePluginSession {
       );
       _process = process;
 
-      _stdout = process.stdout
-          .transform(const Utf8Decoder(allowMalformed: true))
-          .transform(const LineSplitter())
-          .listen(_handleLine);
-      _stderr = process.stderr
-          .transform(const Utf8Decoder(allowMalformed: true))
-          .transform(const LineSplitter())
-          .listen((String line) {
-        if (line.trim().isNotEmpty) onStatus(line.trim());
-      });
-      unawaited(process.exitCode.then((int code) {
-        if (_process == process) {
-          _process = null;
-          onStatus('Plugin exited with code $code.');
-        }
-      }));
+      final Completer<void> stdoutDone = Completer<void>();
+      final Completer<void> stderrDone = Completer<void>();
+      _stdoutDone = stdoutDone;
+      _stderrDone = stderrDone;
+      _stdout =
+          process.stdout.transform(const Utf8Decoder(allowMalformed: true)).transform(const LineSplitter()).listen(
+        (String line) => _handleLine(process, generation, line),
+        onDone: () {
+          if (!stdoutDone.isCompleted) stdoutDone.complete();
+        },
+      );
+      _stderr =
+          process.stderr.transform(const Utf8Decoder(allowMalformed: true)).transform(const LineSplitter()).listen(
+        (String line) {
+          if (generation == _generation && _process == process && line.trim().isNotEmpty) {
+            onStatus(line.trim());
+          }
+        },
+        onDone: () {
+          if (!stderrDone.isCompleted) stderrDone.complete();
+        },
+      );
+      unawaited(process.exitCode.then((int code) => _handleExit(process, generation, code)));
       _send(<String, Object?>{
         'type': 'init',
         'query': query,
@@ -98,57 +113,97 @@ class PortablePluginSession {
   Future<void> stop() async {
     final Process? process = _process;
     _process = null;
-    await _stdout?.cancel();
-    await _stderr?.cancel();
+    _closing = true;
+    _generation++;
+    final Duration? backgroundGrace = _backgroundGrace;
+    _backgroundGrace = null;
+    final StreamSubscription<String>? stdout = _stdout;
+    final StreamSubscription<String>? stderr = _stderr;
+    final Future<void>? stdoutDone = _stdoutDone?.future;
+    final Future<void>? stderrDone = _stderrDone?.future;
     _stdout = null;
     _stderr = null;
-    if (process == null) return;
+    _stdoutDone = null;
+    _stderrDone = null;
+
+    if (process == null) {
+      await stdout?.cancel();
+      await stderr?.cancel();
+      return;
+    }
+
+    await _writeChain.catchError((Object _) {});
     try {
       process.stdin.writeln(jsonEncode(<String, String>{'type': 'close'}));
-      await process.stdin.flush().timeout(const Duration(milliseconds: 250), onTimeout: () {});
+      await process.stdin.flush();
     } catch (_) {
       // The child may have exited between the status callback and disposal.
     }
-    try {
-      process.kill();
-    } catch (_) {
-      // Disposal must remain safe even when the process is already gone.
+
+    if (backgroundGrace != null) {
+      // Keep the pipes alive so a detached `notify` command can arrive after
+      // the portable shell has left the plugin view.
+      unawaited(_finishDetachedProcess(
+        process,
+        backgroundGrace,
+        stdout,
+        stderr,
+        stdoutDone,
+        stderrDone,
+      ));
+      return;
     }
+
+    try {
+      await process.exitCode.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {
+          process.kill();
+          return -1;
+        },
+      );
+    } catch (_) {
+      process.kill();
+    }
+    await _drainProcessOutput(stdoutDone, stderrDone);
+    await stdout?.cancel();
+    await stderr?.cancel();
   }
 
-  void _handleLine(String line) {
+  void _handleLine(Process process, int generation, String line) {
     final String trimmed = line.trim();
     if (trimmed.isEmpty) return;
+    final bool live = generation == _generation && _process == process;
     try {
       final Object? decoded = jsonDecode(trimmed);
       if (decoded is! Map<String, dynamic>) {
-        onStatus(trimmed);
+        if (live) onStatus(trimmed);
         return;
       }
       if (decoded['type'] == 'render') {
-        onFrame(PluginRenderFrame.fromJson(decoded));
+        if (live) onFrame(PluginRenderFrame.fromJson(decoded));
       } else if (decoded['type'] == 'command') {
         final PluginCommand? command = PluginCommand.fromJson(decoded);
-        if (command != null) _handleCommand(command);
+        if (command != null) _handleCommand(command, live: live);
       }
     } catch (_) {
-      onStatus(trimmed);
+      if (live) onStatus(trimmed);
     }
   }
 
-  void _handleCommand(PluginCommand command) {
+  void _handleCommand(PluginCommand command, {required bool live}) {
     switch (command.name) {
       case 'copy':
-        unawaited(Clipboard.setData(ClipboardData(text: command.text ?? '')));
+        if (live) unawaited(Clipboard.setData(ClipboardData(text: command.text ?? '')));
         return;
       case 'open':
-        if (command.url != null) unawaited(PortableActions.openExternal(command.url!));
+        if (live && command.url != null) unawaited(PortableActions.openExternal(command.url!));
         return;
       case 'hide':
-        onHide();
+        if (live) onHide();
         return;
       case 'toast':
-        onStatus(command.text ?? 'Plugin message');
+        if (live) onStatus(command.text ?? 'Plugin message');
         return;
       case 'notify':
         final Object? title = command.data['title'];
@@ -157,19 +212,26 @@ class PortablePluginSession {
           body: command.text ?? '',
         ));
         return;
+      case 'background':
+        if (!live) return;
+        final Object? timeout = command.data['timeout'];
+        final int seconds = (timeout is num ? timeout.toInt() : 30).clamp(5, 300);
+        _backgroundGrace = Duration(seconds: seconds);
+        onStatus('Background finish granted (${seconds}s).');
+        return;
       case 'setquery':
-        if (command.text != null) sendQuery(command.text!);
+        if (live && command.text != null) sendQuery(command.text!);
         return;
       case 'storage':
-        _handleStorage(command);
+        _handleStorage(command, live: live);
         return;
       default:
-        onStatus('Unsupported plugin command: ${command.name}');
+        if (live) onStatus('Unsupported plugin command: ${command.name}');
         return;
     }
   }
 
-  void _handleStorage(PluginCommand command) {
+  void _handleStorage(PluginCommand command, {required bool live}) {
     final Object? key = command.data['key'];
     final Object? requestId = command.data['requestId'];
     final bool secret = command.data['secret'] == true;
@@ -181,7 +243,7 @@ class PortablePluginSession {
         if (key is String && key.isNotEmpty) PluginStorage.delete(manifest, key, secret: secret);
         return;
       case 'get':
-        if (key is String && key.isNotEmpty) {
+        if (live && key is String && key.isNotEmpty) {
           _send(<String, Object?>{
             'type': 'storage',
             if (requestId != null) 'requestId': requestId,
@@ -216,6 +278,49 @@ class PortablePluginSession {
       environment['PYTHONPATH'] = existing == null || existing.isEmpty ? libs.path : '${libs.path}$separator$existing';
     }
     return environment;
+  }
+
+  void _handleExit(Process process, int generation, int code) {
+    if (generation != _generation || _process != process || _closing) return;
+    _process = null;
+    onStatus('Plugin exited with code $code.');
+  }
+
+  Future<void> _drainProcessOutput(Future<void>? stdoutDone, Future<void>? stderrDone) async {
+    final List<Future<void>> pending = <Future<void>>[
+      if (stdoutDone != null) stdoutDone,
+      if (stderrDone != null) stderrDone,
+    ];
+    if (pending.isEmpty) return;
+    try {
+      await Future.wait<void>(pending).timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // A broken pipe or killed child must not hold shutdown open forever.
+    }
+  }
+
+  Future<void> _finishDetachedProcess(
+    Process process,
+    Duration grace,
+    StreamSubscription<String>? stdout,
+    StreamSubscription<String>? stderr,
+    Future<void>? stdoutDone,
+    Future<void>? stderrDone,
+  ) async {
+    try {
+      await process.exitCode.timeout(
+        grace,
+        onTimeout: () {
+          process.kill();
+          return -1;
+        },
+      );
+    } catch (_) {
+      process.kill();
+    }
+    await _drainProcessOutput(stdoutDone, stderrDone);
+    await stdout?.cancel();
+    await stderr?.cancel();
   }
 
   void _send(Map<String, Object?> message) {

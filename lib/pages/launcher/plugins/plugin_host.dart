@@ -49,6 +49,8 @@ class LauncherPluginHost {
   PluginManifest? _active;
   StreamSubscription<String>? _stdoutSub;
   StreamSubscription<String>? _stderrSub;
+  Completer<void>? _stdoutDone;
+  Completer<void>? _stderrDone;
   late final StreamSubscription<BrowserBridgeEvent> _browserBridgeSub;
 
   /// Dev mode: watches the plugin folder and hot-restarts the process on save.
@@ -128,21 +130,31 @@ class LauncherPluginHost {
       );
       _process = process;
 
-      _stdoutSub = process.stdout
-          .transform(const Utf8Decoder(allowMalformed: true))
-          .transform(const LineSplitter())
-          .listen((String line) => _handleStdoutLine(generation, manifest, line));
+      final Completer<void> stdoutDone = Completer<void>();
+      final Completer<void> stderrDone = Completer<void>();
+      _stdoutDone = stdoutDone;
+      _stderrDone = stderrDone;
+      _stdoutSub =
+          process.stdout.transform(const Utf8Decoder(allowMalformed: true)).transform(const LineSplitter()).listen(
+        (String line) => _handleStdoutLine(generation, manifest, line),
+        onDone: () {
+          if (!stdoutDone.isCompleted) stdoutDone.complete();
+        },
+      );
 
-      _stderrSub = process.stderr
-          .transform(const Utf8Decoder(allowMalformed: true))
-          .transform(const LineSplitter())
-          .listen((String line) {
-        if (line.trim().isEmpty) return;
-        debugLog.add(PluginDebugKind.stderr, line);
-        unawaited(ErrorLogger.log('Plugin:${manifest.id}', '[stderr] $line', null));
-      });
+      _stderrSub =
+          process.stderr.transform(const Utf8Decoder(allowMalformed: true)).transform(const LineSplitter()).listen(
+        (String line) {
+          if (line.trim().isEmpty) return;
+          debugLog.add(PluginDebugKind.stderr, line);
+          unawaited(ErrorLogger.log('Plugin:${manifest.id}', '[stderr] $line', null));
+        },
+        onDone: () {
+          if (!stderrDone.isCompleted) stderrDone.complete();
+        },
+      );
 
-      unawaited(process.exitCode.then(_handleExit));
+      unawaited(process.exitCode.then((int code) => _handleExit(generation, process, manifest, code)));
 
       debugLog.add(PluginDebugKind.info,
           'Started ${manifest.runtime} ${manifest.args.isEmpty ? '' : '${manifest.args.join(' ')} '}${manifest.entry} (pid ${process.pid})');
@@ -975,14 +987,18 @@ class LauncherPluginHost {
 
   static String _truncate(String value) => value.length <= 120 ? value : '${value.substring(0, 120)}…';
 
-  void _handleExit(int code) {
-    if (_closing) return; // Expected shutdown.
-    final PluginManifest? manifest = _active;
-    _process = null;
-    if (manifest != null) {
-      debugLog.add(PluginDebugKind.error, 'Process exited unexpectedly (code $code)');
-      onFrame(PluginRenderFrame.errorFrame('"${manifest.name}" exited unexpectedly (code $code).'));
+  void _handleExit(int generation, Process process, PluginManifest manifest, int code) {
+    // A process that was detached for background work may exit after another
+    // plugin has already been activated. It must not clear or report against
+    // the newer live process.
+    if (generation != _generation || _process != process) {
+      debugLog.add(PluginDebugKind.info, 'Background process exited (code $code)');
+      return;
     }
+    if (_closing) return; // Expected shutdown.
+    _process = null;
+    debugLog.add(PluginDebugKind.error, 'Process exited unexpectedly (code $code)');
+    onFrame(PluginRenderFrame.errorFrame('"${manifest.name}" exited unexpectedly (code $code).'));
   }
 
   void _send(Map<String, Object?> message) {
@@ -1025,8 +1041,12 @@ class LauncherPluginHost {
 
     final StreamSubscription<String>? stdoutSub = _stdoutSub;
     final StreamSubscription<String>? stderrSub = _stderrSub;
+    final Future<void>? stdoutDone = _stdoutDone?.future;
+    final Future<void>? stderrDone = _stderrDone?.future;
     _stdoutSub = null;
     _stderrSub = null;
+    _stdoutDone = null;
+    _stderrDone = null;
 
     final Duration? backgroundGrace = _backgroundGrace;
     _backgroundGrace = null;
@@ -1052,21 +1072,17 @@ class LauncherPluginHost {
       // generation guard) and only kill once the grace runs out. Don't await —
       // a switch to another plugin must not block on this.
       debugLog.add(PluginDebugKind.info, 'Finishing in background (up to ${backgroundGrace.inSeconds}s)');
-      unawaited(process.exitCode
-          .timeout(backgroundGrace, onTimeout: () {
-            process.kill();
-            return -1;
-          })
-          .catchError((Object _) => -1)
-          .whenComplete(() async {
-            await stdoutSub?.cancel();
-            await stderrSub?.cancel();
-          }));
+      unawaited(_finishDetachedProcess(
+        process,
+        backgroundGrace,
+        stdoutSub,
+        stderrSub,
+        stdoutDone,
+        stderrDone,
+      ));
       return;
     }
 
-    await stdoutSub?.cancel();
-    await stderrSub?.cancel();
     try {
       await process.exitCode.timeout(
         const Duration(seconds: 2),
@@ -1078,6 +1094,49 @@ class LauncherPluginHost {
     } catch (_) {
       process.kill();
     }
+    await _drainProcessOutput(stdoutDone, stderrDone);
+    await stdoutSub?.cancel();
+    await stderrSub?.cancel();
+  }
+
+  /// Waits for the child's pipes to deliver all buffered lines before the
+  /// subscriptions are cancelled. In particular, a final detached `notify`
+  /// command can be written just before the child exits.
+  Future<void> _drainProcessOutput(Future<void>? stdoutDone, Future<void>? stderrDone) async {
+    final List<Future<void>> pending = <Future<void>>[
+      if (stdoutDone != null) stdoutDone,
+      if (stderrDone != null) stderrDone,
+    ];
+    if (pending.isEmpty) return;
+    try {
+      await Future.wait<void>(pending).timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // A broken pipe or a killed child must not hold shutdown open forever.
+    }
+  }
+
+  Future<void> _finishDetachedProcess(
+    Process process,
+    Duration grace,
+    StreamSubscription<String>? stdoutSub,
+    StreamSubscription<String>? stderrSub,
+    Future<void>? stdoutDone,
+    Future<void>? stderrDone,
+  ) async {
+    try {
+      await process.exitCode.timeout(
+        grace,
+        onTimeout: () {
+          process.kill();
+          return -1;
+        },
+      );
+    } catch (_) {
+      process.kill();
+    }
+    await _drainProcessOutput(stdoutDone, stderrDone);
+    await stdoutSub?.cancel();
+    await stderrSub?.cancel();
   }
 
   /// Fire-and-forget shutdown for [State.dispose].

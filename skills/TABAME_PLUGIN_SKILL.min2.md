@@ -65,7 +65,7 @@ Recommended complete `plugin.json`:
 - Query-sensitive render: echo the event's `rev`. Tabame drops frames older than the newest query.
 - Action results, async pushes, background refreshes, progress, and streamed chunks: use `rev:0` (always accepted).
 - Commands and `action` events have no `rev`.
-- Exit on `close` and stdin EOF. Normal shutdown has about 2 seconds of grace unless `background` was requested.
+- Exit on `close` and stdin EOF. Normal shutdown has about 2 seconds of grace; with `background`, keep the worker alive and join it before exiting.
 - Keep the stdin loop responsive; slow/streaming work must run asynchronously/a worker thread.
 
 ## 4. Tabame → plugin events (stdin)
@@ -115,7 +115,7 @@ Only:
 | `copy`             | `text`; clipboard + toast                                                                                                                                 |
 | `paste`            | `text`; clipboard, hide launcher, reactivate prior window, Ctrl+V                                                                                         |
 | `open`             | `url` or `path`; default handler                                                                                                                          |
-| `hide`             | hide launcher; plugin will close                                                                                                                          |
+| `hide`             | hide launcher; sends `close` (send `background` first for long-running work)                                                                                                                          |
 | `toast`            | `text`, optional `style:success                                                                                                                           | error                                                                         | info                                                                                                                         | progress`, optional `progress:0..1`; progress toast stays until replaced                                                                                                                             |
 | `setQuery`         | `text`; rewrites post-keyword query and triggers `query`                                                                                                  |
 | `clipboardRead`    | optional `requestId`; reply is `clipboard`                                                                                                                |
@@ -126,7 +126,7 @@ Only:
 | `oauth`            | `authorizationUrl` containing literal `{redirectUri}`, optional `requestId,timeout`; exchange returned code yourself; store tokens as secrets             |
 | `browserBridge`    | `op:status                                                                                                                                                | request`, required `requestId`for requests, optional`method,params,timeoutMs` |
 
-Commands are fire-and-forget unless documented with a reply. Several commands may be sent in sequence. `hide`/`paste` end the UI and trigger shutdown. A `copy` immediately followed by `hide` may hide its toast.
+Commands are fire-and-forget unless documented with a reply. Several commands may be sent in sequence. `hide`/`paste` end the UI and send `close`; for long-running work, send `background` first, then `notify` on completion. A `copy` immediately followed by `hide` may hide its toast.
 
 Browser-owned JS uses `browserBridge` method `javascript.execute` with `params:{tabId?,code,input?,world?,allFrames?,frameIds?,injectImmediately?}`. `code` is required, may `await`, and returns through `return` (128 KiB maximum). `input` may be any JSON value; returned data must be JSON-serializable (192 KiB maximum). Default tab is active, default world is `USER_SCRIPT`; use `MAIN` only when page globals are required. Only HTTP(S) tabs are scriptable and Chromium “Allow User Scripts” must be enabled. Related methods include `tabs.open/list/close`.
 
@@ -476,7 +476,7 @@ Field types: `text,password,textarea,dropdown,combobox,checkbox,number,date,file
 - Streaming: render a base `detail`/chat frame, then `detail.append` chunks with `rev:0` from a worker so stdin remains responsive.
 - Pagination: on `loadMore`, append data and re-render the **entire list so far**; preserve selection with stable IDs/`selectId`.
 - Storage: correlate `get/keys` using `requestId`; tokens/API keys use `secret:true`.
-- Work after UI closes: send `background` before `hide`, finish in worker, then `notify`; allow worker to finish during `close` within granted grace.
+- Work after UI closes: for uploads, syncs, or video conversion, send `background` before `hide`, keep a non-daemon worker alive through `close`, join it before exit, then send `notify` with the completion message.
 - Browser/API/filesystem/process work is allowed by the runtime. Prefer host commands for clipboard/open/hide. Catch malformed input and operational errors; do not crash. Render a useful `detail` error and/or error toast.
 - OAuth: keep state validation and code exchange in the plugin; authorization URL must contain `{redirectUri}`.
 

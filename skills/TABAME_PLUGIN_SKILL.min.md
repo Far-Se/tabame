@@ -127,7 +127,7 @@ Only `{"type":"render",...}` and `{"type":"command","command":"...",...}` are me
 | `copy`             | `text`                                                                           | Clipboard + "Copied" toast.                                                                                                                                                                                                 |
 | `paste`            | `text`                                                                           | Clipboard, hides launcher, refocuses previous window, sends Ctrl+V (types text there).                                                                                                                                      |
 | `open`             | `url` or `path`                                                                  | Opens URL/file/folder with default handler.                                                                                                                                                                                 |
-| `hide`             | —                                                                                | Hides launcher (shuts plugin down — you get `close`; print final output before/with it).                                                                                                                                    |
+| `hide`             | —                                                                                | Hides launcher and sends `close`; for long-running work, send `background` first so the process can finish and send `notify`.                                                                                                                                    |
 | `toast`            | `text`,`style`?(`success`\|`error`\|`info`\|`progress`),`progress`?              | Transient chip. `progress` style stays pinned (spinner or determinate ring); re-send to update.                                                                                                                             |
 | `setQuery`         | `text`                                                                           | Rewrites post-keyword search text (keyword stays); triggers a normal `query` back to you.                                                                                                                                   |
 | `clipboardRead`    | `requestId`?                                                                     | Host replies `{"type":"clipboard","requestId","text"}`.                                                                                                                                                                     |
@@ -154,7 +154,7 @@ Echo the query's `rev` when responding to that query — Tabame **drops frames o
 
 ### 5.3 Lifecycle
 
-keyword typed → process starts → `init` then `query` → typing → `query`s (same process) → selection → `select` → Enter/Ctrl+K → `action` → leave/Esc/close → `close`, then killed (~2s grace). **Exit on `close` AND on stdin EOF.**
+keyword typed → process starts → `init`/`query` → actions → leave/Esc/close → `close`; normally killed (~2s), or kept alive for the requested `background` grace. **Exit on `close` AND stdin EOF.**
 
 ## 6. Render frame reference
 
@@ -436,13 +436,13 @@ send({"type":"command","command":"storage","op":"set","key":"token","value":"sk-
 send({"type":"command","command":"storage","op":"get","key":"token","secret":True,"requestId":"tok"})
 ```
 
-**Outliving the launcher**: `background{timeout}` then `hide`; keep working (thread), `notify` when done; join worker on `close`.
+**Outliving the launcher**: For an upload, sync, or video conversion, send `background{timeout}` before `hide`. Tabame sends `close` but keeps the process supervised during the requested grace; keep the worker alive, join it on `close`, and send `notify` when done.
 
 ```python
-send({"type":"command","command":"background","timeout":60})
+send({"type":"command","command":"background","timeout":300})
 send({"type":"command","command":"hide"})
 # … work …
-send({"type":"command","command":"notify","title":"Sync","text":"Done — 42 items."})
+send({"type":"command","command":"notify","title":"Conversion","text":"Finished successfully."})
 ```
 
 **Error handling** — never crash; catch and render:
