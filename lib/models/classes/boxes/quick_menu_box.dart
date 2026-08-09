@@ -148,9 +148,6 @@ class QuickMenuFunctions {
         await windowManager.setSize(Size(value.width + 2, value.height + 2));
         await Future<void>.delayed(const Duration(milliseconds: 30));
         await windowManager.setSize(Size(value.width, value.height));
-        Win32.setWindowInvisible(false);
-        // ShowWindow(Win32.hWnd, SW_SHOW);
-        Win32.forceRedraw();
 
         if (forceReposition) {
           if (center) {
@@ -163,6 +160,13 @@ class QuickMenuFunctions {
           if (!_listeners.contains(listener)) continue;
           await listener.onQuickMenuVisible(type, center);
         }
+
+        // Keep the native window transparent until Flutter has painted the
+        // destination page. Revealing before the frame is ready lets DWM show
+        // the previous QuickMenu backing surface for a moment.
+        await WidgetsBinding.instance.endOfFrame;
+        await Win32.forceRedraw();
+        Win32.setWindowInvisible(false);
         shownTime = DateTime.now().millisecondsSinceEpoch;
         // WinUtils.setWindowFullyOpaque(Win32.hWnd);
 

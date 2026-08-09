@@ -52,8 +52,7 @@ class FancyShotButton extends StatelessWidget {
       onTap: available
           ? () async {
               if (QuickMenuFunctions.isQuickMenuVisible) {
-                QuickMenuFunctions.hideQuickMenu();
-                await Future<void>.delayed(const Duration(milliseconds: 50));
+                await QuickMenuFunctions.hideQuickMenu();
               }
               await FancyShotCaptureWidget.captureScreenshots();
               // WinUtils.startTabame(closeCurrent: false, arguments: freeze ? "-capture -freeze" : "-capture");

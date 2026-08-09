@@ -435,9 +435,6 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       } else if (mounted) {
         setState(() {});
       }
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        WinUtils.setWindowFullyOpaque(Win32.hWnd);
-      });
     } else {
       PaintingBinding.instance.imageCache.clear(); // <- this
       PaintingBinding.instance.imageCache.clearLiveImages(); // <- this
@@ -470,18 +467,13 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       _isClickThroughActive = false; // keep the poller's cache in sync
     }
 
-    if (newType == QuickMenuPage.quickClick) {
-      Globals.quickMenuPage = newType;
-      if (mounted) setState(() {});
-      await WidgetsBinding.instance.endOfFrame;
-      await WidgetsBinding.instance.endOfFrame;
-      if (!mounted) return;
-      Win32.setWindowInvisible(false);
-    }
+    Globals.quickMenuPage = newType;
+    if (mounted) setState(() {});
+    await WidgetsBinding.instance.endOfFrame;
+    await WidgetsBinding.instance.endOfFrame;
   }
 
   Future<void> _onQuickMenuVisible(QuickMenuPage type, bool center) async {
-    Win32.setWindowInvisible(false);
     tryPop = false;
     if (type != QuickMenuPage.quickClick) {
       Win32.activateWindow(Win32.hWnd);

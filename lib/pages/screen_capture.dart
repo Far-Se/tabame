@@ -778,7 +778,9 @@ class FancyShotCaptureWidget extends StatefulWidget {
   /// Call this **before** launching [FancyShotCaptureWidget] (e.g. before
   /// calling `refreshQuickMenu`). It hides the current window, captures every
   /// monitor, and stores the result in a static cache that the widget picks up
-  /// automatically in [initState], avoiding a second hide/capture cycle.
+  /// automatically in [initState], avoiding a second hide/capture cycle. The
+  /// window stays hidden until the destination widget finishes its setup so the
+  /// previous QuickMenu frame cannot flash during the handoff.
   ///
   /// ```dart
   /// await FancyShotCaptureWidget.captureScreenshots();
@@ -806,13 +808,13 @@ class FancyShotCaptureWidget extends StatefulWidget {
           captured[monitorHandle] = snapshot;
         }
       }
-    } finally {
+    } catch (_) {
       if (hwnd != 0) {
         ShowWindow(hwnd, SW_SHOW);
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
       }
+      rethrow;
     }
-
     _staticCache = captured;
   }
 
@@ -2603,8 +2605,7 @@ class _CaptureSettingsModalState extends State<_CaptureSettingsModal> {
                       icon: const Icon(Icons.center_focus_strong, size: 14, color: Colors.greenAccent),
                       onPressed: () async {
                         Navigator.of(context).maybePop();
-                        QuickMenuFunctions.hideQuickMenu();
-                        await Future<void>.delayed(const Duration(milliseconds: 100));
+                        await QuickMenuFunctions.hideQuickMenu();
                         Globals.quickMenuPage = QuickMenuPage.fancyShotFreeze;
                         await FancyShotCaptureWidget.captureScreenshots();
                         QuickMenuFunctions.refreshQuickMenu();
@@ -2618,8 +2619,7 @@ class _CaptureSettingsModalState extends State<_CaptureSettingsModal> {
                       icon: const Icon(Icons.center_focus_strong_outlined, size: 14, color: Colors.greenAccent),
                       onPressed: () async {
                         Navigator.of(context).maybePop();
-                        QuickMenuFunctions.hideQuickMenu();
-                        await Future<void>.delayed(const Duration(milliseconds: 100));
+                        await QuickMenuFunctions.hideQuickMenu();
                         Globals.quickMenuPage = QuickMenuPage.fancyShotLive;
                         QuickMenuFunctions.refreshQuickMenu();
                       },

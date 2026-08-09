@@ -152,8 +152,7 @@ class WindowsHotkeyActionService extends HotkeyActionService {
         }
         Win32.setWindowInvisible(true);
         if (QuickMenuFunctions.isQuickMenuVisible) {
-          QuickMenuFunctions.hideQuickMenu();
-          await Future<void>.delayed(const Duration(milliseconds: 160));
+          await QuickMenuFunctions.hideQuickMenu();
         }
         await QuickMenuFunctions.toggleQuickMenu(
           visible: true,
