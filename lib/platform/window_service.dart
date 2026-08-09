@@ -20,6 +20,9 @@ abstract class WindowService {
   bool get isActivationAvailable => isAvailable;
   String get activationUnavailableReason => unavailableReason;
 
+  // TODO: Implement multiplatform.
+  bool get isPreviewAvailable => false;
+
   Future<List<PlatformWindow>> enumerate();
   Future<bool> activate(PlatformWindow window);
 
@@ -28,6 +31,9 @@ abstract class WindowService {
   Future<String?> captureFocus();
 
   Future<bool> restoreFocus(String? token);
+
+  // TODO: Implement multiplatform.
+  Future<PlatformWindowPreview?> capturePreview(PlatformWindow window) async => null;
 }
 
 class UnavailableWindowService extends WindowService {

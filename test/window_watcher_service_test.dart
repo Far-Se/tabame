@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tabame/platform/platform_models.dart';
@@ -65,8 +66,11 @@ void main() {
 
     expect(service.isAvailable, isTrue);
     expect((await service.enumerate()).single.identity, 'windows-editor');
-    expect(await service.activate((await service.enumerate()).single), isTrue);
+    final PlatformWindow window = (await service.enumerate()).single;
+    expect(await service.activate(window), isTrue);
+    expect((await service.capturePreview(window))?.width, 2);
     expect(bridge.activateCalls, 1);
+    expect(bridge.previewCalls, 1);
   });
 }
 
@@ -127,9 +131,13 @@ class _FakeWindowsBridge implements WindowsWindowBridge {
 
   final List<PlatformWindow> windows;
   int activateCalls = 0;
+  int previewCalls = 0;
 
   @override
   bool get isAvailable => true;
+
+  @override
+  bool get isPreviewAvailable => true;
 
   @override
   String get unavailableReason => '';
@@ -148,4 +156,14 @@ class _FakeWindowsBridge implements WindowsWindowBridge {
 
   @override
   Future<bool> restoreFocus(String? token) async => false;
+
+  @override
+  Future<PlatformWindowPreview?> capturePreview(PlatformWindow window) async {
+    previewCalls++;
+    return PlatformWindowPreview(
+      encodedBytes: Uint8List.fromList(<int>[1, 2, 3]),
+      width: 2,
+      height: 1,
+    );
+  }
 }

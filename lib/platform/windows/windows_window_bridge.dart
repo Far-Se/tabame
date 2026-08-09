@@ -7,8 +7,10 @@ import '../platform_models.dart';
 abstract class WindowsWindowBridge {
   bool get isAvailable;
   String get unavailableReason;
+  bool get isPreviewAvailable => false;
   Future<List<PlatformWindow>> enumerate();
   Future<bool> activate(PlatformWindow window);
   Future<String?> captureFocus();
   Future<bool> restoreFocus(String? token);
+  Future<PlatformWindowPreview?> capturePreview(PlatformWindow window) async => null;
 }

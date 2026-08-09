@@ -217,6 +217,14 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   bool _isResizingResults = false;
   bool _isFilePreviewVisible = true;
 
+  final Map<String, PlatformWindowPreview> _windowPreviewCache = <String, PlatformWindowPreview>{};
+  final Map<String, Future<PlatformWindowPreview?>> _windowPreviewCaptures = <String, Future<PlatformWindowPreview?>>{};
+  final ValueNotifier<int> _windowPreviewCacheVersion = ValueNotifier<int>(0);
+  final Set<String> _queuedWindowPreviewIds = <String>{};
+  int _windowPreviewPrefetchGeneration = -1;
+  int _windowPreviewPrefetchRun = 0;
+  String? _lastHoveredWindowPreviewId;
+
   final List<String> _folderBrowsingStack = <String>[];
   final List<String> _folderBrowsingQueryStack = <String>[];
 
@@ -1884,6 +1892,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _resultsFocusNode.dispose();
     _scrollController.dispose();
     _activeIndexNotifier.dispose();
+    _windowPreviewCacheVersion.dispose();
     super.dispose();
   }
 
@@ -4064,6 +4073,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       _scrollController.jumpTo(0);
     }
 
+    if (_controller.text == '.') {
+      _prefetchWindowPreviews(results);
+    }
+
     _maybeExecutePendingLauncherQuickAction();
     unawaited(_pruneStaleFileResults(results));
   }
@@ -4405,6 +4418,90 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
   String _resultKeyId(LauncherSearchResultItem result, int index) => '${result.id}#$index';
 
+  Future<PlatformWindowPreview?> _captureWindowPreview(
+    PlatformWindow window, {
+    bool force = false,
+  }) {
+    final String identity = window.identity;
+    final PlatformWindowPreview? cached = _windowPreviewCache[identity];
+    if (!force && cached != null) return Future<PlatformWindowPreview?>.value(cached);
+
+    final Future<PlatformWindowPreview?>? existing = _windowPreviewCaptures[identity];
+    if (existing != null) return existing;
+
+    Future<PlatformWindowPreview?> performCapture() async {
+      try {
+        final PlatformWindowPreview? preview = await WindowWatcherService.instance.capturePreview(window);
+        if (preview != null) {
+          _windowPreviewCache[identity] = preview;
+          if (mounted) _windowPreviewCacheVersion.value++;
+          return preview;
+        }
+      } catch (_) {
+        // Keep the last successful frame when a window disappears or refuses a
+        // refresh; hover can retry if the HWND remains valid.
+      }
+      return _windowPreviewCache[identity];
+    }
+
+    late final Future<PlatformWindowPreview?> request;
+    request = performCapture().whenComplete(() {
+      if (identical(_windowPreviewCaptures[identity], request)) {
+        _windowPreviewCaptures.remove(identity);
+      }
+    });
+    _windowPreviewCaptures[identity] = request;
+    return request;
+  }
+
+  void _prefetchWindowPreviews(List<LauncherSearchResultItem> results) {
+    if (_windowPreviewPrefetchGeneration != _searchGeneration) {
+      _windowPreviewPrefetchGeneration = _searchGeneration;
+      _queuedWindowPreviewIds.clear();
+      _lastHoveredWindowPreviewId = null;
+      _windowPreviewPrefetchRun++;
+    }
+
+    final Set<String> activeWindowIds = <String>{
+      for (final LauncherSearchResultItem result in results)
+        if (result.window != null) result.window!.identity,
+    };
+    final int cacheSizeBeforePrune = _windowPreviewCache.length;
+    _windowPreviewCache
+        .removeWhere((String identity, PlatformWindowPreview preview) => !activeWindowIds.contains(identity));
+    if (_windowPreviewCache.length != cacheSizeBeforePrune && mounted) {
+      _windowPreviewCacheVersion.value++;
+    }
+
+    final List<PlatformWindow> pending = <PlatformWindow>[
+      for (final LauncherSearchResultItem result in results)
+        if (result.window != null && _queuedWindowPreviewIds.add(result.window!.identity)) result.window!,
+    ];
+    if (pending.isEmpty) return;
+
+    final int run = _windowPreviewPrefetchRun;
+    int nextIndex = 0;
+    Future<void> worker() async {
+      while (mounted && _controller.text == '.' && run == _windowPreviewPrefetchRun) {
+        final int index = nextIndex++;
+        if (index >= pending.length) return;
+        await _captureWindowPreview(pending[index], force: true);
+      }
+    }
+
+    final int workerCount = math.min(3, pending.length);
+    for (int index = 0; index < workerCount; index++) {
+      unawaited(worker());
+    }
+  }
+
+  void _selectWindowResultFromMouse(int index, PlatformWindow window) {
+    _selectResultFromMouse(index);
+    if (_lastHoveredWindowPreviewId == window.identity) return;
+    _lastHoveredWindowPreviewId = window.identity;
+    unawaited(_captureWindowPreview(window, force: true));
+  }
+
   void _selectResultFromPointerHover(PointerHoverEvent event, int index) {
     if (event.delta == Offset.zero) return;
 
@@ -4414,6 +4511,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
     _mouseSelectionEnabled = true;
     _selectResultFromMouse(index);
+    if (index >= 0 && index < _results.length && _results[index].window == null) {
+      _lastHoveredWindowPreviewId = null;
+    }
   }
 
   void _selectResultFromMouse(int index) {
@@ -4446,9 +4546,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _controller.selection = selection;
   }
 
-  FileSystemEntity? _filePreviewEntityAt(int index) {
+  LauncherSearchResultItem? _previewResultAt(int index) {
     if (index < 0 || index >= _results.length) return null;
-    return _results[index].entity;
+    final LauncherSearchResultItem result = _results[index];
+    return result.isFile || result.isWindow ? result : null;
   }
 
   @override
@@ -4701,11 +4802,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                         return ValueListenableBuilder<bool>(
                           valueListenable: _isRepeatingKey,
                           builder: (BuildContext context, bool isRepeatingKey, Widget? child) {
-                            final FileSystemEntity? previewEntity = _filePreviewEntityAt(activeIndex);
+                            final LauncherSearchResultItem? previewResult = _previewResultAt(activeIndex);
+                            final FileSystemEntity? previewEntity = previewResult?.entity;
+                            final PlatformWindow? previewWindow = previewResult?.window;
                             return LayoutBuilder(
                               builder: (BuildContext context, BoxConstraints constraints) {
-                                final bool showPreview = _isFilePreviewVisible && previewEntity != null;
-                                final double previewWidth = constraints.maxWidth * 0.30;
+                                final bool showPreview = _isFilePreviewVisible && previewResult != null;
+                                final double previewWidth = constraints.maxWidth * 0.40;
                                 return Stack(
                                   children: <Widget>[
                                     Positioned.fill(
@@ -4789,13 +4892,29 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                                         right: 0,
                                         bottom: 0,
                                         width: previewWidth,
-                                        child: _LauncherFilePreviewPanel(
-                                          key: ValueKey<String>(previewEntity.path),
-                                          entity: previewEntity,
-                                          design: _design,
-                                          accent: accent,
-                                          onSurface: onSurface,
-                                        ),
+                                        child: previewEntity != null
+                                            ? _LauncherFilePreviewPanel(
+                                                key: ValueKey<String>(previewEntity.path),
+                                                entity: previewEntity,
+                                                design: _design,
+                                                accent: accent,
+                                                onSurface: onSurface,
+                                              )
+                                            : ValueListenableBuilder<int>(
+                                                valueListenable: _windowPreviewCacheVersion,
+                                                builder: (BuildContext context, int version, Widget? child) {
+                                                  final PlatformWindow window = previewWindow!;
+                                                  return _LauncherWindowPreviewPanel(
+                                                    key: ValueKey<String>(window.identity),
+                                                    window: window,
+                                                    preview: _windowPreviewCache[window.identity],
+                                                    onPreviewNeeded: () => _captureWindowPreview(window),
+                                                    design: _design,
+                                                    accent: accent,
+                                                    onSurface: onSurface,
+                                                  );
+                                                },
+                                              ),
                                       ),
                                   ],
                                 );
@@ -5613,7 +5732,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       accent: accent,
       onSurface: theme.colorScheme.onSurface,
       onTap: () => _openWindow(window),
-      onHover: () => _selectResultFromMouse(index),
+      onHover: () => _selectWindowResultFromMouse(index, window),
     );
   }
 
@@ -5628,6 +5747,257 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       onSurface: theme.colorScheme.onSurface,
       onTap: () => _openBrowserTab(browserTab),
       onHover: () => _selectResultFromMouse(index),
+    );
+  }
+}
+
+class _LauncherWindowPreviewPanel extends StatefulWidget {
+  const _LauncherWindowPreviewPanel({
+    super.key,
+    required this.window,
+    required this.preview,
+    required this.onPreviewNeeded,
+    required this.design,
+    required this.accent,
+    required this.onSurface,
+  });
+
+  final PlatformWindow window;
+  final PlatformWindowPreview? preview;
+  final Future<PlatformWindowPreview?> Function() onPreviewNeeded;
+  final LauncherDesign design;
+  final Color accent;
+  final Color onSurface;
+
+  @override
+  State<_LauncherWindowPreviewPanel> createState() => _LauncherWindowPreviewPanelState();
+}
+
+class _LauncherWindowPreviewPanelState extends State<_LauncherWindowPreviewPanel> {
+  Timer? _captureTimer;
+  PlatformWindowPreview? _preview;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _preview = widget.preview;
+    if (_preview == null) _scheduleCapture();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LauncherWindowPreviewPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.window.identity != widget.window.identity) {
+      _preview = widget.preview;
+      if (_preview == null) _scheduleCapture();
+      return;
+    }
+    if (widget.preview != null && !identical(oldWidget.preview, widget.preview)) {
+      _preview = widget.preview;
+      _isLoading = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _captureTimer?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleCapture() {
+    _captureTimer?.cancel();
+    _isLoading = true;
+    _captureTimer = Timer(const Duration(milliseconds: 60), () async {
+      PlatformWindowPreview? preview;
+      try {
+        preview = await widget.onPreviewNeeded();
+      } catch (_) {
+        preview = null;
+      }
+      if (!mounted) return;
+      setState(() {
+        _preview = preview ?? _preview;
+        _isLoading = false;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final double radius = math.min(LauncherThemeData(design: widget.design).frameRadius, 10);
+    final Color panelColor = Color.alphaBlend(widget.onSurface.withAlpha(12), theme.colorScheme.surface);
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: panelColor,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: widget.accent.withAlpha(65)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _buildHeader(theme),
+          Divider(height: 1, thickness: 1, color: widget.onSurface.withAlpha(24)),
+          Expanded(
+            child: _preview != null && _preview!.encodedBytes.isNotEmpty
+                ? _buildBody(theme, _preview!)
+                : _isLoading
+                    ? Center(
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 1.5, color: widget.accent.withAlpha(180)),
+                        ),
+                      )
+                    : _buildEmptyPreview(theme),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(9, 8, 7, 8),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.window_rounded, size: 14, color: widget.accent.withAlpha(210)),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Tooltip(
+              message: widget.window.title,
+              child: Text(
+                widget.window.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: widget.onSurface.withAlpha(220),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+            decoration: BoxDecoration(
+              color: widget.accent.withAlpha(18),
+              borderRadius: BorderRadius.circular(3),
+              border: Border.all(color: widget.accent.withAlpha(45)),
+            ),
+            child: Text(
+              'CTRL P',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: widget.accent.withAlpha(190),
+                fontSize: 8,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody(ThemeData theme, PlatformWindowPreview preview) {
+    final String application = widget.window.applicationName.isNotEmpty
+        ? widget.window.applicationName
+        : widget.window.executable.isNotEmpty
+            ? widget.window.executable
+            : 'Application';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(9),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black.withAlpha(35),
+                border: Border.all(color: widget.onSurface.withAlpha(18)),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: Image.memory(
+                  preview.encodedBytes,
+                  fit: BoxFit.contain,
+                  gaplessPlayback: true,
+                  filterQuality: FilterQuality.medium,
+                  errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                      _buildEmptyPreview(theme),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Divider(height: 1, thickness: 1, color: widget.onSurface.withAlpha(22)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(9, 7, 9, 8),
+          child: Column(
+            children: <Widget>[
+              _buildInfoRow(theme, 'APP', application),
+              const SizedBox(height: 4),
+              _buildInfoRow(theme, 'FRAME', '${preview.width} × ${preview.height}'),
+              const SizedBox(height: 4),
+              _buildInfoRow(theme, 'STATE', widget.window.isMinimized ? 'Minimized' : 'Open'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyPreview(ThemeData theme) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.hide_image_outlined, size: 30, color: widget.onSurface.withAlpha(80)),
+          const SizedBox(height: 7),
+          Text(
+            WindowWatcherService.instance.isPreviewAvailable ? 'Window preview unavailable' : 'Preview not supported',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.labelSmall?.copyWith(color: widget.onSurface.withAlpha(115)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(ThemeData theme, String label, String value) {
+    return Row(
+      children: <Widget>[
+        SizedBox(
+          width: 46,
+          child: Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: widget.onSurface.withAlpha(85),
+              fontSize: 7.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.45,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: widget.onSurface.withAlpha(180),
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

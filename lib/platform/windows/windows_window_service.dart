@@ -18,6 +18,9 @@ class WindowsWindowService extends WindowService {
   String get unavailableReason => isAvailable ? '' : bridge.unavailableReason;
 
   @override
+  bool get isPreviewAvailable => bridge.isPreviewAvailable;
+
+  @override
   Future<List<PlatformWindow>> enumerate() => bridge.enumerate();
 
   @override
@@ -28,4 +31,7 @@ class WindowsWindowService extends WindowService {
 
   @override
   Future<bool> restoreFocus(String? token) => bridge.restoreFocus(token);
+
+  @override
+  Future<PlatformWindowPreview?> capturePreview(PlatformWindow window) => bridge.capturePreview(window);
 }

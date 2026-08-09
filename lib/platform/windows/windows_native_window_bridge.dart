@@ -1,8 +1,13 @@
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
+import 'package:image/image.dart' as img;
 
+import '../../models/win32/screenshot.dart';
 import '../../models/win32/win_utils.dart';
 import '../platform_models.dart';
 import 'win32_api.dart';
@@ -20,6 +25,9 @@ class WindowsNativeWindowBridge implements WindowsWindowBridge {
 
   @override
   String get unavailableReason => 'The Windows window service is unavailable on this platform.';
+
+  @override
+  bool get isPreviewAvailable => isAvailable;
 
   @override
   Future<List<PlatformWindow>> enumerate() async {
@@ -86,6 +94,122 @@ class WindowsNativeWindowBridge implements WindowsWindowBridge {
     if (handle == null || handle == 0 || IsWindow(handle) == 0) return false;
     if (IsIconic(handle) != 0) ShowWindow(handle, SW_RESTORE);
     return SetForegroundWindow(handle) != 0;
+  }
+
+  @override
+  Future<PlatformWindowPreview?> capturePreview(PlatformWindow window) async {
+    final int? handle = int.tryParse(window.nativeId);
+    if (!isPreviewAvailable || handle == null || handle == 0 || IsWindow(handle) == 0) return null;
+
+    try {
+      return await Isolate.run(() => _captureWindowPreview(handle));
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+// `PW_RENDERFULLCONTENT` is supported by Windows but omitted from win32's
+// generated constants.
+const int _pwRenderFullContent = 0x00000002;
+const int _maxPreviewDimension = 16384;
+const int _maxPreviewPixels = 40000000;
+
+PlatformWindowPreview? _captureWindowPreview(int handle) {
+  if (IsWindow(handle) == 0) return null;
+
+  final Pointer<RECT> windowRect = calloc<RECT>();
+  final Pointer<RECT> frameRect = calloc<RECT>();
+  try {
+    if (GetWindowRect(handle, windowRect) == 0) return null;
+
+    final int width = windowRect.ref.right - windowRect.ref.left;
+    final int height = windowRect.ref.bottom - windowRect.ref.top;
+    if (width <= 0 ||
+        height <= 0 ||
+        width > _maxPreviewDimension ||
+        height > _maxPreviewDimension ||
+        width * height > _maxPreviewPixels) {
+      return null;
+    }
+
+    final int screenDc = GetDC(NULL);
+    if (screenDc == 0) return null;
+
+    final int memoryDc = CreateCompatibleDC(screenDc);
+    if (memoryDc == 0) {
+      ReleaseDC(NULL, screenDc);
+      return null;
+    }
+
+    final int bitmap = CreateCompatibleBitmap(screenDc, width, height);
+    if (bitmap == 0) {
+      DeleteDC(memoryDc);
+      ReleaseDC(NULL, screenDc);
+      return null;
+    }
+
+    final int previousObject = SelectObject(memoryDc, bitmap);
+    if (previousObject == 0 || previousObject == -1) {
+      DeleteObject(bitmap);
+      DeleteDC(memoryDc);
+      ReleaseDC(NULL, screenDc);
+      return null;
+    }
+
+    try {
+      bool captured = false;
+      try {
+        captured = PrintWindow(handle, memoryDc, _pwRenderFullContent) != 0 || PrintWindow(handle, memoryDc, 0) != 0;
+      } finally {
+        SelectObject(memoryDc, previousObject);
+      }
+      if (!captured) return null;
+
+      final BitmapCapture capture = readBitmapCapture(hdc: screenDc, bitmap: bitmap);
+      img.Image image = img.Image.fromBytes(
+        width: capture.width,
+        height: capture.height,
+        bytes: capture.rgbaBytes.buffer,
+        numChannels: 4,
+        order: img.ChannelOrder.rgba,
+      );
+
+      if (DwmGetWindowAttribute(
+            handle,
+            DWMWA_EXTENDED_FRAME_BOUNDS,
+            frameRect.cast(),
+            sizeOf<RECT>(),
+          ) ==
+          0) {
+        final int cropLeft = math.max(0, frameRect.ref.left - windowRect.ref.left);
+        final int cropTop = math.max(0, frameRect.ref.top - windowRect.ref.top);
+        final int cropRight = math.min(width, frameRect.ref.right - windowRect.ref.left);
+        final int cropBottom = math.min(height, frameRect.ref.bottom - windowRect.ref.top);
+        if (cropRight > cropLeft && cropBottom > cropTop) {
+          image = img.copyCrop(
+            image,
+            x: cropLeft,
+            y: cropTop,
+            width: cropRight - cropLeft,
+            height: cropBottom - cropTop,
+          );
+        }
+      }
+
+      return PlatformWindowPreview(
+        encodedBytes: Uint8List.fromList(img.encodePng(image)),
+        width: image.width,
+        height: image.height,
+      );
+    } finally {
+      DeleteObject(bitmap);
+      DeleteDC(memoryDc);
+      ReleaseDC(NULL, screenDc);
+    }
+  } finally {
+    calloc.free(windowRect);
+    calloc.free(frameRect);
   }
 }
 

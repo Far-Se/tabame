@@ -89,6 +89,19 @@ class PlatformWindow {
   int get hashCode => identity.hashCode;
 }
 
+/// An encoded snapshot of a native application window.
+class PlatformWindowPreview {
+  const PlatformWindowPreview({
+    required this.encodedBytes,
+    required this.width,
+    required this.height,
+  });
+
+  final Uint8List encodedBytes;
+  final int width;
+  final int height;
+}
+
 /// A display's bounds and usable work area in the adapter's coordinate system.
 class PlatformMonitor {
   const PlatformMonitor({

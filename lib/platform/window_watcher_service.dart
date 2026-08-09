@@ -29,6 +29,8 @@ class WindowWatcherService {
 
   bool get isActivationAvailable => service.isActivationAvailable;
 
+  bool get isPreviewAvailable => service.isPreviewAvailable;
+
   String get unavailableReason => service.unavailableReason;
 
   String get activationUnavailableReason => service.activationUnavailableReason;
@@ -77,6 +79,11 @@ class WindowWatcherService {
   Future<bool> activate(PlatformWindow window) async {
     if (!service.isActivationAvailable) return false;
     return service.activate(window);
+  }
+
+  Future<PlatformWindowPreview?> capturePreview(PlatformWindow window) async {
+    if (!service.isPreviewAvailable) return null;
+    return service.capturePreview(window);
   }
 
   bool containsExecutable(String value) {
