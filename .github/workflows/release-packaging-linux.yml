@@ -169,11 +169,23 @@ jobs:
             xvfb
 
       - name: Set up Flutter
+        if: matrix.flutter_arch == 'x64'
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          architecture: ${{ matrix.flutter_arch }}
+          architecture: x64
           cache: true
+
+      # Flutter does not publish Linux ARM64 SDK archives. Git-backed setup
+      # lets the stable checkout bootstrap its native ARM64 Dart SDK instead.
+      - name: Set up Flutter from source
+        if: matrix.flutter_arch == 'arm64'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: main
+          flutter-version: stable
+          architecture: arm64
+          cache: false
 
       - name: Enable Linux desktop target
         run: flutter config --enable-linux-desktop

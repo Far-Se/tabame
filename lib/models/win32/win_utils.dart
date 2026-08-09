@@ -37,12 +37,12 @@ class WinUtils {
   static const Duration _iconCacheMaxAge = Duration(days: 7);
   static ExtractedIcon _defaultFolderIcon;
 
-  static Directory _iconCacheDirectory() {
-    return Directory(AppPaths.cachePath('icon_cache', forWrite: true));
+  static Directory _iconCacheDirectory({String? cacheDirectoryPath}) {
+    return Directory(cacheDirectoryPath ?? AppPaths.cachePath('icon_cache', forWrite: true));
   }
 
-  static Directory fileFormatIconCacheDirectory() {
-    return Directory(p.join(_iconCacheDirectory().path, 'file_formats'));
+  static Directory fileFormatIconCacheDirectory({String? cacheDirectoryPath}) {
+    return Directory(p.join(_iconCacheDirectory(cacheDirectoryPath: cacheDirectoryPath).path, 'file_formats'));
   }
 
   static bool _isFreshCacheFile(File file) {
@@ -64,10 +64,13 @@ class WinUtils {
     return key.isEmpty ? null : key;
   }
 
-  static File? _fileFormatIconCacheFile(String path) {
+  static File? _fileFormatIconCacheFile(String path, {String? cacheDirectoryPath}) {
     final String? key = _fileFormatIconCacheKey(path);
     if (key == null) return null;
-    return File(p.join(fileFormatIconCacheDirectory().path, '$key.ico'));
+    return File(p.join(
+      fileFormatIconCacheDirectory(cacheDirectoryPath: cacheDirectoryPath).path,
+      '$key.ico',
+    ));
   }
 
   static File? getCachedFileFormatIcon(String path) {
@@ -1243,7 +1246,11 @@ class WinUtils {
     return null;
   }
 
-  static ExtractedIcon extractIcon(String path, {int iconID = 0}) {
+  static ExtractedIcon extractIcon(
+    String path, {
+    int iconID = 0,
+    String? cacheDirectoryPath,
+  }) {
     File? cacheFile;
     final bool isDefaultFolder = iconID == 0 && usesDefaultFolderIcon(path);
     if (isDefaultFolder && _defaultFolderIcon != null) {
@@ -1251,12 +1258,12 @@ class WinUtils {
     }
 
     if (iconID == 0) {
-      final Directory cacheDir = _iconCacheDirectory();
+      final Directory cacheDir = _iconCacheDirectory(cacheDirectoryPath: cacheDirectoryPath);
       if (!cacheDir.existsSync()) {
         cacheDir.createSync(recursive: true);
       }
 
-      cacheFile = _fileFormatIconCacheFile(path);
+      cacheFile = _fileFormatIconCacheFile(path, cacheDirectoryPath: cacheDirectoryPath);
       if (cacheFile != null) {
         final Directory fileFormatCacheDir = cacheFile.parent;
         if (!fileFormatCacheDir.existsSync()) {

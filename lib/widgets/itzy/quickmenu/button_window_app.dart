@@ -30,7 +30,9 @@ class _ShutdownSignal {
   const _ShutdownSignal();
 }
 
-void _iconWorkerEntry(SendPort mainSendPort) {
+void _iconWorkerEntry(List<Object?> args) {
+  final SendPort mainSendPort = args[0]! as SendPort;
+  final String cacheDirectoryPath = args[1]! as String;
   final ReceivePort port = ReceivePort();
   mainSendPort.send(port.sendPort); // handshake
 
@@ -42,7 +44,7 @@ void _iconWorkerEntry(SendPort mainSendPort) {
     if (msg is _IconRequest) {
       ExtractedIcon result;
       try {
-        result = WinUtils.extractIcon(msg.path);
+        result = WinUtils.extractIcon(msg.path, cacheDirectoryPath: cacheDirectoryPath);
       } catch (e, st) {
         // Debug.add is isolate-safe because it only writes to a global list.
         Debug.add('worker: extractIcon failed for ${msg.path}: $e\n$st');
@@ -71,8 +73,9 @@ class _WorkerPool {
   Future<void> _ensureReady() => _initFuture ??= _spawnAll();
 
   Future<void> _spawnAll() async {
+    final String cacheDirectoryPath = AppPaths.cachePath('icon_cache', forWrite: true);
     for (int i = 0; i < _poolSize; i++) {
-      _workers.add(await _Worker.spawn(_onResponse));
+      _workers.add(await _Worker.spawn(_onResponse, cacheDirectoryPath));
     }
   }
 
@@ -121,9 +124,9 @@ class _Worker {
   final SendPort _sendPort;
   final ReceivePort _receivePort;
 
-  static Future<_Worker> spawn(void Function(_IconResponse) onResponse) async {
+  static Future<_Worker> spawn(void Function(_IconResponse) onResponse, String cacheDirectoryPath) async {
     final ReceivePort receivePort = ReceivePort();
-    await Isolate.spawn(_iconWorkerEntry, receivePort.sendPort);
+    await Isolate.spawn(_iconWorkerEntry, <Object?>[receivePort.sendPort, cacheDirectoryPath]);
 
     final Completer<SendPort> ready = Completer<SendPort>();
     bool handshakeDone = false;
@@ -330,9 +333,10 @@ class IconService {
 
   // ── Public API ──────────────────────────────────────────────────────────
 
-  Future<ExtractedIcon> getIcon(String rawPath) {
+  Future<ExtractedIcon> getIcon(String rawPath) async {
     final String path = _applyRewrite(rawPath);
-    if (path.isEmpty) return Future<ExtractedIcon>.value(null);
+    if (path.isEmpty) return null;
+    await init();
     return _resolve(path);
   }
 

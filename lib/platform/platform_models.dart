@@ -73,6 +73,7 @@ class PlatformWindow {
       executablePath: '${map['executablePath'] ?? ''}',
       className: '${map['className'] ?? ''}',
       monitorId: '${map['monitorId'] ?? ''}',
+      icon: map['icon'],
       helpText: '${map['helpText'] ?? ''}',
       isPinned: map['isPinned'] == true,
       isOnScreen: map['isOnScreen'] is bool ? map['isOnScreen'] as bool : true,

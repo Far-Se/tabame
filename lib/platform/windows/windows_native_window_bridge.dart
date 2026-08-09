@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 
+import '../../models/win32/win_utils.dart';
 import '../platform_models.dart';
 import 'win32_api.dart';
 import 'windows_window_bridge.dart';
@@ -39,6 +40,8 @@ class WindowsNativeWindowBridge implements WindowsWindowBridge {
       final String executable = _basename(executablePath);
       final String className = _windowClass(handle);
       final _WindowBounds bounds = _windowBounds(handle);
+      final Object? icon =
+          WinUtils.windowIcon(handle) ?? (executablePath.isNotEmpty ? WinUtils.extractIcon(executablePath) : null);
       windows.add(
         PlatformWindow(
           nativeId: '$handle',
@@ -53,6 +56,7 @@ class WindowsNativeWindowBridge implements WindowsWindowBridge {
           executable: executable,
           executablePath: executablePath,
           className: className,
+          icon: icon,
           isOnScreen: true,
           isMinimized: IsIconic(handle) != 0,
         ),

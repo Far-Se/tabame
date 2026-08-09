@@ -31,9 +31,11 @@ void main() {
       'y': 20,
       'width': 800,
       'height': 600,
+      'icon': 'cached-icon.ico',
     });
     expect(window.nativeId, '123:456');
     expect(window.width, 800);
+    expect(window.icon, 'cached-icon.ico');
   });
 
   test('macOS window service gates and delegates neutral enumeration', () async {
