@@ -333,6 +333,17 @@ class Settings {
   ThemeColors get themeColors => themeTypeMode == ThemeType.dark ? darkTheme : lightTheme;
   ThemeColors get launcherThemeColors => themeTypeMode == ThemeType.dark ? launcherDarkTheme : launcherLightTheme;
 
+  ThemeColors appThemeColors({required bool isDark}) {
+    final QuickMenuDesigns design = currentQuickMenuDesign;
+    final bool useClassicInterfaceTheme =
+        page == TPage.interface && (design == QuickMenuDesigns.windowsXp || design == QuickMenuDesigns.windows98);
+    if (!useClassicInterfaceTheme) return isDark ? darkTheme : lightTheme;
+
+    final QMDesignThemeSet classicThemes = quickMenuDesignThemes[QuickMenuDesigns.classic.displayName] ??
+        Settings.createDefaultQuickMenuDesignThemes()[QuickMenuDesigns.classic.displayName]!;
+    return (isDark ? classicThemes.darkTheme : classicThemes.lightTheme).copyWith();
+  }
+
   static ThemeColors _defaultThemeColors({
     required Color background,
     required Color textColor,

@@ -12,7 +12,7 @@ class AppTheme {
   static ThemeData getLightThemeData(BuildContext context) => getThemeData(context, isDark: false);
 
   static ThemeData getThemeData(BuildContext context, {required bool isDark}) {
-    final ThemeColors theme = isDark ? user.darkTheme : user.lightTheme;
+    final ThemeColors theme = user.appThemeColors(isDark: isDark);
     final ThemeData base = isDark ? ThemeData.dark() : ThemeData.light();
 
     late TextTheme uiFont;
@@ -55,8 +55,8 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          foregroundColor: Design.background,
-          backgroundColor: Design.accent,
+          foregroundColor: theme.background,
+          backgroundColor: theme.accent,
           textStyle: entryFont.labelLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
       ),
@@ -65,7 +65,7 @@ class AppTheme {
         verticalOffset: 10,
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         margin: const EdgeInsets.all(0),
-        textStyle: TextStyle(color: theme.text, fontSize: Design.baseFontSize + 2, height: 0),
+        textStyle: TextStyle(color: theme.text, fontSize: theme.baseFontSize + 2, height: 0),
         decoration: BoxDecoration(color: theme.background),
         preferBelow: false,
       ),
@@ -233,12 +233,12 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        textStyle: TextStyle(color: theme.text, fontSize: Design.baseFontSize),
+        textStyle: TextStyle(color: theme.text, fontSize: theme.baseFontSize),
         labelTextStyle: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
           if (states.contains(WidgetState.focused) || states.contains(WidgetState.hovered)) {
-            return TextStyle(color: theme.accent, fontSize: Design.baseFontSize);
+            return TextStyle(color: theme.accent, fontSize: theme.baseFontSize);
           }
-          return TextStyle(color: theme.text, fontSize: Design.baseFontSize);
+          return TextStyle(color: theme.text, fontSize: theme.baseFontSize);
         }),
       ),
       scrollbarTheme: ScrollbarThemeData(
@@ -290,14 +290,15 @@ class AppTheme {
   }
 
   static Future<void> loadDragCursor(BuildContext context) async {
+    final bool isDark = user.isDark(context);
+    final ThemeColors theme = user.appThemeColors(isDark: isDark);
     Globals.customCursor = await CustomMouseCursor.icon(Icons.swipe,
         size: 21,
         hotX: 9,
         hotY: 3,
-        color: user.isDark(context) ? Design.text : Design.background,
+        color: isDark ? theme.text : theme.background,
         shadows: <Shadow>[
-          Shadow(
-              offset: const Offset(0, 0), blurRadius: 2, color: user.isDark(context) ? Design.background : Design.text)
+          Shadow(offset: const Offset(0, 0), blurRadius: 2, color: isDark ? theme.background : theme.text)
         ]);
   }
 

@@ -121,9 +121,15 @@ class BookmarkIcon extends StatelessWidget {
 
   Widget _buildFallback() {
     final String emoji = mark.emoji.isNotEmpty ? mark.emoji : (fallbackEmoji.isNotEmpty ? fallbackEmoji : "❖");
-    return Text(
-      emoji,
-      style: TextStyle(fontSize: size),
+    return SizedBox.square(
+      dimension: size,
+      child: Center(
+        child: Text(
+          emoji,
+          maxLines: 1,
+          style: TextStyle(fontSize: size, height: 1),
+        ),
+      ),
     );
   }
 }
