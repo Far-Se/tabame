@@ -12,7 +12,7 @@ on:
           - nightly
           - official
       tag_name:
-        description: "Optional official release tag. Nightly always uses the exact Nightly tag."
+        description: "Optional official release tag. Nightly always uses the exact nightly tag."
         required: false
         type: string
       run_tests:
@@ -28,7 +28,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: tabame-windows-release-${{ inputs.tag_name || (inputs.release_type == 'nightly' && 'Nightly') || github.ref_name }}
+  group: tabame-windows-release-${{ inputs.tag_name || (inputs.release_type == 'nightly' && 'nightly') || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -103,15 +103,15 @@ jobs:
                 $tagName = "v$appVersion"
               }
             }
-            if ($tagName -eq "Nightly") {
-              throw "The Nightly tag is reserved for nightly releases."
+            if ($tagName -eq "nightly") {
+              throw "The nightly tag is reserved for nightly releases."
             }
           } else {
             if ([string]::IsNullOrWhiteSpace($tagName)) {
-              $tagName = "Nightly"
+              $tagName = "nightly"
             }
-            if ($tagName -ne "Nightly") {
-              throw "Nightly releases must use the exact Nightly tag."
+            if ($tagName -ne "nightly") {
+              throw "Nightly releases must use the exact nightly tag."
             }
           }
 
@@ -170,7 +170,7 @@ jobs:
             -PackagePath "${{ steps.package.outputs.zip_path }}" `
             -Sha256Path "${{ steps.package.outputs.sha256_path }}"
 
-      - name: Move Nightly tag to this commit
+      - name: Move nightly tag to this commit
         if: ${{ steps.meta.outputs.release_type == 'nightly' }}
         shell: pwsh
         run: |

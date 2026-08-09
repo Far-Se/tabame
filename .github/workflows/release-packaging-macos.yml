@@ -24,7 +24,7 @@ on:
           - nightly
           - official
       tag_name:
-        description: "Optional official release tag. Nightly always uses the exact Nightly tag."
+        description: "Optional official release tag. Nightly always uses the exact nightly tag."
         required: false
         type: string
 
@@ -32,7 +32,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: tabame-macos-release-${{ inputs.tag_name || (inputs.release_type == 'nightly' && 'Nightly') || github.ref_name }}
+  group: tabame-macos-release-${{ inputs.tag_name || (inputs.release_type == 'nightly' && 'nightly') || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -84,18 +84,18 @@ jobs:
 
             if [[ "$release_type" == nightly ]]; then
               if [[ -z "$release_tag" ]]; then
-                release_tag='Nightly'
+                release_tag='nightly'
               fi
-              [[ "$release_tag" == 'Nightly' ]] || {
-                echo 'Nightly releases must use the exact Nightly tag.' >&2
+              [[ "$release_tag" == 'nightly' ]] || {
+                echo 'Nightly releases must use the exact nightly tag.' >&2
                 exit 2
               }
             else
               if [[ -z "$release_tag" ]]; then
                 release_tag="v$app_version"
               fi
-              [[ "$release_tag" != 'Nightly' ]] || {
-                echo 'The Nightly tag is reserved for nightly releases.' >&2
+              [[ "$release_tag" != 'nightly' ]] || {
+                echo 'The nightly tag is reserved for nightly releases.' >&2
                 exit 2
               }
             fi
@@ -248,6 +248,21 @@ jobs:
             args+=(--require-signed)
           fi
           bash tool/release/smoke-macos.sh "${args[@]}"
+
+      - name: Name nightly release assets
+        if: ${{ needs.metadata.outputs.release_type == 'nightly' }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          package="dist/tabame-${{ needs.metadata.outputs.app_version }}-macos-${{ matrix.arch }}"
+          asset="dist/tabame-nightly-macos-${{ matrix.arch }}"
+          mv "$package.dmg" "$asset.dmg"
+          mv "$package.zip" "$asset.zip"
+          {
+            shasum -a 256 "$asset.dmg"
+            shasum -a 256 "$asset.zip"
+          } | sed 's#dist/##' > "$asset.sha256"
+          rm -f "$package.sha256"
 
       - name: Upload macOS release artifacts
         uses: actions/upload-artifact@v4

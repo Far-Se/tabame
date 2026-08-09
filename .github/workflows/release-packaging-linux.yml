@@ -24,7 +24,7 @@ on:
           - nightly
           - official
       tag_name:
-        description: "Optional official release tag. Nightly always uses the exact Nightly tag."
+        description: "Optional official release tag. Nightly always uses the exact nightly tag."
         required: false
         type: string
 
@@ -32,7 +32,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: tabame-linux-release-${{ inputs.tag_name || (inputs.release_type == 'nightly') || github.ref_name }}
+  group: tabame-linux-release-${{ inputs.tag_name || (inputs.release_type == 'nightly' && 'nightly') || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -86,18 +86,18 @@ jobs:
 
             if [[ "$release_type" == nightly ]]; then
               if [[ -z "$release_tag" ]]; then
-                release_tag='Nightly'
+                release_tag='nightly'
               fi
-              [[ "$release_tag" == 'Nightly' ]] || {
-                echo 'Nightly releases must use the exact Nightly tag.' >&2
+              [[ "$release_tag" == 'nightly' ]] || {
+                echo 'Nightly releases must use the exact nightly tag.' >&2
                 exit 2
               }
             else
               if [[ -z "$release_tag" ]]; then
                 release_tag="v$app_version"
               fi
-              [[ "$release_tag" != 'Nightly' ]] || {
-                echo 'The Nightly tag is reserved for nightly releases.' >&2
+              [[ "$release_tag" != 'nightly' ]] || {
+                echo 'The nightly tag is reserved for nightly releases.' >&2
                 exit 2
               }
             fi
@@ -264,6 +264,17 @@ jobs:
           xvfb-run -a dbus-run-session -- bash -c \
             'export XDG_SESSION_TYPE=x11; bash tool/release/smoke-linux.sh --package "$1" --duration 5' \
             smoke "$package"
+
+      - name: Name nightly release assets
+        if: ${{ needs.metadata.outputs.release_type == 'nightly' }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          package="dist/tabame_${{ needs.metadata.outputs.package_version }}_${{ matrix.deb_arch }}.deb"
+          asset="dist/tabame-nightly-linux-${{ matrix.deb_arch }}.deb"
+          mv "$package" "$asset"
+          sha256sum "$asset" | sed 's#dist/##' > "$asset.sha256"
+          rm -f "$package.sha256"
 
       - name: Upload Linux release artifacts
         uses: actions/upload-artifact@v4
