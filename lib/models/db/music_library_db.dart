@@ -394,7 +394,7 @@ class MusicLibraryDb {
         AND (normalized_path = ? OR normalized_path LIKE ? ESCAPE '~')
         AND (index_token IS NULL OR index_token != ?)
       ''',
-      <Object?>[normalizedRoot, normalizedScope, '${_escapeLike(normalizedScope)}\\%', indexToken],
+      <Object?>[normalizedRoot, normalizedScope, _descendantLikePattern(scopePath), indexToken],
     );
   }
 
@@ -508,7 +508,7 @@ class MusicLibraryDb {
       WHERE normalized_path LIKE ? ESCAPE '~'
         AND normalized_parent_path != ?
       ''',
-      <Object?>['${_escapeLike(normalizedFolder)}\\%', normalizedFolder],
+      <Object?>[_descendantLikePattern(folderPath), normalizedFolder],
     );
 
     final Map<String, String> childFolders = <String, String>{};
@@ -595,7 +595,6 @@ class MusicLibraryDb {
   Future<List<MusicItem>> getDirectorySongsRecursive(String directoryId) async {
     final String path = parseFolderId(directoryId);
     final Database db = await database;
-    final String normalizedPath = normalizePath(path);
     final ResultSet rows = db.select(
       '''
       SELECT *
@@ -603,7 +602,7 @@ class MusicLibraryDb {
       WHERE normalized_path LIKE ? ESCAPE '~'
       ORDER BY normalized_parent_path COLLATE NOCASE, COALESCE(track_index, 999999), title COLLATE NOCASE
       ''',
-      <Object?>['${_escapeLike(normalizedPath)}\\%'],
+      <Object?>[_descendantLikePattern(path)],
     );
     return rows.map(_songFromRow).toList();
   }
@@ -875,6 +874,12 @@ class MusicLibraryDb {
     final String firstSegment = relative.split(RegExp(r'[\\/]+')).first;
     if (firstSegment.isEmpty) return null;
     return context.join(folderPath, firstSegment);
+  }
+
+  static String _descendantLikePattern(String path) {
+    final String normalized = normalizePath(path);
+    final String separator = _pathContext(path).separator;
+    return '${_escapeLike(normalized)}$separator%';
   }
 
   static String _escapeLike(String value) {
