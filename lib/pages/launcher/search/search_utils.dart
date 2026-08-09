@@ -9,6 +9,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/db/file_index_db.dart';
 import '../../../models/settings.dart';
+import '../../../models/util/file_extension_filter.dart';
 import '../../../models/util/quickmenu_modal.dart';
 import '../../../platform/platform_models.dart';
 import '../../../platform/window_watcher_service.dart';
@@ -245,7 +246,8 @@ Future<List<Map<String, Object?>>> searchAndSyncFileMatchesInBackground(Map<Stri
     final String excludePath = (folder['excludePath'] ?? '') as String;
     final bool includeFolders = (folder['includeFolders'] ?? true) as bool;
     final bool includeFiles = (folder['includeFiles'] ?? true) as bool;
-    final Set<String> allowedExtensions = _normalizedAllowedExtensions(
+    final bool excludeExtensions = (folder['excludeExtensions'] ?? false) as bool;
+    final Set<String> allowedExtensions = normalizeFileExtensions(
       ((folder['allowedExtensions'] as List<dynamic>?) ?? const <dynamic>[]).map((dynamic value) => value.toString()),
     );
     final int? maxDepth = folder['maxDepth'] as int?;
@@ -258,6 +260,7 @@ Future<List<Map<String, Object?>>> searchAndSyncFileMatchesInBackground(Map<Stri
       includeFolders,
       includeFiles,
       allowedExtensions,
+      excludeExtensions,
       excludePath,
       maxDepth,
       0,
@@ -360,20 +363,6 @@ QuickActionMenuEntry _buildQuickActionsLauncherEntry() {
   );
 }
 
-bool _isAllowedExtension(String name, Set<String> allowedExtensions) {
-  if (allowedExtensions.isEmpty) return true;
-  final String extension = p.extension(name).toLowerCase();
-  return allowedExtensions.contains(extension);
-}
-
-Set<String> _normalizedAllowedExtensions(Iterable<String> extensions) {
-  return extensions
-      .map((String extension) => extension.trim().toLowerCase())
-      .where((String extension) => extension.isNotEmpty)
-      .map((String extension) => extension.startsWith('.') ? extension : '.$extension')
-      .toSet();
-}
-
 void _recursiveSyncAndSearch(
   Directory dir,
   String rootPath,
@@ -383,6 +372,7 @@ void _recursiveSyncAndSearch(
   bool includeFolders,
   bool includeFiles,
   Set<String> allowedExtensions,
+  bool excludeExtensions,
   String excludePath,
   int? maxDepth,
   int currentDepth,
@@ -405,7 +395,14 @@ void _recursiveSyncAndSearch(
       final bool isDir = entity is Directory;
 
       int? currentId;
-      final bool shouldInclude = isDir ? includeFolders : includeFiles && _isAllowedExtension(name, allowedExtensions);
+      final bool shouldInclude = isDir
+          ? includeFolders
+          : includeFiles &&
+              includesFileExtension(
+                name,
+                allowedExtensions,
+                excludeMatches: excludeExtensions,
+              );
 
       if (shouldInclude) {
         if (query.isEmpty || lowerName.contains(query)) {
@@ -443,6 +440,7 @@ void _recursiveSyncAndSearch(
           includeFolders,
           includeFiles,
           allowedExtensions,
+          excludeExtensions,
           excludePath,
           maxDepth,
           currentDepth + 1,

@@ -126,6 +126,7 @@ class MixedSearchHandler {
                       'includeFolders': folder.includeFolders,
                       'includeFiles': folder.includeFiles,
                       'allowedExtensions': folder.allowedExtensions,
+                      'excludeExtensions': folder.excludeExtensions,
                       'maxDepth': folder.maxDepth,
                       'excludePath': folder.excludePath,
                     })

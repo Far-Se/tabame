@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/db/file_index_db.dart';
 import '../../../models/settings.dart';
+import '../../../models/util/file_extension_filter.dart';
 import '../../../services/file_indexer.dart';
 
 class InterfaceQMSearchSettings extends StatefulWidget {
@@ -414,8 +415,8 @@ class _SearchFolderTileState extends State<_SearchFolderTile> {
                               if (widget.folder.allowedExtensions.isNotEmpty)
                                 _buildTag(
                                   context,
-                                  widget.folder.allowedExtensions.join(", "),
-                                  Icons.extension_rounded,
+                                  "${widget.folder.excludeExtensions ? 'Exclude' : 'Only'}: ${widget.folder.allowedExtensions.join(", ")}",
+                                  widget.folder.excludeExtensions ? Icons.block_rounded : Icons.extension_rounded,
                                 ),
                               if (widget.folder.maxDepth != null)
                                 _buildTag(
@@ -529,6 +530,17 @@ class _SearchFolderEditorState extends State<SearchFolderEditor> {
     _excludeController.addListener(_validateRegex);
   }
 
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _excludeController.removeListener(_validateRegex);
+    _pathController.dispose();
+    _extensionsController.dispose();
+    _depthController.dispose();
+    _excludeController.dispose();
+    super.dispose();
+  }
+
   String? _regexError;
   Timer? _debounce;
 
@@ -553,15 +565,8 @@ class _SearchFolderEditorState extends State<SearchFolderEditor> {
   }
 
   void _setExtensions(String extList) {
-    final String combined = "${_extensionsController.text},$extList";
-    final List<String> parts = combined
-        .split(",")
-        .map((String e) => e.trim().replaceAll(" ", ""))
-        .where((String e) => e.isNotEmpty)
-        .toSet()
-        .toList();
-
-    _extensionsController.text = parts.join(",");
+    final List<String> extensions = parseFileExtensions("${_extensionsController.text},$extList");
+    _extensionsController.text = extensions.join(", ");
     setState(() {});
   }
 
@@ -652,11 +657,13 @@ class _SearchFolderEditorState extends State<SearchFolderEditor> {
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
+                    _buildExtensionModeSwitch(theme),
+                    const SizedBox(height: 8),
                     TextField(
                       controller: _extensionsController,
                       decoration: InputDecoration(
-                        labelText: "File Extensions (comma separated)",
-                        hintText: ".exe, .lnk, .dart",
+                        labelText: _folder.excludeExtensions ? "Excluded File Extensions" : "Allowed File Extensions",
+                        hintText: _folder.excludeExtensions ? ".bin .dat .dll .sha256" : ".exe .lnk .dart",
                         filled: true,
                         fillColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
                         border:
@@ -668,13 +675,22 @@ class _SearchFolderEditorState extends State<SearchFolderEditor> {
                     // Presets
                     Wrap(
                       spacing: 8,
-                      children: <Widget>[
-                        _presetChip("🖼️ Images", ".jpg,.jpeg,.png,.webp,.gif"),
-                        _presetChip("⚙️ Apps", ".exe,.msi,.bat,.ps1,.lnk"),
-                        _presetChip("📄 Docs", ".pdf,.docx,.txt,.md,.rtf"),
-                        _presetChip("🎬 Video", ".mp4,.mkv,.avi,.mov"),
-                        _presetChip("💻 Code", ".dart,.js,.py,.cpp,.html"),
-                      ],
+                      children: _folder.excludeExtensions
+                          ? <Widget>[
+                              _presetChip("🖼️ Images", ".jpg,.jpeg,.png,.webp,.gif,.bmp,.ico"),
+                              _presetChip("⚙️ Apps", ".exe,.msi,.bat,.cmd,.ps1,.lnk"),
+                              _presetChip("🧩 Binary", ".bin,.dat,.dll,.sys,.pdb"),
+                              _presetChip("#️⃣ Checksums", ".sha1,.sha256,.sha512,.md5"),
+                              _presetChip("🧹 Temporary", ".tmp,.temp,.bak,.old,.cache"),
+                              _presetChip("📦 Archives", ".zip,.7z,.rar,.tar,.gz"),
+                            ]
+                          : <Widget>[
+                              _presetChip("🖼️ Images", ".jpg,.jpeg,.png,.webp,.gif"),
+                              _presetChip("⚙️ Apps", ".exe,.msi,.bat,.ps1,.lnk"),
+                              _presetChip("📄 Docs", ".pdf,.docx,.txt,.md,.rtf"),
+                              _presetChip("🎬 Video", ".mp4,.mkv,.avi,.mov"),
+                              _presetChip("💻 Code", ".dart,.js,.py,.cpp,.html"),
+                            ],
                     ),
                   ],
                 ),
@@ -726,11 +742,7 @@ class _SearchFolderEditorState extends State<SearchFolderEditor> {
                     ? null
                     : () {
                         if (_pathController.text.isEmpty) return;
-                        final List<String> exts = _extensionsController.text
-                            .split(",")
-                            .map((String e) => e.trim())
-                            .where((String e) => e.isNotEmpty)
-                            .toList();
+                        final List<String> exts = parseFileExtensions(_extensionsController.text);
                         widget.onSaved(_folder.copyWith(
                           path: _pathController.text,
                           allowedExtensions: exts,
@@ -745,6 +757,56 @@ class _SearchFolderEditorState extends State<SearchFolderEditor> {
                 child: const Text("Save Source", style: TextStyle(fontWeight: FontWeight.w700)),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExtensionModeSwitch(ThemeData theme) {
+    final bool excludesExtensions = _folder.excludeExtensions;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+      decoration: BoxDecoration(
+        color: excludesExtensions
+            ? theme.colorScheme.error.withValues(alpha: 0.08)
+            : theme.colorScheme.onSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: excludesExtensions
+              ? theme.colorScheme.error.withValues(alpha: 0.3)
+              : theme.colorScheme.onSurface.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(
+            excludesExtensions ? Icons.block_rounded : Icons.filter_alt_rounded,
+            size: 17,
+            color: excludesExtensions ? theme.colorScheme.error : theme.colorScheme.onSurface.withValues(alpha: 0.55),
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  "Exclude files with extension:",
+                  style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  excludesExtensions ? "Listed types are skipped" : "Only listed types are indexed",
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: excludesExtensions,
+            onChanged: (bool value) => setState(() => _folder = _folder.copyWith(excludeExtensions: value)),
           ),
         ],
       ),

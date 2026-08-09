@@ -6,7 +6,9 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart' hide Row;
 import '../platform/windows/tabamewin32_api.dart' show BrowserTab, BrowserTabs;
@@ -77,6 +79,15 @@ export 'launcher/result/result_item_bookmark.dart' show BookmarkSearchResult, Bo
 
 // Constants
 // ---------------------------------------------------------------------------
+
+Uint8List? _decodeIcoFileToPng(String path) {
+  try {
+    final img.Image? decoded = img.decodeImage(File(path).readAsBytesSync());
+    return decoded == null ? null : img.encodePng(decoded);
+  } catch (_) {
+    return null;
+  }
+}
 
 class _ParsedLauncherTimer {
   const _ParsedLauncherTimer({
@@ -202,6 +213,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   double _resultsMaxHeight = _maxResultsHeight;
   bool _isResizeHandleHovered = false;
   bool _isResizingResults = false;
+  String? _icoPreviewPath;
+  Future<Uint8List?>? _icoPreviewFuture;
 
   final List<String> _folderBrowsingStack = <String>[];
   final List<String> _folderBrowsingQueryStack = <String>[];
@@ -4421,6 +4434,94 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _controller.selection = selection;
   }
 
+  static const Set<String> _previewableImageExtensions = <String>{
+    '.bmp',
+    '.gif',
+    '.ico',
+    '.jfif',
+    '.jpeg',
+    '.jpg',
+    '.png',
+    '.svg',
+    '.wbmp',
+    '.webp',
+  };
+
+  File? _imagePreviewFileAt(int index) {
+    if (index < 0 || index >= _results.length) return null;
+    final FileSystemEntity? entity = _results[index].entity;
+    if (entity is! File) return null;
+    return _previewableImageExtensions.contains(p.extension(entity.path).toLowerCase()) ? entity : null;
+  }
+
+  Future<Uint8List?> _loadIcoPreview(File imageFile) {
+    if (_icoPreviewPath != imageFile.path || _icoPreviewFuture == null) {
+      _icoPreviewPath = imageFile.path;
+      _icoPreviewFuture = compute(_decodeIcoFileToPng, imageFile.path);
+    }
+    return _icoPreviewFuture!;
+  }
+
+  Widget _buildImagePreviewError(Color onSurface) {
+    return Tooltip(
+      message: 'Preview unavailable',
+      child: Icon(Icons.broken_image_outlined, size: 24, color: onSurface.withAlpha(110)),
+    );
+  }
+
+  Widget _buildLauncherImagePreview(
+    File imageFile,
+    double maxWidth,
+    double maxHeight,
+    Color onSurface,
+  ) {
+    final String extension = p.extension(imageFile.path).toLowerCase();
+    final Widget preview;
+    if (extension == '.svg') {
+      preview = SvgPicture.file(
+        imageFile,
+        key: ValueKey<String>(imageFile.path),
+        fit: BoxFit.scaleDown,
+        errorBuilder: (BuildContext context, Object error, StackTrace stackTrace) => _buildImagePreviewError(onSurface),
+      );
+    } else if (extension == '.ico') {
+      preview = FutureBuilder<Uint8List?>(
+        future: _loadIcoPreview(imageFile),
+        builder: (BuildContext context, AsyncSnapshot<Uint8List?> snapshot) {
+          final Uint8List? bytes = snapshot.data;
+          if (snapshot.connectionState != ConnectionState.done) return const SizedBox.shrink();
+          if (bytes == null) return _buildImagePreviewError(onSurface);
+          return Image.memory(
+            bytes,
+            key: ValueKey<String>(imageFile.path),
+            fit: BoxFit.scaleDown,
+            filterQuality: FilterQuality.medium,
+            errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                _buildImagePreviewError(onSurface),
+          );
+        },
+      );
+    } else {
+      preview = Image.file(
+        imageFile,
+        key: ValueKey<String>(imageFile.path),
+        fit: BoxFit.scaleDown,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+            _buildImagePreviewError(onSurface),
+      );
+    }
+
+    return Semantics(
+      image: true,
+      label: 'Preview of ${p.basename(imageFile.path)}',
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+        child: preview,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ThemeData appTheme = Theme.of(context);
@@ -4671,72 +4772,110 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                         return ValueListenableBuilder<bool>(
                           valueListenable: _isRepeatingKey,
                           builder: (BuildContext context, bool isRepeatingKey, Widget? child) {
-                            return ListView.builder(
-                              controller: _scrollController,
-                              shrinkWrap: true,
-                              itemCount: _results.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                final LauncherSearchResultItem result = _results[index];
-                                final bool isSelected = index == activeIndex;
-                                late final Widget resultWidget;
-                                if (result.isShortcut) {
-                                  resultWidget = _buildShortcutResult(
-                                      context, theme, result.shortcut!, index, isSelected, isRepeatingKey);
-                                } else if (result.isFile) {
-                                  resultWidget = _buildFileResult(
-                                      context, theme, result.entity!, result.nodeId, index, isSelected, isRepeatingKey);
-                                } else if (result.isApp) {
-                                  resultWidget = _buildAppResult(context, theme, result.appResult!, result.nodeId,
-                                      index, isSelected, isRepeatingKey);
-                                } else if (result.isWindow) {
-                                  resultWidget = _buildWindowResult(
-                                      context, theme, result.window!, index, isSelected, isRepeatingKey);
-                                } else if (result.isBrowserTab) {
-                                  resultWidget = _buildBrowserTabResult(
-                                      context, theme, result.browserTab!, index, isSelected, isRepeatingKey);
-                                } else if (result.isBookmark) {
-                                  resultWidget = _buildBookmarkResult(
-                                      context, theme, result.bookmarkResult!, index, isSelected, isRepeatingKey);
-                                } else if (result.isNotion) {
-                                  resultWidget = _buildNotionResult(
-                                      context, theme, result.notionResult!, index, isSelected, isRepeatingKey);
-                                } else if (result.isObsidian) {
-                                  resultWidget = _buildObsidianResult(
-                                      context, theme, result.obsidianResult!, index, isSelected, isRepeatingKey);
-                                } else if (result.isSteam) {
-                                  resultWidget = _buildSteamResult(
-                                      context, theme, result.steamResult!, index, isSelected, isRepeatingKey);
-                                } else if (result.isInfo) {
-                                  resultWidget = _buildInfoResult(
-                                      context, theme, result.infoResult!, index, isSelected, isRepeatingKey);
-                                } else {
-                                  resultWidget = _buildQuickActionResult(
-                                      context, theme, result.quickAction!, index, isSelected, isRepeatingKey);
-                                }
-                                final Widget resultWithDivider = result.shortcut?.showDividerBefore == true
-                                    ? Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: <Widget>[
-                                          Divider(
-                                            height: 17,
-                                            thickness: 1,
-                                            indent: 12,
-                                            endIndent: 12,
-                                            color: theme.colorScheme.outlineVariant.withAlpha(150),
-                                          ),
-                                          resultWidget,
-                                        ],
-                                      )
-                                    : resultWidget;
-                                return KeyedSubtree(
-                                  key: _resultKeys[_resultKeyId(result, index)],
-                                  child: MouseRegion(
-                                    onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
-                                    child: Stack(
-                                      alignment: Alignment.centerRight,
-                                      children: <Widget>[resultWithDivider],
+                            final File? previewFile = _imagePreviewFileAt(activeIndex);
+                            final LayerLink previewLink = LayerLink();
+                            return LayoutBuilder(
+                              builder: (BuildContext context, BoxConstraints constraints) {
+                                final double previewMaxWidth = constraints.maxWidth * 0.30;
+                                final double previewMaxHeight = math.min(220, constraints.maxHeight * 0.60);
+                                return Stack(
+                                  clipBehavior: Clip.none,
+                                  children: <Widget>[
+                                    Positioned.fill(
+                                      child: ListView.builder(
+                                        controller: _scrollController,
+                                        shrinkWrap: true,
+                                        itemCount: _results.length,
+                                        itemBuilder: (BuildContext context, int index) {
+                                          final LauncherSearchResultItem result = _results[index];
+                                          final bool isSelected = index == activeIndex;
+                                          late final Widget resultWidget;
+                                          if (result.isShortcut) {
+                                            resultWidget = _buildShortcutResult(
+                                                context, theme, result.shortcut!, index, isSelected, isRepeatingKey);
+                                          } else if (result.isFile) {
+                                            resultWidget = _buildFileResult(context, theme, result.entity!,
+                                                result.nodeId, index, isSelected, isRepeatingKey);
+                                          } else if (result.isApp) {
+                                            resultWidget = _buildAppResult(context, theme, result.appResult!,
+                                                result.nodeId, index, isSelected, isRepeatingKey);
+                                          } else if (result.isWindow) {
+                                            resultWidget = _buildWindowResult(
+                                                context, theme, result.window!, index, isSelected, isRepeatingKey);
+                                          } else if (result.isBrowserTab) {
+                                            resultWidget = _buildBrowserTabResult(
+                                                context, theme, result.browserTab!, index, isSelected, isRepeatingKey);
+                                          } else if (result.isBookmark) {
+                                            resultWidget = _buildBookmarkResult(context, theme, result.bookmarkResult!,
+                                                index, isSelected, isRepeatingKey);
+                                          } else if (result.isNotion) {
+                                            resultWidget = _buildNotionResult(context, theme, result.notionResult!,
+                                                index, isSelected, isRepeatingKey);
+                                          } else if (result.isObsidian) {
+                                            resultWidget = _buildObsidianResult(context, theme, result.obsidianResult!,
+                                                index, isSelected, isRepeatingKey);
+                                          } else if (result.isSteam) {
+                                            resultWidget = _buildSteamResult(
+                                                context, theme, result.steamResult!, index, isSelected, isRepeatingKey);
+                                          } else if (result.isInfo) {
+                                            resultWidget = _buildInfoResult(
+                                                context, theme, result.infoResult!, index, isSelected, isRepeatingKey);
+                                          } else {
+                                            resultWidget = _buildQuickActionResult(
+                                                context, theme, result.quickAction!, index, isSelected, isRepeatingKey);
+                                          }
+                                          final Widget resultWithDivider = result.shortcut?.showDividerBefore == true
+                                              ? Column(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: <Widget>[
+                                                    Divider(
+                                                      height: 17,
+                                                      thickness: 1,
+                                                      indent: 12,
+                                                      endIndent: 12,
+                                                      color: theme.colorScheme.outlineVariant.withAlpha(150),
+                                                    ),
+                                                    resultWidget,
+                                                  ],
+                                                )
+                                              : resultWidget;
+                                          final Widget anchoredResult = isSelected && previewFile != null
+                                              ? CompositedTransformTarget(
+                                                  link: previewLink,
+                                                  child: resultWithDivider,
+                                                )
+                                              : resultWithDivider;
+                                          return KeyedSubtree(
+                                            key: _resultKeys[_resultKeyId(result, index)],
+                                            child: MouseRegion(
+                                              onHover: (PointerHoverEvent event) =>
+                                                  _selectResultFromPointerHover(event, index),
+                                              child: Stack(
+                                                alignment: Alignment.centerRight,
+                                                children: <Widget>[anchoredResult],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
                                     ),
-                                  ),
+                                    if (previewFile != null)
+                                      CompositedTransformFollower(
+                                        link: previewLink,
+                                        showWhenUnlinked: false,
+                                        targetAnchor: Alignment.centerRight,
+                                        followerAnchor: Alignment.centerRight,
+                                        offset: const Offset(-8, 0),
+                                        child: IgnorePointer(
+                                          child: _buildLauncherImagePreview(
+                                            previewFile,
+                                            previewMaxWidth,
+                                            previewMaxHeight,
+                                            onSurface,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 );
                               },
                             );

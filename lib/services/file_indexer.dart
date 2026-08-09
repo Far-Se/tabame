@@ -7,6 +7,7 @@ import 'package:sqlite3/sqlite3.dart';
 
 import '../models/classes/boxes.dart';
 import '../models/db/file_index_db.dart';
+import '../models/util/file_extension_filter.dart';
 
 final class _FileTime extends Struct {
   @Uint32()
@@ -288,7 +289,7 @@ class FileIndexer {
         rootId,
         currentDepth: 1,
         config: config,
-        allowedExtensions: _normalizedAllowedExtensions(config.allowedExtensions),
+        allowedExtensions: normalizeFileExtensions(config.allowedExtensions),
       );
 
       db.execute('COMMIT');
@@ -343,7 +344,7 @@ class FileIndexer {
           continue;
         }
 
-        if (!_shouldIndexFile(name, config.includeFiles, allowedExtensions)) {
+        if (!_shouldIndexFile(name, config.includeFiles, allowedExtensions, config.excludeExtensions)) {
           continue;
         }
 
@@ -358,29 +359,23 @@ class FileIndexer {
     return indexedItems;
   }
 
-  Set<String> _normalizedAllowedExtensions(List<String> extensions) {
-    return extensions
-        .map((String extension) => extension.trim().toLowerCase())
-        .where((String extension) => extension.isNotEmpty)
-        .map((String extension) => extension.startsWith('.') ? extension : '.$extension')
-        .toSet();
-  }
-
-  bool _shouldIndexFile(String name, bool includeFiles, Set<String> allowedExtensions) {
+  bool _shouldIndexFile(
+    String name,
+    bool includeFiles,
+    Set<String> allowedExtensions,
+    bool excludeExtensions,
+  ) {
     if (!includeFiles) return false;
-    if (allowedExtensions.isEmpty) return true;
-    return allowedExtensions.contains(_getExtension(name).toLowerCase());
+    return includesFileExtension(
+      name,
+      allowedExtensions,
+      excludeMatches: excludeExtensions,
+    );
   }
 
   String _getBasename(String path) {
     final int index = path.lastIndexOf('\\');
     if (index == -1) return path;
     return path.substring(index + 1);
-  }
-
-  String _getExtension(String name) {
-    final int index = name.lastIndexOf('.');
-    if (index == -1 || index == 0) return '';
-    return name.substring(index);
   }
 }

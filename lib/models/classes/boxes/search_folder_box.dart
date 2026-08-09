@@ -10,6 +10,7 @@ class SearchFolder {
   final bool includeFolders;
   final bool includeFiles;
   final List<String> allowedExtensions; // Should include the dot, e.g., '.exe'
+  final bool excludeExtensions;
   final int? maxDepth;
   final String? excludePath;
 
@@ -18,6 +19,7 @@ class SearchFolder {
     this.includeFolders = true,
     this.includeFiles = true,
     this.allowedExtensions = const <String>[],
+    this.excludeExtensions = false,
     this.maxDepth,
     this.excludePath,
   });
@@ -27,6 +29,7 @@ class SearchFolder {
     bool? includeFolders,
     bool? includeFiles,
     List<String>? allowedExtensions,
+    bool? excludeExtensions,
     int? maxDepth,
     String? excludePath,
   }) {
@@ -35,6 +38,7 @@ class SearchFolder {
       includeFolders: includeFolders ?? this.includeFolders,
       includeFiles: includeFiles ?? this.includeFiles,
       allowedExtensions: allowedExtensions ?? this.allowedExtensions,
+      excludeExtensions: excludeExtensions ?? this.excludeExtensions,
       maxDepth: maxDepth ?? this.maxDepth,
       excludePath: excludePath ?? this.excludePath,
     );
@@ -46,6 +50,7 @@ class SearchFolder {
       'includeFolders': includeFolders,
       'includeFiles': includeFiles,
       'allowedExtensions': allowedExtensions,
+      'excludeExtensions': excludeExtensions,
       'maxDepth': maxDepth,
       'excludePath': excludePath,
     };
@@ -57,6 +62,7 @@ class SearchFolder {
       includeFolders: (map['includeFolders'] ?? false) as bool,
       includeFiles: (map['includeFiles'] ?? false) as bool,
       allowedExtensions: List<String>.from((map['allowedExtensions'] ?? const <String>[]) as List<dynamic>),
+      excludeExtensions: (map['excludeExtensions'] ?? false) as bool,
       maxDepth: map['maxDepth'] != null ? map['maxDepth'] as int : null,
       excludePath: map['excludePath'] != null ? map['excludePath'] as String : null,
     );
@@ -68,7 +74,7 @@ class SearchFolder {
 
   @override
   String toString() {
-    return 'SearchFolder(path: $path, includeFolders: $includeFolders, includeFiles: $includeFiles, allowedExtensions: $allowedExtensions, maxDepth: $maxDepth, excludePath: $excludePath)';
+    return 'SearchFolder(path: $path, includeFolders: $includeFolders, includeFiles: $includeFiles, allowedExtensions: $allowedExtensions, excludeExtensions: $excludeExtensions, maxDepth: $maxDepth, excludePath: $excludePath)';
   }
 
   @override
@@ -79,6 +85,7 @@ class SearchFolder {
         other.includeFolders == includeFolders &&
         other.includeFiles == includeFiles &&
         other.excludePath == excludePath &&
+        other.excludeExtensions == excludeExtensions &&
         listEquals(other.allowedExtensions, allowedExtensions) &&
         other.maxDepth == maxDepth;
   }
@@ -89,6 +96,7 @@ class SearchFolder {
         includeFolders.hashCode ^
         includeFiles.hashCode ^
         excludePath.hashCode ^
+        excludeExtensions.hashCode ^
         allowedExtensions.hashCode ^
         maxDepth.hashCode;
   }

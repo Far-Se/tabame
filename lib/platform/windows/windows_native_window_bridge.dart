@@ -28,7 +28,7 @@ class WindowsNativeWindowBridge implements WindowsWindowBridge {
     final int currentProcessId = GetCurrentProcessId();
     final List<PlatformWindow> windows = <PlatformWindow>[];
     for (final int handle in _enumerateHandles()) {
-      if (handle == 0 || IsWindow(handle) == 0 || !(_isVisible(handle))) continue;
+      if (handle == 0 || IsWindow(handle) == 0 || !_isWindowOnDesktop(handle)) continue;
 
       final int processId = _processId(handle);
       if (processId == 0 || processId == currentProcessId) continue;
@@ -102,7 +102,20 @@ List<int> _enumerateHandles() {
   return List<int>.unmodifiable(_windowEnumerationBuffer);
 }
 
-bool _isVisible(int handle) => IsWindowVisible(handle) != 0;
+bool _isWindowOnDesktop(int handle) {
+  if (IsWindowVisible(handle) == 0) return false;
+
+  final int extendedStyle = GetWindowLongPtr(handle, GWL_EXSTYLE);
+  if ((extendedStyle & WS_EX_TOOLWINDOW) != 0) return false;
+
+  final Pointer<Int> cloakedState = calloc<Int>();
+  try {
+    DwmGetWindowAttribute(handle, DWMWA_CLOAKED, cloakedState, sizeOf<Int>());
+    return cloakedState.value == 0;
+  } finally {
+    calloc.free(cloakedState);
+  }
+}
 
 int _processId(int handle) {
   final Pointer<Uint32> processId = calloc<Uint32>();
