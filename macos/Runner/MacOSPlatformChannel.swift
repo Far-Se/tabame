@@ -756,7 +756,7 @@ final class MacOSPlatformChannel: NSObject, FlutterStreamHandler {
       { _, event, userData in
         guard let userData = userData else { return noErr }
         let owner = Unmanaged<MacOSPlatformChannel>.fromOpaque(userData).takeUnretainedValue()
-        var hotKeyID = EventHotKeyID(signature: Self.hotKeySignature, id: 0)
+        var hotKeyID = EventHotKeyID(signature: MacOSPlatformChannel.hotKeySignature, id: 0)
         if let event = event {
           _ = GetEventParameter(
             event,

@@ -20,7 +20,7 @@ jobs:
             desktop_flag: --enable-windows-desktop
             entrypoint: lib/main.dart
           - target: macos
-            runner: macos-13
+            runner: macos-15-intel
             desktop_flag: --enable-macos-desktop
             entrypoint: lib/portable_main.dart
           - target: linux
