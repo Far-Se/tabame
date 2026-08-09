@@ -862,6 +862,30 @@ class QuickMenuModalFrame extends StatelessWidget {
             // ),
           ],
         ),
+      QuickMenuDesigns.rundown => _FrameSpec(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(Design.borderRadius),
+            border: Border.all(color: text.withValues(alpha: isDark ? 0.18 : 0.14), width: 0.8),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.12),
+                blurRadius: 18,
+                spreadRadius: -7,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          overlays: <Widget>[
+            Positioned(
+              left: 8,
+              top: 8,
+              width: 5,
+              height: 5,
+              child: ColoredBox(color: accent),
+            ),
+          ],
+        ),
       // QuickMenuDesigns.familyGuy => _FrameSpec(
       //     decoration: BoxDecoration(
       //       borderRadius: radius,

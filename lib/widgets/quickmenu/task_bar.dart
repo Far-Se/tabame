@@ -75,7 +75,16 @@ class Caches {
 }
 
 class TaskBar extends StatefulWidget {
-  const TaskBar({super.key});
+  const TaskBar({
+    super.key,
+    this.monitorFilter,
+    this.onWindowHover,
+    this.onWindowsChanged,
+  });
+
+  final int? monitorFilter;
+  final ValueChanged<Window?>? onWindowHover;
+  final ValueChanged<List<Window>>? onWindowsChanged;
 
   @override
   TaskBarState createState() => TaskBarState();
@@ -193,6 +202,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
 
       // Update local list
       _windows = List<Window>.from(WindowWatcher.list);
+      widget.onWindowsChanged?.call(List<Window>.unmodifiable(_windows));
 
       await _handleAudio();
 
@@ -241,17 +251,23 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     WindowWatcher.hierarchyAdd(hWnd);
   }
 
+  List<Window> get _visibleWindows => _windows.where((Window window) {
+        if (user.taskManagerStats && window.process.exe.toLowerCase() == "taskmgr.exe") return false;
+        return widget.monitorFilter == null || window.monitor == widget.monitorFilter;
+      }).toList(growable: false);
+
   @override
   void onVerticalArrow(bool up) {
-    if (_windows.isEmpty) return;
+    final List<Window> windows = _visibleWindows;
+    if (windows.isEmpty) return;
     if (up) {
       if (QuickMenuFunctions.taskBarSelectedIdx > 0) {
         QuickMenuFunctions.taskBarSelectedIdx--;
       } else {
-        QuickMenuFunctions.taskBarSelectedIdx = _windows.length - 1;
+        QuickMenuFunctions.taskBarSelectedIdx = windows.length - 1;
       }
     } else {
-      if (QuickMenuFunctions.taskBarSelectedIdx < _windows.length - 1) {
+      if (QuickMenuFunctions.taskBarSelectedIdx < windows.length - 1) {
         QuickMenuFunctions.taskBarSelectedIdx++;
       } else {
         QuickMenuFunctions.taskBarSelectedIdx = 0;
@@ -279,9 +295,10 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
 
   @override
   void onEnter() {
+    final List<Window> windows = _visibleWindows;
     if (QuickMenuFunctions.taskBarSelectedIdx != -1) {
-      if (QuickMenuFunctions.taskBarSelectedIdx < _windows.length) {
-        final Window window = _windows[QuickMenuFunctions.taskBarSelectedIdx];
+      if (QuickMenuFunctions.taskBarSelectedIdx < windows.length) {
+        final Window window = windows[QuickMenuFunctions.taskBarSelectedIdx];
         _activateWindow(window);
         QuickMenuFunctions.resetKeyboardSelection();
       }
@@ -320,8 +337,10 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
         }
       });
     }
-    Globals.heights.taskbar = ((user.expandedTaskbar ? Caches.expandedHeight : kTaskBarItemHeight) * _windows.length)
-        .clamp(150, user.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320);
+    final List<Window> visibleWindows = _visibleWindows;
+    Globals.heights.taskbar =
+        ((user.expandedTaskbar ? Caches.expandedHeight : kTaskBarItemHeight) * visibleWindows.length)
+            .clamp(150, user.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320);
 
     // Recompute after layout so the shadow reflects content changes (windows
     // added/removed) even when no scroll event fired.
@@ -356,7 +375,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                 padding: EdgeInsets.zero,
                 // Row 0 is always the carousel slot; it renders SizedBox.shrink
                 // when there is nothing to show, so the window list is offset by 1.
-                itemCount: _windows.length + 1,
+                itemCount: visibleWindows.length + 1,
                 itemBuilder: (BuildContext context, int xIndex) {
                   if (xIndex == 0) {
                     if (user.mediaSessionsInTaskbar || user.musicPlayerInTaskbar) {
@@ -367,33 +386,36 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                   }
 
                   final int index = xIndex - 1;
-                  final Window window = _windows[index];
+                  final Window window = visibleWindows[index];
+                  final int sourceIndex = _windows.indexWhere((Window item) => item.hWnd == window.hWnd);
                   final bool isSelected = index == QuickMenuFunctions.taskBarSelectedIdx;
 
                   // Add separator if monitor changes
-                  if (index > 0 && window.monitor != _windows[index - 1].monitor) {
+                  if (index > 0 && window.monitor != visibleWindows[index - 1].monitor) {
                     return Column(
                       children: <Widget>[
                         _buildMonitorSeparator(context),
                         TaskBarItem(
                           window: window,
-                          index: index,
+                          index: sourceIndex,
                           isSelected: isSelected,
                           onClose: _handleWindowClose,
+                          onHover: widget.onWindowHover,
                         ),
                       ],
                     );
                   }
 
                   // Add padding at bottom
-                  if (_windows.length > 10 && index == _windows.length - 1) {
+                  if (visibleWindows.length > 10 && index == visibleWindows.length - 1) {
                     return Column(
                       children: <Widget>[
                         TaskBarItem(
                           window: window,
-                          index: index,
+                          index: sourceIndex,
                           isSelected: isSelected,
                           onClose: _handleWindowClose,
+                          onHover: widget.onWindowHover,
                         ),
                         const SizedBox(height: 20),
                       ],
@@ -402,9 +424,10 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
 
                   return TaskBarItem(
                     window: window,
-                    index: index,
+                    index: sourceIndex,
                     isSelected: isSelected,
                     onClose: _handleWindowClose,
+                    onHover: widget.onWindowHover,
                   );
                 },
               ),
@@ -432,8 +455,9 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     Win32.closeWindow(window.hWnd);
 
     setState(() {
-      _windows.removeAt(index);
+      _windows.removeWhere((Window item) => item.hWnd == window.hWnd);
     });
+    widget.onWindowsChanged?.call(List<Window>.unmodifiable(_windows));
 
     await _handleAudio();
     _fetchWindows();
@@ -452,6 +476,7 @@ class TaskBarItem extends StatefulWidget {
   final int index;
   final bool isSelected;
   final Function(int index, Window window) onClose;
+  final ValueChanged<Window?>? onHover;
 
   const TaskBarItem({
     super.key,
@@ -459,6 +484,7 @@ class TaskBarItem extends StatefulWidget {
     required this.index,
     required this.isSelected,
     required this.onClose,
+    this.onHover,
   });
 
   @override
@@ -483,8 +509,14 @@ class _TaskBarItemState extends State<TaskBarItem> {
       return const SizedBox.shrink();
     }
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
+      onEnter: (_) {
+        setState(() => _isHovered = true);
+        widget.onHover?.call(widget.window);
+      },
+      onExit: (_) {
+        setState(() => _isHovered = false);
+        widget.onHover?.call(null);
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOutCubic,

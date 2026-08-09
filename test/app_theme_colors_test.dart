@@ -4,6 +4,12 @@ import 'package:tabame/models/settings.dart';
 
 void main() {
   group('Settings.appThemeColors', () {
+    test('registers the Rundown theme set', () {
+      final Map<String, QMDesignThemeSet> themes = Settings.createDefaultQuickMenuDesignThemes();
+
+      expect(themes[QuickMenuDesigns.rundown.displayName], isNotNull);
+    });
+
     test('uses Classic themes for the XP and Windows 98 Interface process', () {
       final Settings settings = Settings()..page = TPage.interface;
       final QMDesignThemeSet classicThemes = settings.quickMenuDesignThemes[QuickMenuDesigns.classic.displayName]!;
