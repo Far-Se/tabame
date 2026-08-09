@@ -37,6 +37,7 @@ import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
 import '../platform/platform_models.dart';
 import '../platform/window_watcher_service.dart';
+import '../services/extension_policy.dart';
 import '../services/file_indexer.dart';
 import '../widgets/itzy/quickmenu/button_currency_converter.dart';
 import '../widgets/itzy/quickmenu/button_notion.dart';
@@ -4215,7 +4216,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   void _openBookmarkResult(BookmarkSearchResult result) {
     switch (result.kind) {
       case BookmarkResultKind.bookmark:
-        WinUtils.open(result.bookmark!.stringToExecute, parseParamaters: true);
+        WinUtils.open(result.bookmark!.stringToExecute, parseParamaters: true, userProvided: true);
         QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
         user.launcherSearchText = '';
       case BookmarkResultKind.cliBook:
@@ -4235,11 +4236,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       unawaited(_recordFileOpen(nodeId));
     }
 
-    if (path.endsWith('ps1')) {
+    final ExtensionPolicy extensionPolicy = ExtensionPolicy.current;
+    if (extensionPolicy.blocksUserTarget(path)) {
+      _flashLauncherInfo(extensionPolicy.userCommandDisabledMessage, icon: Icons.block_rounded);
+      return;
+    }
+
+    if (path.toLowerCase().endsWith('.ps1')) {
       final String openPath = 'powershell -ExecutionPolicy Bypass -File "$path"';
-      WinUtils.open(openPath, parseParamaters: true);
+      WinUtils.open(openPath, parseParamaters: true, userProvided: true);
     } else {
-      WinUtils.open(path);
+      WinUtils.open(path, userProvided: true);
     }
     QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;

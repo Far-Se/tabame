@@ -1159,11 +1159,13 @@ class ViewsSettings {
   ViewsSettings();
   Future<void> load() async {
     final String file = AppPaths.settingsPath('views.json');
-    if (!File(file).existsSync()) File(file).createSync();
-    String fileData = File(file).readAsStringSync();
+    final String writableFile = AppPaths.settingsPath('views.json', forWrite: true);
+    if (!File(file).existsSync() && !File(writableFile).existsSync()) File(writableFile).createSync(recursive: true);
+    String fileData = File(file).existsSync() ? File(file).readAsStringSync() : File(writableFile).readAsStringSync();
     if (fileData.isEmpty) {
-      File(file).writeAsStringSync(toJson());
-      fileData = File(file).readAsStringSync();
+      File(writableFile).parent.createSync(recursive: true);
+      File(writableFile).writeAsStringSync(toJson());
+      fileData = File(writableFile).readAsStringSync();
     }
     final Map<String, dynamic> map = json.decode(fileData);
     minW = (map['minW'] ?? 10) as int;

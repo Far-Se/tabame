@@ -6,24 +6,69 @@ import 'package:path/path.dart' as p;
 
 import '../../../logic/error_handler.dart';
 import '../../../platform/app_paths.dart';
+import '../../../platform/distribution_profile.dart';
+import '../../../services/extension_policy.dart';
 import 'plugin_manifest.dart';
+
+/// Origin metadata written beside a gallery-installed plugin. It is useful for
+/// classification and diagnostics, but it is not a trust grant: Store policy
+/// still requires a verified allow-listed artifact before any execution.
+class PluginOrigin {
+  const PluginOrigin({
+    this.source = PluginSource.localUserAuthored,
+    this.publisher = '',
+    this.artifactSha256 = '',
+    this.artifactSignature = '',
+  });
+
+  final PluginSource source;
+  final String publisher;
+  final String artifactSha256;
+  final String artifactSignature;
+
+  factory PluginOrigin.fromJson(Map<String, dynamic> json) {
+    return PluginOrigin(
+      source: parsePluginSource(json['source']),
+      publisher: json['publisher'] is String ? json['publisher'] as String : '',
+      artifactSha256: json['artifactSha256'] is String ? json['artifactSha256'] as String : '',
+      artifactSignature: json['artifactSignature'] is String ? json['artifactSignature'] as String : '',
+    );
+  }
+
+  Map<String, String> toJson() => <String, String>{
+        'source': source.value,
+        if (publisher.trim().isNotEmpty) 'publisher': publisher,
+        if (artifactSha256.trim().isNotEmpty) 'artifactSha256': artifactSha256,
+        if (artifactSignature.trim().isNotEmpty) 'artifactSignature': artifactSignature,
+      };
+}
 
 /// Scans the plugins folder and answers keyword lookups for the launcher.
 ///
 /// The registry is a process-wide cache: [load] rescans disk (cheap — a handful
 /// of tiny `plugin.json` files) and is called each time the launcher opens so
-/// newly-dropped plugins appear without a restart.
+/// newly-dropped plugins appear without a restart. Store profiles may retain
+/// manifests in [manifests] for data-preservation UX, but blocked manifests are
+/// never added to [_byKeyword].
 abstract final class PluginRegistry {
+  static const String originFileName = '.tabame-origin.json';
+
   static List<PluginManifest> _manifests = <PluginManifest>[];
   static Map<String, PluginManifest> _byKeyword = <String, PluginManifest>{};
   static bool _loaded = false;
+  static ExtensionPolicy _policy = ExtensionPolicy.current;
 
   static List<PluginManifest> get manifests => _manifests;
   static bool get isLoaded => _loaded;
+  static ExtensionPolicy get policy => _policy;
 
   /// Rescans Tabame's platform-correct plugin root. Malformed manifests are
   /// logged and skipped rather than aborting the whole scan.
-  static Future<void> load() async {
+  ///
+  /// [extensionPolicy] is injectable for deterministic policy tests; normal
+  /// application code uses the compile-time profile policy.
+  static Future<void> load({DistributionProfile? profile, ExtensionPolicy? extensionPolicy}) async {
+    _policy = extensionPolicy ?? ExtensionPolicy.forProfile(profile ?? DistributionProfileConfig.current);
     final List<PluginManifest> found = <PluginManifest>[];
     try {
       final Directory root = Directory(AppPaths.pluginsDirectory);
@@ -41,10 +86,15 @@ abstract final class PluginRegistry {
             final Object? decoded = jsonDecode(await manifestFile.readAsString());
             if (decoded is! Map) continue;
             final String folderName = p.basename(entity.path);
+            final PluginOrigin origin = _readOrigin(entity.path);
             final PluginManifest manifest = PluginManifest.fromJson(
               decoded.cast<String, dynamic>(),
               directory: entity.path,
               folderName: folderName,
+              source: origin.source,
+              publisher: origin.publisher.trim().isEmpty ? null : origin.publisher,
+              artifactSha256: origin.artifactSha256,
+              artifactSignature: origin.artifactSignature,
             );
             if (manifest.isValid) found.add(manifest);
           } catch (error, stack) {
@@ -61,9 +111,39 @@ abstract final class PluginRegistry {
     // [_manifests] so the manager can still list and re-enable them.
     _byKeyword = <String, PluginManifest>{};
     for (final PluginManifest manifest in _manifests) {
-      if (manifest.enabled) _byKeyword.putIfAbsent(manifest.keywordLower, () => manifest);
+      if (canExecute(manifest)) _byKeyword.putIfAbsent(manifest.keywordLower, () => manifest);
     }
     _loaded = true;
+  }
+
+  static PluginOrigin _readOrigin(String directory) {
+    try {
+      final File file = File(p.join(directory, originFileName));
+      if (!file.existsSync()) return const PluginOrigin();
+      final Object? decoded = jsonDecode(file.readAsStringSync());
+      if (decoded is Map) return PluginOrigin.fromJson(decoded.cast<String, dynamic>());
+    } catch (_) {
+      // Invalid or user-edited provenance is treated as local data.
+    }
+    return const PluginOrigin();
+  }
+
+  /// Final registry-side execution gate. An imported `enabled: true` value is
+  /// only one input; it cannot override the selected distribution policy.
+  static bool canExecute(PluginManifest manifest, {ExtensionPolicy? extensionPolicy}) {
+    final ExtensionPolicy selectedPolicy = extensionPolicy ?? _policy;
+    return selectedPolicy.canExecutePlugin(
+      id: manifest.id,
+      source: manifest.source,
+      enabled: manifest.enabled,
+      publisher: manifest.publisher,
+      // No artifact is considered verified by the legacy portable registry.
+      // Portable policy does not require these values; a future Store policy
+      // must add verification before enabling a source.
+      artifactHashVerified: false,
+      signatureVerified: false,
+      consentGranted: false,
+    );
   }
 
   /// Renames later duplicate keywords and persists the correction to their
@@ -80,6 +160,12 @@ abstract final class PluginRegistry {
         continue;
       }
 
+      if (!_policy.canEditLocalPluginConfiguration) {
+        // Store scans are read-only: preserve imported plugin data exactly and
+        // leave duplicate keywords unavailable rather than rewriting manifests.
+        resolved.add(manifest);
+        continue;
+      }
       final String keyword = _nextAvailableKeyword(manifest.keyword.trim(), reserved);
       final PluginManifest? renamed = await _renameKeyword(manifest, keyword);
       if (renamed == null) {
@@ -112,7 +198,16 @@ abstract final class PluginRegistry {
       const JsonEncoder encoder = JsonEncoder.withIndent('  ');
       await manifestFile.writeAsString(encoder.convert(json));
       final String folderName = p.basename(manifest.directory);
-      return PluginManifest.fromJson(json, directory: manifest.directory, folderName: folderName);
+      final PluginOrigin origin = _readOrigin(manifest.directory);
+      return PluginManifest.fromJson(
+        json,
+        directory: manifest.directory,
+        folderName: folderName,
+        source: origin.source,
+        publisher: origin.publisher.trim().isEmpty ? null : origin.publisher,
+        artifactSha256: origin.artifactSha256,
+        artifactSignature: origin.artifactSignature,
+      );
     } catch (error, stack) {
       unawaited(
         ErrorLogger.log('PluginRegistry', 'Failed to rename duplicate keyword for ${manifest.id}: $error', stack),
@@ -125,6 +220,7 @@ abstract final class PluginRegistry {
   /// `plugin.json`, preserving every other field, then rescans so the in-memory
   /// state matches disk. Returns whether the write succeeded.
   static Future<bool> setEnabled(PluginManifest manifest, bool enabled) async {
+    if (!_policy.canEditLocalPluginConfiguration) return false;
     try {
       final File manifestFile = File(p.join(manifest.directory, 'plugin.json'));
       if (!manifestFile.existsSync()) return false;
@@ -146,6 +242,7 @@ abstract final class PluginRegistry {
   /// field, then rescans so launcher matching uses the new keyword. Returns
   /// null on success, or a short human-readable error.
   static Future<String?> setKeyword(PluginManifest manifest, String keyword) async {
+    if (!_policy.canEditLocalPluginConfiguration) return _policy.pluginDisabledMessage;
     final String trimmedKeyword = keyword.trim();
     if (trimmedKeyword.isEmpty) return 'Plugin keyword cannot be empty.';
 

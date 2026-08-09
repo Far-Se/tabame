@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:path/path.dart' as p;
-
 import '../app_catalog_service.dart';
 import '../audio_system_service.dart';
 import '../clipboard_service.dart';
@@ -15,6 +13,7 @@ import '../notification_service.dart';
 import '../platform_capabilities.dart';
 import '../quick_snap_service.dart';
 import '../screen_capture_service.dart';
+import '../shell_integration_service.dart';
 import '../window_service.dart';
 import 'win32_api.dart' as win32;
 import 'windows_app_catalog_provider.dart';
@@ -30,7 +29,9 @@ import 'windows_notification_service.dart';
 import 'windows_quick_snap_service.dart';
 import 'windows_ocr_service.dart';
 import 'windows_screen_capture_service.dart';
+import 'windows_shell_integration.dart';
 import 'windows_window_service.dart';
+import '../../services/native_integration_coordinator.dart';
 
 /// Windows-only startup and packaging bridge.
 ///
@@ -57,6 +58,7 @@ class WindowsBootstrap {
     HotkeyService.register(WindowsHotkeyService());
     InputService.register(const WindowsInputService());
     NotificationService.register(WindowsNotificationService());
+    TaskbarVisibilityService.register(WindowsTaskbarVisibilityService());
     HotkeyActionService.register(const WindowsHotkeyActionService());
     WindowsHotkeyActionService.registerCallbacks();
     AudioSystemService.register(WindowsAudioService.instance);
@@ -69,7 +71,6 @@ class WindowsBootstrap {
     );
     refreshCapabilities();
     win32.SetProcessDpiAwarenessContext(win32.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-    prepareSqliteRuntime();
   }
 
   static PlatformCapabilities refreshCapabilities() {
@@ -94,30 +95,32 @@ class WindowsBootstrap {
       systemNotifications: NotificationService.instance.isAvailable,
     );
     PlatformCapabilities.register(capabilities);
+    final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
+    _reportCapability(integrations, NativeIntegrationId.globalHooks, HotkeyService.instance.isAvailable);
+    _reportCapability(integrations, NativeIntegrationId.windowAutomation, WindowService.instance.isAvailable);
+    _reportCapability(integrations, NativeIntegrationId.inputInjection, InputService.instance.isAvailable);
+    _reportCapability(integrations, NativeIntegrationId.clipboardHistory, clipboard.isAvailable);
+    _reportCapability(integrations, NativeIntegrationId.screenCapture, capture.isAvailable);
+    _reportCapability(integrations, NativeIntegrationId.ocr, ocr.isAvailable && capture.isAvailable);
+    _reportCapability(integrations, NativeIntegrationId.notifications, NotificationService.instance.isAvailable);
+    _reportCapability(integrations, NativeIntegrationId.quickSnap, QuickSnapService.instance.isAvailable);
+    _reportCapability(integrations, NativeIntegrationId.audioControl, AudioSystemService.instance.isAvailable);
     return capabilities;
   }
 
-  /// Places the development-layout SQLite DLL beside the executable.
-  ///
-  /// Release packaging performs the same placement in CI. Keeping this
-  /// fallback here preserves local Windows builds without making shared
-  /// database services know about Windows packaging paths.
-  static void prepareSqliteRuntime() {
-    if (!Platform.isWindows) return;
-
-    final String executableDirectory = p.dirname(Platform.resolvedExecutable);
-    final String sqlitePath = p.join(executableDirectory, 'sqlite3.dll');
-    if (File(sqlitePath).existsSync()) return;
-
-    final String developmentPath = p.join(executableDirectory, 'windows', 'sqlite3.dll');
-    final File developmentFile = File(developmentPath);
-    if (!developmentFile.existsSync()) return;
-
-    try {
-      developmentFile.renameSync(sqlitePath);
-    } catch (_) {
-      // Packaging or another process may already have moved the DLL. The
-      // database layer reports a native loading failure if it is still absent.
+  static void _reportCapability(NativeIntegrationCoordinator integrations, NativeIntegrationId id, bool available) {
+    final NativeIntegrationStatus runtimeStatus = integrations.runtimeStatusOf(id);
+    if (available) {
+      if (runtimeStatus != NativeIntegrationStatus.running && runtimeStatus != NativeIntegrationStatus.error) {
+        integrations.reportAvailable(id);
+      }
+      return;
+    }
+    if (runtimeStatus != NativeIntegrationStatus.error) {
+      integrations.reportUnavailable(
+        id,
+        reason: '${id.label} is unavailable on this Windows session.',
+      );
     }
   }
 }

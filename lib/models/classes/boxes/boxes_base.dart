@@ -4,13 +4,15 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import '../../../platform/windows/tabamewin32_api.dart';
 import '../../../platform/windows/win32_api.dart';
 
 import '../../../logic/error_handler.dart';
 import '../../../platform/app_paths.dart';
+import '../../../platform/distribution_profile.dart';
+import '../../../services/native_integration_coordinator.dart';
 import '../../../services/notification_coordinator.dart';
+import '../../../services/update_service.dart';
 import '../../globals.dart';
 import '../../settings.dart';
 import '../../util/quick_action_list.dart';
@@ -52,6 +54,10 @@ class Boxes {
     } else {
       pref = await SaveSettings.getInstance();
     }
+    NativeIntegrationCoordinator.configure(
+      profile: DistributionProfileConfig.current,
+      consentStore: SaveSettingsNativeIntegrationConsentStore(pref),
+    );
 
     user.isWindows10 = WinUtils.isWindows10();
     Debug.add("Registered: Loaded Box info (win10: ${user.isWindows10} | ${Platform.operatingSystemVersion})");
@@ -84,9 +90,9 @@ class Boxes {
       await pref.setBool("trayBarAlternative", false);
       await pref.setBool("libreStats", false);
       await pref.setBool("autoOpenTaskManager", false);
+      await pref.setBool("clipboardHistoryEnabled", false);
       await pref.setBool("quickClickEnabled", false);
       await pref.setString("quickClickConfig", jsonEncode(user.quickClickConfig.toMap()));
-      await pref.setBool("runAsAdministrator", false);
       await pref.setBool("hideTabameOnUnfocus", true);
       await pref.setString("wallpapersFolder", "");
       await pref.setString("fancyshotFolder", "");
@@ -167,7 +173,6 @@ class Boxes {
       ..wallpapersFolder = pref.getString("wallpapersFolder") ?? user.wallpapersFolder
       ..useCustomCursor = pref.getBool("useCustomCursor") ?? user.useCustomCursor
       ..fancyshotFolder = pref.getString("fancyshotFolder") ?? user.fancyshotFolder
-      ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? user.runAsAdministrator
       ..launcherFullPopups = pref.getBool("launcherFullPopups") ?? user.launcherFullPopups
       ..autoOpenTaskManager = pref.getBool("autoOpenTaskManager") ?? user.autoOpenTaskManager
       ..quickClickEnabled = pref.getBool("quickClickEnabled") ?? user.quickClickEnabled
@@ -322,9 +327,17 @@ class Boxes {
       shutDownScheduler();
       if (reminders.any((Reminder reminder) => reminder.enabled)) Tasks().startReminders();
 
-      if (user.hideTaskbarOnStartup) {
-        WinUtils.toggleTaskbar(visible: false);
+      final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
+      if (user.hideTaskbarOnStartup && integrations.canStart(NativeIntegrationId.shellIntegration)) {
+        unawaited(WinUtils.toggleTaskbar(visible: false));
         Debug.add("Registered: Taskbar");
+      } else if (user.hideTaskbarOnStartup) {
+        integrations.reportDisabled(
+          NativeIntegrationId.shellIntegration,
+          reason: integrations.denialReason(NativeIntegrationId.shellIntegration) ??
+              'Taskbar hiding is disabled; the normal taskbar remains visible.',
+          reducedMode: true,
+        );
       }
       if (user.isWindows10 && user.volumeOSDStyle != VolumeOSDStyle.normal) {
         WinUtils.setVolumeOSDStyle(type: VolumeOSDStyle.normal, applyStyle: true);
@@ -333,7 +346,8 @@ class Boxes {
       }
       if (user.autoCheckForUpdates) checkForUpdates(autoInstall: false);
 
-      if (user.autoOpenTaskManager) {
+      if (user.autoOpenTaskManager &&
+          NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.processActions)) {
         if (Win32.getProcessIdsByName('taskmgr.exe').isEmpty) {
           unawaited(Process.start('cmd', <String>['/c', 'start', '', '/min', 'taskmgr'],
               mode: ProcessStartMode.detached, runInShell: false));
@@ -379,6 +393,16 @@ class Boxes {
   static void shutDownScheduler() {
     shutDownTimer?.cancel();
     shutDownWarningTimer?.cancel();
+
+    if (!NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.processActions)) {
+      NativeIntegrationCoordinator.instance.reportDisabled(
+        NativeIntegrationId.processActions,
+        reason: NativeIntegrationCoordinator.instance.denialReason(NativeIntegrationId.processActions) ??
+            'Shutdown scheduling is disabled until the named action is enabled.',
+        reducedMode: true,
+      );
+      return;
+    }
 
     bool isShutdownScheduled = pref.getBool("isShutDownScheduled") ?? false;
     final bool alwaysShutdownAtSavedTime = pref.getBool("alwaysShutDownAtTime") ?? false;
@@ -1224,69 +1248,41 @@ class Boxes {
   // --------------------------------------------------------------------------
 
   static String? updateDownloadLink;
+
   static Future<int> checkForUpdates({bool autoInstall = false}) async {
-    try {
-      final http.Response githubResponse =
-          await http.get(Uri.parse("https://api.github.com/repos/far-se/tabame/releases"));
-      if (githubResponse.statusCode != 200) return -1;
-      final List<dynamic> releasePayload = jsonDecode(githubResponse.body);
-      if (releasePayload.isEmpty) return -1;
+    final UpdateCheckResult result = await UpdateService.forCurrentProfile().checkForUpdates(
+      currentVersion: Globals.version,
+      autoInstall: autoInstall,
+    );
+    if (result.release != null) {
+      updateDownloadLink = result.release!.downloadUrl;
+      user.newVersion = result.release!.version;
+      await pref.setString("newVersion", user.newVersion);
+    }
 
-      final Map<String, dynamic> latestRelease = releasePayload[0];
-      if (latestRelease["tag_name"] == Globals.version) return 0;
-      if (latestRelease["tag_name"] == "Nightly" || latestRelease["tag_name"] == "nightly") {
+    switch (result.state) {
+      case UpdateCheckState.latest:
         return 0;
-      }
-
-      String assetDownloadLink = "";
-      for (final Map<String, dynamic> releaseAsset in latestRelease["assets"]) {
-        if (!releaseAsset["name"].endsWith("zip")) continue;
-        if (releaseAsset.containsKey("browser_download_url")) {
-          assetDownloadLink = releaseAsset["browser_download_url"];
-          break;
-        }
-      }
-      if (assetDownloadLink == "") return -1;
-
-      updateDownloadLink = assetDownloadLink;
-      user.newVersion = latestRelease["tag_name"];
-      pref.setString("newVersion", user.newVersion);
-
-      if (autoInstall) {
-        unawaited(installUpdate(assetDownloadLink, user.newVersion));
-      }
-      Debug.add("Updates: Checked");
-      return 1;
-    } catch (e) {
-      WinUtils.msgBox("Tabame", "Update Error: $e");
-      Debug.error("Updates Error: $e");
-      return -1;
+      case UpdateCheckState.available:
+        Debug.add("Updates: Checked");
+        return result.installResult?.state == UpdateInstallState.failed ? -1 : 1;
+      case UpdateCheckState.managedByInstaller:
+      case UpdateCheckState.managedByStore:
+        return -2;
+      case UpdateCheckState.unavailable:
+      case UpdateCheckState.downgradeRejected:
+        Debug.error("Updates Error: ${result.message}");
+        return -1;
     }
   }
 
   static Future<void> installUpdate(String downloadLink, String tagName) async {
-    try {
-      final String updateArchivePath = AppPaths.temporaryPath('tabame_$tagName.zip');
-      await WinUtils.downloadFile(downloadLink, updateArchivePath, () {
-        final String installDirectory = File(Platform.resolvedExecutable).parent.path;
-        WinUtils.open(
-          'powershell.exe',
-          arguments: '-Command "Start-Sleep -Seconds 1; '
-              'Expand-Archive '
-              '-LiteralPath \\"$updateArchivePath\\" '
-              '-DestinationPath \\"$installDirectory\\" -Force; '
-              'Invoke-Item \\"$installDirectory\\tabame.exe\\";"',
-        );
-        if (kReleaseMode) {
-          Timer(const Duration(milliseconds: 100), () {
-            WinUtils.closeAllTabameExProcesses();
-            exit(0);
-          });
-        }
-      });
-    } catch (e) {
-      WinUtils.msgBox("Tabame", "Update Error: $e");
-      Debug.add("Updates Error: $e");
+    final UpdateInstallResult result = await UpdateService.forCurrentProfile().installUpdate(
+      UpdateRelease(version: tagName, downloadUrl: downloadLink),
+    );
+    if (result.state != UpdateInstallState.started) {
+      WinUtils.msgBox("Tabame", result.message);
+      Debug.add("Updates Error: ${result.message}");
     }
   }
 }

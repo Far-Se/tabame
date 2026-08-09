@@ -7,6 +7,7 @@ import '../platform/windows/tabamewin32_api.dart';
 
 import '../logic/error_handler.dart';
 import '../models/settings.dart';
+import 'native_integration_coordinator.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win_utils.dart';
 
@@ -35,21 +36,46 @@ class RewindlyService {
   bool get isRunning => _running;
   int get monitorCount => _monitors.length;
 
-  /// Called once from `registerAll()` in the main process.
+  /// Called once from `registerAll()` in the main process. Persisted consent
+  /// never starts background capture in a Store profile until it is explicit.
   void init() {
-    if (user.rewindlyEnabled) start();
+    if (!user.rewindlyEnabled) return;
+    unawaited(start());
   }
 
-  Future<void> start() async {
-    if (_running) return;
+  Future<bool> start() async {
+    if (_running) return true;
+    final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
+    if (!integrations.canStart(NativeIntegrationId.screenRecording)) {
+      integrations.reportDisabled(
+        NativeIntegrationId.screenRecording,
+        reason: integrations.denialReason(NativeIntegrationId.screenRecording) ??
+            'Background screen recording is disabled until you enable it.',
+        reducedMode: true,
+      );
+      return false;
+    }
+
+    _monitors = List<int>.from(Monitor.list);
+    int startedSegments = 0;
+    for (int i = 0; i < _monitors.length; i++) {
+      if (await _startSegment(i)) startedSegments++;
+    }
+    if (startedSegments == 0) {
+      _monitors = <int>[];
+      integrations.reportUnavailable(
+        NativeIntegrationId.screenRecording,
+        reason: 'No monitor recording backend could be started; the launcher remains usable.',
+      );
+      return false;
+    }
+
     _running = true;
     runningNotifier.value = true;
-    _monitors = List<int>.from(Monitor.list);
-    for (int i = 0; i < _monitors.length; i++) {
-      await _startSegment(i);
-    }
     _rotationTimer?.cancel();
     _rotationTimer = Timer.periodic(_segmentLength, (_) => _rotate());
+    integrations.reportRunning(NativeIntegrationId.screenRecording);
+    return true;
   }
 
   /// Stops all recorders but keeps the buffer on disk.
@@ -79,8 +105,8 @@ class RewindlyService {
     return dir;
   }
 
-  Future<void> _startSegment(int index) async {
-    if (index >= _monitors.length) return;
+  Future<bool> _startSegment(int index) async {
+    if (index >= _monitors.length) return false;
     final int epoch = DateTime.now().millisecondsSinceEpoch;
     final String path = '${_monitorDir(index).path}\\seg_$epoch.mp4';
     final ScreenRecordingConfig config = ScreenRecordingConfig(
@@ -95,9 +121,11 @@ class RewindlyService {
       sessionId: _sessionBase + index,
     );
     try {
-      await startScreenRecording(config);
+      final ScreenRecordingStatus status = await startScreenRecording(config);
+      return status.isRecording;
     } catch (e, s) {
-      ErrorLogger.log('RewindlyService._startSegment', e.toString(), s);
+      unawaited(ErrorLogger.log('RewindlyService._startSegment', e.toString(), s));
+      return false;
     }
   }
 

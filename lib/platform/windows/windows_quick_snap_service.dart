@@ -13,6 +13,7 @@ import '../../models/win32/window.dart';
 import '../monitor_service.dart';
 import '../platform_models.dart';
 import '../quick_snap_service.dart';
+import '../../services/native_integration_coordinator.dart';
 import 'tabamewin32_api.dart';
 import 'win32_api.dart';
 
@@ -56,15 +57,11 @@ abstract class WindowsQuickSnapBridge {
 /// Native Windows implementation. Win32 handles, DPI, DWM borders, and the
 /// legacy native views event stream are deliberately kept in this adapter.
 class WindowsNativeQuickSnapBridge extends WindowsQuickSnapBridge implements TabameListener {
-  WindowsNativeQuickSnapBridge() {
-    if (Platform.isWindows) {
-      NativeHooks.registerCallHandler();
-      NativeHooks.addListener(this);
-    }
-  }
+  WindowsNativeQuickSnapBridge();
 
   final StreamController<WindowsQuickSnapEvent> _events = StreamController<WindowsQuickSnapEvent>.broadcast();
   final Map<String, List<int>> _originalSizes = <String, List<int>>{};
+  bool _listenerRegistered = false;
   int? _overlayOriginalExStyle;
 
   @override
@@ -76,12 +73,14 @@ class WindowsNativeQuickSnapBridge extends WindowsQuickSnapBridge implements Tab
   @override
   Future<void> enable({bool rightClickToTrigger = true}) async {
     if (!isAvailable) return;
+    _registerListener();
     await enableViews(true, rightClickToTrigger: rightClickToTrigger);
   }
 
   @override
   Future<void> enableStandalone() async {
     if (!isAvailable) return;
+    _registerListener();
     await enableViews(true, rightClickToTrigger: false);
     await NativeHooks.hook();
   }
@@ -90,6 +89,17 @@ class WindowsNativeQuickSnapBridge extends WindowsQuickSnapBridge implements Tab
   Future<void> disable() async {
     if (!isAvailable) return;
     await enableViews(false);
+    if (_listenerRegistered) {
+      NativeHooks.removeListener(this);
+      _listenerRegistered = false;
+    }
+  }
+
+  void _registerListener() {
+    if (_listenerRegistered) return;
+    NativeHooks.registerCallHandler();
+    NativeHooks.addListener(this);
+    _listenerRegistered = true;
   }
 
   @override
@@ -181,7 +191,7 @@ class WindowsNativeQuickSnapBridge extends WindowsQuickSnapBridge implements Tab
       Win32.closeWindow(existing);
       return true;
     }
-    WinUtils.startTabame(closeCurrent: false, arguments: '-quickSnap', admin: true);
+    WinUtils.startTabame(closeCurrent: false, arguments: '-quickSnap');
     return true;
   }
 
@@ -290,10 +300,16 @@ class WindowsQuickSnapService extends QuickSnapService {
   Stream<PlatformQuickSnapEvent> get events => _events.stream;
 
   @override
-  Future<void> enable({bool rightClickToTrigger = true}) => bridge.enable(rightClickToTrigger: rightClickToTrigger);
+  Future<void> enable({bool rightClickToTrigger = true}) async {
+    if (!NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.quickSnap)) return;
+    await bridge.enable(rightClickToTrigger: rightClickToTrigger);
+  }
 
   @override
-  Future<void> enableStandalone() => bridge.enableStandalone();
+  Future<void> enableStandalone() async {
+    if (!NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.quickSnap)) return;
+    await bridge.enableStandalone();
+  }
 
   @override
   Future<void> disable() => bridge.disable();
@@ -305,14 +321,19 @@ class WindowsQuickSnapService extends QuickSnapService {
     required PlatformSnapZone zone,
     double gap = 0,
     double topInset = 0,
-  }) =>
-      bridge.snap(window: window, monitor: monitor, zone: zone, gap: gap, topInset: topInset);
+  }) async {
+    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.quickSnap)) return false;
+    return bridge.snap(window: window, monitor: monitor, zone: zone, gap: gap, topInset: topInset);
+  }
 
   @override
   Future<bool> restore(PlatformWindow window) => bridge.restore(window);
 
   @override
-  Future<bool> toggleStandalone() => bridge.toggleStandalone();
+  Future<bool> toggleStandalone() async {
+    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.quickSnap)) return false;
+    return bridge.toggleStandalone();
+  }
 
   @override
   Future<PlatformQuickSnapOverlayState?> prepareOverlay(PlatformMonitor monitor) => bridge.prepareOverlay(monitor);
@@ -332,6 +353,7 @@ class WindowsQuickSnapService extends QuickSnapService {
 
   Future<void> dispose() async {
     await _bridgeEvents.cancel();
+    await bridge.disable();
     await _events.close();
   }
 

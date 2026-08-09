@@ -21,6 +21,7 @@ import '../models/globals.dart';
 import '../platform/app_paths.dart';
 import '../platform/clipboard_service.dart';
 import '../platform/platform_models.dart';
+import '../services/native_integration_coordinator.dart';
 import '../models/screen_utils.dart';
 import '../models/settings.dart';
 import '../models/win32/imports.dart';
@@ -147,6 +148,7 @@ Future<void> startScreenCapture() async {
   await windowManager.waitUntilReadyToShow(windowOptions, () async {
     Win32Window.hwnd = GetAncestor(GetActiveWindow(), 2);
     await Boxes.registerBoxes(justLoad: true);
+    await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.screenCapture);
     Settings.load();
     await windowManager.setAsFrameless();
     await windowManager.setHasShadow(false);
@@ -316,6 +318,7 @@ Future<void> openPhotoEditorForCapture({
 
 class Settings {
   static String get _path => AppPaths.settingsPath('screen_capture.json');
+  static String get _writePath => AppPaths.settingsPath('screen_capture.json', forWrite: true);
   static Map<String, dynamic> _data = <String, dynamic>{};
 
   static void load() {
@@ -350,7 +353,8 @@ class Settings {
 
   static void save() {
     try {
-      final File file = File(_path);
+      final File file = File(_writePath);
+      file.parent.createSync(recursive: true);
       file.writeAsStringSync(jsonEncode(_data));
     } catch (e) {
       // ignore
@@ -468,6 +472,13 @@ class ScreenCapture {
     int monitorHandle, {
     CaptureEngine engine = CaptureEngine.bitBlt,
   }) async {
+    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.screenCapture)) {
+      NativeIntegrationCoordinator.instance.reportUnavailable(
+        NativeIntegrationId.screenCapture,
+        reason: 'Screen capture is unavailable in the current distribution profile.',
+      );
+      return null;
+    }
     final MonitorBitmapCapture? capture = await _captureMonitorBitmap(monitorHandle, engine);
     if (capture == null || capture.width <= 0 || capture.height <= 0 || capture.rgbaBytes.isEmpty) {
       return null;

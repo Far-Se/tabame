@@ -60,9 +60,11 @@ class WindowsSecretStore implements SecretStore {
   String protectField(String value) {
     if (value.isEmpty || SecretCrypto.isProtectedField(value)) return value;
     final Uint8List? sealed = _dpapi(Uint8List.fromList(utf8.encode(value)), protect: true);
-    // Preserve the existing Windows fail-safe: a transient DPAPI failure must
-    // not silently discard the value during a settings write.
-    if (sealed == null) return value;
+    if (sealed == null) {
+      // Never downgrade a secret to plaintext when DPAPI is unavailable. The
+      // caller can surface the write failure and ask the user to retry.
+      throw StateError('Windows DPAPI is unavailable; refusing to store a plaintext secret.');
+    }
     return '${SecretCrypto.dpapiFieldPrefix}${base64Encode(sealed)}';
   }
 

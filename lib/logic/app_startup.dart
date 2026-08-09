@@ -8,14 +8,17 @@ import '../platform/windows/windows_bootstrap.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
+import '../models/clipboard_history.dart';
 import '../models/classes/save_settings.dart';
 import '../models/globals.dart';
 import '../models/settings.dart';
 import '../models/win32/win32.dart';
-import '../models/win32/win_utils.dart';
 import '../platform/app_paths.dart';
+import '../platform/clipboard_service.dart';
+import '../platform/distribution_profile.dart';
 import '../services/browser_bridge_service.dart';
 import '../services/clipboard_history_coordinator.dart';
+import '../services/native_integration_coordinator.dart';
 import 'error_handler.dart';
 
 class AppStartup {
@@ -70,8 +73,15 @@ class AppStartup {
   }
 
   static Future<void> registerServices() async {
+    final DistributionRuntimeReport distribution = DistributionRuntime.inspect();
+    Debug.add('Distribution profile: ${distribution.profile.value}');
+    if (!distribution.profileMatchesPackageIdentity) {
+      Debug.add('Distribution profile mismatch: ${distribution.diagnostic}');
+    }
+
     if (Globals.isStandaloneLauncher) {
       await Boxes.registerBoxes(justLoad: true);
+      _configureNativeIntegrations();
       await BrowserBridgeService.instance.initialize(asLauncherClient: true);
       Debug.add("Registered: Standalone launcher settings");
       return;
@@ -87,32 +97,18 @@ class AppStartup {
     Debug.add("Registered All");
   }
 
-  static Future<bool> checkAdminAndRestart() async {
-    if (Globals.isStandaloneLauncher) return false;
-    if (kReleaseMode &&
-        user.runAsAdministrator &&
-        !WinUtils.isAdministrator() &&
-        !user.args.join(' ').contains('-tryadmin')) {
-      Debug.add("Trying Admin");
-      user.args.add('-tryadmin');
-      WinUtils.closeAllTabameExProcesses();
-      Debug.add("Closed all tabame processed");
-      WinUtils.runAsAdmin(Platform.resolvedExecutable, arguments: '"${user.args.join('" "')}"');
-      Debug.add("Started New");
-      Timer(const Duration(seconds: 1), () {
-        Debug.add("Started Close Current");
-        exit(0);
-      });
-      return true;
-    }
-    if (user.args.contains("-restarted")) {
-      Future<void>.delayed(const Duration(seconds: 2), () => WinUtils.closeAllTabameExProcesses());
-    }
-    return false;
-  }
-
   static void registerHooks() {
-    if (Globals.isStandaloneLauncher) return;
+    if (Globals.isStandaloneLauncher || user.page != TPage.quickmenu) return;
+    final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
+    if (!integrations.canStart(NativeIntegrationId.globalHooks)) {
+      integrations.reportDisabled(
+        NativeIntegrationId.globalHooks,
+        reason: integrations.denialReason(NativeIntegrationId.globalHooks) ?? 'Global hooks are disabled.',
+        reducedMode: true,
+      );
+      Debug.add('Global hooks are disabled; visible/manual summon remains available.');
+      return;
+    }
     if (Globals.debugHooks || kReleaseMode) {
       Debug.add("Registering Hooks");
       if (user.args.contains("-interface") && Boxes.remap.isEmpty) {
@@ -174,13 +170,38 @@ class AppStartup {
       await windowManager.setAsFrameless();
       await windowManager.setHasShadow(false);
       await Win32.fetchMainWindowHandle();
-      if (!Globals.isStandaloneLauncher) {
-        await ClipboardHistoryCoordinator.instance.start();
+      if (!Globals.isStandaloneLauncher && user.page == TPage.quickmenu) {
+        final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
+        if (ClipboardHistoryStore.enabled && integrations.canStart(NativeIntegrationId.clipboardHistory)) {
+          final bool started = await ClipboardHistoryCoordinator.instance.start();
+          if (started) {
+            integrations.reportRunning(NativeIntegrationId.clipboardHistory);
+          } else {
+            integrations.reportUnavailable(
+              NativeIntegrationId.clipboardHistory,
+              reason: ClipboardService.instance.unavailableReason,
+            );
+          }
+        } else {
+          integrations.reportDisabled(
+            NativeIntegrationId.clipboardHistory,
+            reason: integrations.denialReason(NativeIntegrationId.clipboardHistory) ??
+                'Clipboard history is paused until you enable it.',
+            reducedMode: true,
+          );
+        }
         WindowsBootstrap.refreshCapabilities();
       }
       Globals.fullLoaded.value = true;
       Debug.add("Set windowOptions");
     });
+  }
+
+  static void _configureNativeIntegrations() {
+    NativeIntegrationCoordinator.configure(
+      profile: DistributionProfileConfig.current,
+      consentStore: SaveSettingsNativeIntegrationConsentStore(Boxes.pref),
+    );
   }
 
   static Future<void> finalizeStartup() async {
@@ -190,9 +211,18 @@ class AppStartup {
       Debug.add("Set transparency");
       return;
     }
-    if (user.quickClickEnabled) {
+    if (user.page == TPage.quickmenu &&
+        user.quickClickEnabled &&
+        NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.globalHooks)) {
       await QuickClick.registerQuickClick(user.quickClickConfig);
       await QuickClick.disableQuickClick();
+    } else if (user.page == TPage.quickmenu && user.quickClickEnabled) {
+      NativeIntegrationCoordinator.instance.reportDisabled(
+        NativeIntegrationId.globalHooks,
+        reason: NativeIntegrationCoordinator.instance.denialReason(NativeIntegrationId.globalHooks) ??
+            'QuickClick is disabled with global hooks; use the visible/manual action instead.',
+        reducedMode: true,
+      );
     }
     Debug.add("Set transparency");
   }

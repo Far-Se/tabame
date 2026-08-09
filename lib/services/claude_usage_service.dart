@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
+import '../platform/app_paths.dart';
 
 class ClaudeUsageRecord {
   final double fiveHour;
@@ -174,7 +174,6 @@ class ClaudeUsageService {
   }
 
   Future<File> _cacheFile() async {
-    final Directory dir = await getApplicationSupportDirectory();
-    return File('${dir.path}/claude_usage_cache.json');
+    return File(AppPaths.cachePath('claude_usage_cache.json', forWrite: true));
   }
 }

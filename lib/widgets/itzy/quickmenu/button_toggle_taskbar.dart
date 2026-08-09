@@ -14,7 +14,7 @@ class ToggleTaskbarButton extends StatelessWidget {
       message: "Toggle Taskbar",
       icon: const Icon(Icons.call_to_action_outlined),
       onTap: () async {
-        WinUtils.toggleTaskbar();
+        await WinUtils.toggleTaskbar();
       },
     );
   }

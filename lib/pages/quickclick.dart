@@ -15,6 +15,7 @@ import '../models/win32/keys.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
+import '../services/native_integration_coordinator.dart';
 
 // ─── constants ───────────────────────────────────────────────────────────────
 
@@ -92,6 +93,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
 
   bool showInfoModal = false;
   bool overlayVisible = true;
+  bool _nativeEnabled = false;
 
   // ── init ────────────────────────────────────────────────────────────────────
 
@@ -99,9 +101,19 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
   void initState() {
     super.initState();
     Win32.setWindowInvisible(true);
-    NativeHooks.addListener(this);
-    QuickClick.setQuickClickHotkeys(user.quickClickConfig);
-    QuickClick.enableQuickClick();
+    _nativeEnabled = NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.globalHooks);
+    if (_nativeEnabled) {
+      NativeHooks.addListener(this);
+      QuickClick.setQuickClickHotkeys(user.quickClickConfig);
+      QuickClick.enableQuickClick();
+    } else {
+      NativeIntegrationCoordinator.instance.reportDisabled(
+        NativeIntegrationId.globalHooks,
+        reason: NativeIntegrationCoordinator.instance.denialReason(NativeIntegrationId.globalHooks) ??
+            'QuickClick is disabled with global hooks; use visible/manual controls instead.',
+        reducedMode: true,
+      );
+    }
     _enableDpiAwareness();
 
     currentMonitor = Monitor.getCursorMonitor();
@@ -282,8 +294,10 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
   void dispose() {
     _dragPollTimer?.cancel();
     _cursorPollTimer?.cancel();
-    NativeHooks.removeListener(this);
-    QuickClick.disableQuickClick();
+    if (_nativeEnabled) {
+      NativeHooks.removeListener(this);
+      QuickClick.disableQuickClick();
+    }
     _refocusPreviousWindow();
     super.dispose();
   }

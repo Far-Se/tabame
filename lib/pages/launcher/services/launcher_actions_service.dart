@@ -1,6 +1,24 @@
 part of '../../launcher_actions_panel.dart';
 
 class LauncherActionsBuilder {
+  static Future<void> _launchElevated(
+    BuildContext context,
+    String executable, {
+    String? arguments,
+  }) async {
+    final ElevationRequestResult result = await ElevationService.forCurrentProfile().launchApplicationElevated(
+      executable: executable,
+      arguments: arguments,
+    );
+    if (result.didLaunch) {
+      _closeLauncher();
+      return;
+    }
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
+    }
+  }
+
   static Future<List<LauncherAction>> build(
     BuildContext context,
     LauncherSearchResultItem item,
@@ -49,46 +67,50 @@ class LauncherActionsBuilder {
   }
 
   static Future<List<LauncherAction>> _buildFileActions(String path) async {
+    final bool elevationAvailable = ElevationService.forCurrentProfile().capability.isAvailable;
+    final ExtensionPolicy extensionPolicy = ExtensionPolicy.current;
+    final bool allowDynamicCode =
+        extensionPolicy.canRunUserCommandTemplates || !extensionPolicy.isUnreviewedCodePath(path);
     final List<LauncherAction> actions = <LauncherAction>[
       // == Built-in primary actions ==
-      LauncherAction(
-        label: 'Open',
-        icon: Icons.open_in_new_rounded,
-        kbdHint: '↵',
-        onExecute: (_) {
-          WinUtils.open(path);
-          _closeLauncher();
-        },
-      ),
-      LauncherAction(
-        label: 'Run as Administrator',
-        icon: Icons.shield_outlined,
-        subtitle: 'Elevated privileges',
-        onExecute: (_) {
-          WinUtils.runAsAdmin(path);
-          _closeLauncher();
-        },
-      ),
-      LauncherAction(
-        label: 'Run with Parameters',
-        icon: Icons.tune_rounded,
-        subtitle: 'Specify arguments before launching',
-        keepPanelOpen: true,
-        onExecute: (BuildContext ctx) async {
-          final TextEditingController controller = TextEditingController();
-          final String? args = await showDialog<String>(
-            context: ctx,
-            builder: (_) => _ParametersDialog(
-              title: 'Run "${p.basename(path)}" with parameters',
-              controller: controller,
-            ),
-          );
-          controller.dispose();
-          if (args == null) return;
-          WinUtils.open(path, arguments: args);
-          _closeLauncher();
-        },
-      ),
+      if (allowDynamicCode)
+        LauncherAction(
+          label: 'Open',
+          icon: Icons.open_in_new_rounded,
+          kbdHint: '↵',
+          onExecute: (_) {
+            WinUtils.open(path, userProvided: true);
+            _closeLauncher();
+          },
+        ),
+      if (elevationAvailable && allowDynamicCode)
+        LauncherAction(
+          label: 'Run as Administrator',
+          icon: Icons.shield_outlined,
+          subtitle: 'Explicit UAC request',
+          onExecute: (BuildContext context) => _launchElevated(context, path),
+        ),
+      if (allowDynamicCode)
+        LauncherAction(
+          label: 'Run with Parameters',
+          icon: Icons.tune_rounded,
+          subtitle: 'Specify arguments before launching',
+          keepPanelOpen: true,
+          onExecute: (BuildContext ctx) async {
+            final TextEditingController controller = TextEditingController();
+            final String? args = await showDialog<String>(
+              context: ctx,
+              builder: (_) => _ParametersDialog(
+                title: 'Run "${p.basename(path)}" with parameters',
+                controller: controller,
+              ),
+            );
+            controller.dispose();
+            if (args == null) return;
+            WinUtils.open(path, arguments: args, userProvided: true);
+            _closeLauncher();
+          },
+        ),
       LauncherAction(
         label: 'Open Containing Folder',
         icon: Icons.folder_open_rounded,
@@ -116,7 +138,8 @@ class LauncherActionsBuilder {
     ];
 
     // == Shell context-menu items ==
-    final List<ShellMenuItem> shellActions = await ShellContextMenu.getMenuItems(path);
+    final List<ShellMenuItem> shellActions =
+        allowDynamicCode ? await ShellContextMenu.getMenuItems(path) : const <ShellMenuItem>[];
     final List<LauncherAction> newList = <LauncherAction>[];
     for (final ShellMenuItem action in shellActions) {
       if (<String>["Cut", "Copy"].contains(action.verb)) continue;
@@ -130,17 +153,18 @@ class LauncherActionsBuilder {
     actions.addAll(newList);
 
     if (shellActions.isEmpty) {
-      // Graceful fallback when native bridge isn't available
+      // Graceful fallback when native bridge isn't available.
       actions.addAll(<LauncherAction>[
-        LauncherAction(
-          label: 'Open with',
-          icon: Icons.open_with_rounded,
-          onExecute: (_) {
-            WinUtils.open('shell:AppsFolder', arguments: '', parseParamaters: false);
-            // The standard "Open With" dialog via openwith.exe
-            WinUtils.open('openwith.exe', arguments: '"$path"', parseParamaters: true);
-          },
-        ),
+        if (allowDynamicCode)
+          LauncherAction(
+            label: 'Open with',
+            icon: Icons.open_with_rounded,
+            onExecute: (_) {
+              WinUtils.open('shell:AppsFolder', arguments: '', parseParamaters: false);
+              // The standard "Open With" dialog via openwith.exe
+              WinUtils.open('openwith.exe', arguments: '"$path"', parseParamaters: true);
+            },
+          ),
         LauncherAction(
           label: 'Show Properties',
           icon: Icons.info_outline_rounded,
@@ -157,6 +181,7 @@ class LauncherActionsBuilder {
   // == Folders ================================================================
 
   static Future<List<LauncherAction>> _buildFolderActions(String path) async {
+    final bool allowUserShell = ExtensionPolicy.current.canRunUserCommandTemplates;
     final List<LauncherAction> actions = <LauncherAction>[
       LauncherAction(
         label: 'Open in Explorer',
@@ -167,40 +192,43 @@ class LauncherActionsBuilder {
           _closeLauncher();
         },
       ),
-      LauncherAction(
-        label: 'Open Terminal Here',
-        icon: Icons.terminal_rounded,
-        subtitle: 'Windows Terminal / PowerShell',
-        onExecute: (_) {
-          // Try wt.exe (Windows Terminal), fall back to PowerShell
-          try {
-            WinUtils.open('wt.exe', arguments: '-d "$path"', parseParamaters: true);
-          } catch (_) {
-            WinUtils.runPowerShellDetachedVisible('', workingDirectory: path, keepOpen: true);
-          }
-          _closeLauncher();
-        },
-      ),
-      LauncherAction(
-        label: 'Open CMD Here',
-        icon: Icons.code_rounded,
-        onExecute: (_) {
-          WinUtils.open('cmd.exe', arguments: '/k cd /d "$path"', parseParamaters: true);
-          _closeLauncher();
-        },
-      ),
-      LauncherAction(
-        label: 'Open PowerShell Here',
-        icon: Icons.terminal_rounded,
-        onExecute: (_) {
-          WinUtils.open(
-            'powershell.exe',
-            arguments: '-NoExit -Command "Set-Location \'$path\'"',
-            parseParamaters: true,
-          );
-          _closeLauncher();
-        },
-      ),
+      if (allowUserShell)
+        LauncherAction(
+          label: 'Open Terminal Here',
+          icon: Icons.terminal_rounded,
+          subtitle: 'Windows Terminal / PowerShell',
+          onExecute: (_) {
+            // Try wt.exe (Windows Terminal), fall back to PowerShell
+            try {
+              WinUtils.open('wt.exe', arguments: '-d "$path"', parseParamaters: true);
+            } catch (_) {
+              WinUtils.runPowerShellDetachedVisible('', workingDirectory: path, keepOpen: true);
+            }
+            _closeLauncher();
+          },
+        ),
+      if (allowUserShell)
+        LauncherAction(
+          label: 'Open CMD Here',
+          icon: Icons.code_rounded,
+          onExecute: (_) {
+            WinUtils.open('cmd.exe', arguments: '/k cd /d "$path"', parseParamaters: true);
+            _closeLauncher();
+          },
+        ),
+      if (allowUserShell)
+        LauncherAction(
+          label: 'Open PowerShell Here',
+          icon: Icons.terminal_rounded,
+          onExecute: (_) {
+            WinUtils.open(
+              'powershell.exe',
+              arguments: '-NoExit -Command "Set-Location \'$path\'"',
+              parseParamaters: true,
+            );
+            _closeLauncher();
+          },
+        ),
       LauncherAction(
         label: 'Copy Path',
         icon: Icons.content_copy_rounded,
@@ -254,6 +282,7 @@ class LauncherActionsBuilder {
   // == Apps ===================================================================
 
   static List<LauncherAction> _buildAppActions(LauncherAppResult app) {
+    final bool elevationAvailable = ElevationService.forCurrentProfile().capability.isAvailable;
     return <LauncherAction>[
       LauncherAction(
         label: 'Launch',
@@ -265,16 +294,17 @@ class LauncherActionsBuilder {
           _closeLauncher();
         },
       ),
-      LauncherAction(
-        label: 'Launch as Administrator',
-        icon: Icons.shield_outlined,
-        subtitle: 'Elevated privileges',
-        onExecute: (_) {
-          final String target = app.launchTarget;
-          if (target.isNotEmpty) WinUtils.runAsAdmin(target);
-          _closeLauncher();
-        },
-      ),
+      if (elevationAvailable)
+        LauncherAction(
+          label: 'Launch as Administrator',
+          icon: Icons.shield_outlined,
+          subtitle: 'Explicit UAC request',
+          onExecute: (BuildContext context) {
+            final String target = app.launchTarget;
+            if (target.isNotEmpty) return _launchElevated(context, target);
+            return null;
+          },
+        ),
       LauncherAction(
         label: 'Reload Icon',
         icon: Icons.refresh_rounded,
@@ -345,6 +375,7 @@ class LauncherActionsBuilder {
     BuildContext context,
     BookmarkSearchResult result,
   ) async {
+    final bool elevationAvailable = ElevationService.forCurrentProfile().capability.isAvailable;
     switch (result.kind) {
       case BookmarkResultKind.bookmark:
         return <LauncherAction>[
@@ -353,7 +384,7 @@ class LauncherActionsBuilder {
             icon: Icons.open_in_new_rounded,
             kbdHint: '↵',
             onExecute: (_) {
-              WinUtils.open(result.bookmark!.stringToExecute, parseParamaters: true);
+              WinUtils.open(result.bookmark!.stringToExecute, parseParamaters: true, userProvided: true);
               _closeLauncher();
             },
           ),
@@ -385,14 +416,14 @@ class LauncherActionsBuilder {
               _closeLauncher();
             },
           ),
-          LauncherAction(
-            label: 'Launch as Administrator',
-            icon: Icons.shield_outlined,
-            onExecute: (_) {
-              WinUtils.runAsAdmin(result.app!.path, arguments: result.app!.arguments);
-              _closeLauncher();
-            },
-          ),
+          if (elevationAvailable)
+            LauncherAction(
+              label: 'Launch as Administrator',
+              icon: Icons.shield_outlined,
+              subtitle: 'Explicit UAC request',
+              onExecute: (BuildContext context) =>
+                  _launchElevated(context, result.app!.path, arguments: result.app!.arguments),
+            ),
           LauncherAction(
             label: 'Copy Path',
             icon: Icons.content_copy_rounded,
@@ -409,6 +440,7 @@ class LauncherActionsBuilder {
     BuildContext context,
     CliBookItem cli,
   ) {
+    final bool allowUserShell = ExtensionPolicy.current.canRunUserCommandTemplates;
     return <LauncherAction>[
       LauncherAction(
         label: 'Copy Command',
@@ -420,52 +452,56 @@ class LauncherActionsBuilder {
           _closeLauncher();
         },
       ),
-      LauncherAction(
-        label: 'Run in PowerShell',
-        icon: Icons.play_arrow_rounded,
-        subtitle: 'Opens a visible PowerShell window',
-        onExecute: (_) {
-          WinUtils.runPowerShellDetachedVisible(cli.value, keepOpen: true);
-          _closeLauncher();
-        },
-      ),
-      LauncherAction(
-        label: 'Run with Parameters',
-        icon: Icons.tune_rounded,
-        subtitle: 'Fill variables & pick working directory',
-        keepPanelOpen: true,
-        onExecute: (BuildContext ctx) {
-          showModalBottomSheet<void>(
-            context: ctx,
-            barrierColor: Colors.transparent,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (_) => _CliRunSheet(cliItem: cli),
-          );
-        },
-      ),
-      LauncherAction(
-        label: 'Run in Specific Folder',
-        icon: Icons.folder_special_rounded,
-        subtitle: 'Pick a working directory then run',
-        onExecute: (_) async {
-          _closeLauncher();
+      if (allowUserShell)
+        LauncherAction(
+          label: 'Run in PowerShell',
+          icon: Icons.play_arrow_rounded,
+          subtitle: 'Opens a visible PowerShell window',
+          onExecute: (_) {
+            WinUtils.runPowerShellDetachedVisible(cli.value, keepOpen: true, userProvided: true);
+            _closeLauncher();
+          },
+        ),
+      if (allowUserShell)
+        LauncherAction(
+          label: 'Run with Parameters',
+          icon: Icons.tune_rounded,
+          subtitle: 'Fill variables & pick working directory',
+          keepPanelOpen: true,
+          onExecute: (BuildContext ctx) {
+            showModalBottomSheet<void>(
+              context: ctx,
+              barrierColor: Colors.transparent,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => _CliRunSheet(cliItem: cli),
+            );
+          },
+        ),
+      if (allowUserShell)
+        LauncherAction(
+          label: 'Run in Specific Folder',
+          icon: Icons.folder_special_rounded,
+          subtitle: 'Pick a working directory then run',
+          onExecute: (_) async {
+            _closeLauncher();
 
-          // final DirectoryPicker picker = DirectoryPicker()..title = 'Select Working Directory';
-          // final Directory? dir = picker.getDirectory();
-          // if (dir == null || dir.path.isEmpty) return;
-          // if (mounted) setState(() => _workingDirectory = dir.path);
-          ///
-          final DirectoryPicker picker = DirectoryPicker()..title = 'Select Working Directory';
-          final Directory? dir = picker.getDirectory();
-          if (dir == null || dir.path.isEmpty) return;
-          WinUtils.runPowerShellDetachedVisible(
-            cli.value,
-            workingDirectory: dir.path,
-            keepOpen: true,
-          );
-        },
-      ),
+            // final DirectoryPicker picker = DirectoryPicker()..title = 'Select Working Directory';
+            // final Directory? dir = picker.getDirectory();
+            // if (dir == null || dir.path.isEmpty) return;
+            // if (mounted) setState(() => _workingDirectory = dir.path);
+            ///
+            final DirectoryPicker picker = DirectoryPicker()..title = 'Select Working Directory';
+            final Directory? dir = picker.getDirectory();
+            if (dir == null || dir.path.isEmpty) return;
+            WinUtils.runPowerShellDetachedVisible(
+              cli.value,
+              workingDirectory: dir.path,
+              keepOpen: true,
+              userProvided: true,
+            );
+          },
+        ),
     ];
   }
 

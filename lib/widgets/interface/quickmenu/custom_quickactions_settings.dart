@@ -6,6 +6,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/app_opacity.dart';
 import '../../../models/util/quick_actions.dart';
+import '../../../services/extension_policy.dart';
 import '../../widgets/text_input.dart';
 
 class InterfaceQMCustomQuickActionsSettingsPage extends StatefulWidget {
@@ -350,6 +351,7 @@ class _QMQuickActionEditState extends State<QMQuickActionEdit> {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
+    final ExtensionPolicy extensionPolicy = ExtensionPolicy.current;
     final IconData currentIcon = _getIconForType(widget.leAction.type);
 
     return Padding(
@@ -458,13 +460,20 @@ class _QMQuickActionEditState extends State<QMQuickActionEdit> {
                   setState(() {});
                 },
                 items: quickActionsType.map<DropdownMenuItem<String>>((String value) {
+                  final bool enabled = value != "Run Command" || extensionPolicy.canRunUserCommandTemplates;
                   return DropdownMenuItem<String>(
                     value: value,
+                    enabled: enabled,
                     child: Row(
                       children: <Widget>[
-                        Icon(_getIconForType(value), size: 18, color: scheme.onSurface.withValues(alpha: 0.6)),
+                        Icon(_getIconForType(value),
+                            size: 18, color: scheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.3)),
                         const SizedBox(width: 12),
                         Text(value),
+                        if (!enabled) ...<Widget>[
+                          const SizedBox(width: 6),
+                          const Text('(unavailable)', style: TextStyle(fontSize: 11)),
+                        ],
                       ],
                     ),
                   );

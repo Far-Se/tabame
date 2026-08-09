@@ -39,8 +39,11 @@ try {
 
     $nestedSqlite = Join-Path $releaseRoot 'windows\sqlite3.dll'
     $rootSqlite = Join-Path $releaseRoot 'sqlite3.dll'
-    if ((Test-Path -LiteralPath $nestedSqlite) -and -not (Test-Path -LiteralPath $rootSqlite)) {
-        throw 'Windows package contains sqlite3.dll only in the nested windows directory.'
+    if (-not (Test-Path -LiteralPath $rootSqlite -PathType Leaf)) {
+        if (Test-Path -LiteralPath $nestedSqlite -PathType Leaf) {
+            throw 'Windows package contains sqlite3.dll only in the nested windows directory.'
+        }
+        throw 'Windows package is missing sqlite3.dll beside tabame.exe.'
     }
 
     Write-Output "Windows package layout smoke passed: $($executable.FullName)"

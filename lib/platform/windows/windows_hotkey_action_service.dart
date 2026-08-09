@@ -72,7 +72,7 @@ class WindowsHotkeyActionService extends HotkeyActionService {
         if (windowHandle != 0) {
           Win32.closeWindow(windowHandle);
         } else {
-          WinUtils.startTabame(closeCurrent: false, arguments: '-quickSnap', admin: true);
+          WinUtils.startTabame(closeCurrent: false, arguments: '-quickSnap');
         }
       },
       'OpenScreenDraw': () {
@@ -80,7 +80,7 @@ class WindowsHotkeyActionService extends HotkeyActionService {
         if (windowHandle != 0) {
           Win32.closeWindow(windowHandle);
         } else {
-          WinUtils.startTabame(closeCurrent: false, arguments: '-screenDraw', admin: false);
+          WinUtils.startTabame(closeCurrent: false, arguments: '-screenDraw');
         }
       },
       'OpenScreenRecording': () {

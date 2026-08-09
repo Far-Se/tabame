@@ -92,6 +92,7 @@ Future<void> startScreenDraw() async {
 // ---------------------------------------------------------------------------
 class Settings {
   static String get _path => AppPaths.settingsPath('screen_draw.json');
+  static String get _writePath => AppPaths.settingsPath('screen_draw.json', forWrite: true);
   static Map<String, dynamic> _data = <String, dynamic>{};
 
   static void load() {
@@ -108,7 +109,8 @@ class Settings {
 
   static void save() {
     try {
-      final File file = File(_path);
+      final File file = File(_writePath);
+      file.parent.createSync(recursive: true);
       file.writeAsStringSync(jsonEncode(_data));
     } catch (e) {
       // ignore

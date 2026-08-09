@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/util/ocr_capture_decoder.dart';
 import '../screen_capture_service.dart';
+import '../../services/native_integration_coordinator.dart';
 import 'tabamewin32_api.dart' as win32;
 
 /// Native seam for Windows OCR. The shared layer passes only encoded image
@@ -28,6 +29,13 @@ class WindowsOcrService extends OcrService {
   @override
   Future<OcrResult?> recognizeImage(CapturedImage image) async {
     if (!isAvailable || image.isEmpty) return null;
+    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.ocr)) {
+      NativeIntegrationCoordinator.instance.reportUnavailable(
+        NativeIntegrationId.ocr,
+        reason: 'Screen OCR is unavailable in the current distribution profile.',
+      );
+      return null;
+    }
 
     try {
       final OcrPixelBuffer? buffer = await compute<Uint8List, OcrPixelBuffer?>(

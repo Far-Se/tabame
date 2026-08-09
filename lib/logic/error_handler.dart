@@ -1,12 +1,17 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 
-import '../platform/app_paths.dart';
+import '../../platform/app_paths.dart';
+import '../../platform/sensitive_data_redactor.dart';
 import 'package:stack_trace/stack_trace.dart';
 
 class ErrorLogger {
   static File get errorLog {
     return File(AppPaths.resolvePath('errors.log'));
+  }
+
+  static File get writableErrorLog {
+    return File(AppPaths.currentPath('errors.log'));
   }
 
   static Future<void> log(
@@ -18,16 +23,16 @@ class ErrorLogger {
       // Demangle the stack trace — critical for release mode
       final String chain = stack != null ? Chain.forTrace(stack).terse.toString() : 'no stack trace';
 
-      final String entry = '''
+      final String entry = SensitiveDataRedactor.redactText('''
 ==============================
 [$source] ${DateTime.now().toIso8601String()}
 ERROR: $error
 STACK:
 $chain
-''';
+''');
       if (kReleaseMode) {
-        await errorLog.parent.create(recursive: true);
-        await errorLog.writeAsString(entry, mode: FileMode.append, flush: true);
+        await writableErrorLog.parent.create(recursive: true);
+        await writableErrorLog.writeAsString(entry, mode: FileMode.append, flush: true);
       }
 
       // Also print in debug
@@ -45,15 +50,18 @@ $chain
   static Future<String> readLogs() async {
     try {
       final File file = errorLog;
-      return file.existsSync() ? await file.readAsString() : 'No logs found.';
+      return file.existsSync() ? SensitiveDataRedactor.redactText(await file.readAsString()) : 'No logs found.';
     } catch (e) {
       return 'Failed to read logs: $e';
     }
   }
 
   static Future<void> clearLogs() async {
-    final File file = errorLog;
-    if (file.existsSync()) await file.delete();
+    final Set<String> paths = <String>{errorLog.path, writableErrorLog.path};
+    for (final String path in paths) {
+      final File file = File(path);
+      if (file.existsSync()) await file.delete();
+    }
   }
 }
 
@@ -68,7 +76,10 @@ void handleErrors(FlutterErrorDetails details) async {
       "$stack\n${details.context?.toDescription()}\n${details.summary.toString()}\n${details.context.toString()}\n===============\n${DateTime.now().toString()}\n";
   final File errorFile = File(AppPaths.currentPath('errors.log'));
   errorFile.parent.createSync(recursive: true);
-  errorFile.writeAsStringSync("$error\n$stack", mode: FileMode.append);
+  errorFile.writeAsStringSync(
+    SensitiveDataRedactor.redactText('$error\n$stack'),
+    mode: FileMode.append,
+  );
 }
 
 bool handlePlatformErrors(Object error, StackTrace stack2) {
@@ -81,7 +92,7 @@ bool handlePlatformErrors(Object error, StackTrace stack2) {
   final File errorFile = File(AppPaths.currentPath('errors.log'));
   errorFile.parent.createSync(recursive: true);
   errorFile.writeAsStringSync(
-    "${DateTime.now().toString()}\n${error.toString()}\n$stack",
+    SensitiveDataRedactor.redactText("${DateTime.now().toString()}\n${error.toString()}\n$stack"),
     mode: FileMode.append,
   );
   return true;

@@ -3,8 +3,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import '../../platform/windows/win32_api.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
@@ -12,7 +10,14 @@ import '../../models/settings.dart';
 import '../../models/util/solar_calculator.dart';
 import '../../models/win32/win32.dart';
 import '../../models/win32/win_utils.dart';
-import '../widgets/custom_tooltip.dart';
+import '../../platform/app_data_export.dart';
+import '../../platform/app_paths.dart';
+import '../../platform/file_picker_service.dart';
+import '../../services/elevation_service.dart';
+import '../../services/install_lifecycle_service.dart';
+import '../../services/native_integration_coordinator.dart';
+import '../../services/startup_registration_service.dart';
+import '../../services/update_service.dart';
 import '../widgets/mini_switch.dart';
 import '../widgets/windows_scroll.dart';
 
@@ -39,10 +44,20 @@ class SettingsPageState extends State<SettingsPage> {
   bool showUpdateButtons = false;
   final Set<String> _expandedCards = <String>{"maintenance"};
   final GlobalKey _uninstallKey = GlobalKey();
+  final StartupRegistrationService _startupService = StartupRegistrationService.forCurrentProfile();
+  final ElevationService _elevationService = ElevationService.forCurrentProfile();
+  final InstallLifecycleService _lifecycleService = InstallLifecycleService.forCurrentProfile();
+  final UpdateService _updateService = UpdateService.forCurrentProfile();
+  StartupRegistrationStatus? _startupStatus;
+  PrivilegeStatus? _privilegeStatus;
+  bool _startupBusy = false;
+  bool _elevationBusy = false;
 
   @override
   void initState() {
     super.initState();
+    _refreshStartupStatus();
+    _refreshPrivilegeStatus();
     if (user.args.contains("-uninstall")) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final BuildContext? uninstallContext = _uninstallKey.currentContext;
@@ -55,8 +70,6 @@ class SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bool runOnStartup = WinUtils.checkIfRegisterAsStartup();
-    if (!runOnStartup) user.runAsAdministrator = false;
     final Color accent = Design.accent;
     final Color background = Design.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
@@ -88,7 +101,10 @@ class SettingsPageState extends State<SettingsPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           _buildSectionTitle("Configuration"),
-                          _buildGeneralCard(runOnStartup, accent, onSurface),
+                          _buildGeneralCard(_startupStatus, accent, onSurface),
+                          const SizedBox(height: 16),
+                          _buildSectionTitle("Advanced & Security"),
+                          _buildElevationCard(accent, onSurface),
                           const SizedBox(height: 16),
                           _buildSectionTitle("Light Switch"),
                           _buildLightSwitchCard(accent, background, onSurface),
@@ -144,6 +160,7 @@ class SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildUpdateCard(Color accent, Color background, Color onSurface) {
+    final UpdateServiceCapabilities updateCapabilities = _updateService.capabilities;
     return _settingsCard(
       title: "Version & Updates",
       subtitle: "Check the status of Tabame and install the latest improvements.",
@@ -249,12 +266,15 @@ class SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 12),
           _toggleTile(
             title: "Auto Update",
-            subtitle: "Download new releases automatically when available.",
-            value: user.autoCheckForUpdates,
-            onChanged: (bool value) async {
-              setState(() => user.autoCheckForUpdates = value);
-              Boxes.updateSettings("autoUpdate", user.autoCheckForUpdates);
-            },
+            subtitle: updateCapabilities.message,
+            value: updateCapabilities.canCheckRemoteReleases && user.autoCheckForUpdates,
+            enabled: updateCapabilities.canCheckRemoteReleases,
+            onChanged: updateCapabilities.canCheckRemoteReleases
+                ? (bool value) async {
+                    setState(() => user.autoCheckForUpdates = value);
+                    Boxes.updateSettings("autoUpdate", user.autoCheckForUpdates);
+                  }
+                : null,
           ),
           const SizedBox(height: 8),
           Align(
@@ -269,7 +289,9 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildGeneralCard(bool runOnStartup, Color accent, Color onSurface) {
+  Widget _buildGeneralCard(StartupRegistrationStatus? startupStatus, Color accent, Color onSurface) {
+    final bool runOnStartup = startupStatus?.isEnabled ?? false;
+    final bool startupCanChange = startupStatus?.canChange == true && !_startupBusy;
     return _settingsCard(
       id: "general",
       title: "Configuration",
@@ -278,55 +300,22 @@ class SettingsPageState extends State<SettingsPage> {
         children: <Widget>[
           _toggleTile(
             title: "Launch at Startup",
-            subtitle: "Start Tabame automatically when you log in to Windows.",
+            subtitle: startupStatus?.message.isNotEmpty == true
+                ? startupStatus!.message
+                : "Start Tabame automatically when you log in to Windows.",
             value: runOnStartup,
-            onChanged: (bool value) async {
-              if (value) {
-                await WinUtils.setStartUpShortcut(true);
-              } else {
-                await WinUtils.setStartUpShortcut(false);
-                user.runAsAdministrator = false;
-                await Boxes.updateSettings("runAsAdministrator", false);
-              }
-              if (!mounted) return;
-              setState(() {});
-            },
+            enabled: startupCanChange,
+            onChanged: startupCanChange ? _setStartupEnabled : null,
           ),
-          if (runOnStartup) ...<Widget>[
-            const SizedBox(height: 8),
-            _toggleTile(
-              title: "Run as Administrator",
-              subtitle: "Needed for some focus, close, and tray-control actions.",
-              value: user.runAsAdministrator,
-              trailing: !user.runAsAdministrator || WinUtils.isAdministrator()
-                  ? null
-                  : CustomTooltip(
-                      message: "Restart as Admin",
-                      child: InkWell(
-                        onTap: () {
-                          WinUtils.runAsAdmin(Platform.resolvedExecutable);
-                          final int hWnd = Win32.findWindow("Tabame");
-                          if (hWnd != 0) Win32.closeWindow(hWnd);
-                          Future<void>.delayed(const Duration(milliseconds: 300), () => exit(0));
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: _AppOpacity.subtle),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(Icons.replay_outlined, size: 16, color: accent),
-                        ),
-                      ),
-                    ),
-              onChanged: (bool value) async {
-                user.runAsAdministrator = value;
-                await Boxes.updateSettings("runAsAdministrator", value);
-                if (!mounted) return;
-                setState(() {});
-              },
+          if (startupStatus != null && !startupStatus.canChange) ...<Widget>[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _startupService.openSystemSettings,
+                icon: const Icon(Icons.settings_outlined, size: 16),
+                label: const Text('OPEN WINDOWS STARTUP SETTINGS'),
+              ),
             ),
           ],
           const SizedBox(height: 8),
@@ -335,8 +324,13 @@ class SettingsPageState extends State<SettingsPage> {
             subtitle: "Apply your taskbar visibility preference immediately.",
             value: user.hideTaskbarOnStartup,
             onChanged: (bool value) async {
+              await NativeIntegrationCoordinator.instance.setConsent(
+                NativeIntegrationId.shellIntegration,
+                value,
+              );
               user.hideTaskbarOnStartup = value;
-              Boxes.updateSettings("hideTaskbarOnStartup", user.hideTaskbarOnStartup);
+              await Boxes.updateSettings("hideTaskbarOnStartup", user.hideTaskbarOnStartup);
+              if (!value) await WinUtils.toggleTaskbar(visible: true);
               if (!mounted) return;
               setState(() {});
             },
@@ -346,43 +340,240 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildMaintenanceCard(Color accent, Color onSurface) {
+  Future<void> _refreshStartupStatus() async {
+    final StartupRegistrationStatus status = await _startupService.read();
+    if (!mounted) return;
+    setState(() => _startupStatus = status);
+  }
+
+  Future<void> _setStartupEnabled(bool enabled) async {
+    setState(() => _startupBusy = true);
+    final StartupRegistrationStatus status = await _startupService.setEnabled(enabled);
+    if (!mounted) return;
+    setState(() {
+      _startupBusy = false;
+      _startupStatus = status;
+    });
+    if (status.state == StartupRegistrationState.error || status.state == StartupRegistrationState.unavailable) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status.message)));
+    }
+  }
+
+  Future<void> _refreshPrivilegeStatus() async {
+    final PrivilegeStatus status = _elevationService.readPrivilegeStatus();
+    if (!mounted) return;
+    setState(() => _privilegeStatus = status);
+  }
+
+  Widget _buildElevationCard(Color accent, Color onSurface) {
+    final ElevationCapabilityResult capability = _elevationService.capability;
+    final PrivilegeStatus status = _privilegeStatus ?? const PrivilegeStatus.unavailable();
+    final bool canRestart = capability.isAvailable && !status.isElevated && !_elevationBusy;
+
     return _settingsCard(
-      id: "maintenance",
-      title: "Integration & Maintenance",
-      subtitle: "Manage shell integration and locate your data quickly.",
+      id: "security",
+      title: "Elevation",
+      subtitle: "Request administrator access only for this explicit session.",
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _markdownCard(
-            onSurface,
-            '''
-To export settings, copy *settings.json* from [this folder](data). To import, exit Tabame and replace the file with your copy.
-''',
-            ({String? s, String? s2, String? s3}) {
-              final String path = WinUtils.getKnownFolder(FOLDERID_LocalAppData);
-              WinUtils.open("$path\\Tabame\\");
-            },
-          ),
-          const SizedBox(height: 10),
-          const SizedBox(height: 16),
-          SizedBox(
-            key: _uninstallKey,
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _showUninstallConfirmation(accent, onSurface),
-              icon: const Icon(Icons.delete_forever_rounded, size: 18),
-              label: const Text("UNINSTALL TABAME"),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.redAccent,
-                side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.3)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: onSurface.withValues(alpha: _AppOpacity.subtle)),
             ),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  status.isElevated ? Icons.verified_user_outlined : Icons.shield_outlined,
+                  color: status.isElevated ? Colors.greenAccent : accent,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    status.message,
+                    style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.75)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (canRestart)
+            OutlinedButton.icon(
+              onPressed: _restartElevated,
+              icon: const Icon(Icons.restart_alt_rounded, size: 18),
+              label: const Text('RESTART ELEVATED FOR THIS SESSION'),
+            )
+          else
+            Text(
+              status.level == PrivilegeLevel.unavailable
+                  ? status.message
+                  : status.isElevated
+                      ? 'No restart is needed for this session.'
+                      : capability.message,
+              style: TextStyle(fontSize: Design.baseFontSize + 1, color: onSurface.withValues(alpha: 0.65)),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            'This action is separate from Launch at Startup. Normal and login-startup launches never request UAC.',
+            style:
+                TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: _AppOpacity.textSecondary)),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _restartElevated() async {
+    if (_elevationBusy) return;
+    setState(() => _elevationBusy = true);
+    final ElevationRequestResult result = await _elevationService.restartCurrentSessionElevated(
+      executable: Platform.resolvedExecutable,
+      arguments: user.args,
+    );
+    if (!mounted) return;
+    setState(() => _elevationBusy = false);
+    if (result.shouldCloseCurrentProcess) {
+      final int hWnd = Win32.findWindow("Tabame");
+      if (hWnd != 0) Win32.closeWindow(hWnd);
+      Future<void>.delayed(const Duration(milliseconds: 300), () => exit(0));
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
+  }
+
+  Widget _buildMaintenanceCard(Color accent, Color onSurface) {
+    final bool appOwnsUninstall = _lifecycleService.capabilities.canCustomUninstall;
+    return _settingsCard(
+      id: "maintenance",
+      title: "Integration & Maintenance",
+      subtitle: "Manage shell integration and your Tabame data.",
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            "Data folder\\n${AppPaths.root}",
+            style: TextStyle(color: onSurface.withValues(alpha: _AppOpacity.textSecondary), fontSize: 12),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              OutlinedButton.icon(
+                onPressed: () => WinUtils.open(AppPaths.root),
+                icon: const Icon(Icons.folder_open_rounded, size: 17),
+                label: const Text('OPEN DATA FOLDER'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _exportSettings,
+                icon: const Icon(Icons.download_rounded, size: 17),
+                label: const Text('EXPORT SETTINGS'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _clearAppCache,
+                icon: const Icon(Icons.cleaning_services_rounded, size: 17),
+                label: const Text('CLEAR CACHE'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _confirmDeleteData,
+            icon: const Icon(Icons.delete_sweep_rounded, size: 18),
+            label: const Text('DELETE ALL TABAME DATA'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.orangeAccent,
+              side: BorderSide(color: Colors.orangeAccent.withValues(alpha: 0.3)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          if (appOwnsUninstall) ...<Widget>[
+            const SizedBox(height: 16),
+            SizedBox(
+              key: _uninstallKey,
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _showUninstallConfirmation(accent, onSurface),
+                icon: const Icon(Icons.delete_forever_rounded, size: 18),
+                label: const Text("UNINSTALL TABAME"),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.3)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _exportSettings() async {
+    final SaveFilePicker request = SaveFilePicker()
+      ..title = 'Export Tabame settings'
+      ..fileName = 'tabame-settings-export.json'
+      ..defaultExtension = 'json'
+      ..filterSpecification = <String, String>{'JSON files': '*.json', 'All files': '*.*'}
+      ..initialDirectory = AppPaths.root;
+    final File? destination = await FilePickerService.instance.pickSaveFile(request);
+    if (destination == null || !mounted) return;
+    try {
+      await AppDataExport.exportSettings(destination);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Secret-safe settings export created.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Settings export failed: $error')));
+    }
+  }
+
+  Future<void> _clearAppCache() async {
+    try {
+      await AppPaths.clearCache();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tabame cache cleared.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cache clear failed: $error')));
+    }
+  }
+
+  Future<void> _confirmDeleteData() async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Delete all Tabame data?'),
+        content: const Text(
+          'This removes settings, databases, secrets, logs, plugins, and cached data. It does not uninstall Tabame and cannot be undone.',
+        ),
+        actions: <Widget>[
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('CANCEL')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('DELETE DATA'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await AppPaths.deleteAllData();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Tabame data deleted. Restart Tabame to continue.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Data deletion failed: $error')));
+    }
   }
 
   void _showUninstallConfirmation(Color accent, Color onSurface) {
@@ -436,7 +627,9 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
   }
 
   Future<void> _handleUninstall() async {
-    await WinUtils.performUninstall();
+    final LifecycleOperationResult result = await _lifecycleService.uninstall();
+    if (!mounted || result.state == LifecycleOperationState.completed) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
   }
 
   Widget _buildWizardlyCard(Color accent, Color onSurface) {
@@ -451,8 +644,20 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
             subtitle: "Access Wizardly directly from the Windows right-click folder menu.",
             value: wizardlyContextMenu.isWizardlyInstalledInContextMenu(),
             onChanged: (bool value) async {
+              await NativeIntegrationCoordinator.instance.setConsent(
+                NativeIntegrationId.contextMenu,
+                value,
+              );
+              if (value && !NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.contextMenu)) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Context-menu integration is unavailable in this profile.')),
+                  );
+                }
+                return;
+              }
               wizardlyContextMenu.toggleWizardlyToContextMenu();
-              setState(() {});
+              if (mounted) setState(() {});
             },
           ),
         ],
@@ -777,7 +982,8 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
     required String title,
     required String subtitle,
     required bool value,
-    required ValueChanged<bool> onChanged,
+    required ValueChanged<bool>? onChanged,
+    bool enabled = true,
     Widget? trailing,
   }) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
@@ -808,7 +1014,7 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
             trailing,
           ],
           const SizedBox(width: 10),
-          MiniToggleSwitch(value: value, onChanged: onChanged),
+          MiniToggleSwitch(value: value, onChanged: enabled ? onChanged : null),
         ],
       ),
     );
@@ -849,25 +1055,14 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
     );
   }
 
-  Widget _markdownCard(Color onSurface, String data, Function({String? s, String? s2, String? s3}) onTap) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: onSurface.withValues(alpha: _AppOpacity.subtle)),
-      ),
-      child: MarkdownBody(
-        shrinkWrap: true,
-        data: data,
-        onTapLink: (String s, String? s2, String s3) => onTap(s: s, s2: s2, s3: s3),
-      ),
-    );
-  }
-
   Future<void> _checkForUpdates() async {
     final int r = await Boxes.checkForUpdates(autoInstall: false);
+    if (r == -2) {
+      updateResponse = "Updates are managed by the installer.";
+      showUpdateButtons = false;
+      setState(() {});
+      return;
+    }
     if (r == -1) {
       updateResponse = "Failed to fetch updates.";
       showUpdateButtons = false;

@@ -8,6 +8,7 @@ import '../../models/win32/keys.dart';
 import '../../models/win32/mixed.dart';
 import '../input_service.dart';
 import '../platform_models.dart';
+import '../../services/native_integration_coordinator.dart';
 import 'win32_api.dart';
 
 /// Windows implementation of the neutral input contract.
@@ -53,12 +54,18 @@ class WindowsInputService extends InputService {
   @override
   Future<bool> setCursorPosition(Point<int> position) async {
     if (!isAvailable) return false;
+    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.inputInjection)) {
+      return false;
+    }
     return SetCursorPos(position.x, position.y) != 0;
   }
 
   @override
   Future<bool> injectKeySequence(String sequence) async {
     if (!isAvailable || sequence.isEmpty) return false;
+    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.inputInjection)) {
+      return false;
+    }
     WinKeys.safeSendHotkey(() {
       WinKeys.send(sequence);
     });
@@ -69,6 +76,9 @@ class WindowsInputService extends InputService {
   Future<bool> injectClick(
       {required Point<int> position, PlatformMouseButton button = PlatformMouseButton.left}) async {
     if (!isAvailable) return false;
+    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.inputInjection)) {
+      return false;
+    }
     await setCursorPosition(position);
     final String key = switch (button) {
       PlatformMouseButton.left => '{LMB}',

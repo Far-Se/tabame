@@ -3,6 +3,7 @@ import 'dart:async';
 import '../models/clipboard_history.dart';
 import '../platform/clipboard_service.dart';
 import '../platform/platform_models.dart';
+import 'native_integration_coordinator.dart';
 
 /// Owns clipboard watcher lifecycle independently from any one QuickMenu page.
 ///
@@ -26,13 +27,31 @@ class ClipboardHistoryCoordinator {
   Future<bool> _start() async {
     if (_subscription != null) return ClipboardService.instance.isMonitoringAvailable;
 
+    final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
+    if (!ClipboardHistoryStore.enabled || !integrations.canStart(NativeIntegrationId.clipboardHistory)) {
+      integrations.reportDisabled(
+        NativeIntegrationId.clipboardHistory,
+        reason: integrations.denialReason(NativeIntegrationId.clipboardHistory) ??
+            'Clipboard history is paused until you enable it.',
+        reducedMode: true,
+      );
+      return false;
+    }
+
     final bool started = await ClipboardService.instance.start();
-    if (!started) return false;
+    if (!started) {
+      integrations.reportUnavailable(
+        NativeIntegrationId.clipboardHistory,
+        reason: ClipboardService.instance.unavailableReason,
+      );
+      return false;
+    }
 
     _subscription = ClipboardService.instance.changes.listen(
       (PlatformClipboardText change) => unawaited(ClipboardHistoryStore.recordClipboardChange(change)),
       onError: (_) {},
     );
+    integrations.reportRunning(NativeIntegrationId.clipboardHistory);
     return true;
   }
 
@@ -41,5 +60,10 @@ class ClipboardHistoryCoordinator {
     await _subscription?.cancel();
     _subscription = null;
     await ClipboardService.instance.stop();
+    NativeIntegrationCoordinator.instance.reportDisabled(
+      NativeIntegrationId.clipboardHistory,
+      reason: 'Clipboard history monitoring is paused.',
+      reducedMode: true,
+    );
   }
 }

@@ -12,6 +12,7 @@ import '../../../pages/launcher/plugins/plugin_registry.dart';
 import '../../../platform/app_paths.dart';
 import '../../../platform/file_picker_service.dart';
 import '../../../services/browser_bridge_service.dart';
+import '../../../services/extension_policy.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 import '../../widgets/windows_scroll.dart';
@@ -101,6 +102,8 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   String _pluginDirectoryStatus = '';
   bool _pluginDirectoryStatusError = false;
 
+  ExtensionPolicy get _policy => ExtensionPolicy.current;
+
   @override
   void dispose() {
     _installedSearchController.dispose();
@@ -123,7 +126,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   }
 
   Future<void> _changePluginDirectory() async {
-    if (_pluginDirectoryBusy) return;
+    if (!_policy.canEditLocalPluginConfiguration || _pluginDirectoryBusy) return;
 
     final Directory currentDirectory = Directory(AppPaths.pluginsDirectory);
     final DirectoryPicker picker = DirectoryPicker()
@@ -149,6 +152,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   }
 
   Future<void> _toggle(PluginManifest manifest, bool enabled) async {
+    if (!_policy.canEditLocalPluginConfiguration) return;
     setState(() => _busyId = manifest.id);
     await PluginRegistry.setEnabled(manifest, enabled);
     if (!mounted) return;
@@ -156,6 +160,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   }
 
   Future<void> _editKeyword(PluginManifest manifest) async {
+    if (!_policy.canEditLocalPluginConfiguration) return;
     final Set<String> occupiedKeywords = PluginRegistry.manifests
         .where((PluginManifest other) => other.directory != manifest.directory)
         .map((PluginManifest other) => other.keywordLower)
@@ -182,7 +187,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   }
 
   Future<void> _loadGallery({bool force = false}) async {
-    if (_galleryLoading) return;
+    if (!_policy.canFetchPluginGallery || _galleryLoading) return;
     setState(() {
       _galleryLoading = true;
       _galleryError = '';
@@ -205,7 +210,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   }
 
   Future<void> _install(PluginGalleryEntry entry) async {
-    if (_installingId != null) return;
+    if (!_policy.canInstallRemotePlugins || _installingId != null) return;
     setState(() {
       _installingId = entry.id;
       _installStatus = '';
@@ -267,34 +272,86 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   Widget build(BuildContext context) {
     final bool gallery = _mode == _PanelMode.gallery;
     final bool makeYourOwn = _mode == _PanelMode.makeYourOwn;
+    final bool pluginsDisabled = !_policy.canExecutePlugins;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: C.start,
       children: <Widget>[
         PanelHeader(
-          title: makeYourOwn ? "Make Your Own Plugin" : (gallery ? "Plugin Gallery" : "Launcher Plugins"),
-          icon:
-              makeYourOwn ? Icons.construction_rounded : (gallery ? Icons.storefront_rounded : Icons.extension_rounded),
-          buttonIcon: makeYourOwn
+          title: pluginsDisabled
+              ? "Launcher Plugins"
+              : (makeYourOwn ? "Make Your Own Plugin" : (gallery ? "Plugin Gallery" : "Launcher Plugins")),
+          icon: pluginsDisabled
+              ? Icons.extension_off_outlined
+              : (makeYourOwn
+                  ? Icons.construction_rounded
+                  : (gallery ? Icons.storefront_rounded : Icons.extension_rounded)),
+          buttonIcon: pluginsDisabled
               ? null
-              : ((gallery ? _galleryLoading : _reloading) ? Icons.hourglass_bottom_rounded : Icons.refresh_rounded),
-          buttonTooltip: makeYourOwn ? null : (gallery ? "Refresh gallery" : "Reload plugins"),
-          buttonPressed: makeYourOwn
+              : (makeYourOwn
+                  ? null
+                  : ((gallery ? _galleryLoading : _reloading)
+                      ? Icons.hourglass_bottom_rounded
+                      : Icons.refresh_rounded)),
+          buttonTooltip:
+              pluginsDisabled ? null : (makeYourOwn ? null : (gallery ? "Refresh gallery" : "Reload plugins")),
+          buttonPressed: pluginsDisabled
               ? null
-              : (gallery ? (_galleryLoading ? null : () => _loadGallery(force: true)) : (_reloading ? null : _reload)),
+              : (makeYourOwn
+                  ? null
+                  : (gallery
+                      ? (_galleryLoading ? null : () => _loadGallery(force: true))
+                      : (_reloading ? null : _reload))),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-          child: _buildModeRail(),
-        ),
+        if (!pluginsDisabled)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+            child: _buildModeRail(),
+          ),
         Flexible(
           child: Material(
             type: MaterialType.transparency,
-            child: makeYourOwn ? _buildMakeYourOwn() : (gallery ? _buildGallery() : _buildInstalled()),
+            child: pluginsDisabled
+                ? _buildDisabled()
+                : (makeYourOwn ? _buildMakeYourOwn() : (gallery ? _buildGallery() : _buildInstalled())),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDisabled() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.extension_off_outlined, size: 44, color: Design.text.withAlpha(70)),
+            const SizedBox(height: 14),
+            Text(
+              'Extensions unavailable',
+              style: TextStyle(
+                  fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700, color: Design.text.withAlpha(190)),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _policy.pluginDisabledMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(125), height: 1.4),
+            ),
+            if (PluginRegistry.manifests.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 10),
+              Text(
+                '${PluginRegistry.manifests.length} existing plugin manifest(s) were preserved but will not run.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(105)),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -921,6 +978,11 @@ class _BrowserBridgeCard extends StatelessWidget {
             ),
           BrowserBridgePhase.error => (
               status.error.isEmpty ? 'Could not start the connector' : status.error,
+              const Color(0xFFC86464),
+              Icons.error_outline_rounded,
+            ),
+          BrowserBridgePhase.blocked => (
+              'Browser Bridge Blocked by Privacy ${status.error}',
               const Color(0xFFC86464),
               Icons.error_outline_rounded,
             ),

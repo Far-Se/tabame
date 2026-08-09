@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import '../platform/app_paths.dart';
 import '../platform/clipboard_service.dart';
 import '../platform/platform_models.dart';
+import '../services/native_integration_coordinator.dart';
 import 'classes/save_settings.dart';
 
 enum ClipboardHistoryType {
@@ -153,7 +154,9 @@ class ClipboardHistoryStore {
   /// Storing hashes instead of full entries keeps RAM usage negligible.
   static final List<String> _recentCache = <String>[];
   static bool _recentCacheLoaded = false;
-  static bool _fallbackEnabled = true;
+  // A missing setting is treated as paused. First-run initialization also
+  // writes this value explicitly so monitoring never starts by accident.
+  static bool _fallbackEnabled = false;
   static int _fallbackCacheDays = defaultCacheDays;
 
   static bool get enabled => _readPersistedBool(enabledKey) ?? _fallbackEnabled;
@@ -169,6 +172,10 @@ class ClipboardHistoryStore {
 
   static Future<void> setEnabled(bool value) async {
     _fallbackEnabled = value;
+    await NativeIntegrationCoordinator.instance.setConsent(
+      NativeIntegrationId.clipboardHistory,
+      value,
+    );
     try {
       final SaveSettings settings = await SaveSettings.getInstance();
       await settings.setBool(enabledKey, value);
@@ -847,7 +854,7 @@ class ClipboardHistoryStore {
     _recording = false;
     _recentCache.clear();
     _recentCacheLoaded = false;
-    _fallbackEnabled = true;
+    _fallbackEnabled = false;
     _fallbackCacheDays = defaultCacheDays;
   }
 }

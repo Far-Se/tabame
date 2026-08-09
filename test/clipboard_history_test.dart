@@ -28,6 +28,7 @@ void main() {
       migrateLegacyData: false,
     );
     ClipboardHistoryStore.resetForTesting();
+    await ClipboardHistoryStore.setEnabled(true);
     service = _FakeClipboardService();
     ClipboardService.register(service);
     await ClipboardHistoryCoordinator.instance.stop();

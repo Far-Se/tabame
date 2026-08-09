@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
+import '../../../services/native_integration_coordinator.dart';
 import '../../../services/rewindly_service.dart';
 import '../../widgets/mini_switch.dart';
 import '../../widgets/modal_button.dart';
@@ -50,8 +51,23 @@ class _RewindlyPanelState extends State<RewindlyPanel> {
       _statusMessage = null;
     });
     await Boxes.updateSettings("rewindlyEnabled", enable);
+    await NativeIntegrationCoordinator.instance.setConsent(
+      NativeIntegrationId.screenRecording,
+      enable,
+    );
     if (enable) {
-      await _service.start();
+      final bool started = await _service.start();
+      if (!started) {
+        user.rewindlyEnabled = false;
+        await Boxes.updateSettings("rewindlyEnabled", false);
+        await NativeIntegrationCoordinator.instance.revokeConsent(NativeIntegrationId.screenRecording);
+        if (mounted) {
+          setState(() {
+            _statusIsError = true;
+            _statusMessage = 'Screen recording is unavailable; no background capture was started.';
+          });
+        }
+      }
     } else {
       await _service.stop();
     }

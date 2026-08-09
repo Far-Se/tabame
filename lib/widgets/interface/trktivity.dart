@@ -13,6 +13,7 @@ import '../../models/classes/boxes.dart';
 import '../../platform/app_paths.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win_utils.dart';
+import '../../services/native_integration_coordinator.dart';
 import '../widgets/checkbox_widget.dart';
 import '../widgets/info_widget.dart';
 import 'trktivity/trktivity_activity_chart.dart';
@@ -318,11 +319,27 @@ class TrktivityPageState extends State<TrktivityPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   CheckboxListTile(
-                    onChanged: (bool? e) => setState(() {
-                      user.trktivityEnabled = !user.trktivityEnabled;
-                      Boxes.updateSettings("trktivityEnabled", user.trktivityEnabled);
-                      enableTrcktivity(user.trktivityEnabled);
-                    }),
+                    onChanged: (bool? e) async {
+                      final bool enabled = !user.trktivityEnabled;
+                      await NativeIntegrationCoordinator.instance.setConsent(
+                        NativeIntegrationId.backgroundCapture,
+                        enabled,
+                      );
+                      if (enabled &&
+                          !NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.backgroundCapture)) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Activity capture is unavailable in this profile.')),
+                          );
+                        }
+                        return;
+                      }
+                      setState(() {
+                        user.trktivityEnabled = enabled;
+                        Boxes.updateSettings("trktivityEnabled", enabled);
+                        enableTrcktivity(enabled);
+                      });
+                    },
                     controlAffinity: ListTileControlAffinity.leading,
                     value: user.trktivityEnabled,
                     title: Text(

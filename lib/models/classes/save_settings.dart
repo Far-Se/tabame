@@ -129,7 +129,9 @@ class SavedStore {
   File? _localDataFilePath;
   String? _fileName;
   String get fileName {
-    _fileName ??= AppPaths.settingsPath('settings.json');
+    // Reads may fall back to the legacy root, but every write is directed to
+    // the canonical provider root.
+    _fileName ??= AppPaths.settingsPath('settings.json', forWrite: true);
     return _fileName!;
   }
 
@@ -161,7 +163,7 @@ class SavedStore {
     final String writablePath = AppPaths.settingsPath('settings.json', forWrite: true);
     final File readableFile = File(readablePath);
     final File writableFile = File(writablePath);
-    String activePath = writablePath;
+
     if (readablePath != writablePath && readableFile.existsSync() && !writableFile.existsSync()) {
       try {
         await writableFile.parent.create(recursive: true);
@@ -172,12 +174,12 @@ class SavedStore {
           await legacyBackup.copy(writableBackup.path);
         }
       } catch (_) {
-        // The read fallback remains usable if a legacy file is locked.
-        activePath = readablePath;
+        // Keep the canonical path as the write target. Reads below still use
+        // the legacy file until the next retry can copy it.
       }
     }
-    _fileName = activePath;
-    return _localDataFilePath = File(activePath);
+    _fileName = writablePath;
+    return _localDataFilePath = File(writablePath);
   }
 
   void clearCache() => _cachedPreferences = null;
@@ -187,8 +189,15 @@ class SavedStore {
     }
     Map<String, Object> preferences = <String, Object>{};
     final File? localDataFile = await _getLocalDataFile();
-    if (localDataFile != null && localDataFile.existsSync()) {
-      final String stringMap = _safeRead(localDataFile);
+    File? readableDataFile = localDataFile;
+    if (readableDataFile != null && !readableDataFile.existsSync()) {
+      final File legacyDataFile = File(AppPaths.settingsPath('settings.json'));
+      if (legacyDataFile.path != readableDataFile.path && legacyDataFile.existsSync()) {
+        readableDataFile = legacyDataFile;
+      }
+    }
+    if (readableDataFile != null && readableDataFile.existsSync()) {
+      final String stringMap = _safeRead(readableDataFile);
       Map<String, Object>? parsed = _tryDecode(stringMap);
       if (parsed != null) {
         preferences = parsed;
@@ -232,14 +241,16 @@ class SavedStore {
     if (SaveSettings.suppressWrites) return true;
     try {
       final File? localDataFile = await _getLocalDataFile();
-      if (localDataFile == null) {
-        return false;
-      }
-      if (!localDataFile.existsSync()) {
-        localDataFile.createSync(recursive: true);
-      }
+      if (localDataFile == null) return false;
       final String stringMap = json.encode(preferences);
-      localDataFile.writeAsStringSync(stringMap);
+      final File temporaryFile = File('${localDataFile.path}.tmp');
+      await temporaryFile.parent.create(recursive: true);
+      await temporaryFile.writeAsString(stringMap, flush: true);
+      if (localDataFile.existsSync()) {
+        await localDataFile.copy('$fileName.bk');
+        await localDataFile.delete();
+      }
+      await temporaryFile.rename(localDataFile.path);
     } catch (e) {
       return false;
     }

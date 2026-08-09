@@ -8,7 +8,7 @@ import '../../../models/classes/boxes/quick_menu_box.dart';
 import '../../../models/clipboard_history.dart';
 import '../../../models/settings.dart';
 import '../../../platform/clipboard_service.dart';
-import '../../../platform/platform_capabilities.dart';
+import '../../../services/clipboard_history_coordinator.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/mini_switch.dart';
 import '../../widgets/mix_widgets.dart';
@@ -22,7 +22,8 @@ class ClipboardHistoryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!PlatformCapabilities.current.clipboardMonitoring) return const SizedBox.shrink();
+    // Keep the panel visible in reduced mode so the user can see why monitoring
+    // is paused and explicitly revoke or grant consent.
     return ModalButton(
       actionName: "Clipboard History",
       icon: const Icon(Icons.content_paste_search_rounded),
@@ -141,9 +142,19 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
 
   Future<void> _toggleEnabled(bool value) async {
     await ClipboardHistoryStore.setEnabled(value);
+    bool effective = value;
+    if (value) {
+      effective = await ClipboardHistoryCoordinator.instance.start();
+      if (!effective) {
+        await ClipboardHistoryStore.setEnabled(false);
+      }
+    } else {
+      await ClipboardHistoryCoordinator.instance.stop();
+    }
     if (mounted) {
       setState(() {
-        _enabled = value;
+        _enabled = effective;
+        if (!effective && value) _error = ClipboardService.instance.unavailableReason;
       });
     }
   }

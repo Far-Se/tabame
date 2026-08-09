@@ -15,9 +15,11 @@ import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
 
 import '../platform/audio_system_service.dart';
+import '../platform/distribution_profile.dart';
 import '../platform/monitor_service.dart';
 import '../platform/quick_snap_service.dart';
 import '../platform/windows/tabamewin32_api.dart';
+import '../services/native_integration_coordinator.dart';
 import '../services/rewindly_service.dart';
 import 'classes/boxes.dart';
 import 'classes/saved_maps.dart';
@@ -217,7 +219,6 @@ class Settings {
   bool trktivityEnabled = false;
   bool taskManagerStats = false;
   bool quickClickEnabled = false;
-  bool runAsAdministrator = false;
   bool launcherFullPopups = false;
   bool trayBarAlternative = false;
   bool _hideTabameOnUnfocus = true;
@@ -1467,11 +1468,15 @@ Future<void> registerAll() async {
     if (QuickMenuFunctions.isQuickMenuVisible) checkThemeChange();
   });
   Timer.periodic(const Duration(seconds: 5), (Timer timer) {
-    if (!user.hideDesktopFiles) return;
+    if (user.page != TPage.quickmenu || !user.hideDesktopFiles) return;
     WinUtils.toggleDesktopFiles(visible: false);
   });
   //register
   await Boxes.registerBoxes(justLoad: Globals.currentPage == Pages.interface ? true : false);
+  NativeIntegrationCoordinator.configure(
+    profile: DistributionProfileConfig.current,
+    consentStore: SaveSettingsNativeIntegrationConsentStore(Boxes.pref),
+  );
   Debug.add("Registered: Boxes");
   //Schedule Theme
   user.setScheduleThemeChange();
@@ -1479,7 +1484,17 @@ Future<void> registerAll() async {
     SolarCalculator.updateSolarData();
   }
   Debug.add("Registered: ScheduleTheme");
-  await QuickSnapService.instance.enable();
+  final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
+  if (user.page == TPage.quickmenu && integrations.canStart(NativeIntegrationId.quickSnap)) {
+    await QuickSnapService.instance.enable();
+    integrations.reportRunning(NativeIntegrationId.quickSnap);
+  } else if (user.page == TPage.quickmenu) {
+    integrations.reportDisabled(
+      NativeIntegrationId.quickSnap,
+      reason: 'Drag-triggered QuickSnap is disabled; manual snapping remains available.',
+      reducedMode: true,
+    );
+  }
   //
 
   await AudioSystemService.instance.initialize();
@@ -1487,7 +1502,7 @@ Future<void> registerAll() async {
 
   // Rewindly background DVR — main/QuickMenu process only, never the Interface
   // settings window (which runs as a separate process).
-  if (Globals.currentPage != Pages.interface) {
+  if (user.page != TPage.interface && !user.args.contains('-interface')) {
     RewindlyService.instance.init();
     Debug.add("Registered: Rewindly");
   }

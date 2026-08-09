@@ -44,9 +44,9 @@ const List<_FaqItem> _faqItems = <_FaqItem>[
   _FaqItem(
       question: "Why does Tabame ask for administrator privileges?",
       answer:
-          """Some features — such as closing protected system windows, forcing focus on elevated apps — require elevated permissions. You can enable "Run as Administrator" in Settings → Configuration. The app needs to be restarted."""),
+          """Some actions — such as changing protected context-menu entries or launching a selected app elevated — may require UAC. Tabame normally runs at standard user or medium integrity and never elevates at startup. Use Settings → Advanced & Security → Restart Elevated for This Session when you explicitly need it."""),
   _FaqItem(question: "How do I make Tabame start with Windows?", answer: """
-Go to Settings → Configuration and enable "Launch at Startup". Tabame will register a start-up shortcut in your shell startup folder automatically."""),
+Go to Settings → Configuration and enable "Launch at Startup". Tabame registers a per-user startup shortcut without requesting administrator privileges or changing the elevation state."""),
   _FaqItem(
       question: "Where are my settings stored?",
       answer:
@@ -70,7 +70,7 @@ Go to Settings → Configuration and enable "Launch at Startup". Tabame will reg
   _FaqItem(
       question: "Tabame isn't responding to my hotkey. What should I try?",
       answer:
-          """First make sure no other application has registered the same shortcut. If you enabled "Run as Administrator" at startup, Tabame must also be running as admin to intercept hotkeys from elevated windows. Finally, try restarting Tabame from the system tray."""),
+          """First make sure no other application has registered the same shortcut. Tabame normally runs without elevation, so actions targeting elevated windows may be unavailable until you explicitly use Settings → Advanced & Security → Restart Elevated for This Session. Finally, try restarting Tabame from the system tray."""),
   _FaqItem(
       question: "How can I report a bug or request a feature?",
       answer:

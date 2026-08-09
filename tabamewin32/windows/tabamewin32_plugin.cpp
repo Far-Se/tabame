@@ -3,6 +3,9 @@
 
 #include <windows.h>
 
+#include <winrt/Windows.ApplicationModel.h>
+#include <winrt/Windows.Storage.h>
+
 #include "include/encoding.h"
 #include <ShellAPI.h>
 #include <iostream>
@@ -805,6 +808,96 @@ void SetStartOnSystemStartupH(Tabamewin32Plugin *, const MethodCall &call,
   OK(result, std::string(""));
 }
 
+void GetStartupTaskStateH(Tabamewin32Plugin *, const MethodCall &,
+                          MethodResult result) {
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+  std::thread([shared_result]() {
+    bool apartmentInitialized = false;
+    try {
+      winrt::init_apartment(winrt::apartment_type::multi_threaded);
+      apartmentInitialized = true;
+      const auto task =
+          winrt::Windows::ApplicationModel::StartupTask::GetAsync(
+              L"TabameStartupTask")
+              .get();
+      shared_result->Success(
+          EVal(static_cast<int>(task.State())));
+    } catch (const winrt::hresult_error &error) {
+      shared_result->Error(
+          "STARTUP_TASK_ERROR",
+          Encoding::WideToUtf8(
+              std::wstring(error.message().c_str(), error.message().size())));
+    } catch (...) {
+      shared_result->Error("STARTUP_TASK_ERROR",
+                           "Windows StartupTask is unavailable.");
+    }
+    if (apartmentInitialized)
+      winrt::uninit_apartment();
+  }).detach();
+}
+
+void RequestEnableStartupTaskH(Tabamewin32Plugin *, const MethodCall &,
+                               MethodResult result) {
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+  std::thread([shared_result]() {
+    bool apartmentInitialized = false;
+    try {
+      winrt::init_apartment(winrt::apartment_type::multi_threaded);
+      apartmentInitialized = true;
+      const auto task =
+          winrt::Windows::ApplicationModel::StartupTask::GetAsync(
+              L"TabameStartupTask")
+              .get();
+      const auto state = task.RequestEnableAsync().get();
+      shared_result->Success(EVal(static_cast<int>(state)));
+    } catch (const winrt::hresult_error &error) {
+      shared_result->Error(
+          "STARTUP_TASK_ERROR",
+          Encoding::WideToUtf8(
+              std::wstring(error.message().c_str(), error.message().size())));
+    } catch (...) {
+      shared_result->Error("STARTUP_TASK_ERROR",
+                           "Windows StartupTask could not be enabled.");
+    }
+    if (apartmentInitialized)
+      winrt::uninit_apartment();
+  }).detach();
+}
+
+void DisableStartupTaskH(Tabamewin32Plugin *, const MethodCall &,
+                         MethodResult result) {
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+  std::thread([shared_result]() {
+    bool apartmentInitialized = false;
+    try {
+      winrt::init_apartment(winrt::apartment_type::multi_threaded);
+      apartmentInitialized = true;
+      const auto task =
+          winrt::Windows::ApplicationModel::StartupTask::GetAsync(
+              L"TabameStartupTask")
+              .get();
+      task.Disable();
+      shared_result->Success(EVal(static_cast<int>(task.State())));
+    } catch (const winrt::hresult_error &error) {
+      shared_result->Error(
+          "STARTUP_TASK_ERROR",
+          Encoding::WideToUtf8(
+              std::wstring(error.message().c_str(), error.message().size())));
+    } catch (...) {
+      shared_result->Error("STARTUP_TASK_ERROR",
+                           "Windows StartupTask could not be disabled.");
+    }
+    if (apartmentInitialized)
+      winrt::uninit_apartment();
+  }).detach();
+}
+
 void CreateShortcutH(Tabamewin32Plugin *, const MethodCall &call,
                      MethodResult result) {
   auto &a = Args::Map(call);
@@ -1592,6 +1685,44 @@ void StopClipboardWatcherH(Tabamewin32Plugin *self, const MethodCall &,
   OK(result, true);
 }
 
+void GetApplicationDataPathsH(Tabamewin32Plugin *, const MethodCall &,
+                              MethodResult result) {
+  auto shared_result =
+      std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>(
+          std::move(result));
+
+  std::thread([shared_result]() {
+    bool apartmentInitialized = false;
+    try {
+      winrt::init_apartment(winrt::apartment_type::multi_threaded);
+      apartmentInitialized = true;
+      const auto applicationData =
+          winrt::Windows::Storage::ApplicationData::Current();
+      const auto localFolder = applicationData.LocalFolder().Path();
+      const auto localCacheFolder = applicationData.LocalCacheFolder().Path();
+      const auto temporaryFolder = applicationData.TemporaryFolder().Path();
+      EMap paths;
+      paths[EVal("localFolder")] = EVal(Encoding::WideToUtf8(
+          std::wstring(localFolder.c_str(), localFolder.size())));
+      paths[EVal("localCacheFolder")] = EVal(Encoding::WideToUtf8(
+          std::wstring(localCacheFolder.c_str(), localCacheFolder.size())));
+      paths[EVal("temporaryFolder")] = EVal(Encoding::WideToUtf8(
+          std::wstring(temporaryFolder.c_str(), temporaryFolder.size())));
+      shared_result->Success(EVal(paths));
+    } catch (const winrt::hresult_error &error) {
+      shared_result->Error(
+          "APPLICATION_DATA_ERROR",
+          Encoding::WideToUtf8(
+              std::wstring(error.message().c_str(), error.message().size())));
+    } catch (...) {
+      shared_result->Error("APPLICATION_DATA_ERROR",
+                           "Windows.Storage.ApplicationData is unavailable.");
+    }
+    if (apartmentInitialized)
+      winrt::uninit_apartment();
+  }).detach();
+}
+
 void ClipboardExtendedH(Tabamewin32Plugin *, const MethodCall &call,
                         MethodResult result) {
   ClipboardExtended::HandleMethodCall(call, std::move(result));
@@ -1851,6 +1982,9 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"convertLinkToPath", Handlers::ConvertLinkToPathH},
       // Shortcuts / Startup
       {"setStartOnSystemStartup", Handlers::SetStartOnSystemStartupH},
+      {"getStartupTaskState", Handlers::GetStartupTaskStateH},
+      {"requestEnableStartupTask", Handlers::RequestEnableStartupTaskH},
+      {"disableStartupTask", Handlers::DisableStartupTaskH},
       {"createShortcut", Handlers::CreateShortcutH},
       {"setStartOnStartupAsAdmin", Handlers::SetStartOnStartupAsAdminH},
       // System
@@ -1920,6 +2054,7 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"getScreenRecordingStatus", Handlers::GetScreenRecordingStatusH},
       {"concatScreenRecordings", Handlers::ConcatScreenRecordingsH},
       {"getChangedFolders", Handlers::GetChangedFoldersH},
+      {"getApplicationDataPaths", Handlers::GetApplicationDataPathsH},
       {"addFoldersToWatchlist", Handlers::AddFoldersToWatchlistH},
       {"removeFoldersFromWatchlist", Handlers::RemoveFoldersFromWatchlistH},
       {"startClipboardWatcher", Handlers::StartClipboardWatcherH},

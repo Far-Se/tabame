@@ -9,6 +9,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
+import '../../../services/extension_policy.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/mouse_scroll_widget.dart';
 import '../../widgets/panel_header.dart';
@@ -161,6 +162,14 @@ class CliBookWidgetState extends State<CliBookWidget> {
 
   Future<void> _runSelectedItem({bool pickFolder = false}) async {
     if (runSelected == -1 || runCategorySelected == -1) return;
+    if (!ExtensionPolicy.current.canRunUserCommandTemplates) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ExtensionPolicy.current.userCommandDisabledMessage)),
+        );
+      }
+      return;
+    }
     final String resolvedCommand = _resolveVariables(cliBook[runCategorySelected].items[runSelected].value);
     if (resolvedCommand.trim().isEmpty) return;
 
@@ -172,7 +181,12 @@ class CliBookWidgetState extends State<CliBookWidget> {
       workingDirectory = dir.path;
     }
 
-    WinUtils.runPowerShellDetachedVisible(resolvedCommand, workingDirectory: workingDirectory, keepOpen: true);
+    WinUtils.runPowerShellDetachedVisible(
+      resolvedCommand,
+      workingDirectory: workingDirectory,
+      keepOpen: true,
+      userProvided: true,
+    );
   }
 
   Widget _buildInputDecorationField({

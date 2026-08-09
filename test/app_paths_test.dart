@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:tabame/logic/error_handler.dart';
+import 'package:tabame/platform/app_data_locations.dart';
 import 'package:tabame/platform/app_paths.dart';
+import 'package:tabame/platform/distribution_profile.dart';
 
 void main() {
   late Directory workspace;
@@ -49,6 +51,88 @@ void main() {
     expect(File(p.join(legacyRoot.path, 'settings', 'settings.json')).existsSync(), isTrue);
     expect(File(p.join(legacyRoot.path, 'file_index.db-wal')).existsSync(), isTrue);
     expect(AppPaths.temporaryPath('capture.png'), p.join(hostTemp.path, 'capture.png'));
+    expect(AppPaths.migration.status, AppDataMigrationStatus.completed);
+    expect(AppPaths.migration.version, 1);
+    expect(File(p.join(canonicalRoot.path, '.tabame-data-migration.json')).existsSync(), isTrue);
+  });
+
+  test('retries an incomplete migration without deleting legacy data', () async {
+    AppPaths.resetForTesting();
+    final String retryRoot = p.join(workspace.path, 'retry', 'Tabame');
+    int attempts = 0;
+    await AppPaths.initialize(
+      applicationSupportDirectory: () async => Directory(p.join(workspace.path, 'retry-support')),
+      applicationCacheDirectory: () async => Directory(p.join(workspace.path, 'retry-cache')),
+      temporaryDirectory: () async => hostTemp,
+      rootOverride: retryRoot,
+      legacyRootOverride: legacyRoot.path,
+      copyFile: (File source, File destination) async {
+        attempts++;
+        if (attempts == 1) throw const FileSystemException('simulated migration failure');
+        await source.copy(destination.path);
+      },
+    );
+
+    expect(AppPaths.migration.status, AppDataMigrationStatus.incomplete);
+    expect(File(p.join(legacyRoot.path, 'settings', 'settings.json')).existsSync(), isTrue);
+
+    AppPaths.resetForTesting();
+    await AppPaths.initialize(
+      applicationSupportDirectory: () async => Directory(p.join(workspace.path, 'retry-support')),
+      applicationCacheDirectory: () async => Directory(p.join(workspace.path, 'retry-cache')),
+      temporaryDirectory: () async => hostTemp,
+      rootOverride: retryRoot,
+      legacyRootOverride: legacyRoot.path,
+    );
+
+    expect(AppPaths.migration.status, AppDataMigrationStatus.completed);
+    expect(File(p.join(retryRoot, 'settings', 'settings.json')).readAsStringSync(), '{"legacy":true}');
+    expect(File(p.join(legacyRoot.path, 'file_index.db-shm')).existsSync(), isTrue);
+  });
+
+  test('preserves canonical files during an upgrade retry', () async {
+    AppPaths.resetForTesting();
+    final String upgradeRoot = p.join(workspace.path, 'upgrade', 'Tabame');
+    final File canonicalSettings = File(p.join(upgradeRoot, 'settings', 'settings.json'))..createSync(recursive: true);
+    canonicalSettings.writeAsStringSync('{"canonical":true}');
+
+    await AppPaths.initialize(
+      applicationSupportDirectory: () async => Directory(p.join(workspace.path, 'upgrade-support')),
+      applicationCacheDirectory: () async => Directory(p.join(workspace.path, 'upgrade-cache')),
+      temporaryDirectory: () async => hostTemp,
+      rootOverride: upgradeRoot,
+      legacyRootOverride: legacyRoot.path,
+    );
+
+    expect(canonicalSettings.readAsStringSync(), '{"canonical":true}');
+    expect(File(p.join(upgradeRoot, 'file_index.db-wal')).existsSync(), isTrue);
+  });
+
+  test('uses package-local folders for an injected MSIX provider on Windows', () async {
+    if (!Platform.isWindows) return;
+    AppPaths.resetForTesting();
+    final Directory packageLocal = Directory(p.join(workspace.path, 'package-local'));
+    final Directory packageCache = Directory(p.join(workspace.path, 'package-cache'));
+    final Directory packageTemp = Directory(p.join(workspace.path, 'package-temp'));
+    await AppPaths.initialize(
+      profile: DistributionProfile.storeMsix,
+      applicationSupportDirectory: () async => Directory(p.join(workspace.path, 'unused-support')),
+      applicationCacheDirectory: () async => Directory(p.join(workspace.path, 'unused-cache')),
+      temporaryDirectory: () async => hostTemp,
+      applicationDataLocations: () async => AppDataLocations(
+        localFolder: packageLocal,
+        localCacheFolder: packageCache,
+        temporaryFolder: packageTemp,
+      ),
+      rootOverride: packageLocal.path,
+      legacyRootOverride: legacyRoot.path,
+      migrateLegacyData: false,
+    );
+
+    expect(AppPaths.profile, DistributionProfile.storeMsix);
+    expect(AppPaths.root, packageLocal.path);
+    expect(AppPaths.cacheDirectory, packageCache.path);
+    expect(AppPaths.temporaryDirectory, packageTemp.path);
   });
 
   test('synchronous error handlers create a clean-install log directory', () async {

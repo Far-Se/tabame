@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../platform/audio_system_service.dart';
@@ -14,6 +16,7 @@ import '../../../models/util/quick_action_list.dart';
 import '../../../models/util/quick_actions.dart';
 import '../../../models/win32/keys.dart';
 import '../../../models/win32/win_utils.dart';
+import '../../../services/extension_policy.dart';
 
 import '../../widgets/modal_button.dart';
 import '../../widgets/mouse_scroll_widget.dart';
@@ -198,6 +201,8 @@ QuickActionMenuEntry? _buildCustomQuickActionEntry({
   required Color onSurface,
   VoidCallback? onStateChanged,
 }) {
+  final ExtensionPolicy extensionPolicy = ExtensionPolicy.current;
+  if (item.type == "Run Command" && !extensionPolicy.canRunUserCommandTemplates) return null;
   final List<String> searchTerms = <String>[item.name, item.type, item.value];
   if (item.type == "Quick Action") {
     final int actionIndex = int.tryParse(item.value) ?? 0;
@@ -276,7 +281,7 @@ QuickActionMenuEntry? _buildCustomQuickActionEntry({
       title: item.name,
       searchTerms: searchTerms,
       onExecute: () {
-        WinUtils.runPowerShell(<String>[item.value]);
+        WinUtils.runPowerShell(<String>[item.value], userProvided: true);
       },
       builder: (BuildContext context) {
         return QuickActionListItem(
@@ -284,7 +289,7 @@ QuickActionMenuEntry? _buildCustomQuickActionEntry({
           accent: accent,
           onSurface: onSurface,
           onTap: () {
-            WinUtils.runPowerShell(<String>[item.value]);
+            WinUtils.runPowerShell(<String>[item.value], userProvided: true);
           },
         );
       },
@@ -294,13 +299,13 @@ QuickActionMenuEntry? _buildCustomQuickActionEntry({
       id: "custom-$index",
       title: item.name,
       searchTerms: searchTerms,
-      onExecute: () => WinUtils.open(item.value, parseParamaters: true),
+      onExecute: () => WinUtils.open(item.value, parseParamaters: true, userProvided: true),
       builder: (BuildContext context) {
         return QuickActionListItem(
           name: item.name,
           accent: accent,
           onSurface: onSurface,
-          onTap: () => WinUtils.open(item.value, parseParamaters: true),
+          onTap: () => WinUtils.open(item.value, parseParamaters: true, userProvided: true),
         );
       },
     );
@@ -498,7 +503,7 @@ void executeQuickActionValue(int value) {
       WinUtils.moveDesktop(DesktopDirection.left);
       break;
     case 2:
-      WinUtils.toggleTaskbar();
+      unawaited(WinUtils.toggleTaskbar());
       break;
     case 3:
       AudioOrchestrator(service: AudioSystemService.instance).toggleMute(AudioDeviceType.output);
