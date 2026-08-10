@@ -464,6 +464,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       prefix: r'$',
       icon: Icons.functions_rounded,
     )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: '!',
+      caption: 'Launcher Plugins',
+      prefix: '!',
+      icon: Icons.extension_outlined,
+    )),
     const LauncherSearchResultItem.info(LauncherInfoResult(
       id: 'ctrlKInfo',
       title: 'Ctrl+K',
@@ -1193,22 +1199,29 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     return false;
   }
 
-  Future<void> _handleLauncherWindowAction() async {
-    if (Globals.isStandaloneLauncher) {
+  Future<void> _handleLauncherWindowAction({String? query, bool forceOpenInNewWindow = false}) async {
+    if (Globals.isStandaloneLauncher && !forceOpenInNewWindow) {
       await windowManager.close();
       return;
     }
     try {
       await Process.start(
         Platform.resolvedExecutable,
-        <String>['-launcher', _controller.text],
+        <String>['-launcher', query ?? _controller.text],
         mode: ProcessStartMode.detached,
         runInShell: false,
       );
-      QuickMenuFunctions.hideQuickMenu();
+      await QuickMenuFunctions.hideQuickMenu();
     } catch (_) {
       _showPluginToast('Could not open external launcher', style: 'error');
     }
+  }
+
+  Future<void> _openPluginInNewWindow(PluginManifest plugin) {
+    return _handleLauncherWindowAction(
+      query: plugin.keyword.trim(),
+      forceOpenInNewWindow: true,
+    );
   }
 
   /// Handles key events while a plugin owns the launcher. Returns
@@ -1785,7 +1798,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     // current query so it activates.
     unawaited(PluginRegistry.load().then((_) {
       if (!mounted || _activePlugin != null) return;
-      if (PluginRegistry.matchKeyword(_controller.text) != null) _onSearchChanged(_controller.text);
+      if (PluginRegistry.matchKeyword(_controller.text) != null || _controller.text.startsWith('!')) {
+        _onSearchChanged(_controller.text);
+      }
     }));
     // if (Globals.isStandaloneLauncher == true) {
     //   Future<void>.delayed(const Duration(milliseconds: 300), () {
@@ -2351,6 +2366,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     );
 
     switch (searchMode) {
+      case LauncherSearchMode.pluginsOnly:
+        _handlePluginSearch(context);
+        break;
       case LauncherSearchMode.windowsOnly:
         WindowsSearchHandler.handle(context);
         break;
@@ -3950,6 +3968,65 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         context.setResults(<LauncherSearchResultItem>[], isSearching: false);
       }
     }
+  }
+
+  void _handlePluginSearch(LauncherSearchContext context) {
+    final String query = context.normalizedQuery.trim().toLowerCase();
+    final List<PluginManifest> plugins = PluginRegistry.manifests
+        .where((PluginManifest plugin) => PluginRegistry.canExecute(plugin))
+        .where((PluginManifest plugin) => query.isEmpty || _pluginMatchesSearch(plugin, query))
+        .toList()
+      ..sort((PluginManifest a, PluginManifest b) {
+        int rank(PluginManifest plugin) {
+          if (plugin.keywordLower == query) return 0;
+          if (plugin.name.toLowerCase() == query) return 1;
+          if (plugin.keywordLower.startsWith(query)) return 2;
+          if (plugin.name.toLowerCase().startsWith(query)) return 3;
+          return 4;
+        }
+
+        final int rankComparison = rank(a).compareTo(rank(b));
+        if (rankComparison != 0) return rankComparison;
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
+
+    if (plugins.isEmpty) {
+      context.setResults(<LauncherSearchResultItem>[
+        LauncherSearchResultItem.info(LauncherInfoResult(
+          id: query.isEmpty ? 'plugin-search-empty' : 'plugin-search-no-match:$query',
+          title: query.isEmpty ? 'No launcher plugins installed' : 'No matching plugin',
+          subtitle: query.isEmpty
+              ? 'Install or enable plugins from the Plugins manager'
+              : 'Search by plugin name, keyword, or description',
+          icon: Icons.extension_outlined,
+        )),
+      ], isSearching: false);
+      return;
+    }
+
+    context.setResults(
+      plugins
+          .map((PluginManifest plugin) => LauncherSearchResultItem.quickAction(_buildPluginQuickAction(plugin)))
+          .toList(growable: false),
+      isSearching: false,
+    );
+  }
+
+  bool _pluginMatchesSearch(PluginManifest plugin, String query) {
+    return <String>[plugin.name, plugin.keyword, plugin.description, plugin.id]
+        .any((String value) => value.toLowerCase().contains(query));
+  }
+
+  QuickActionMenuEntry _buildPluginQuickAction(PluginManifest plugin) {
+    final String description = plugin.description.trim();
+    return _buildFunctionAction(
+      id: 'plugin-window:${plugin.id}:${plugin.keywordLower}',
+      title: plugin.name,
+      subtitle: description.isEmpty ? '${plugin.keyword} · Open in new window' : '${plugin.keyword} · $description',
+      icon: PluginIcons.resolve(plugin.icon),
+      searchTerms: <String>['!', plugin.id, plugin.name, plugin.keyword, plugin.description],
+      onExecute: () => unawaited(_openPluginInNewWindow(plugin)),
+    );
   }
 
   void _handleWorkspacesSearch(LauncherSearchContext context) {

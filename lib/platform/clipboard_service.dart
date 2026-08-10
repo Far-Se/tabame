@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'platform_models.dart';
@@ -22,6 +23,9 @@ abstract class ClipboardService {
 
   /// Format capabilities are explicit so UI does not probe a native channel.
   bool get supportsRichText => false;
+
+  /// Whether the adapter can capture text directly into caller-provided files.
+  bool get supportsClipboardFileCapture => false;
   bool get supportsImages => false;
   bool get supportsFileClipboard => false;
 
@@ -32,7 +36,38 @@ abstract class ClipboardService {
   Future<PlatformClipboardContent?> readContent();
   Future<bool> writeContent(PlatformClipboardContent content);
   Future<PlatformClipboardImageInfo?> saveImageToFile(String path) async => null;
+  Future<PlatformClipboardFileCapture?> captureClipboardToFiles({
+    required String textPath,
+    required String htmlPath,
+    int previewLimit = 5000,
+  }) async =>
+      null;
   Future<Uint8List?> readImage() async => null;
+  Future<bool> writeContentFromFiles({
+    String textPath = '',
+    String htmlPath = '',
+    String imagePath = '',
+  }) async {
+    try {
+      if (imagePath.isNotEmpty) {
+        final File imageFile = File(imagePath);
+        if (!await imageFile.exists()) return false;
+        return writeContent(
+          PlatformClipboardContent(imageBytes: await imageFile.readAsBytes()),
+        );
+      }
+
+      String text = '';
+      String html = '';
+      if (textPath.isNotEmpty) text = await File(textPath).readAsString();
+      if (htmlPath.isNotEmpty) html = await File(htmlPath).readAsString();
+      if (text.isEmpty && html.isEmpty) return false;
+      return writeContent(PlatformClipboardContent(text: text, html: html));
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> writeFiles(List<String> paths) async => false;
   Future<bool> writeFile(String path) => writeFiles(<String>[path]);
   Future<bool> revealFile(String path) async => false;

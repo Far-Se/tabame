@@ -2067,6 +2067,8 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       {"clipboardExtendedPasteRichText", Handlers::ClipboardExtendedH},
       {"clipboardExtendedPasteImage", Handlers::ClipboardExtendedH},
       {"clipboardExtendedSaveImage", Handlers::ClipboardExtendedH},
+      {"clipboardExtendedCaptureTextToFiles", Handlers::ClipboardExtendedH},
+      {"clipboardExtendedCopyContentFromFiles", Handlers::ClipboardExtendedH},
       {"clipboardExtendedGetContentType", Handlers::ClipboardExtendedH},
       {"clipboardExtendedHasData", Handlers::ClipboardExtendedH},
       {"clipboardExtendedClear", Handlers::ClipboardExtendedH},
@@ -2103,9 +2105,14 @@ void Tabamewin32Plugin::RegisterWithRegistrar(
   plugin->clipboard_proc_id_ = registrar->RegisterTopLevelWindowProcDelegate(
       [](HWND, UINT message, WPARAM, LPARAM) -> std::optional<LRESULT> {
         if (message == WM_CLIPBOARDUPDATE && channel) {
+          EMap event;
+          const DWORD sequence = GetClipboardSequenceNumber();
+          if (sequence != 0) {
+            event[EVal("sequence")] = EVal(static_cast<int64_t>(sequence));
+          }
           channel->InvokeMethod(
               "ClipboardUpdate",
-              std::make_unique<flutter::EncodableValue>(true));
+              std::make_unique<flutter::EncodableValue>(event));
         }
         return std::nullopt;
       });

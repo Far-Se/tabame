@@ -15,12 +15,22 @@ import 'win32_api.dart';
 /// this bridge.
 abstract class WindowsClipboardBridge {
   bool get isAvailable;
-  Stream<void> get changes;
+  Stream<int?> get changes;
   Future<bool> start();
   Future<void> stop();
   Future<PlatformClipboardContent?> readContent();
   Future<bool> writeContent(PlatformClipboardContent content);
   Future<PlatformClipboardImageInfo?> saveImageToFile(String path);
+  Future<PlatformClipboardFileCapture?> captureClipboardToFiles({
+    required String textPath,
+    required String htmlPath,
+    int previewLimit = 5000,
+  });
+  Future<bool> writeContentFromFiles({
+    String textPath = '',
+    String htmlPath = '',
+    String imagePath = '',
+  });
   Future<Uint8List?> readImage();
   Future<bool> writeFiles(List<String> paths);
   Future<bool> revealFile(String path);
@@ -33,7 +43,7 @@ class WindowsClipboardService extends ClipboardService {
 
   final WindowsClipboardBridge bridge;
   final StreamController<PlatformClipboardText> _changes;
-  StreamSubscription<void>? _nativeSubscription;
+  StreamSubscription<int?>? _nativeSubscription;
   bool _started = false;
 
   @override
@@ -52,6 +62,9 @@ class WindowsClipboardService extends ClipboardService {
   bool get supportsFileClipboard => isAvailable;
 
   @override
+  bool get supportsClipboardFileCapture => isAvailable;
+
+  @override
   String get unavailableReason => isAvailable
       ? 'Windows clipboard monitoring could not be started.'
       : 'The Windows clipboard service is unavailable.';
@@ -64,8 +77,13 @@ class WindowsClipboardService extends ClipboardService {
     if (_started) return true;
     if (!isAvailable) return false;
 
+    int? lastSequence;
     _nativeSubscription = bridge.changes.listen(
-      (_) => unawaited(_emitCurrentText()),
+      (int? sequence) {
+        if (sequence != null && sequence == lastSequence) return;
+        if (sequence != null) lastSequence = sequence;
+        _emitClipboardNotification(sequence);
+      },
       onError: (_) {},
     );
     final bool started = await bridge.start();
@@ -97,6 +115,32 @@ class WindowsClipboardService extends ClipboardService {
   Future<PlatformClipboardImageInfo?> saveImageToFile(String path) => bridge.saveImageToFile(path);
 
   @override
+  Future<PlatformClipboardFileCapture?> captureClipboardToFiles({
+    required String textPath,
+    required String htmlPath,
+    int previewLimit = 5000,
+  }) {
+    return bridge.captureClipboardToFiles(
+      textPath: textPath,
+      htmlPath: htmlPath,
+      previewLimit: previewLimit,
+    );
+  }
+
+  @override
+  Future<bool> writeContentFromFiles({
+    String textPath = '',
+    String htmlPath = '',
+    String imagePath = '',
+  }) {
+    return bridge.writeContentFromFiles(
+      textPath: textPath,
+      htmlPath: htmlPath,
+      imagePath: imagePath,
+    );
+  }
+
+  @override
   Future<Uint8List?> readImage() => bridge.readImage();
 
   @override
@@ -105,15 +149,12 @@ class WindowsClipboardService extends ClipboardService {
   @override
   Future<bool> revealFile(String path) => bridge.revealFile(path);
 
-  Future<void> _emitCurrentText() async {
-    try {
-      final PlatformClipboardContent? content = await readContent();
-      _changes.add(PlatformClipboardText(text: content?.text ?? ''));
-    } catch (_) {
-      // An unavailable or locked clipboard is a recoverable change. Emitting an
-      // empty event lets the history coordinator re-check without crashing.
-      _changes.add(const PlatformClipboardText(text: ''));
-    }
+  void _emitClipboardNotification(int? sequence) {
+    // The event is intentionally notification-only. Reading a large clipboard
+    // value here would block the platform thread and force the history path to
+    // read it a second time. The store performs one file-backed capture after
+    // receiving this marker.
+    _changes.add(PlatformClipboardText(text: '', changeCount: sequence, isSnapshot: false));
   }
 
   Future<void> dispose() async {
@@ -127,15 +168,15 @@ class WindowsTabameClipboardBridge implements WindowsClipboardBridge {
   WindowsTabameClipboardBridge({bool? available}) : _available = available ?? Platform.isWindows;
 
   final bool _available;
-  final StreamController<void> _changes = StreamController<void>.broadcast();
-  late final ClipboardEventListener _listener = _ClipboardEventRelay(() => _changes.add(null));
+  final StreamController<int?> _changes = StreamController<int?>.broadcast();
+  late final ClipboardEventListener _listener = _ClipboardEventRelay((int? sequence) => _changes.add(sequence));
   bool _started = false;
 
   @override
   bool get isAvailable => _available;
 
   @override
-  Stream<void> get changes => _changes.stream;
+  Stream<int?> get changes => _changes.stream;
 
   @override
   Future<bool> start() async {
@@ -188,6 +229,42 @@ class WindowsTabameClipboardBridge implements WindowsClipboardBridge {
   }
 
   @override
+  Future<PlatformClipboardFileCapture?> captureClipboardToFiles({
+    required String textPath,
+    required String htmlPath,
+    int previewLimit = 5000,
+  }) async {
+    final ClipboardFileCapture? capture = await ClipboardExtended.captureTextToFiles(
+      textPath: textPath,
+      htmlPath: htmlPath,
+      previewLimit: previewLimit,
+    );
+    if (capture == null) return null;
+    return PlatformClipboardFileCapture(
+      captured: capture.captured,
+      textPreview: capture.textPreview,
+      htmlPreview: capture.htmlPreview,
+      textLength: capture.textLength,
+      htmlLength: capture.htmlLength,
+      byteLength: capture.byteLength,
+      contentHash: capture.contentHash,
+    );
+  }
+
+  @override
+  Future<bool> writeContentFromFiles({
+    String textPath = '',
+    String htmlPath = '',
+    String imagePath = '',
+  }) {
+    return ClipboardExtended.copyContentFromFiles(
+      textPath: textPath,
+      htmlPath: htmlPath,
+      imagePath: imagePath,
+    );
+  }
+
+  @override
   Future<Uint8List?> readImage() => ClipboardExtended.pasteImage();
 
   @override
@@ -219,10 +296,10 @@ class WindowsTabameClipboardBridge implements WindowsClipboardBridge {
 class _ClipboardEventRelay extends ClipboardEventListener {
   _ClipboardEventRelay(this.onUpdate);
 
-  final void Function() onUpdate;
+  final void Function(int? sequence) onUpdate;
 
   @override
-  void onClipboardUpdate() => onUpdate();
+  void onClipboardUpdate(int? sequence) => onUpdate(sequence);
 }
 
 /// Writes one or more paths as CF_HDROP without importing the shared WinUtils

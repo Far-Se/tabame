@@ -166,8 +166,8 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
   }
 
   Future<void> _copy(ClipboardHistoryEntry entry) async {
-    await ClipboardHistoryStore.copyEntry(entry);
-    if (!mounted) return;
+    final bool copied = await ClipboardHistoryStore.copyEntry(entry);
+    if (!mounted || !copied) return;
     QuickMenuFunctions.hideQuickMenu();
   }
 
@@ -286,7 +286,7 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
           onSurface: onSurface,
           icon: Icons.cleaning_services_rounded,
           title: "Prune history",
-          subtitle: "Remove entries older than ${ClipboardHistoryStore.cacheDays}d and orphaned images.",
+          subtitle: "Remove entries older than ${ClipboardHistoryStore.cacheDays}d and orphaned payloads.",
           trailing: TextButton(
             onPressed: _pruneHistory,
             child: const Text("Prune"),

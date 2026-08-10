@@ -9,9 +9,10 @@ Grammar (after the `tz` keyword):
     tz PT                   -> current time in Pacific Time
     tz noon UTC             -> word times work too (noon / midnight / now)
 
-DST for the generic zones (PT, ET, CET, EET, ...) is computed with built-in
-US/EU/AU rules, so no tzdata package is required. Explicit abbreviations
-(PST, PDT, EEST, ...) are always their fixed offset.
+The bundled timezones.json catalog provides Windows/IANA region names and
+aliases. IANA zones use Python's zoneinfo database (tzdata is installed by the
+plugin manifest on Windows), with the catalog offset as a dependency-free
+fallback. Explicit abbreviations (PST, PDT, EEST, ...) are always fixed.
 """
 
 import json
@@ -19,8 +20,10 @@ import re
 import subprocess
 import sys
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
 LOCAL_TZ = datetime.now().astimezone().tzinfo
+TIMEZONE_DATA_FILE = Path(__file__).with_name("timezones.json")
 
 
 def send(frame):
@@ -64,7 +67,7 @@ def _dst_active(rule, d):
 # --- zone table ---------------------------------------------------------------
 
 
-def _zone(name, std, std_lbl, dst=None, dst_lbl=None, rule=None):
+def _zone(name, std, std_lbl, dst=None, dst_lbl=None, rule=None, iana=None):
     return {
         "name": name,
         "std": std,
@@ -72,6 +75,7 @@ def _zone(name, std, std_lbl, dst=None, dst_lbl=None, rule=None):
         "dst": dst,
         "dst_lbl": dst_lbl,
         "rule": rule,
+        "iana": iana,
     }
 
 
@@ -178,8 +182,105 @@ ALIASES = {
     "NZDT": _zone("New Zealand Daylight", 780, "NZDT"),
 }
 
+# --- bundled region catalog ---------------------------------------------------
+
+
+def _normalize_alias(value):
+    return re.sub(r"\s+", " ", str(value).strip().upper())
+
+
+def _catalog_label(entry):
+    text = str(entry.get("text") or "").strip()
+    label = re.sub(r"^\([^)]*\)\s*", "", text).strip()
+    return label or str(entry.get("value") or "Unnamed region")
+
+
+def _entry_zone_key(entry):
+    for zone_name in entry.get("utc") or []:
+        if isinstance(zone_name, str) and zone_name.strip():
+            return zone_name.strip()
+    return None
+
+
+def _catalog_aliases(entry):
+    label = _catalog_label(entry)
+    candidates = [entry.get("value"), label]
+    candidates.extend(part.strip() for part in label.split(","))
+    candidates.extend(entry.get("utc") or [])
+    for candidate in candidates:
+        alias = _normalize_alias(candidate) if candidate else ""
+        if alias:
+            yield alias
+
+
+def _load_timezone_catalog():
+    try:
+        with TIMEZONE_DATA_FILE.open(encoding="utf-8") as catalog_file:
+            data = json.load(catalog_file)
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(data, list):
+        return []
+    return [
+        entry
+        for entry in data
+        if isinstance(entry, dict) and entry.get("value") and "offset" in entry
+    ]
+
+
+def _prefer_catalog_entry(candidate, current):
+    """Prefer a standard entry when JSON contains standard/daylight duplicates."""
+    return bool(current.get("isdst")) and not bool(candidate.get("isdst"))
+
+
+def _build_catalog(catalog):
+    selected = {}
+    order = []
+    for entry in catalog:
+        key = _entry_zone_key(entry) or _normalize_alias(entry["value"])
+        if key not in selected:
+            order.append(key)
+            selected[key] = entry
+        elif _prefer_catalog_entry(entry, selected[key]):
+            selected[key] = entry
+
+    specs_by_key = {}
+    specs = []
+    for key in order:
+        entry = selected[key]
+        minutes = int(round(float(entry.get("offset", 0)) * 60))
+        spec = _zone(
+            _catalog_label(entry),
+            minutes,
+            str(entry.get("abbr") or "UTC"),
+            iana=_entry_zone_key(entry),
+        )
+        spec["catalog_key"] = key
+        spec["catalog_value"] = str(entry["value"])
+        specs_by_key[key] = spec
+        specs.append(spec)
+
+    aliases = {}
+    for entry in catalog:
+        key = _entry_zone_key(entry) or _normalize_alias(entry["value"])
+        spec = specs_by_key[key]
+        for alias in _catalog_aliases(entry):
+            aliases.setdefault(alias, spec)
+    return specs, aliases
+
+
+_ZONEINFO_CACHE = {}
+TIMEZONE_CATALOG = _load_timezone_catalog()
+CATALOG_SPECS, CATALOG_ALIASES = _build_catalog(TIMEZONE_CATALOG)
+for _alias, _spec in CATALOG_ALIASES.items():
+    # Keep the hand-written aliases for ambiguous abbreviations such as CST/IST.
+    ALIASES.setdefault(_alias, _spec)
+
+MAX_ALIAS_WORDS = max((len(alias.split()) for alias in ALIASES), default=1)
+
+
 # zones offered when no explicit destination is given
-WORLD = [
+_FALLBACK_WORLD = [
     ("UTC", _UTC),
     ("New York", _ET),
     ("Los Angeles", _PT),
@@ -191,10 +292,28 @@ WORLD = [
     ("Tokyo", _JST),
     ("Sydney", _AET),
 ]
+WORLD = [(spec["name"], spec) for spec in CATALOG_SPECS] or _FALLBACK_WORLD
+
+
+def _load_zoneinfo(key):
+    if key in _ZONEINFO_CACHE:
+        return _ZONEINFO_CACHE[key]
+    try:
+        from zoneinfo import ZoneInfo
+
+        zone = ZoneInfo(key)
+    except Exception:
+        zone = None
+    _ZONEINFO_CACHE[key] = zone
+    return zone
 
 
 def spec_tz(spec, on_date):
-    """Materialize a zone spec into a fixed-offset tzinfo for a given date."""
+    """Materialize a zone spec using IANA data or its catalog fallback."""
+    if spec.get("iana"):
+        zone = _load_zoneinfo(spec["iana"])
+        if zone is not None:
+            return zone
     if spec["dst"] is not None and _dst_active(spec["rule"], on_date):
         return timezone(timedelta(minutes=spec["dst"]), spec["dst_lbl"])
     return timezone(timedelta(minutes=spec["std"]), spec["std_lbl"])
@@ -206,7 +325,7 @@ def resolve_token(token, on_date):
     Returns None when the token is not a known zone; raises ValueError for an
     IANA-style name that cannot be loaded.
     """
-    token = token.strip()
+    token = _normalize_alias(token)
     if token in ("LOCAL", "HERE"):
         return LOCAL_TZ, "Local", None
     spec = ALIASES.get(token)
@@ -218,16 +337,13 @@ def resolve_token(token, on_date):
             "_".join(w.capitalize() for w in part.split("_"))
             for part in token.split("/")
         )
-        try:
-            from zoneinfo import ZoneInfo
-
-            return ZoneInfo(key), key, None
-        except Exception:
-            raise ValueError(
-                f"Couldn't load IANA zone `{token}` — Python's zoneinfo needs the "
-                "`tzdata` package on Windows (`pip install tzdata`). "
-                "Abbreviations like `PT`, `ET`, `CET` or city names work without it."
-            )
+        zone = _load_zoneinfo(key)
+        if zone is not None:
+            return zone, key, None
+        raise ValueError(
+            f"Couldn't load IANA zone `{token}` — install the `tzdata` package "
+            "or use a region from the bundled catalog."
+        )
     return None
 
 
@@ -268,7 +384,8 @@ def parse_query(query):
     """Returns (base_datetime, src_desc, src_spec, dst_target, has_seconds).
 
     dst_target is (tzinfo, name) when the user asked for a specific
-    destination ("... to CET"), else None.
+    destination ("... to CET"), including a zone-only query such as
+    "Los Angeles". A zone-only query uses the current local time as its source.
     """
     today = datetime.now().date()
     q = re.sub(r"\s+", " ", query.strip().upper())
@@ -282,21 +399,28 @@ def parse_query(query):
             raise ValueError(f"Unknown timezone: `{parts[1].strip()}`")
         dst_target = (resolved[0], resolved[1])
 
-    # Peel a source timezone off the end (1 or 2 words, e.g. "NEW YORK").
+    # Peel the longest known source timezone off the end. Catalog names such
+    # as "Central America Standard Time" can be several words long.
     src_tz, src_desc, src_spec = None, "Local", None
     tokens = src_part.split(" ") if src_part else []
-    for n in (2, 1):
-        if len(tokens) >= n:
-            resolved = resolve_token(" ".join(tokens[-n:]), today)
-            if resolved is not None:
-                src_tz, src_desc, src_spec = resolved
-                tokens = tokens[:-n]
-                break
+    for n in range(min(len(tokens), MAX_ALIAS_WORDS), 0, -1):
+        resolved = resolve_token(" ".join(tokens[-n:]), today)
+        if resolved is not None:
+            src_tz, src_desc, src_spec = resolved
+            tokens = tokens[:-n]
+            break
 
     time_text = " ".join(tokens).strip()
     tz = src_tz if src_tz is not None else LOCAL_TZ
 
     if not time_text:
+        if src_tz is not None and src_spec is not None and dst_target is None:
+            # A zone-only query means "show the current local time there". Keep
+            # the local wall-clock datetime as the source so the destination
+            # branch renders the requested zone instead of treating it as the
+            # source of a full world comparison.
+            base = datetime.now(timezone.utc).astimezone(LOCAL_TZ)
+            return base, "Local", None, (src_tz, src_desc), False
         base = datetime.now(timezone.utc).astimezone(tz)
         return base, src_desc, src_spec, dst_target, False
 
@@ -319,9 +443,11 @@ USAGE_MD = (
     "- `3 PM` — your local time across world zones\n"
     "- `11:30 PM PT` — Pacific → local\n"
     "- `9 AM ET to CET` — zone → zone\n"
-    "- `now in Tokyo`, `noon UTC`, `PT`\n\n"
+    "- `now in Tokyo`, `noon UTC`, `PT`\n"
+    "- `Los Angeles` or `Kathmandu` — current local time in that zone\n\n"
     "Zones: `PT` `MT` `CT` `ET` `UTC` `UK` `CET` `EET` `IST` `JST` `AEST`…\n"
-    "or city names: `Paris`, `Tokyo`, `NYC`, `Bucharest`, `Sydney`."
+    "The bundled catalog also accepts Windows region names, city names, and IANA IDs\n"
+    "such as `Cairo`, `Kathmandu`, `America/Sao_Paulo`, or `Pacific/Fiji`."
 )
 
 LAST = {"frame": None, "copies": {}}
@@ -429,7 +555,7 @@ def render(rev, query):
         "rev": rev,
         "view": "list",
         "preview": {"enabled": True, "wide": False},
-        "emptyText": "Type a time, e.g. 3 PM PT",
+        "emptyText": "Type a time or timezone, e.g. 3 PM PT or Los Angeles",
         "items": items,
     }
     LAST["frame"] = frame

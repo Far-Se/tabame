@@ -1,0 +1,36 @@
+{
+  "claudeUrl": "https://claude.ai/new",
+  "claudeOrigin": "https://claude.ai",
+  "responseTimeoutMs": 90000,
+  "promptSelectors": [
+    "div[contenteditable=\"true\"].ProseMirror",
+    "div[contenteditable=\"true\"][data-placeholder]",
+    "div[contenteditable=\"true\"]",
+    "textarea[placeholder]"
+  ],
+  "sendButtonSelectors": [
+    "button[aria-label=\"Send message\" i]",
+    "button[aria-label*=\"Send\" i]",
+    "button[data-testid=\"send-button\"]"
+  ],
+  "userMessageSelectors": [
+    "[data-testid=\"user-message\"]",
+    "[data-cds=\"UserMessage\"]",
+    "[data-message-author-role=\"user\"]"
+  ],
+  "assistantMessageSelectors": [
+    "[role=\"article\"] .font-claude-response .standard-markdown",
+    "[data-is-streaming] .font-claude-response .standard-markdown",
+    "[role=\"article\"] .font-claude-response",
+    "[data-is-streaming] .font-claude-response",
+    "[data-message-author-role=\"assistant\"]",
+    "[data-testid=\"assistant-message\"]",
+    "[role=\"article\"] [data-is-streaming]",
+    "[data-is-streaming]"
+  ],
+  "messageSelectors": [
+    "[data-testid$=\"-message\"]",
+    "main [data-message-author-role]"
+  ],
+  "streamingSelector": "[data-is-streaming=\"true\"]"
+}

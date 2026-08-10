@@ -909,9 +909,7 @@ class LauncherPluginHost {
       if (op == 'copy') {
         final Object? rawId = command.data['id'];
         if (rawId is String && rawId.isNotEmpty) {
-          final ClipboardHistoryEntry? entry = await ClipboardHistoryStore.getFullEntry(rawId);
-          if (entry != null) {
-            await ClipboardHistoryStore.copyEntry(entry);
+          if (await ClipboardHistoryStore.copyById(rawId)) {
             onCommand(const PluginCommand(name: 'toast', text: 'Copied to clipboard'));
           }
         }
@@ -920,12 +918,12 @@ class LauncherPluginHost {
 
       if (op == 'entry') {
         final Object? rawId = command.data['id'];
-        final ClipboardHistoryEntry? entry = rawId is String ? await ClipboardHistoryStore.getFullEntry(rawId) : null;
+        final ClipboardHistoryEntry? entry = rawId is String ? await ClipboardHistoryStore.getEntryById(rawId) : null;
         _send(<String, Object?>{
           'type': 'clipboardHistory',
           if (requestId != null) 'requestId': requestId,
           'op': 'entry',
-          'entry': entry == null ? null : _clipboardHistoryEntryMap(entry, previewLimit: 12000),
+          'entry': entry == null ? null : _clipboardHistoryEntryMap(entry),
         });
         return;
       }

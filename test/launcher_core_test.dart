@@ -15,6 +15,8 @@ void main() {
     test('parses launcher prefixes and normalized query text', () {
       final Map<String, (LauncherSearchMode, String)> cases = <String, (LauncherSearchMode, String)>{
         '/reload': (LauncherSearchMode.actionsOnly, 'reload'),
+        '!weather': (LauncherSearchMode.pluginsOnly, 'weather'),
+        '!': (LauncherSearchMode.pluginsOnly, ''),
         '.chrome': (LauncherSearchMode.windowsOnly, 'chrome'),
         ',gmail': (LauncherSearchMode.browserTabsOnly, 'gmail'),
         '> main.dart': (LauncherSearchMode.filesOnly, 'main.dart'),

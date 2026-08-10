@@ -130,15 +130,17 @@
       "id": "timezone",
       "name": "Timezone Converter",
       "keyword": "tz",
-      "description": "Convert times between timezones",
+      "description": "Convert times across the full Windows/IANA timezone catalog",
       "icon": "clock",
       "runtime": "python",
       "author": "Far-Se",
-      "version": "1.0.0",
+      "version": "1.2.0",
       "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/timezone",
       "files": {
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/timezone/plugin.json",
-        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/timezone/main.py"
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/timezone/main.py",
+        "timezones.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/timezone/timezones.json",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/timezone/README.md"
       }
     },
     {

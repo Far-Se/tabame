@@ -1511,7 +1511,7 @@ mixin TabameListener {
 }
 
 abstract class ClipboardEventListener {
-  void onClipboardUpdate() {}
+  void onClipboardUpdate(int? sequence) {}
 }
 
 class ClipboardHooks {
@@ -1541,10 +1541,10 @@ class ClipboardHooks {
     return result ?? false;
   }
 
-  static void _dispatchClipboardUpdate() {
+  static void _dispatchClipboardUpdate(int? sequence) {
     for (final ClipboardEventListener listener in listeners) {
       if (!listenersObv.contains(listener)) continue;
-      listener.onClipboardUpdate();
+      listener.onClipboardUpdate(sequence);
     }
   }
 }
@@ -1583,7 +1583,13 @@ class NativeHooks {
       return;
     }
     if (call.method == "ClipboardUpdate") {
-      ClipboardHooks._dispatchClipboardUpdate();
+      int? sequence;
+      final dynamic arguments = call.arguments;
+      if (arguments is Map) {
+        final dynamic rawSequence = arguments['sequence'];
+        if (rawSequence is num) sequence = rawSequence.toInt();
+      }
+      ClipboardHooks._dispatchClipboardUpdate(sequence);
     }
     if (call.method == 'onDisplayChange') {
       // ignore: always_specify_types
@@ -1795,6 +1801,28 @@ class ClipboardImageInfo {
   final String hash;
 }
 
+/// Metadata returned when native clipboard text/HTML was written directly to
+/// payload files. The text itself never crosses the method channel.
+class ClipboardFileCapture {
+  const ClipboardFileCapture({
+    required this.captured,
+    required this.textPreview,
+    required this.htmlPreview,
+    required this.textLength,
+    required this.htmlLength,
+    required this.byteLength,
+    required this.contentHash,
+  });
+
+  final bool captured;
+  final String textPreview;
+  final String htmlPreview;
+  final int textLength;
+  final int htmlLength;
+  final int byteLength;
+  final String contentHash;
+}
+
 class ClipboardExtended {
   ClipboardExtended._();
 
@@ -1887,6 +1915,51 @@ class ClipboardExtended {
       byteLength: (result['byteLength'] as int?) ?? 0,
       hash: (result['hash'] as String?) ?? '',
     );
+  }
+
+  /// Captures text and HTML into the supplied files on a native worker thread.
+  /// Only bounded previews, lengths, and a content hash cross the channel.
+  static Future<ClipboardFileCapture?> captureTextToFiles({
+    required String textPath,
+    required String htmlPath,
+    int previewLimit = 5000,
+  }) async {
+    final Map<dynamic, dynamic>? result = await tabameWin32MethodChannel.invokeMapMethod<dynamic, dynamic>(
+      'clipboardExtendedCaptureTextToFiles',
+      <String, dynamic>{
+        'textPath': textPath,
+        'htmlPath': htmlPath,
+        'previewLimit': previewLimit,
+      },
+    );
+    if (result == null) return null;
+    return ClipboardFileCapture(
+      captured: result['captured'] == true,
+      textPreview: (result['textPreview'] as String?) ?? '',
+      htmlPreview: (result['htmlPreview'] as String?) ?? '',
+      textLength: (result['textLength'] as num?)?.toInt() ?? 0,
+      htmlLength: (result['htmlLength'] as num?)?.toInt() ?? 0,
+      byteLength: (result['byteLength'] as num?)?.toInt() ?? 0,
+      contentHash: (result['contentHash'] as String?) ?? '',
+    );
+  }
+
+  /// Restores clipboard content directly from payload files. The large values
+  /// stay native instead of crossing the method channel into Dart.
+  static Future<bool> copyContentFromFiles({
+    String textPath = '',
+    String htmlPath = '',
+    String imagePath = '',
+  }) async {
+    final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
+      'clipboardExtendedCopyContentFromFiles',
+      <String, dynamic>{
+        'textPath': textPath,
+        'htmlPath': htmlPath,
+        'imagePath': imagePath,
+      },
+    );
+    return result ?? false;
   }
 
   static Future<String> getContentType() async {
