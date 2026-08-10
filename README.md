@@ -60,7 +60,9 @@ Either manually delete the folder, or from `Program and Features` or Open Tabame
 
 Please [open an issue](https://github.com/Far-Se/tabame/issues) - it really helps. It works on my machine, but every PC is a little different.
 
-**Please attach your `errors.log`.** You'll find it at `%localappdata%/Tabame` (paste that into the Explorer address bar).
+**Please attach a redacted copy of `errors.log`.** Remove tokens, credentials,
+private clipboard/screen content, and sensitive paths before sharing it. You'll
+find it at `%localappdata%/Tabame` (paste that into the Explorer address bar).
 
 ## 🛠️ Build it yourself
 

@@ -93,8 +93,8 @@ msix_config:
   display_name: Tabame
   publisher_display_name: Far Se
   identity_name: FarSe.Tabame
-  msix_version: 1.3.0.0
-  logo_path: E:\Projects\tabame\resources\logo_light.png
+  msix_version: 2.0.0.0
+  logo_path: resources/logo_light.png
   capabilities: internetClient
   store: true
   publisher: CN=AFABAF16-E985-4690-B2D6-19C8C95AADB4

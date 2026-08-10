@@ -1,7 +1,7 @@
 # Extension and dynamic-code policy contract
 
 - **Phase:** 6 — Plugin and dynamic-code policy
-- **Status:** Implemented; Store artifact and certification validation remain outstanding
+- **Status:** Implemented; signed Store candidate path exists; certification validation remains outstanding
 - **Selected first Store route:** `storeInstaller`
 - **Portable route:** Existing executable plugin behavior remains available
 - **Related feature contract:** [`microsoft-store-feature-contract.md`](microsoft-store-feature-contract.md)
@@ -12,12 +12,12 @@ a plugin, but none of those values can grant execution in a Store profile.
 
 ## Extension classes
 
-| Class | Current repository meaning | Portable profile | First Store release |
-| --- | --- | --- | --- |
-| Bundled | Code shipped as part of a reviewed Tabame artifact. No bundled executable plugin is currently enabled. | May execute if intentionally shipped and registered. | No executable bundled extension is enabled. A future one requires a reviewed contract amendment. |
-| First-party gallery | Entries from the official `resources/plugins.json` feed, currently hosted by the Tabame repository. | May be fetched and installed using the existing gallery flow. | Gallery fetch and installation are disabled. |
-| Third-party gallery | An entry explicitly marked as coming from a non-first-party gallery/publisher. | May use the portable gallery adapter when the user invokes installation. | Gallery fetch and installation are disabled. |
-| Local user-authored | A plugin folder dropped or configured by the user, including legacy data with no trusted origin marker. | May be discovered and executed. | Existing manifests are preserved for data retention, but are not matched or executed. |
+| Class               | Current repository meaning                                                                              | Portable profile                                                         | First Store release                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| Bundled             | Code shipped as part of a reviewed Tabame artifact. No bundled executable plugin is currently enabled.  | May execute if intentionally shipped and registered.                     | No executable bundled extension is enabled. A future one requires a reviewed contract amendment. |
+| First-party gallery | Entries from the official `resources/plugins.json` feed, currently hosted by the Tabame repository.     | May be fetched and installed using the existing gallery flow.            | Gallery fetch and installation are disabled.                                                     |
+| Third-party gallery | An entry explicitly marked as coming from a non-first-party gallery/publisher.                          | May use the portable gallery adapter when the user invokes installation. | Gallery fetch and installation are disabled.                                                     |
+| Local user-authored | A plugin folder dropped or configured by the user, including legacy data with no trusted origin marker. | May be discovered and executed.                                          | Existing manifests are preserved for data retention, but are not matched or executed.            |
 
 Gallery installation records origin metadata in `.tabame-origin.json` so the
 registry can classify the source. This metadata is diagnostic provenance, not a
@@ -113,5 +113,6 @@ Focused tests in `test/extension_policy_test.dart` cover:
 The existing `test/plugin_protocol_test.dart` remains a parser/protocol test only;
 it does not imply that a Store profile may start a plugin host.
 
-This phase does not package, sign, publish, or certify an artifact. Those activities
-remain Phase 8 and later release gates.
+This phase did not package, sign, publish, or certify an artifact. The separate
+Phase 8 Store candidate path now packages/signs; immutable hosting, certification,
+and Partner Center publication remain later release gates.

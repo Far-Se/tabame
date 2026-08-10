@@ -12,11 +12,11 @@ boundaries. UI and startup code must not copy the executable directory, expand a
 ZIP over the running binary, register an uninstall command, or delete installed
 files directly.
 
-| Profile | Install/upgrade owner | In-app update behavior | In-app uninstall behavior | App-data behavior |
-| --- | --- | --- | --- | --- |
-| `portable` | User/extracted ZIP | Existing GitHub ZIP check and self-update adapter remain available | Existing explicit portable custom uninstall adapter remains available | Existing portable behavior is preserved |
-| `storeInstaller` | Signed Store-listed EXE/MSI | No GitHub ZIP check or ZIP install; report “Updates are delivered by the signed Store-listed installer” | Hide custom uninstall; Windows installer owns removal | Installer uninstall preserves `%LOCALAPPDATA%\\Tabame` |
-| `storeMsix` | Microsoft Store/MSIX | No GitHub check or binary replacement; Store owns updates | Hide custom uninstall; Store owns removal | Package app-data follows MSIX rules; user-created exports remain separate |
+| Profile          | Install/upgrade owner       | In-app update behavior                                                                                  | In-app uninstall behavior                                             | App-data behavior                                                         |
+| ---------------- | --------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `portable`       | User/extracted ZIP          | Existing GitHub ZIP check and self-update adapter remain available                                      | Existing explicit portable custom uninstall adapter remains available | Existing portable behavior is preserved                                   |
+| `storeInstaller` | Signed Store-listed EXE/MSI | No GitHub ZIP check or ZIP install; report “Updates are delivered by the signed Store-listed installer” | Hide custom uninstall; Windows installer owns removal                 | Installer uninstall preserves `%LOCALAPPDATA%\\Tabame`                    |
+| `storeMsix`      | Microsoft Store/MSIX        | No GitHub check or binary replacement; Store owns updates                                               | Hide custom uninstall; Store owns removal                             | Package app-data follows MSIX rules; user-created exports remain separate |
 
 The Store profiles never call the portable adapter. Profile capability is the
 compile-time policy gate; package identity is not used to enable portable
@@ -38,8 +38,8 @@ as the current development stream, matching the previous portable behavior.
 
 The portable adapter retains the existing ZIP-over-install-directory behavior
 for compatibility. This is intentionally not available to either Store profile.
-A future signed installer update path must be added before Store publication;
-Phase 5 does not package, sign, or host that installer.
+The signed installer candidate path is implemented separately in Phase 8;
+immutable hosting and Store publication remain release-owner gates.
 
 ## Uninstall contract
 
@@ -68,6 +68,6 @@ location and advances through settings setup.
 - upgrade, same-version, downgrade, and invalid-version decisions.
 
 Desktop validation remains required for clean install, upgrade, repair if
-supported, uninstall/data retention, and portable ZIP compatibility. Signed
-installer production, Authenticode verification, immutable hosting, CI, and
-Partner Center submission remain later release gates.
+supported, uninstall/data retention, and portable ZIP compatibility. Signed installer production, Authenticode verification, and CI are implemented
+in the Phase 8 candidate path; immutable hosting and Partner Center submission
+remain release gates.

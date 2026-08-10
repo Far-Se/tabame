@@ -63,6 +63,7 @@ pubspec.lock
 *Release*
 !.github/workflows/release-packaging-linux.yml
 !.github/workflows/release-packaging-macos.yml
+!.github/workflows/release-packaging-windows-store.yml
 # The macOS target references these source-controlled release settings.
 !macos/Flutter/Flutter-Release.xcconfig
 !macos/Runner/Configs/Release.xcconfig

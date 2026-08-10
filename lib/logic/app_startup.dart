@@ -13,6 +13,7 @@ import '../models/classes/save_settings.dart';
 import '../models/globals.dart';
 import '../models/settings.dart';
 import '../models/win32/win32.dart';
+import '../models/win32/win_utils.dart';
 import '../platform/app_paths.dart';
 import '../platform/clipboard_service.dart';
 import '../platform/distribution_profile.dart';
@@ -54,7 +55,6 @@ class AppStartup {
     List<String> arguments = <String>[...arguments2];
     if (arguments.isNotEmpty) {
       if (arguments[0].endsWith('"') && !arguments[0].startsWith('"')) arguments[0] = '"${arguments[0]}';
-      String argString = arguments.join(" ");
       user.args = <String>[...arguments];
       final int launcherIndex = arguments.indexOf("-launcher");
       if (launcherIndex != -1) {
@@ -62,7 +62,8 @@ class AppStartup {
         Globals.quickMenuPage = QuickMenuPage.launcher;
         user.launcherSearchText = launcherIndex + 1 < arguments.length ? arguments[launcherIndex + 1] : '';
       }
-      if (argString.contains("interface")) {
+      final bool interfaceRequested = arguments.any((String argument) => argument.toLowerCase() == "-interface");
+      if (interfaceRequested) {
         user.page = TPage.interface;
         // This process is the Interface: bump the reload marker on settings writes so the
         // running QuickMenu process live-reloads (see SavedStore + QuickMenu file watcher).
@@ -121,6 +122,11 @@ class AppStartup {
 
   static Future<void> setupWindow(List<String> arguments) async {
     late WindowOptions windowOptions;
+    final bool elevatedQuickMenuRequested = user.args.contains(Globals.elevatedQuickMenuArgument);
+    final bool startInInterface = !Globals.isStandaloneLauncher &&
+        !elevatedQuickMenuRequested &&
+        (user.page == TPage.interface || !AppPaths.hasSettingsFile || Boxes.remap.isEmpty);
+    Globals.startInInterface = startInInterface;
     if (Globals.isStandaloneLauncher) {
       windowOptions = WindowOptions(
         size: Size(Boxes.launcherSizeWidth, Globals.launcherSize.height),
@@ -132,7 +138,7 @@ class AppStartup {
         alwaysOnTop: false,
         title: "Tabame - Launcher - ${user.launcherSearchText.addDots(9)}",
       );
-    } else if (user.args.contains("-interface") || !AppPaths.hasSettingsFile || Boxes.remap.isEmpty) {
+    } else if (startInInterface) {
       late String title;
       if (user.args.contains("-wizardly")) {
         title = "Wizardly";
@@ -170,6 +176,11 @@ class AppStartup {
       await windowManager.setAsFrameless();
       await windowManager.setHasShadow(false);
       await Win32.fetchMainWindowHandle();
+      if (user.args.contains(Globals.elevatedQuickMenuArgument)) {
+        // The elevated replacement owns the session; close the old QuickMenu
+        // and any Interface window after the new native window is ready.
+        Future<void>.delayed(const Duration(milliseconds: 300), WinUtils.closeAllTabameExProcesses);
+      }
       if (!Globals.isStandaloneLauncher && user.page == TPage.quickmenu) {
         final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
         if (ClipboardHistoryStore.enabled && integrations.canStart(NativeIntegrationId.clipboardHistory)) {

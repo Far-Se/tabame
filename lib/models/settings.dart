@@ -20,7 +20,7 @@ import '../platform/monitor_service.dart';
 import '../platform/quick_snap_service.dart';
 import '../platform/windows/tabamewin32_api.dart';
 import '../services/native_integration_coordinator.dart';
-import '../services/rewindly_service.dart';
+// import '../services/rewindly_service.dart';
 import 'classes/boxes.dart';
 import 'classes/saved_maps.dart';
 import 'globals.dart';
@@ -243,10 +243,10 @@ class Settings {
   bool trktivitySaveAllTitles = false;
   bool quickMenuAtTaskbarLevel = true;
   // Rewindly (background "instant replay" DVR)
-  bool rewindlyEnabled = false;
-  int rewindlyFps = 2; // capture frame rate, 1-10
-  int rewindlyClipMinutes = 1; // length of an exported clip, 1-10
-  int rewindlyRetentionMinutes = 60; // rolling buffer history to keep
+  // bool rewindlyEnabled = false;
+  // int rewindlyFps = 2; // capture frame rate, 1-10
+  // int rewindlyClipMinutes = 1; // length of an exported clip, 1-10
+  // int rewindlyRetentionMinutes = 60; // rolling buffer history to keep
   // Keystroke & Click Visualizer overlay
   bool keystrokesShowClicks = true; // render mouse click ripples
   bool keystrokesModifiersOnly = false; // only show chords that use a modifier
@@ -1503,7 +1503,7 @@ Future<void> registerAll() async {
   // Rewindly background DVR — main/QuickMenu process only, never the Interface
   // settings window (which runs as a separate process).
   if (user.page != TPage.interface && !user.args.contains('-interface')) {
-    RewindlyService.instance.init();
+    // RewindlyService.instance.init();
     Debug.add("Registered: Rewindly");
   }
 }

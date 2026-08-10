@@ -1,7 +1,7 @@
 # Distribution profile build contract
 
 - **Phase:** 1 — Distribution profile foundation
-- **Status:** Foundation plus elevation/lifecycle boundaries implemented; packaging and publication unchanged
+- **Status:** Store installer candidate packaging/signing path implemented; portable publication remains unchanged
 - **Default:** `portable`
 - **Define:** `TABAME_DISTRIBUTION_PROFILE`
 
@@ -14,15 +14,16 @@ Phase 4 elevation service and the `allowElevation` capability.
 
 ## Profiles
 
-| Profile          | Intended artifact                               | Package identity | Update/lifecycle policy                                                                                                            |
-| ---------------- | ----------------------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `portable`       | Existing ZIP/GitHub build                       | Unpackaged       | Existing ZIP self-update and custom lifecycle remain available; elevation is explicit                                              |
-| `storeInstaller` | Future signed EXE/MSI listed in Microsoft Store | Unpackaged       | Installer owns lifecycle; self-update, custom install, and custom uninstall disabled; explicit UAC is available                    |
-| `storeMsix`      | Future Store-hosted MSIX                        | Required         | Store owns updates/uninstall; package app-data and StartupTask are required; elevation is disabled until `allowElevation` approval |
+| Profile          | Intended artifact                                                  | Package identity | Update/lifecycle policy                                                                                                            |
+| ---------------- | ------------------------------------------------------------------ | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `portable`       | Existing ZIP/GitHub build                                          | Unpackaged       | Existing ZIP self-update and custom lifecycle remain available; elevation is explicit                                              |
+| `storeInstaller` | Signed per-user Inno Setup EXE candidate listed in Microsoft Store | Unpackaged       | Installer owns lifecycle; self-update, custom install, and custom uninstall disabled; explicit UAC is available                    |
+| `storeMsix`      | Future Store-hosted MSIX                                           | Required         | Store owns updates/uninstall; package app-data and StartupTask are required; elevation is disabled until `allowElevation` approval |
 
-`storeInstaller` is the selected first Store route. The current CI still
-publishes the portable ZIP; this phase does not change release publication or
-create an installer/MSIX artifact.
+`storeInstaller` is the selected first Store route. The existing Windows workflow
+still publishes the portable ZIP unchanged. The separate
+`.github/workflows/release-packaging-windows-store.yml` creates a signed installer
+candidate only when its protected signing environment is explicitly used.
 
 ## Local commands
 
@@ -35,7 +36,7 @@ flutter build windows --release
 # Explicit portable profile.
 flutter build windows --release --dart-define=TABAME_DISTRIBUTION_PROFILE=portable
 
-# Validate the future installer-listed Store behavior without packaging it.
+# Build the installer-listed Store profile; package it with the separate CI script.
 flutter build windows --release --dart-define=TABAME_DISTRIBUTION_PROFILE=storeInstaller
 
 # Validate the future MSIX capability policy without producing an MSIX.
@@ -55,9 +56,9 @@ injected probe results so packaged and unpackaged cases are deterministic.
 ## CI contract
 
 The existing Windows workflow remains the portable profile because it does not
-pass a distribution define and publishes a ZIP. When profile builds are added in
-a later packaging phase, CI must pass the define explicitly rather than relying
-on `kReleaseMode` or executable paths:
+pass a distribution define and publishes a ZIP. The separate Store candidate
+workflow passes its profile define explicitly rather than relying on
+`kReleaseMode` or executable paths:
 
 ```text
 flutter build windows --release --dart-define=TABAME_DISTRIBUTION_PROFILE=portable
@@ -65,10 +66,11 @@ flutter build windows --release --dart-define=TABAME_DISTRIBUTION_PROFILE=storeI
 flutter build windows --release --dart-define=TABAME_DISTRIBUTION_PROFILE=storeMsix
 ```
 
-The `storeInstaller` command is only a profile build until signing, immutable
-hosting, installer packaging, and Store listing work is completed. The
-`storeMsix` command is only a capability-policy build until manifest, restricted
-capability, signing, package, WACK, and Store validation work is approved.
+The `storeInstaller` command is wired to the separate signed EXE candidate path,
+but submission still requires protected signing, immutable hosting, metadata
+approval, and certification gates. The `storeMsix` command remains only a
+capability-policy build until its separate manifest, restricted-capability,
+signing, package, WACK, and Store validation work is approved.
 
 ## Policy boundaries
 
@@ -78,8 +80,8 @@ capability, signing, package, WACK, and Store validation work is approved.
 - The profile foundation does not approve restricted MSIX elevation. `allowElevation`
   remains false for `storeMsix` until Microsoft approval is recorded.
 - `UpdateService` and `InstallLifecycleService` own runtime lifecycle policy;
-  packaging, signing, installer artifact production, and Store publication remain
-  later release work.
+  the Store installer package/signing scripts own candidate production, while
+  immutable hosting and Store publication remain release-owner work.
 - `ExtensionPolicy` owns executable plugin provenance, gallery/dependency gates,
   imported-plugin configuration gates, and user-authored command/PowerShell
   policy. See [`extension-policy-contract.md`](extension-policy-contract.md).

@@ -200,9 +200,17 @@ class AppPaths {
   static DistributionProfile get profile => instance._profile ?? DistributionProfileConfig.current;
   static AppDataMigrationReport get migration => instance._migration;
 
-  /// Whether the persisted settings file exists. A settings directory alone
-  /// does not mean that first-run setup has been completed.
-  static bool get hasSettingsFile => File(settingsPath('settings.json')).existsSync();
+  /// Whether persisted settings are available. A settings directory alone
+  /// does not mean that first-run setup has been completed. The last-known-good
+  /// backup also counts while settings.json is being replaced, so a second
+  /// Tabame process cannot mistake a normal write window for first run.
+  static bool get hasSettingsFile {
+    final String readablePath = settingsPath('settings.json');
+    if (File(readablePath).existsSync()) return true;
+
+    final String writablePath = settingsPath('settings.json', forWrite: true);
+    return File('$readablePath.bk').existsSync() || File('$writablePath.bk').existsSync();
+  }
 
   static String get root => instance._requireRoot();
   static String get legacyRoot => instance._requireLegacyRoot();
@@ -212,7 +220,7 @@ class AppPaths {
   static String get cacheDirectory => instance._requireCacheRoot();
   static String get pluginsDirectory => instance._pluginsDirectoryPath ?? currentPath('plugins');
   static String get fancyshotDirectory => currentPath('fancyshot');
-  static String get rewindlyDirectory => currentPath('rewindly');
+  // static String get rewindlyDirectory => currentPath('rewindly');
   static String get temporaryDirectory => instance._requireTemporaryBasePath();
 
   /// Returns a canonical path for an app-owned relative storage location.

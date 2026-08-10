@@ -1,6 +1,6 @@
-# Phase 9 packaging and release runbook
+# Desktop packaging and release runbook
 
-Status: Phase 9 implementation
+Status: Phase 12 runbook complete; Store pilot and external release gates remain blocked
 
 This is the release contract for the three supported desktop targets. The
 packaging scripts are intentionally outside application feature code so a
@@ -9,12 +9,13 @@ behavior.
 
 ## Supported artifacts
 
-| Target | Artifact | Baseline | Installation path | Upgrade path |
-| --- | --- | --- | --- | --- |
-| Windows | `tabame-nightly-windows.zip` for nightly builds; `tabame-v<version>-windows.zip` for official builds | Existing Windows workflow and Windows 10/11-era native integrations | Extract the ZIP and run `tabame.exe`; the existing `install.ps1` remains a local developer helper | Stop Tabame, extract the new ZIP over the existing install directory, and keep `%LOCALAPPDATA%\Tabame`; the existing workflow and tag semantics are unchanged |
-| macOS Intel | `tabame-<version>-macos-x86_64.dmg` and matching ZIP | macOS 13 Ventura or newer, x86_64 | Open the DMG and copy `tabame.app` to `/Applications` | Replace the app bundle with the newer signed/notarized bundle; user data is outside the app bundle |
-| macOS Apple Silicon | `tabame-<version>-macos-arm64.dmg` and matching ZIP | macOS 13 Ventura or newer, arm64 | Open the DMG and copy `tabame.app` to `/Applications` | Replace the app bundle with the newer signed/notarized bundle; user data is outside the app bundle |
-| Linux | `tabame_<version>_<arch>.deb` for `amd64` and `arm64` | Ubuntu 22.04+ with GTK 3; X11 is the advanced integration target | `sudo apt install ./tabame_<version>_<arch>.deb` | Install the newer `.deb` with the same command; `dpkg` replaces `/opt/tabame` and preserves user data |
+| Target              | Artifact                                                                                                   | Baseline                                                            | Installation path                                                                                                                      | Upgrade path                                                                                                                                                  |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows             | `tabame-nightly-windows.zip` for nightly builds; `tabame-v<version>-windows.zip` for official builds       | Existing Windows workflow and Windows 10/11-era native integrations | Extract the ZIP and run `tabame.exe`; the existing `install.ps1` remains a local developer helper                                      | Stop Tabame, extract the new ZIP over the existing install directory, and keep `%LOCALAPPDATA%\Tabame`; the existing workflow and tag semantics are unchanged |
+| Windows Store       | `tabame-v<version>-windows-store-installer.exe` plus checksum, manifest, SBOM, and Partner Center metadata | Windows 10 22H2+/x64; selected `storeInstaller` profile             | Run the signed per-user EXE; managed binaries live under `%LOCALAPPDATA%\Programs\Tabame` and app data remains `%LOCALAPPDATA%\Tabame` | Run a new signed installer version; installer owns binaries and preserves app data; use the Store/pilot rollback procedure                                    |
+| macOS Intel         | `tabame-<version>-macos-x86_64.dmg` and matching ZIP                                                       | macOS 13 Ventura or newer, x86_64                                   | Open the DMG and copy `tabame.app` to `/Applications`                                                                                  | Replace the app bundle with the newer signed/notarized bundle; user data is outside the app bundle                                                            |
+| macOS Apple Silicon | `tabame-<version>-macos-arm64.dmg` and matching ZIP                                                        | macOS 13 Ventura or newer, arm64                                    | Open the DMG and copy `tabame.app` to `/Applications`                                                                                  | Replace the app bundle with the newer signed/notarized bundle; user data is outside the app bundle                                                            |
+| Linux               | `tabame_<version>_<arch>.deb` for `amd64` and `arm64`                                                      | Ubuntu 22.04+ with GTK 3; X11 is the advanced integration target    | `sudo apt install ./tabame_<version>_<arch>.deb`                                                                                       | Install the newer `.deb` with the same command; `dpkg` replaces `/opt/tabame` and preserves user data                                                         |
 
 Linux AppImage and Flatpak are deliberately not release artifacts in Phase 9.
 The `.deb` gives the MVP a package-manager-visible install, upgrade, and
@@ -99,15 +100,15 @@ the job then imports the certificate, signs with hardened runtime, submits the
 DMG to `xcrun notarytool`, staples the ticket, and runs the signed smoke check.
 The required GitHub Actions secrets are:
 
-| Secret | Purpose |
-| --- | --- |
-| `TABAME_APPLE_CERTIFICATE_P12_BASE64` | Base64 Developer ID Application certificate |
-| `TABAME_APPLE_CERTIFICATE_PASSWORD` | Password for that P12 file |
-| `TABAME_APPLE_KEYCHAIN_PASSWORD` | Temporary CI keychain password |
-| `TABAME_MACOS_SIGNING_IDENTITY` | Exact `Developer ID Application: ...` identity name |
-| `TABAME_APPLE_NOTARY_PRIVATE_KEY` | App Store Connect API `.p8` private key contents |
-| `TABAME_APPLE_NOTARY_KEY_ID` | App Store Connect API key ID |
-| `TABAME_APPLE_NOTARY_ISSUER_ID` | App Store Connect issuer ID |
+| Secret                                | Purpose                                             |
+| ------------------------------------- | --------------------------------------------------- |
+| `TABAME_APPLE_CERTIFICATE_P12_BASE64` | Base64 Developer ID Application certificate         |
+| `TABAME_APPLE_CERTIFICATE_PASSWORD`   | Password for that P12 file                          |
+| `TABAME_APPLE_KEYCHAIN_PASSWORD`      | Temporary CI keychain password                      |
+| `TABAME_MACOS_SIGNING_IDENTITY`       | Exact `Developer ID Application: ...` identity name |
+| `TABAME_APPLE_NOTARY_PRIVATE_KEY`     | App Store Connect API `.p8` private key contents    |
+| `TABAME_APPLE_NOTARY_KEY_ID`          | App Store Connect API key ID                        |
+| `TABAME_APPLE_NOTARY_ISSUER_ID`       | App Store Connect issuer ID                         |
 
 The bundle identifier is `com.farse.tabame` and must remain stable. A signing
 identity or bundle identifier change can invalidate existing TCC grants. Do
@@ -127,14 +128,41 @@ release publication. Its behavior is preserved:
   `tabame-nightly-windows.zip` plus its SHA-256 file.
 - Official builds still upload `tabame-v<version>-windows.zip` plus its
   SHA-256 file.
-- Existing MSIX/Store settings and the separate
-  [`MICROSOFT_STORE_BUILD_GUIDE.md`](../../MICROSOFT_STORE_BUILD_GUIDE.md)
-  remain unchanged.
+- The future MSIX template remains unwired. The installer-listed Store route is
+  implemented by the separate
+  [Windows Store candidate workflow](../../.github/workflows/release-packaging-windows-store.yml)
+  and the contracts linked below; it does not change the ZIP workflow.
 
-Phase 9 only adds a package-layout/checksum smoke step using
-[`verify-windows-package.ps1`](../../tool/release/verify-windows-package.ps1).
-It does not replace the ZIP packaging, nightly tag movement, release naming,
-or MSIX configuration.
+The existing ZIP path still uses only the package-layout/checksum smoke step
+from [`verify-windows-package.ps1`](../../tool/release/verify-windows-package.ps1).
+The Store candidate uses its own staging, installer, signing, checksum, SBOM,
+and lifecycle verification scripts. Neither path replaces the other, moves the
+nightly tag, or changes official ZIP release naming.
+
+## Windows Store installer candidate
+
+The selected route is a signed offline Inno Setup EXE listed in Partner Center
+by an immutable HTTPS URL. Start with the
+[`microsoft-store-phase12-runbook.md`](microsoft-store-phase12-runbook.md) and
+[`windows-store-installer-contract.md`](windows-store-installer-contract.md).
+
+The CI entry point is:
+
+```text
+gh workflow run release-packaging-windows-store.yml -f sign=true -f run_install_smoke=true
+```
+
+The protected `windows-store-signing` environment must provide the CA-backed
+PFX/password and optional timestamp/signer values. The workflow produces an
+unsigned intermediate for structure checks and a separately named signed
+candidate; it never publishes a ZIP or creates a GitHub release. Do not submit
+the unsigned artifact or a short-lived workflow-artifact URL. The release owner
+must upload the final signed EXE to immutable HTTPS hosting, fill the metadata
+URL, and record the final hash in the certification and pilot records.
+
+Store-specific privacy, security, listing, certification, and Partner Center
+artifacts are maintained in this directory. The in-app Settings page links to
+privacy, support, and licensing information.
 
 ## Logs and first-run diagnostics
 
@@ -143,11 +171,11 @@ platform-neutral `AppPaths` application root. The exact parent can vary with
 the host's XDG/Apple known-folder policy, so support should use the paths shown
 in the table as the normal locations and the in-app log export when available.
 
-| Target | Normal log location | Permission/capability diagnostic |
-| --- | --- | --- |
-| Windows | `%LOCALAPPDATA%\Tabame\errors.log` | No OS permission grant is required for the portable shell. Windows-only actions may request elevation or depend on Explorer/Defender policy. |
-| macOS | `~/Library/Application Support/<application-support-name>/Tabame/errors.log` | The portable shell shows **macOS capabilities** on first run when TCC grants are missing. Refreshing the panel re-probes Accessibility, Input Monitoring, Screen Recording, and Notifications and opens the matching System Settings pane. |
-| Linux | `$XDG_DATA_HOME/tabame/Tabame/errors.log`, or `~/.local/share/tabame/Tabame/errors.log` when `XDG_DATA_HOME` is unset | The shell reports X11/Wayland mode and unavailable services. Missing session D-Bus, Secret Service, notifications, X11, or filesystem watches are reduced capabilities, not startup-fatal permissions. |
+| Target  | Normal log location                                                                                                   | Permission/capability diagnostic                                                                                                                                                                                                           |
+| ------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Windows | `%LOCALAPPDATA%\Tabame\errors.log`                                                                                    | No OS permission grant is required for the portable shell. Windows-only actions may request elevation or depend on Explorer/Defender policy.                                                                                               |
+| macOS   | `~/Library/Application Support/<application-support-name>/Tabame/errors.log`                                          | The portable shell shows **macOS capabilities** on first run when TCC grants are missing. Refreshing the panel re-probes Accessibility, Input Monitoring, Screen Recording, and Notifications and opens the matching System Settings pane. |
+| Linux   | `$XDG_DATA_HOME/tabame/Tabame/errors.log`, or `~/.local/share/tabame/Tabame/errors.log` when `XDG_DATA_HOME` is unset | The shell reports X11/Wayland mode and unavailable services. Missing session D-Bus, Secret Service, notifications, X11, or filesystem watches are reduced capabilities, not startup-fatal permissions.                                     |
 
 The log file can contain plugin and native-service details. Redact tokens,
 paths, and plugin credentials before attaching it to a bug report. A log write
@@ -198,7 +226,7 @@ before replacing an app bundle or package.
    OS; verify the explicit re-entry fallback instead.
 6. Remove the application using the platform path: delete the extracted
    Windows directory, move the macOS app to Trash, or run `sudo apt remove
-   tabame`. Uninstall must not delete the user data root unless the user
+tabame`. The uninstaller must not delete the user data root unless the user
    explicitly chooses a separate data cleanup operation.
 7. Reinstall the same artifact and repeat the cold-start, summon/hide, focus,
    monitor, sleep/wake, and log checks.
@@ -210,14 +238,14 @@ replace, the manual permission and desktop-session checks.
 
 ## Release smoke-test matrix
 
-| Check | Windows | macOS | Linux X11 | Linux Wayland |
-| --- | --- | --- | --- | --- |
-| Artifact structure and checksum | `verify-windows-package.ps1` in `windows-build.yml` | `smoke-macos.sh`; `codesign` required on tags | `dpkg-deb`, AppStream, and `smoke-linux.sh` | Same package structure; portable bundle smoke under Weston |
-| Cold start and clean shutdown | Package workflow layout check plus manual launch | DMG mount plus optional liveness launch | `xvfb-run` + session D-Bus liveness launch | `wayland-smoke.yml` runs the bundle under headless Weston |
-| Summon/hide and focus restoration | Existing Windows workflow/manual desktop check | Manual permissioned desktop check; Carbon/manual fallback when denied | Manual X11 check with passive hotkey capability | Manual visible-window fallback; no global shortcut claim |
-| Monitor changes and sleep/wake | Manual Windows desktop check | Manual Retina/non-Retina and above/below-display check | Manual multi-monitor X11 check | Compositor-managed placement only; restricted capability is expected |
-| Settings migration and upgrade | `%LOCALAPPDATA%\Tabame` upgrade check | app replacement with support root retained | `.deb` upgrade with `/opt/tabame` replacement and data retained | Same reduced-mode data check |
-| Permission/service denial | Elevation/Defender policy check | TCC denial and re-grant through diagnostics | missing D-Bus/Secret Service/notification check | X11 API denial/reduced-mode check |
+| Check                             | Windows                                             | macOS                                                                 | Linux X11                                                       | Linux Wayland                                                        |
+| --------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Artifact structure and checksum   | `verify-windows-package.ps1` in `windows-build.yml` | `smoke-macos.sh`; `codesign` required on tags                         | `dpkg-deb`, AppStream, and `smoke-linux.sh`                     | Same package structure; portable bundle smoke under Weston           |
+| Cold start and clean shutdown     | Package workflow layout check plus manual launch    | DMG mount plus optional liveness launch                               | `xvfb-run` + session D-Bus liveness launch                      | `wayland-smoke.yml` runs the bundle under headless Weston            |
+| Summon/hide and focus restoration | Existing Windows workflow/manual desktop check      | Manual permissioned desktop check; Carbon/manual fallback when denied | Manual X11 check with passive hotkey capability                 | Manual visible-window fallback; no global shortcut claim             |
+| Monitor changes and sleep/wake    | Manual Windows desktop check                        | Manual Retina/non-Retina and above/below-display check                | Manual multi-monitor X11 check                                  | Compositor-managed placement only; restricted capability is expected |
+| Settings migration and upgrade    | `%LOCALAPPDATA%\Tabame` upgrade check               | app replacement with support root retained                            | `.deb` upgrade with `/opt/tabame` replacement and data retained | Same reduced-mode data check                                         |
+| Permission/service denial         | Elevation/Defender policy check                     | TCC denial and re-grant through diagnostics                           | missing D-Bus/Secret Service/notification check                 | X11 API denial/reduced-mode check                                    |
 
 The repeatable CI entry points are:
 

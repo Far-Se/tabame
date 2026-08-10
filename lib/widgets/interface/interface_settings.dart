@@ -123,6 +123,8 @@ class SettingsPageState extends State<SettingsPage> {
                         children: <Widget>[
                           _buildSectionTitle("Data & Tools"),
                           _buildMaintenanceCard(accent, onSurface),
+                          const SizedBox(height: 16),
+                          _buildReleaseInfoCard(onSurface),
                         ],
                       ),
                     ),
@@ -369,6 +371,7 @@ class SettingsPageState extends State<SettingsPage> {
     final ElevationCapabilityResult capability = _elevationService.capability;
     final PrivilegeStatus status = _privilegeStatus ?? const PrivilegeStatus.unavailable();
     final bool canRestart = capability.isAvailable && !status.isElevated && !_elevationBusy;
+    final bool canStartQuickMenu = capability.isAvailable && status.isAvailable && !_elevationBusy;
 
     return _settingsCard(
       id: "security",
@@ -402,11 +405,24 @@ class SettingsPageState extends State<SettingsPage> {
             ),
           ),
           const SizedBox(height: 12),
-          if (canRestart)
-            OutlinedButton.icon(
-              onPressed: _restartElevated,
-              icon: const Icon(Icons.restart_alt_rounded, size: 18),
-              label: const Text('RESTART ELEVATED FOR THIS SESSION'),
+          if (canRestart || canStartQuickMenu)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                if (canRestart)
+                  OutlinedButton.icon(
+                    onPressed: _restartElevated,
+                    icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                    label: const Text('RESTART THIS WINDOW ELEVATED'),
+                  ),
+                if (canStartQuickMenu)
+                  OutlinedButton.icon(
+                    onPressed: _restartQuickMenuElevated,
+                    icon: const Icon(Icons.shield_outlined, size: 18),
+                    label: const Text('RESTART QUICKMENU ELEVATED'),
+                  ),
+              ],
             )
           else
             Text(
@@ -440,6 +456,24 @@ class SettingsPageState extends State<SettingsPage> {
     if (result.shouldCloseCurrentProcess) {
       final int hWnd = Win32.findWindow("Tabame");
       if (hWnd != 0) Win32.closeWindow(hWnd);
+      Future<void>.delayed(const Duration(milliseconds: 300), () => exit(0));
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
+  }
+
+  Future<void> _restartQuickMenuElevated() async {
+    if (_elevationBusy) return;
+    setState(() => _elevationBusy = true);
+    final ElevationRequestResult result = await _elevationService.launchApplicationElevated(
+      executable: Platform.resolvedExecutable,
+      arguments: Globals.elevatedQuickMenuArgument,
+    );
+    if (!mounted) return;
+    setState(() => _elevationBusy = false);
+    if (result.didLaunch) {
+      // The replacement QuickMenu closes the old Tabame windows once its own
+      // native window is ready. Do not leave this Interface process running.
       Future<void>.delayed(const Duration(milliseconds: 300), () => exit(0));
       return;
     }
@@ -511,6 +545,49 @@ class SettingsPageState extends State<SettingsPage> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReleaseInfoCard(Color onSurface) {
+    const String privacyUrl = 'https://github.com/Far-Se/tabame/blob/main/docs/release/microsoft-store-privacy.md';
+    const String supportUrl = 'https://github.com/Far-Se/tabame/issues';
+    const String licenseUrl = 'https://github.com/Far-Se/tabame/blob/main/LICENSE';
+
+    return _settingsCard(
+      id: 'releaseInfo',
+      title: 'Privacy & Support',
+      subtitle: 'Review data controls, support, licensing, and this build.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Build ${Globals.version} · App data stays under ${AppPaths.root}',
+            style: TextStyle(color: onSurface.withValues(alpha: _AppOpacity.textSecondary), fontSize: 12),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              OutlinedButton.icon(
+                onPressed: () => WinUtils.open(privacyUrl),
+                icon: const Icon(Icons.privacy_tip_outlined, size: 17),
+                label: const Text('PRIVACY'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => WinUtils.open(supportUrl),
+                icon: const Icon(Icons.support_agent_rounded, size: 17),
+                label: const Text('SUPPORT'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => WinUtils.open(licenseUrl),
+                icon: const Icon(Icons.article_outlined, size: 17),
+                label: const Text('LICENSE'),
+              ),
+            ],
+          ),
         ],
       ),
     );

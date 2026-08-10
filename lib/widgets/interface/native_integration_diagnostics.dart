@@ -13,7 +13,7 @@ import '../../services/browser_bridge_service.dart';
 import '../../services/clipboard_history_coordinator.dart';
 import '../../services/mouse_gestures_service.dart';
 import '../../services/native_integration_coordinator.dart';
-import '../../services/rewindly_service.dart';
+// import '../../services/rewindly_service.dart';
 import '../widgets/windows_scroll.dart';
 
 /// A capabilities/consent page for native integrations.
@@ -72,15 +72,15 @@ class _NativeIntegrationDiagnosticsPageState extends State<NativeIntegrationDiag
         await ClipboardHistoryCoordinator.instance.start();
       case NativeIntegrationId.browserBridge:
         await BrowserBridgeService.instance.setEnabled(true);
-      case NativeIntegrationId.screenRecording:
-        user.rewindlyEnabled = true;
-        await Boxes.updateSettings('rewindlyEnabled', true);
-        final bool started = await RewindlyService.instance.start();
-        if (!started) {
-          user.rewindlyEnabled = false;
-          await Boxes.updateSettings('rewindlyEnabled', false);
-          await _coordinator.revokeConsent(id);
-        }
+      // case NativeIntegrationId.screenRecording:
+      //   user.rewindlyEnabled = true;
+      //   await Boxes.updateSettings('rewindlyEnabled', true);
+      //   final bool started = await RewindlyService.instance.start();
+      //   if (!started) {
+      //     user.rewindlyEnabled = false;
+      //     await Boxes.updateSettings('rewindlyEnabled', false);
+      //     await _coordinator.revokeConsent(id);
+      //   }
       case NativeIntegrationId.quickSnap:
         await QuickSnapService.instance.enable();
       default:
@@ -97,11 +97,11 @@ class _NativeIntegrationDiagnosticsPageState extends State<NativeIntegrationDiag
         await ClipboardHistoryStore.setEnabled(false);
       case NativeIntegrationId.browserBridge:
         await BrowserBridgeService.instance.setEnabled(false);
-      case NativeIntegrationId.screenRecording:
-        await RewindlyService.instance.stop();
-        user.rewindlyEnabled = false;
-        await Boxes.updateSettings('rewindlyEnabled', false);
-        await _coordinator.revokeConsent(id);
+      // case NativeIntegrationId.screenRecording:
+      //   await RewindlyService.instance.stop();
+      //   user.rewindlyEnabled = false;
+      //   await Boxes.updateSettings('rewindlyEnabled', false);
+      //   await _coordinator.revokeConsent(id);
       case NativeIntegrationId.quickSnap:
         await QuickSnapService.instance.disable();
         await _coordinator.revokeConsent(id);

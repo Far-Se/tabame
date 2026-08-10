@@ -1,0 +1,15 @@
+Tabame Windows Store installer candidate notices
+===================================================
+
+Tabame is distributed under the MIT License. The complete Tabame license is
+included in the installed application directory as LICENSE.
+
+The runtime dependency graph is resolved from pubspec.lock. The CI candidate
+workflow includes a CycloneDX JSON SBOM generated from `dart pub deps --json`
+next to the installer. That SBOM is the authoritative list of resolved Dart
+packages for the candidate and must be reviewed with the package licenses before
+Partner Center submission.
+
+This notice is intentionally kept with the staged runtime so an installed copy
+has release provenance even when it is moved away from the build workspace. It
+is not a substitute for the release owner's dependency/license audit.

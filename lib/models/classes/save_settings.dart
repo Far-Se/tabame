@@ -196,24 +196,27 @@ class SavedStore {
         readableDataFile = legacyDataFile;
       }
     }
+
+    final File backup = File("$fileName.bk");
+    Map<String, Object>? parsed;
+    String? validSettingsJson;
     if (readableDataFile != null && readableDataFile.existsSync()) {
-      final String stringMap = _safeRead(readableDataFile);
-      Map<String, Object>? parsed = _tryDecode(stringMap);
-      if (parsed != null) {
-        preferences = parsed;
-        // Refresh the backup only with content we know is valid and complete.
+      validSettingsJson = _safeRead(readableDataFile);
+      parsed = _tryDecode(validSettingsJson);
+    }
+    if (parsed == null && backup.existsSync()) {
+      // settings.json can be temporarily absent or partial while another
+      // process replaces it. The backup is only used when it decodes fully.
+      parsed = _tryDecode(_safeRead(backup));
+      validSettingsJson = null;
+    }
+    if (parsed != null) {
+      preferences = parsed;
+      // Refresh the backup only with content we know is valid and complete.
+      if (validSettingsJson != null) {
         try {
-          File("$fileName.bk").writeAsStringSync(stringMap);
+          backup.writeAsStringSync(validSettingsJson);
         } catch (_) {}
-      } else {
-        // settings.json was empty or partial (e.g. read while another process was
-        // mid non-atomic write). Recover from the last-known-good backup instead of
-        // dropping keys, and do NOT overwrite the backup with the bad content.
-        final File backup = File("$fileName.bk");
-        if (backup.existsSync()) {
-          parsed = _tryDecode(_safeRead(backup));
-          if (parsed != null) preferences = parsed;
-        }
       }
     }
     _cachedPreferences = preferences;
@@ -244,13 +247,19 @@ class SavedStore {
       if (localDataFile == null) return false;
       final String stringMap = json.encode(preferences);
       final File temporaryFile = File('${localDataFile.path}.tmp');
-      await temporaryFile.parent.create(recursive: true);
-      await temporaryFile.writeAsString(stringMap, flush: true);
-      if (localDataFile.existsSync()) {
-        await localDataFile.copy('$fileName.bk');
-        await localDataFile.delete();
+      try {
+        await temporaryFile.parent.create(recursive: true);
+        await temporaryFile.writeAsString(stringMap, flush: true);
+        if (localDataFile.existsSync()) {
+          await localDataFile.copy('$fileName.bk');
+        }
+        // Keep the destination present while replacing its contents. A second
+        // process can then recover from the backup instead of observing a
+        // missing settings file between delete and rename.
+        await temporaryFile.copy(localDataFile.path);
+      } finally {
+        if (temporaryFile.existsSync()) await temporaryFile.delete();
       }
-      await temporaryFile.rename(localDataFile.path);
     } catch (e) {
       return false;
     }

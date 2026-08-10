@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:tabame/logic/error_handler.dart';
+import 'package:tabame/models/classes/save_settings.dart';
 import 'package:tabame/platform/app_data_locations.dart';
 import 'package:tabame/platform/app_paths.dart';
 import 'package:tabame/platform/distribution_profile.dart';
@@ -184,8 +185,31 @@ void main() {
     await Directory(AppPaths.settingsDirectory).create(recursive: true);
     expect(AppPaths.hasSettingsFile, isFalse);
 
+    await File('${AppPaths.settingsPath('settings.json', forWrite: true)}.bk').writeAsString('{}');
+    expect(AppPaths.hasSettingsFile, isTrue);
+
     await File(AppPaths.settingsPath('settings.json', forWrite: true)).writeAsString('{}');
     expect(AppPaths.hasSettingsFile, isTrue);
+  });
+
+  test('loads settings from the last-known-good backup during replacement', () async {
+    AppPaths.resetForTesting();
+    await AppPaths.initialize(
+      applicationSupportDirectory: () async => Directory(p.join(workspace.path, 'support-4')),
+      applicationCacheDirectory: () async => Directory(p.join(workspace.path, 'cache-4')),
+      temporaryDirectory: () async => hostTemp,
+      rootOverride: p.join(workspace.path, 'canonical-4', 'Tabame'),
+      legacyRootOverride: p.join(workspace.path, 'missing-legacy-4', 'Tabame'),
+      migrateLegacyData: false,
+    );
+
+    final String settingsPath = AppPaths.settingsPath('settings.json', forWrite: true);
+    await File(settingsPath).parent.create(recursive: true);
+    await File('$settingsPath.bk').writeAsString('{"flutter.remap":"saved"}');
+
+    final SavedStore store = SavedStore();
+    final Map<String, Object> values = await store.getAll();
+    expect(values['flutter.remap'], 'saved');
   });
 
   test('moves the complete plugin folder and remembers its location', () async {

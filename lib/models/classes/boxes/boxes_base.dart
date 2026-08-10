@@ -103,10 +103,10 @@ class Boxes {
       await pref.setInt("lightSwitchSunrise", 6 * 60);
       await pref.setInt("lightSwitchSunset", 18 * 60);
       await pref.setInt("lightSwitchLastFetch", 0);
-      await pref.setBool("rewindlyEnabled", false);
-      await pref.setInt("rewindlyFps", 2);
-      await pref.setInt("rewindlyClipMinutes", 1);
-      await pref.setInt("rewindlyRetentionMinutes", 60);
+      // await pref.setBool("rewindlyEnabled", false);
+      // await pref.setInt("rewindlyFps", 2);
+      // await pref.setInt("rewindlyClipMinutes", 1);
+      // await pref.setInt("rewindlyRetentionMinutes", 60);
 
       final List<Reminder> defaultReminders = <Reminder>[
         Reminder(
@@ -196,10 +196,10 @@ class Boxes {
       ..lightSwitchSunrise = pref.getInt("lightSwitchSunrise") ?? 6 * 60
       ..lightSwitchSunset = pref.getInt("lightSwitchSunset") ?? 18 * 60
       ..lightSwitchLastFetch = pref.getInt("lightSwitchLastFetch") ?? 0
-      ..rewindlyEnabled = pref.getBool("rewindlyEnabled") ?? user.rewindlyEnabled
-      ..rewindlyFps = pref.getInt("rewindlyFps") ?? user.rewindlyFps
-      ..rewindlyClipMinutes = pref.getInt("rewindlyClipMinutes") ?? user.rewindlyClipMinutes
-      ..rewindlyRetentionMinutes = pref.getInt("rewindlyRetentionMinutes") ?? user.rewindlyRetentionMinutes
+      // ..rewindlyEnabled = pref.getBool("rewindlyEnabled") ?? user.rewindlyEnabled
+      // ..rewindlyFps = pref.getInt("rewindlyFps") ?? user.rewindlyFps
+      // ..rewindlyClipMinutes = pref.getInt("rewindlyClipMinutes") ?? user.rewindlyClipMinutes
+      // ..rewindlyRetentionMinutes = pref.getInt("rewindlyRetentionMinutes") ?? user.rewindlyRetentionMinutes
       ..keystrokesShowClicks = pref.getBool("keystrokesShowClicks") ?? user.keystrokesShowClicks
       ..keystrokesModifiersOnly = pref.getBool("keystrokesModifiersOnly") ?? user.keystrokesModifiersOnly
       ..keystrokesPosition = pref.getInt("keystrokesPosition") ?? user.keystrokesPosition

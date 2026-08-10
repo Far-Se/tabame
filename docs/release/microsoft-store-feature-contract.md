@@ -1,6 +1,6 @@
 # Microsoft Store feature contract
 
-- **Status:** Phase 7 native integration consent/reduced-mode implementation aligned; broader Store validation remains outstanding
+- **Status:** Phase 7 native integration consent/reduced-mode implementation aligned; Phase 9 disclosure artifacts prepared; certification remains outstanding
 - **Route:** `storeInstaller`
 - **Baseline:** Windows 10 22H2 (10.0.19045)+, x64
 - **First-release plugin decision:** all executable plugin sources and the plugin gallery are disabled
