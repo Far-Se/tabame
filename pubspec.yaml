@@ -80,6 +80,9 @@ flutter:
     - resources/wizzard2.png
     - resources/wizzard3.png
     - resources/wizzard4.png
+    - resources/launcher1.webp
+    - resources/launcher2.webp
+    - resources/launcher3.webp
     - resources/gradient/
     - resources/logos/
     - resources/devtools.png

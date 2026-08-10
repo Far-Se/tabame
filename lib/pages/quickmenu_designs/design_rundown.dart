@@ -299,7 +299,7 @@ class _RundownActionRailState extends State<_RundownActionRail> with QuickMenuTr
 
   void _loadActions() {
     _actions = <Widget>[];
-    for (final String name in Boxes().topBarWidgets) {
+    for (final String name in Boxes.topBarWidgets) {
       if (name == 'Deactivated:') break;
       final QuickAction? action = quickActionsMap[name];
       if (action != null) _actions.add(action.widget());

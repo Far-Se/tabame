@@ -1019,6 +1019,21 @@
         "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/ffmpeg-video-converter/main.py",
         "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/ffmpeg-video-converter/README.md"
       }
+    },
+    {
+      "id": "ask-claude",
+      "name": "Ask Claude",
+      "keyword": "ask",
+      "description": "Chat with Claude in your browser without leaving the launcher.",
+      "icon": "chat",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/ask_claude",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/ask_claude/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/ask_claude/main.js"
+      }
     }
   ]
 }

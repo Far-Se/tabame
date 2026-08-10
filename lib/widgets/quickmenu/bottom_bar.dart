@@ -156,7 +156,7 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
     super.initState();
     QuickMenuFunctions.addListener(this);
     Debug.add("QuickMenu: Topbar");
-    for (final String name in Boxes().topBarWidgets) {
+    for (final String name in Boxes.topBarWidgets) {
       if (name == "Deactivated:") break;
       final QuickAction? action = quickActionsMap[name];
       if (action != null) showWidgets.add(action.widget());

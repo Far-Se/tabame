@@ -1529,6 +1529,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       return KeyEventResult.ignored;
     }
 
+    // Home/End are text-editing commands when the search field is focused.
+    // Let TextField handle them instead of routing them to result selection.
+    if (node == _searchFocusNode &&
+        (event.logicalKey == LogicalKeyboardKey.home || event.logicalKey == LogicalKeyboardKey.end)) {
+      return KeyEventResult.ignored;
+    }
+
     if (event is KeyDownEvent || event is KeyRepeatEvent) {
       if (event is KeyDownEvent &&
           event.logicalKey == LogicalKeyboardKey.keyP &&

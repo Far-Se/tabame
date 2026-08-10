@@ -294,9 +294,9 @@ class FancyshotState extends State<Fancyshot> {
 
   void _loadLatestScreenshotPreview() async {
     final math.Random random = Random();
-    final int n = random.nextInt(12) + 1;
+    final int n = random.nextInt(3) + 1;
 
-    final ByteData bytes = await rootBundle.load('resources/gradient/gradient$n.jpg');
+    final ByteData bytes = await rootBundle.load('resources/launcher$n.webp');
     capture = bytes.buffer.asUint8List();
     if (capture == null) {
       setState(() {

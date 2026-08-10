@@ -123,9 +123,13 @@ class QuickMenuFunctions {
       Win32.setPosition(const Offset(-99999, -99999));
     }
     if (Globals.quickMenuPage != type) {
+      final bool letsPops = (<QuickMenuPage>[QuickMenuPage.quickMenu, QuickMenuPage.quickMenu].contains(type) &&
+          <QuickMenuPage>[QuickMenuPage.quickMenu, QuickMenuPage.quickMenu].contains(Globals.quickMenuPage));
+
       for (final QuickMenuTriggers listener in listeners) {
         if (!_listeners.contains(listener)) continue;
         await listener.onQuickMenuSwitchedPage(type, Globals.quickMenuPage, visible);
+        if (letsPops) await listener.onQuickMenuMaybePop();
       }
     }
 

@@ -766,14 +766,34 @@ class Boxes {
     return _runKeys;
   }
 
-  List<String> get topBarWidgets {
+  // static List<String> get topBarWidgets {
+  //   final List<String> defaultWidgets = quickActionsMap.keys.toList()..add("Deactivated:");
+  //   final List<String> configuredWidgets = pref.getStringList("topBarWidgets") ?? defaultWidgets;
+  //   final Iterable<String> missingWidgets =
+  //       defaultWidgets.where((String widgetName) => !configuredWidgets.contains(widgetName));
+  //   final int deactivatedMarkerIndex =
+  //       configuredWidgets.indexWhere((String widgetName) => widgetName == "Deactivated:");
+  //   configuredWidgets.insertAll(deactivatedMarkerIndex, missingWidgets);
+  //   pref.setStringList("topBarWidgets", configuredWidgets);
+  //   return configuredWidgets;
+  // }
+  static List<String> get topBarWidgets {
     final List<String> defaultWidgets = quickActionsMap.keys.toList()..add("Deactivated:");
     final List<String> configuredWidgets = pref.getStringList("topBarWidgets") ?? defaultWidgets;
+
+    // Remove duplicates while preserving order
+    final bool hasDuplicates = configuredWidgets.toSet().length != configuredWidgets.length;
+    if (hasDuplicates) {
+      final Set<String> seen = <String>{};
+      configuredWidgets.retainWhere((String widgetName) => seen.add(widgetName));
+    }
+
     final Iterable<String> missingWidgets =
         defaultWidgets.where((String widgetName) => !configuredWidgets.contains(widgetName));
     final int deactivatedMarkerIndex =
         configuredWidgets.indexWhere((String widgetName) => widgetName == "Deactivated:");
     configuredWidgets.insertAll(deactivatedMarkerIndex, missingWidgets);
+
     pref.setStringList("topBarWidgets", configuredWidgets);
     return configuredWidgets;
   }

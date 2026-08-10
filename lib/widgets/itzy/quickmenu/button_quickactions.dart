@@ -335,7 +335,7 @@ List<QuickActionMenuEntry> _buildStandardQuickActionEntries({
   required Color onSurface,
 }) {
   final Map<String, QuickAction> widgets = <String, QuickAction>{}..addAll(quickActionsMap);
-  final List<String> showWidgetsNames = Boxes().topBarWidgets;
+  final List<String> showWidgetsNames = Boxes.topBarWidgets;
   final List<String> forbiddenButtons = <String>[
     "QuickActionsMenuButton",
     "AppAudioControl1",
@@ -614,7 +614,7 @@ class _ShowStandardQuickActionsState extends State<ShowStandardQuickActions> {
   void initState() {
     super.initState();
     widgets.addAll(quickActionsMap);
-    final List<String> showWidgetsNames = Boxes().topBarWidgets;
+    final List<String> showWidgetsNames = Boxes.topBarWidgets;
     final List<String> forbiddenButtons = <String>[
       "QuickActionsMenuButton",
       "AppAudioControl1",

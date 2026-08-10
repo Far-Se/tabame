@@ -78,6 +78,8 @@ const POLL_REQUEST_TIMEOUT_MS = 15_000;
 const STABLE_FOR_MS = 1_200;
 const NO_PROGRESS_TIMEOUT_MS = 25_000;
 const MAX_CONSECUTIVE_POLL_FAILURES = 5;
+const SHUTDOWN_TAB_WAIT_MS = 500;
+const SHUTDOWN_TAB_CLOSE_TIMEOUT_MS = 1_000;
 
 // Shared helpers injected into both in-page scripts. Assistant messages
 // only — never the bubble you just typed. Prefers the dedicated assistant
@@ -359,6 +361,7 @@ const state = {
   initialized: false,
   screen: "connection", // "connection" | "chat"
   tabId: null,
+  tabOwned: false,
   messages: [], // {id, role: "user"|"assistant"|"error"|"system", text, time}
   busy: false,
   thinkingStartedAt: null,
@@ -460,6 +463,7 @@ function ensureTabOpen() {
         return state.tabId;
       }
       state.tabId = null;
+      state.tabOwned = false;
     }
 
     const list = await bridge.request("tabs.list");
@@ -468,12 +472,14 @@ function ensureTabOpen() {
     );
     if (existing) {
       state.tabId = existing.id;
+      state.tabOwned = false;
     } else {
       const tab = await bridge.request("tabs.open", {
         url: CONFIG.claudeUrl,
         active: true,
       });
       state.tabId = tab.id;
+      state.tabOwned = true;
       await waitForTabReady(state.tabId);
     }
     return state.tabId;
@@ -546,6 +552,7 @@ function renderChat(rev) {
     accessories: [
       { text: m.id === state.streamingMessageId ? "Writing…" : m.time },
     ],
+    actions: [{ id: "copy", title: "Copy message", icon: "copy" }],
   }));
 
   if (state.busy && !state.streamingMessageId) {
@@ -876,6 +883,14 @@ async function startNewConversation() {
 
 async function handleAction(id, action) {
   try {
+    if (action === "copy") {
+      const message = state.messages.find((candidate) => candidate.id === id);
+      if (message?.text) {
+        command("copy", { text: message.text });
+        command("toast", { text: "Message copied", style: "success" });
+      }
+      return;
+    }
     if (action === "reconnect") {
       await bridge.refreshStatus().catch(() => {});
       if (bridge.connected) {
@@ -955,10 +970,46 @@ async function handleLine(line) {
   }
 }
 
+async function closeOwnedClaudeTab() {
+  // If shutdown races the initial tabs.open request, give it a brief chance
+  // to return an id before releasing the bridge.
+  if (state.tabId == null && tabOpenPromise) {
+    await Promise.race([
+      tabOpenPromise.catch(() => null),
+      new Promise((resolve) => setTimeout(resolve, SHUTDOWN_TAB_WAIT_MS)),
+    ]);
+  }
+
+  if (!state.tabOwned || state.tabId == null) return;
+
+  const tabId = state.tabId;
+  state.tabId = null;
+  state.tabOwned = false;
+  if (!bridge.connected) {
+    log(
+      "Could not close the Claude tab because the browser bridge is offline.",
+    );
+    return;
+  }
+
+  await bridge
+    .request("tabs.close", { tabId }, SHUTDOWN_TAB_CLOSE_TIMEOUT_MS)
+    .catch((error) =>
+      log(
+        "Could not close the Claude tab on shutdown:",
+        error instanceof Error ? error.message : error,
+      ),
+    );
+}
+
 let shuttingDown = false;
 function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
-  bridge.close();
-  setTimeout(() => process.exit(0), 20);
+  void closeOwnedClaudeTab()
+    .catch((error) => log("Claude tab cleanup failed:", error))
+    .finally(() => {
+      bridge.close();
+      setTimeout(() => process.exit(0), 20);
+    });
 }

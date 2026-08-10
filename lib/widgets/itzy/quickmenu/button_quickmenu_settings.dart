@@ -1084,7 +1084,7 @@ class _QuickActionsTabState extends State<_QuickActionsTab> {
     _icons.addAll(
       quickActionsMap.map((String k, QuickAction v) => MapEntry<String, IconData>(k, v.icon)),
     );
-    final List<String> saved = Boxes().topBarWidgets;
+    final List<String> saved = Boxes.topBarWidgets;
     bool foundDeactivated = false;
     for (final String item in saved) {
       if (item == "Deactivated:") {
