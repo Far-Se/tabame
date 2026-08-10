@@ -24,6 +24,17 @@ void main() {
   });
 
   group('ElevationService', () {
+    test('exposes opt-in startup elevation for supported profiles', () {
+      expect(ElevationService.forCurrentProfile().capability.canStartAutomatically, isTrue);
+      expect(
+        ElevationService(
+          profile: DistributionProfile.storeMsix,
+          adapter: FakeElevationAdapter(const PrivilegeStatus.standardUser()),
+        ).capability.canStartAutomatically,
+        isFalse,
+      );
+    });
+
     test('allows an explicit restart from a standard-user session', () async {
       final FakeElevationAdapter adapter = FakeElevationAdapter(const PrivilegeStatus.standardUser());
       final ElevationService service = ElevationService(

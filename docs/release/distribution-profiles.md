@@ -8,17 +8,20 @@
 The profile is compile-time configuration. An unknown value fails during startup;
 no value selects the safe `portable` profile. Runtime package identity is checked
 on Windows and logged as a diagnostic when it does not match the selected
-profile. A mismatch does not crash the portable development process. Normal
-startup is non-elevated for every profile; explicit elevation is governed by the
-Phase 4 elevation service and the `allowElevation` capability.
+profile. A mismatch does not crash the portable development process, and
+automatic elevation fails closed when package identity is mismatched or unavailable.
+Normal startup is non-elevated by default; the portable and storeInstaller profiles
+also support the explicit, persisted Elevated Permission preference. Startup
+elevation is governed by the Phase 4 elevation service and the
+`allowElevation`/`automaticElevation` capabilities.
 
 ## Profiles
 
-| Profile          | Intended artifact                                                  | Package identity | Update/lifecycle policy                                                                                                            |
-| ---------------- | ------------------------------------------------------------------ | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `portable`       | Existing ZIP/GitHub build                                          | Unpackaged       | Existing ZIP self-update and custom lifecycle remain available; elevation is explicit                                              |
-| `storeInstaller` | Signed per-user Inno Setup EXE candidate listed in Microsoft Store | Unpackaged       | Installer owns lifecycle; self-update, custom install, and custom uninstall disabled; explicit UAC is available                    |
-| `storeMsix`      | Future Store-hosted MSIX                                           | Required         | Store owns updates/uninstall; package app-data and StartupTask are required; elevation is disabled until `allowElevation` approval |
+| Profile          | Intended artifact                                                  | Package identity | Update/lifecycle policy                                                                                                             |
+| ---------------- | ------------------------------------------------------------------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `portable`       | Existing ZIP/GitHub build                                          | Unpackaged       | Existing ZIP self-update and custom lifecycle remain available; explicit and opt-in startup UAC are available                       |
+| `storeInstaller` | Signed per-user Inno Setup EXE candidate listed in Microsoft Store | Unpackaged       | Installer owns lifecycle; self-update, custom install, and custom uninstall disabled; explicit and opt-in startup UAC are available |
+| `storeMsix`      | Future Store-hosted MSIX                                           | Required         | Store owns updates/uninstall; package app-data and StartupTask are required; elevation is disabled until `allowElevation` approval  |
 
 `storeInstaller` is the selected first Store route. The existing Windows workflow
 still publishes the portable ZIP unchanged. The separate

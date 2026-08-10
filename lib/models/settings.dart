@@ -219,6 +219,7 @@ class Settings {
   bool trktivityEnabled = false;
   bool taskManagerStats = false;
   bool quickClickEnabled = false;
+  bool runAsAdministrator = false;
   bool launcherFullPopups = false;
   bool trayBarAlternative = false;
   bool _hideTabameOnUnfocus = true;

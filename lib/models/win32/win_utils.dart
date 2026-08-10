@@ -611,12 +611,23 @@ class WinUtils {
     WinKeys.send("{#WIN}{#CTRL}{$directionKey}");
   }
 
-  static void closeAllTabameExProcesses() {
+  static void closeAllTabameExProcesses({bool closeInterface = true, bool closeQuickMenu = true}) {
     final List<int> windowHandles = enumWindows();
     final int mainHandle = Win32.getMainHandle();
     for (final int windowHandle in windowHandles) {
-      if (Win32.getClass(windowHandle) == "TABAME_WIN32_WINDOW" && windowHandle != mainHandle) {
-        if (Win32.getTitle(windowHandle).contains("Debug")) continue;
+      if (Win32.getClass(windowHandle) != "TABAME_WIN32_WINDOW" || windowHandle == mainHandle) continue;
+      if (Win32.getTitle(windowHandle).contains("Debug")) continue;
+
+      final String title = Win32.getTitle(windowHandle);
+      if (closeInterface && closeQuickMenu) {
+        Win32.closeWindow(windowHandle);
+        continue;
+      }
+
+      final bool isInterfaceWindow =
+          title == "Tabame - Interface" || title == "Tabame - Wizardly" || title == "Tabame - Fancyshot";
+      final bool isQuickMenuWindow = title == "Tabame";
+      if ((isInterfaceWindow && closeInterface) || (isQuickMenuWindow && closeQuickMenu)) {
         Win32.closeWindow(windowHandle);
       }
     }

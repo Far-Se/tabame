@@ -57,7 +57,7 @@ Future<void> main(List<String> arguments) async {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
       SaveSettings.suppressWrites = !AppPaths.hasSettingsFile;
-      await AppStartup.registerServices();
+      if (await AppStartup.registerServices()) exit(0);
       AppStartup.registerHooks();
       await AppStartup.setupWindow(arguments);
       await AppStartup.finalizeStartup();

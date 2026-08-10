@@ -92,6 +92,7 @@ class Boxes {
       await pref.setBool("autoOpenTaskManager", false);
       await pref.setBool("clipboardHistoryEnabled", false);
       await pref.setBool("quickClickEnabled", false);
+      await pref.setBool("runAsAdministrator", false);
       await pref.setString("quickClickConfig", jsonEncode(user.quickClickConfig.toMap()));
       await pref.setBool("hideTabameOnUnfocus", true);
       await pref.setString("wallpapersFolder", "");
@@ -176,6 +177,7 @@ class Boxes {
       ..launcherFullPopups = pref.getBool("launcherFullPopups") ?? user.launcherFullPopups
       ..autoOpenTaskManager = pref.getBool("autoOpenTaskManager") ?? user.autoOpenTaskManager
       ..quickClickEnabled = pref.getBool("quickClickEnabled") ?? user.quickClickEnabled
+      ..runAsAdministrator = pref.getBool("runAsAdministrator") ?? user.runAsAdministrator
       ..quickClickConfig = pref.getString("quickClickConfig") != null
           ? QuickClickConfig.fromMap(jsonDecode(pref.getString("quickClickConfig")!) as Map<String, dynamic>)
           : user.quickClickConfig

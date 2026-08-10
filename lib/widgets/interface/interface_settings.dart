@@ -367,16 +367,35 @@ class SettingsPageState extends State<SettingsPage> {
     setState(() => _privilegeStatus = status);
   }
 
+  Future<void> _setPersistentElevation(bool enabled) async {
+    if (_elevationBusy) return;
+    setState(() => _elevationBusy = true);
+    final bool previousValue = user.runAsAdministrator;
+    user.runAsAdministrator = enabled;
+    try {
+      await Boxes.updateSettings("runAsAdministrator", enabled);
+    } catch (error) {
+      user.runAsAdministrator = previousValue;
+      if (!mounted) return;
+      setState(() => _elevationBusy = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not save Elevated Permission: $error')));
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _elevationBusy = false);
+  }
+
   Widget _buildElevationCard(Color accent, Color onSurface) {
     final ElevationCapabilityResult capability = _elevationService.capability;
     final PrivilegeStatus status = _privilegeStatus ?? const PrivilegeStatus.unavailable();
+    final bool canConfigurePersistentElevation = capability.canStartAutomatically && !_elevationBusy;
     final bool canRestart = capability.isAvailable && !status.isElevated && !_elevationBusy;
     final bool canStartQuickMenu = capability.isAvailable && status.isAvailable && !_elevationBusy;
 
     return _settingsCard(
       id: "security",
       title: "Elevation",
-      subtitle: "Request administrator access only for this explicit session.",
+      subtitle: "Choose whether administrator access is limited to a session or requested on every launch.",
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -403,6 +422,16 @@ class SettingsPageState extends State<SettingsPage> {
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 12),
+          _toggleTile(
+            title: "Elevated Permission",
+            subtitle: capability.canStartAutomatically
+                ? "Request UAC and start Tabame elevated whenever it opens. UAC cancellation keeps the normal session running."
+                : capability.message,
+            value: capability.canStartAutomatically && user.runAsAdministrator,
+            enabled: canConfigurePersistentElevation,
+            onChanged: canConfigurePersistentElevation ? _setPersistentElevation : null,
           ),
           const SizedBox(height: 12),
           if (canRestart || canStartQuickMenu)
@@ -435,7 +464,7 @@ class SettingsPageState extends State<SettingsPage> {
             ),
           const SizedBox(height: 8),
           Text(
-            'This action is separate from Launch at Startup. Normal and login-startup launches never request UAC.',
+            'Launch at Startup controls when Tabame opens. Elevated Permission controls whether that launch requests UAC; turning it off takes effect on the next launch.',
             style:
                 TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: _AppOpacity.textSecondary)),
           ),

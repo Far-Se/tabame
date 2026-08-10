@@ -43,7 +43,12 @@ class PrivilegeStatus {
 }
 
 class ElevationCapabilityResult {
-  const ElevationCapabilityResult({required this.profile, required this.isAvailable, required this.message});
+  const ElevationCapabilityResult({
+    required this.profile,
+    required this.isAvailable,
+    required this.automaticElevation,
+    required this.message,
+  });
 
   factory ElevationCapabilityResult.forProfile(DistributionProfile profile) {
     final DistributionCapabilities capabilities = profile.capabilities;
@@ -51,6 +56,7 @@ class ElevationCapabilityResult {
       return ElevationCapabilityResult(
         profile: profile,
         isAvailable: false,
+        automaticElevation: false,
         message: profile == DistributionProfile.storeMsix
             ? 'Elevation is disabled in the MSIX profile because the restricted allowElevation capability is not approved.'
             : 'Elevation is unavailable in this distribution profile.',
@@ -59,13 +65,19 @@ class ElevationCapabilityResult {
     return ElevationCapabilityResult(
       profile: profile,
       isAvailable: true,
-      message: 'Explicit UAC actions are available for this profile.',
+      automaticElevation: capabilities.automaticElevation,
+      message: capabilities.automaticElevation
+          ? 'Explicit UAC actions and opt-in startup elevation are available for this profile.'
+          : 'Explicit UAC actions are available for this profile.',
     );
   }
 
   final DistributionProfile profile;
   final bool isAvailable;
+  final bool automaticElevation;
   final String message;
+
+  bool get canStartAutomatically => isAvailable && automaticElevation;
 }
 
 enum ElevationRequestState {

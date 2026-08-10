@@ -29,7 +29,7 @@ void main() {
 
       expect(capabilities.packageManaged, isFalse);
       expect(capabilities.runtimeElevation, isTrue);
-      expect(capabilities.automaticElevation, isFalse);
+      expect(capabilities.automaticElevation, isTrue);
       expect(capabilities.allowElevation, isTrue);
       expect(capabilities.startupRegistration, StartupRegistration.shortcut);
       expect(capabilities.appDataProvider, AppDataProvider.localAppData);
@@ -43,7 +43,7 @@ void main() {
 
       expect(capabilities.packageManaged, isFalse);
       expect(capabilities.runtimeElevation, isTrue);
-      expect(capabilities.automaticElevation, isFalse);
+      expect(capabilities.automaticElevation, isTrue);
       expect(capabilities.allowElevation, isTrue);
       expect(capabilities.startupRegistration, StartupRegistration.shortcut);
       expect(capabilities.appDataProvider, AppDataProvider.localAppData);

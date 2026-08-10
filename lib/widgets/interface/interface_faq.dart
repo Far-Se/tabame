@@ -44,9 +44,9 @@ const List<_FaqItem> _faqItems = <_FaqItem>[
   _FaqItem(
       question: "Why does Tabame ask for administrator privileges?",
       answer:
-          """Some actions — such as changing protected context-menu entries or launching a selected app elevated — may require UAC. Tabame normally runs at standard user or medium integrity and never elevates at startup. Use Settings → Advanced & Security → Restart Elevated for This Session when you explicitly need it."""),
+          """Some actions — such as changing protected context-menu entries or launching a selected app elevated — may require UAC. Tabame normally runs at standard user or medium integrity. In Settings → Advanced & Security → Elevation, enable Elevated Permission if you want supported Tabame launches to request UAC automatically; otherwise use one of the explicit restart actions for a single session."""),
   _FaqItem(question: "How do I make Tabame start with Windows?", answer: """
-Go to Settings → Configuration and enable "Launch at Startup". Tabame registers a per-user startup shortcut without requesting administrator privileges or changing the elevation state."""),
+Go to Settings → Configuration and enable "Launch at Startup". Tabame registers a per-user startup shortcut. If Elevated Permission is enabled under Settings → Advanced & Security → Elevation, the launched process also requests UAC."""),
   _FaqItem(
       question: "Where are my settings stored?",
       answer:
@@ -70,7 +70,7 @@ Go to Settings → Configuration and enable "Launch at Startup". Tabame register
   _FaqItem(
       question: "Tabame isn't responding to my hotkey. What should I try?",
       answer:
-          """First make sure no other application has registered the same shortcut. Tabame normally runs without elevation, so actions targeting elevated windows may be unavailable until you explicitly use Settings → Advanced & Security → Restart Elevated for This Session. Finally, try restarting Tabame from the system tray."""),
+          """First make sure no other application has registered the same shortcut. Tabame normally runs without elevation, so actions targeting elevated windows may be unavailable until you enable Elevated Permission or explicitly use Settings → Advanced & Security → Elevation. Finally, try restarting Tabame from the system tray."""),
   _FaqItem(
       question: "How can I report a bug or request a feature?",
       answer:

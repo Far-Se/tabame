@@ -21,10 +21,11 @@ service reports one of:
 A system-controlled state is not overwritten. The UI shows the state/message and
 opens `ms-settings:startupapps` when Windows or policy owns the setting.
 
-Startup registration has no administrator preference. Enabling or disabling
-login startup never changes process integrity, and the startup action never
-requests UAC. Explicit elevation is a separate Phase 4 action for the current
-session only.
+Startup registration has no control over the administrator preference.
+Enabling or disabling login startup does not itself request UAC. If the user has
+enabled **Elevated Permission** in the separate Elevation settings, the
+registered launch starts the normal process, which then performs the configured
+explicit UAC replacement for supported profiles.
 
 ## Profile behavior
 
@@ -60,7 +61,7 @@ back to a shortcut when the task is absent or blocked.
 ## Test contract
 
 `test/startup_registration_service_test.dart` covers the fake-adapter service
-boundary, explicit quick-menu arguments, non-elevated startup, and user/policy-
-controlled states. Desktop validation still needs manual sign-in,
+boundary, explicit quick-menu arguments, default non-elevated startup, and
+user/policy-controlled states. Desktop validation still needs manual sign-in,
 sign-out, Windows Settings ownership, policy denial, shortcut duplicate cleanup,
 executable upgrade, and MSIX StartupTask checks against the signed artifacts.

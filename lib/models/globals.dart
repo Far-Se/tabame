@@ -56,6 +56,12 @@ class Globals {
   static bool startInInterface = false;
   static const String elevatedQuickMenuArgument = "-elevated-quickmenu";
 
+  /// Marks the replacement process created by the persisted elevation setting.
+  /// It preserves the requested page while allowing the replacement to close
+  /// the non-elevated process after its own window is ready.
+  static const String elevatedStartupArgument = "-elevated-startup";
+  static const String elevatedStartupSignalArgument = "-elevated-startup-signal";
+
   static ({double width, double height}) quickMenuSize = (width: 355, height: 580);
   static ({double width, double height}) launcherSize = (width: 715, height: 630);
   static QuickMenuPage quickMenuPage = QuickMenuPage.quickMenu;
