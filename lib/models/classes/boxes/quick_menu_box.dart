@@ -122,10 +122,10 @@ class QuickMenuFunctions {
     if (!visible && !(kDebugMode && !Globals.debugHotkeys)) {
       Win32.setPosition(const Offset(-99999, -99999));
     }
+    final bool letsPops = Globals.quickMenuPage != type &&
+        (<QuickMenuPage>[QuickMenuPage.quickMenu, QuickMenuPage.quickMenu].contains(type) &&
+            <QuickMenuPage>[QuickMenuPage.quickMenu, QuickMenuPage.quickMenu].contains(Globals.quickMenuPage));
     if (Globals.quickMenuPage != type) {
-      final bool letsPops = (<QuickMenuPage>[QuickMenuPage.quickMenu, QuickMenuPage.quickMenu].contains(type) &&
-          <QuickMenuPage>[QuickMenuPage.quickMenu, QuickMenuPage.quickMenu].contains(Globals.quickMenuPage));
-
       for (final QuickMenuTriggers listener in listeners) {
         if (!_listeners.contains(listener)) continue;
         await listener.onQuickMenuSwitchedPage(type, Globals.quickMenuPage, visible);
@@ -136,7 +136,7 @@ class QuickMenuFunctions {
     for (final QuickMenuTriggers listener in listeners) {
       if (!_listeners.contains(listener)) continue;
       await listener.onQuickMenuToggled(visible, type);
-      if (forcePop) await listener.onQuickMenuMaybePop();
+      if (forcePop || letsPops) await listener.onQuickMenuMaybePop();
     }
 
     if (visible) {

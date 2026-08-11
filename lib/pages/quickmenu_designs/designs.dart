@@ -26,6 +26,7 @@ import 'design_notion.dart';
 import 'design_outrun.dart';
 import 'design_outrun2.dart';
 import 'design_player.dart';
+import 'design_relay.dart';
 import 'design_rundown.dart';
 import 'design_serene.dart';
 import 'design_steam.dart';
@@ -126,6 +127,8 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.windows98 => MainMenuWindows98Widget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.notion => MainMenuNotionWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.rundown => MainMenuRundownWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.relay => MainMenuRelayWidget(key: ValueKey<int>(_refreshCounter)),
+      // QuickMenuDesigns.focusline => MainMenuFocuslineWidget(key: ValueKey<int>(_refreshCounter)),
       // QuickMenuDesigns.familyGuy => MainMenuFamilyGuyWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }

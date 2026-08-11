@@ -65,6 +65,18 @@ enum QuickMenuDesigns {
   windows98,
   notion,
   rundown,
+
+  /// Compact communications-console skin with routed signal rails.
+  ///
+  /// Persisted by index — append new designs at the end to preserve existing
+  /// QuickMenu preferences.
+  relay,
+
+  /// Full-width task-first skin with monitor filters and a focused-window bay.
+  ///
+  /// Persisted by index — append new designs at the end to preserve existing
+  /// QuickMenu preferences.
+  // focusline,
   // familyGuy,
   ;
 
@@ -1155,6 +1167,58 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
+      QuickMenuDesigns.relay.displayName: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFE7EEF0),
+          textColor: const Color(0xFF18272C),
+          accentColor: const Color(0xFF007F91),
+          gradientAlpha: 42,
+          uiFontFamily: 'Bahnschrift',
+          uiFontWeight: 500,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
+          borderRadius: 5,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF0B151A),
+          textColor: const Color(0xFFD6E7E8),
+          accentColor: const Color(0xFF2DE2C4),
+          gradientAlpha: 58,
+          uiFontFamily: 'Bahnschrift',
+          uiFontWeight: 500,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
+          borderRadius: 5,
+          baseFontSize: 10,
+        ),
+      ),
+      // QuickMenuDesigns.focusline.displayName: QMDesignThemeSet(
+      //   lightTheme: _defaultThemeColors(
+      //     background: const Color(0xFFE8EDF0),
+      //     textColor: const Color(0xFF1D2A31),
+      //     accentColor: const Color(0xFFB85B34),
+      //     gradientAlpha: 34,
+      //     uiFontFamily: 'Bahnschrift',
+      //     uiFontWeight: 500,
+      //     entryFontFamily: 'Segoe UI',
+      //     entryFontWeight: 600,
+      //     borderRadius: 4,
+      //     baseFontSize: 10,
+      //   ),
+      //   darkTheme: _defaultThemeColors(
+      //     background: const Color(0xFF11171B),
+      //     textColor: const Color(0xFFE1E8E8),
+      //     accentColor: const Color(0xFFE18A4A),
+      //     gradientAlpha: 48,
+      //     uiFontFamily: 'Bahnschrift',
+      //     uiFontWeight: 500,
+      //     entryFontFamily: 'Segoe UI',
+      //     entryFontWeight: 600,
+      //     borderRadius: 4,
+      //     baseFontSize: 10,
+      //   ),
+      // ),
       // QuickMenuDesigns.familyGuy.displayName: QMDesignThemeSet(
       //   lightTheme: _defaultThemeColors(
       //     background: const Color(0xffF0EBE0), // Living-room wall beige

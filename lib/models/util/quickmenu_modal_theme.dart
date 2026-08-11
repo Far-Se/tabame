@@ -886,6 +886,71 @@ class QuickMenuModalFrame extends StatelessWidget {
             ),
           ],
         ),
+      QuickMenuDesigns.relay => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.96),
+            border: Border.all(color: text.withValues(alpha: isDark ? 0.18 : 0.22), width: 0.8),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.10),
+                blurRadius: 16,
+                spreadRadius: -6,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          underlays: <Widget>[
+            CustomPaint(
+              painter: _RelayModalTracePainter(
+                rail: accent.withValues(alpha: isDark ? 0.075 : 0.055),
+                quiet: text.withValues(alpha: isDark ? 0.04 : 0.035),
+              ),
+            ),
+          ],
+          overlays: <Widget>[
+            CustomPaint(
+              painter: _RelayModalFramePainter(
+                accent: accent,
+                quiet: text.withValues(alpha: isDark ? 0.38 : 0.46),
+              ),
+            ),
+          ],
+        ),
+      // QuickMenuDesigns.focusline => _FrameSpec(
+      //     decoration: BoxDecoration(
+      //       borderRadius: radius,
+      //       color: bg.withValues(alpha: isDark ? 0.96 : 0.98),
+      //       border: Border.all(
+      //         color: text.withValues(alpha: isDark ? 0.18 : 0.22),
+      //         width: 0.8,
+      //       ),
+      //       boxShadow: <BoxShadow>[
+      //         BoxShadow(
+      //           color: Colors.black.withValues(alpha: isDark ? 0.26 : 0.10),
+      //           blurRadius: 15,
+      //           spreadRadius: -7,
+      //           offset: const Offset(0, 5),
+      //         ),
+      //       ],
+      //     ),
+      //     underlays: <Widget>[
+      //       CustomPaint(
+      //         painter: _FocuslineModalCalibrationPainter(
+      //           rule: text.withValues(alpha: isDark ? 0.08 : 0.10),
+      //           accent: accent.withValues(alpha: isDark ? 0.16 : 0.13),
+      //         ),
+      //       ),
+      //     ],
+      //     overlays: <Widget>[
+      //       CustomPaint(
+      //         painter: _FocuslineModalFramePainter(
+      //           accent: accent,
+      //           quiet: text.withValues(alpha: isDark ? 0.34 : 0.42),
+      //         ),
+      //       ),
+      //     ],
+      //   ),
       // QuickMenuDesigns.familyGuy => _FrameSpec(
       //     decoration: BoxDecoration(
       //       borderRadius: radius,
@@ -1291,6 +1356,180 @@ class _VectorBracketPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _VectorBracketPainter oldDelegate) => oldDelegate.color != color;
+}
+
+class _RelayModalTracePainter extends CustomPainter {
+  const _RelayModalTracePainter({required this.rail, required this.quiet});
+
+  final Color rail;
+  final Color quiet;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint quietPaint = Paint()
+      ..color = quiet
+      ..strokeWidth = 0.5;
+    final Paint railPaint = Paint()
+      ..color = rail
+      ..strokeWidth = 0.7
+      ..style = PaintingStyle.stroke;
+
+    for (double y = 16; y < size.height; y += 22) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), quietPaint);
+    }
+
+    final Path trace = Path()
+      ..moveTo(0, 31)
+      ..lineTo(size.width * 0.22, 31)
+      ..lineTo(size.width * 0.25, 27)
+      ..lineTo(size.width * 0.52, 27)
+      ..lineTo(size.width * 0.55, 31)
+      ..lineTo(size.width * 0.76, 31);
+    canvas.drawPath(trace, railPaint);
+
+    final Paint node = Paint()..color = rail;
+    for (final Offset point in <Offset>[
+      Offset(size.width * 0.25, 27),
+      Offset(size.width * 0.55, 31),
+    ]) {
+      canvas.drawCircle(point, 1.4, node);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RelayModalTracePainter oldDelegate) =>
+      oldDelegate.rail != rail || oldDelegate.quiet != quiet;
+}
+
+class _RelayModalFramePainter extends CustomPainter {
+  const _RelayModalFramePainter({required this.accent, required this.quiet});
+
+  final Color accent;
+  final Color quiet;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const double inset = 3;
+    const double length = 9;
+    final double right = size.width - inset;
+    final double bottom = size.height - inset;
+    final Paint bracket = Paint()
+      ..color = accent
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.square;
+    final Path corners = Path()
+      ..moveTo(inset, inset + length)
+      ..lineTo(inset, inset)
+      ..lineTo(inset + length, inset)
+      ..moveTo(right - length, inset)
+      ..lineTo(right, inset)
+      ..lineTo(right, inset + length)
+      ..moveTo(right, bottom - length)
+      ..lineTo(right, bottom)
+      ..lineTo(right - length, bottom)
+      ..moveTo(inset + length, bottom)
+      ..lineTo(inset, bottom)
+      ..lineTo(inset, bottom - length);
+    canvas.drawPath(corners, bracket);
+
+    final Paint tick = Paint()
+      ..color = quiet
+      ..strokeWidth = 0.8;
+    final double cx = size.width / 2;
+    canvas.drawLine(Offset(cx, inset - 1), Offset(cx, inset + 4), tick);
+    canvas.drawLine(Offset(cx, bottom - 4), Offset(cx, bottom + 1), tick);
+
+    final Paint bus = Paint()
+      ..color = accent.withValues(alpha: 0.55)
+      ..strokeWidth = 0.8;
+    const double x = 7;
+    canvas.drawLine(const Offset(x, 20), Offset(x, size.height - 20), bus);
+    for (final double y in <double>[26, size.height - 26]) {
+      canvas.drawCircle(Offset(x, y), 1.3, Paint()..color = accent);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RelayModalFramePainter oldDelegate) =>
+      oldDelegate.accent != accent || oldDelegate.quiet != quiet;
+}
+
+class _FocuslineModalCalibrationPainter extends CustomPainter {
+  const _FocuslineModalCalibrationPainter({required this.rule, required this.accent});
+
+  final Color rule;
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint ticks = Paint()
+      ..color = rule
+      ..strokeWidth = 0.5;
+    for (double y = 18; y < size.height; y += 28) {
+      canvas.drawLine(Offset(0, y), Offset(6, y), ticks);
+      canvas.drawLine(Offset(size.width - 6, y), Offset(size.width, y), ticks);
+    }
+
+    final Paint guide = Paint()
+      ..color = accent
+      ..strokeWidth = 0.6;
+    final double center = size.width / 2;
+    canvas.drawLine(Offset(center - 18, 14), Offset(center + 18, 14), guide);
+    canvas.drawCircle(Offset(center, 14), 1.2, Paint()..color = accent);
+  }
+
+  @override
+  bool shouldRepaint(covariant _FocuslineModalCalibrationPainter oldDelegate) {
+    return oldDelegate.rule != rule || oldDelegate.accent != accent;
+  }
+}
+
+class _FocuslineModalFramePainter extends CustomPainter {
+  const _FocuslineModalFramePainter({required this.accent, required this.quiet});
+
+  final Color accent;
+  final Color quiet;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const double inset = 4;
+    const double length = 11;
+    final double right = size.width - inset;
+    final double bottom = size.height - inset;
+
+    final Paint bracket = Paint()
+      ..color = accent
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.square;
+    final Path corners = Path()
+      ..moveTo(inset, inset + length)
+      ..lineTo(inset, inset)
+      ..lineTo(inset + length, inset)
+      ..moveTo(right - length, inset)
+      ..lineTo(right, inset)
+      ..lineTo(right, inset + length)
+      ..moveTo(right, bottom - length)
+      ..lineTo(right, bottom)
+      ..lineTo(right - length, bottom)
+      ..moveTo(inset + length, bottom)
+      ..lineTo(inset, bottom)
+      ..lineTo(inset, bottom - length);
+    canvas.drawPath(corners, bracket);
+
+    final Paint tick = Paint()
+      ..color = quiet
+      ..strokeWidth = 0.7;
+    final double center = size.width / 2;
+    canvas.drawLine(Offset(center, inset - 1), Offset(center, inset + 4), tick);
+    canvas.drawLine(Offset(center, bottom - 4), Offset(center, bottom + 1), tick);
+  }
+
+  @override
+  bool shouldRepaint(covariant _FocuslineModalFramePainter oldDelegate) {
+    return oldDelegate.accent != accent || oldDelegate.quiet != quiet;
+  }
 }
 
 class _HalftonePainter extends CustomPainter {

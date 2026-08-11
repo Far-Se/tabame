@@ -188,6 +188,7 @@ class Launcher extends StatefulWidget {
 class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTickerProviderStateMixin {
   static const double _minResultsHeight = 300;
   static const double _maxResultsHeight = 454;
+  static const double _sidePreviewBreakpoint = 500;
   static const String _filePreviewVisiblePreferenceKey = 'launcherFilePreviewVisible';
 
   final LauncherSearchToken _searchToken = LauncherSearchToken();
@@ -4868,6 +4869,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       isSearching: _isSearching,
     );
     final ({int height, int width}) size = Win32.getSize();
+    final double windowWidth = MediaQuery.maybeOf(context)?.size.width ?? size.width.toDouble();
     final Widget resultsContent = Focus(
       focusNode: _resultsFocusNode,
       skipTraversal: true,
@@ -4898,7 +4900,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                             final PlatformWindow? previewWindow = previewResult?.window;
                             return LayoutBuilder(
                               builder: (BuildContext context, BoxConstraints constraints) {
-                                final bool showPreview = _isFilePreviewVisible && previewResult != null;
+                                final bool showPreview = windowWidth >= _sidePreviewBreakpoint &&
+                                    _isFilePreviewVisible &&
+                                    previewResult != null;
                                 final double previewWidth = constraints.maxWidth * 0.40;
                                 return Stack(
                                   children: <Widget>[
