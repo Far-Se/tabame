@@ -1229,6 +1229,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   /// [KeyEventResult.ignored] to let the normal handler run.
   KeyEventResult _handlePluginKey(KeyEvent event) {
     final PluginRenderFrame? frame = _pluginFrame;
+    if (event.logicalKey == LogicalKeyboardKey.escape && event is KeyRepeatEvent) {
+      _exitPlugin();
+      return KeyEventResult.handled;
+    }
     if (frame == null) {
       // Process launched but no frame yet — still swallow Escape so it exits.
       if (event.logicalKey == LogicalKeyboardKey.escape && event is KeyDownEvent) {
@@ -1617,6 +1621,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       }
       // Escape: go back to quickmenu
       if (event.logicalKey == LogicalKeyboardKey.escape) {
+        if (event is KeyRepeatEvent) {
+          QuickMenuFunctions.hideQuickMenu();
+          Win32.activateWindow(Globals.lastFocusedWinHWND);
+          return KeyEventResult.handled;
+        }
         if (node == _resultsFocusNode) {
           if (event is KeyDownEvent) _focusSearch();
           return KeyEventResult.handled;
@@ -3073,7 +3082,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
           searchTerms: <String>['spotify', 'open', 'launch'],
           onExecute: () {
             SpotifyController.launchApp();
-            _finishLauncherFunctionExecution();
+            // _finishLauncherFunctionExecution(hide: false);
           },
         )),
       ], isSearching: false);
@@ -3191,7 +3200,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
   void _executeSpotifyCommand(PlatformMediaSession session, String command) {
     unawaited(SpotifyController.command(session, command));
-    _finishLauncherFunctionExecution();
+    // _finishLauncherFunctionExecution();
   }
 
   void _createLauncherTimer(_ParsedLauncherTimer timer) {
@@ -3209,7 +3218,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _finishLauncherFunctionExecution();
   }
 
-  void _finishLauncherFunctionExecution() {
+  void _finishLauncherFunctionExecution({bool hide = true}) {
     user.launcherSearchText = '';
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
 
@@ -3219,7 +3228,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       _focusSearch();
     }
 
-    if (kReleaseMode) {
+    if (kReleaseMode && hide) {
       QuickMenuFunctions.hideQuickMenu();
     }
   }

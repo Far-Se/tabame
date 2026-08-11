@@ -32,6 +32,7 @@ Future<void> main(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
   await PlatformBootstrap.initialize();
   await AppPaths.initialize();
+  // arguments = <String>["-screenCapture", "-frozen"];
   AppStartup.parseArguments(arguments);
 
   if (!PlatformBootstrap.isWindows) return startPortableApplication(arguments);

@@ -16,12 +16,12 @@ import '../platform/windows/win32_api.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../logic/app_startup.dart';
+import '../logic/error_handler.dart';
 import '../models/classes/boxes.dart';
 import '../models/globals.dart';
 import '../platform/app_paths.dart';
 import '../platform/clipboard_service.dart';
 import '../platform/platform_models.dart';
-import '../services/native_integration_coordinator.dart';
 import '../models/screen_utils.dart';
 import '../models/settings.dart';
 import '../models/win32/imports.dart';
@@ -35,6 +35,27 @@ import 'photo_editor.dart';
 // Reuse the screen-draw annotation engine (controller, overlay, tools). `show`
 // avoids clashing with this file's own `Settings`/`ScreenCapture` classes.
 import 'screen_draw.dart' show AnnotationController, AnnotationOverlay, DrawTool;
+
+final class _ScreenCaptureTrace {
+  static void event(String name, [Object? details]) {
+    try {
+      final String suffix = details == null ? '' : ' | $details';
+      final File file = File(AppPaths.currentPath('screen_capture.log'));
+      file.parent.createSync(recursive: true);
+      file.writeAsStringSync(
+        '[${DateTime.now().toIso8601String()}] pid=$pid $name$suffix\n',
+        mode: FileMode.append,
+        flush: true,
+      );
+    } catch (_) {
+      // Diagnostics must never become another startup failure.
+    }
+  }
+
+  static void failure(String name, Object error, StackTrace stack) {
+    event(name, 'ERROR: $error\n$stack');
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Isolate helpers — must be top-level so compute() can send them
@@ -126,8 +147,24 @@ Uint8List _encodeRgbaToPngIsolate(List<dynamic> args) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 Future<void> startScreenCapture() async {
+  _ScreenCaptureTrace.event('main.enter', 'args=${user.args.join(' ')}');
+  try {
+    await _startScreenCapture();
+    _ScreenCaptureTrace.event('main.complete');
+  } catch (error, stack) {
+    _ScreenCaptureTrace.failure('main.unhandled', error, stack);
+    await ErrorLogger.log('startScreenCapture.unhandled', error.toString(), stack);
+    rethrow;
+  }
+}
+
+Future<void> _startScreenCapture() async {
+  _ScreenCaptureTrace.event('startup.binding.begin');
   WidgetsFlutterBinding.ensureInitialized();
+  _ScreenCaptureTrace.event('startup.binding.complete');
+  _ScreenCaptureTrace.event('startup.appStartup.begin');
   await AppStartup.initialize();
+  _ScreenCaptureTrace.event('startup.appStartup.complete');
 
   const WindowOptions windowOptions = WindowOptions(
     size: Size(400, 400),
@@ -141,39 +178,125 @@ Future<void> startScreenCapture() async {
 
   // Position offscreen first so the window never appears on-screen before we
   // have the snapshots ready (avoids the cursor-disappear flash).
+  _ScreenCaptureTrace.event('window.position.offscreen.begin');
   await windowManager.setPosition(const Offset(-32000, -32000));
+  _ScreenCaptureTrace.event('window.position.offscreen.complete');
 
-  Map<int, FrozenMonitorSnapshot> preloadedSnapshots = <int, FrozenMonitorSnapshot>{};
+  final Map<int, FrozenMonitorSnapshot> preloadedSnapshots = <int, FrozenMonitorSnapshot>{};
+  bool canPreloadSnapshots = false;
 
-  await windowManager.waitUntilReadyToShow(windowOptions, () async {
-    Win32Window.hwnd = GetAncestor(GetActiveWindow(), 2);
-    await Boxes.registerBoxes(justLoad: true);
-    await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.screenCapture);
-    Settings.load();
-    await windowManager.setAsFrameless();
-    await windowManager.setHasShadow(false);
-    // Keep hidden while we capture – window is offscreen but we also hide it
-    // so the layered surface is definitely absent from GDI capture.
-    ShowWindow(Win32Window.hwnd, SW_HIDE);
-  });
+  try {
+    final Completer<void> windowSetupComplete = Completer<void>();
 
-  // Capture all monitors while the window is hidden and offscreen.
-  Monitor.fetchMonitors();
-  for (final int monitorHandle in Monitor.list) {
-    final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(
-      monitorHandle,
-      engine: Settings.getCaptureEngine(),
-    );
-    if (snapshot != null) {
-      preloadedSnapshots[monitorHandle] = snapshot;
+    Future<void> prepareWindow() async {
+      _ScreenCaptureTrace.event('window.ready.callback.enter');
+      try {
+        // Get the handle through the native bridge instead of relying only on
+        // GetActiveWindow(). The standalone window is deliberately moved offscreen
+        // before this callback, so it is not guaranteed to be the active window.
+        _ScreenCaptureTrace.event('window.handle.lookup.begin');
+        await Win32.fetchMainWindowHandle();
+        Win32Window.hwnd = Win32.hWnd != 0 ? Win32.hWnd : Win32.getMainHandle();
+        _ScreenCaptureTrace.event(
+          'window.handle.lookup.complete',
+          'Win32.hWnd=${Win32.hWnd} overlayHwnd=${Win32Window.hwnd}',
+        );
+        _ScreenCaptureTrace.event('settings.registerBoxes.begin');
+        await Boxes.registerBoxes(justLoad: true);
+        _ScreenCaptureTrace.event('settings.registerBoxes.complete');
+        Settings.load();
+        _ScreenCaptureTrace.event('settings.screenCapture.load.complete');
+        await windowManager.setAsFrameless();
+        _ScreenCaptureTrace.event('window.setAsFrameless.complete');
+        await windowManager.setHasShadow(false);
+        _ScreenCaptureTrace.event('window.setHasShadow.complete');
+        // Keep hidden while we capture – window is offscreen but we also hide it
+        // so the layered surface is definitely absent from GDI capture.
+        if (Win32Window.hwnd != 0) {
+          _ScreenCaptureTrace.event('window.nativeHide.begin', 'hwnd=${Win32Window.hwnd}');
+          ShowWindow(Win32Window.hwnd, SW_HIDE);
+          _ScreenCaptureTrace.event('window.nativeHide.complete');
+        } else {
+          _ScreenCaptureTrace.event('window.nativeHide.skipped', 'hwnd=0');
+        }
+        _ScreenCaptureTrace.event('window.managerHide.begin');
+        await windowManager.hide();
+        _ScreenCaptureTrace.event('window.managerHide.complete');
+        windowSetupComplete.complete();
+      } catch (error, stack) {
+        _ScreenCaptureTrace.failure('window.ready.callback.failed', error, stack);
+        if (!windowSetupComplete.isCompleted) {
+          windowSetupComplete.completeError(error, stack);
+        }
+      }
+    }
+
+    _ScreenCaptureTrace.event('window.waitUntilReadyToShow.begin');
+    await windowManager.waitUntilReadyToShow(windowOptions, () {
+      // window_manager does not await an async callback, so bridge its
+      // completion explicitly before starting capture or revealing the window.
+      unawaited(prepareWindow());
+    });
+    _ScreenCaptureTrace.event('window.waitUntilReadyToShow.callbackScheduled');
+    await windowSetupComplete.future;
+    canPreloadSnapshots = true;
+    _ScreenCaptureTrace.event('window.waitUntilReadyToShow.complete');
+  } catch (error, stack) {
+    _ScreenCaptureTrace.failure('window.setup.failed', error, stack);
+    await ErrorLogger.log('startScreenCapture.windowSetup', error.toString(), stack);
+  }
+
+  // Capture all monitors while the window is hidden and offscreen. A native
+  // capture failure must not strand the process with a hidden window: the
+  // overlay is still useful for retrying or reporting the unavailable backend.
+  try {
+    if (canPreloadSnapshots) {
+      _ScreenCaptureTrace.event('preload.monitors.fetch.begin');
+      Monitor.fetchMonitors();
+      _ScreenCaptureTrace.event('preload.monitors.fetch.complete', 'count=${Monitor.list.length}');
+      for (final int monitorHandle in Monitor.list) {
+        _ScreenCaptureTrace.event('preload.monitor.begin', 'handle=$monitorHandle');
+        final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(
+          monitorHandle,
+          engine: Settings.getCaptureEngine(),
+        );
+        if (snapshot != null) {
+          preloadedSnapshots[monitorHandle] = snapshot;
+          _ScreenCaptureTrace.event(
+            'preload.monitor.complete',
+            'handle=$monitorHandle width=${snapshot.pixelWidth} height=${snapshot.pixelHeight}',
+          );
+        } else {
+          _ScreenCaptureTrace.event('preload.monitor.empty', 'handle=$monitorHandle');
+        }
+      }
+      _ScreenCaptureTrace.event('preload.complete', 'snapshots=${preloadedSnapshots.length}');
+    } else {
+      _ScreenCaptureTrace.event('preload.skipped', 'windowSetupFailed=true');
+    }
+  } catch (error, stack) {
+    _ScreenCaptureTrace.failure('preload.failed', error, stack);
+    await ErrorLogger.log('startScreenCapture', error.toString(), stack);
+  } finally {
+    try {
+      _ScreenCaptureTrace.event('window.reveal.begin', 'hwnd=${Win32Window.hwnd}');
+      if (Win32Window.hwnd != 0) {
+        ShowWindow(Win32Window.hwnd, SW_SHOW);
+        _ScreenCaptureTrace.event('window.nativeShow.complete');
+      }
+      await windowManager.show();
+      _ScreenCaptureTrace.event('window.managerShow.complete');
+      await windowManager.focus();
+      _ScreenCaptureTrace.event('window.focus.complete');
+    } catch (error, stack) {
+      _ScreenCaptureTrace.failure('window.reveal.failed', error, stack);
+      await ErrorLogger.log('startScreenCapture.windowShow', error.toString(), stack);
     }
   }
 
-  // Now show the window.
-  ShowWindow(Win32Window.hwnd, SW_SHOW);
-  await windowManager.focus();
-
+  _ScreenCaptureTrace.event('runApp.begin', 'snapshots=${preloadedSnapshots.length}');
   runApp(ScreenCaptureApp(freezeMode: user.args.contains('-frozen'), preloadedSnapshots: preloadedSnapshots));
+  _ScreenCaptureTrace.event('runApp.returned');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -472,42 +595,50 @@ class ScreenCapture {
     int monitorHandle, {
     CaptureEngine engine = CaptureEngine.bitBlt,
   }) async {
-    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.screenCapture)) {
-      NativeIntegrationCoordinator.instance.reportUnavailable(
-        NativeIntegrationId.screenCapture,
-        reason: 'Screen capture is unavailable in the current distribution profile.',
+    _ScreenCaptureTrace.event('capture.monitor.begin', 'handle=$monitorHandle engine=${engine.name}');
+    try {
+      final MonitorBitmapCapture? capture = await _captureMonitorBitmap(monitorHandle, engine);
+      if (capture == null || capture.width <= 0 || capture.height <= 0 || capture.rgbaBytes.isEmpty) {
+        _ScreenCaptureTrace.event('capture.monitor.empty', 'handle=$monitorHandle');
+        return null;
+      }
+      _ScreenCaptureTrace.event(
+        'capture.monitor.bitmap.complete',
+        'handle=$monitorHandle width=${capture.width} height=${capture.height}',
       );
+
+      // Composite the hardware cursor on top of the captured bitmap.
+      // Windows never includes the cursor in BitBlt/PrintWindow captures, so we
+      // render it manually using DrawIconEx onto a memory DC and alpha-blend the
+      // result into the RGBA buffer.
+      final Uint8List rgbaWithCursor = _compositeSystemCursor(
+        capture.rgbaBytes,
+        capture.width,
+        capture.height,
+        capture.left,
+        capture.top,
+      );
+      _ScreenCaptureTrace.event('capture.monitor.cursor.complete', 'handle=$monitorHandle');
+
+      return FrozenMonitorSnapshot(
+        monitorHandle: monitorHandle,
+        screenRect: Rect.fromLTWH(
+          capture.left.toDouble(),
+          capture.top.toDouble(),
+          capture.width.toDouble(),
+          capture.height.toDouble(),
+        ),
+        rgbaBytes: rgbaWithCursor,
+        pixelWidth: capture.width,
+        pixelHeight: capture.height,
+      );
+    } catch (error, stack) {
+      // GDI/DirectX failures are logged but do not prevent the standalone
+      // overlay from starting or retrying the capture.
+      _ScreenCaptureTrace.failure('capture.monitor.failed', error, stack);
+      unawaited(ErrorLogger.log('ScreenCapture.captureMonitorSnapshot', error.toString(), stack));
       return null;
     }
-    final MonitorBitmapCapture? capture = await _captureMonitorBitmap(monitorHandle, engine);
-    if (capture == null || capture.width <= 0 || capture.height <= 0 || capture.rgbaBytes.isEmpty) {
-      return null;
-    }
-
-    // Composite the hardware cursor on top of the captured bitmap.
-    // Windows never includes the cursor in BitBlt/PrintWindow captures, so we
-    // render it manually using DrawIconEx onto a memory DC and alpha-blend the
-    // result into the RGBA buffer.
-    final Uint8List rgbaWithCursor = _compositeSystemCursor(
-      capture.rgbaBytes,
-      capture.width,
-      capture.height,
-      capture.left,
-      capture.top,
-    );
-
-    return FrozenMonitorSnapshot(
-      monitorHandle: monitorHandle,
-      screenRect: Rect.fromLTWH(
-        capture.left.toDouble(),
-        capture.top.toDouble(),
-        capture.width.toDouble(),
-        capture.height.toDouble(),
-      ),
-      rgbaBytes: rgbaWithCursor,
-      pixelWidth: capture.width,
-      pixelHeight: capture.height,
-    );
   }
 
   static Future<MonitorBitmapCapture?> _captureMonitorBitmap(int monitorHandle, CaptureEngine engine) async {
@@ -847,9 +978,12 @@ class _FancyShotCaptureWidgetState extends State<FancyShotCaptureWidget> {
   @override
   void initState() {
     super.initState();
+    _ScreenCaptureTrace.event(
+      'widget.fancyShot.initState',
+      'freeze=${widget.freezeMode} preloaded=${widget.preloadedSnapshots.length}',
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Win32Window.setupOverlay(delayMs: 10);
-      Win32Window.disableClickThrough();
+      unawaited(_setupOverlayAfterFirstFrame());
     });
     Monitor.fetchMonitors();
     _monitorTimer = Timer.periodic(const Duration(milliseconds: 50), (_) => _checkMonitor());
@@ -860,22 +994,39 @@ class _FancyShotCaptureWidgetState extends State<FancyShotCaptureWidget> {
     if (widget.preloadedSnapshots.isNotEmpty) {
       // Snapshots passed directly (standalone startScreenCapture path).
       _readySnapshots = Map<int, FrozenMonitorSnapshot>.of(widget.preloadedSnapshots);
+      _ScreenCaptureTrace.event('widget.fancyShot.snapshots.source', 'preloaded');
     } else if (FancyShotCaptureWidget._staticCache != null) {
       // Snapshots pre-captured via FancyShotCaptureWidget.captureScreenshots().
       _readySnapshots = FancyShotCaptureWidget._staticCache!;
       FancyShotCaptureWidget._staticCache = null; // consume once
+      _ScreenCaptureTrace.event('widget.fancyShot.snapshots.source', 'staticCache');
     } else {
       // Embedded launch with no pre-capture: capture now (hides window briefly).
+      _ScreenCaptureTrace.event('widget.fancyShot.snapshots.source', 'initialCapture');
       unawaited(_captureInitialSnapshots());
+    }
+  }
+
+  Future<void> _setupOverlayAfterFirstFrame() async {
+    _ScreenCaptureTrace.event('widget.firstFrame.overlaySetup.begin', 'hwnd=${Win32Window.getHwnd()}');
+    try {
+      await Win32Window.setupOverlay(delayMs: 10);
+      Win32Window.disableClickThrough();
+      _ScreenCaptureTrace.event('widget.firstFrame.overlaySetup.complete', 'hwnd=${Win32Window.getHwnd()}');
+    } catch (error, stack) {
+      _ScreenCaptureTrace.failure('widget.firstFrame.overlaySetup.failed', error, stack);
+      await ErrorLogger.log('screenCapture.firstFrameOverlay', error.toString(), stack);
     }
   }
 
   /// Hide the window, capture all monitors, re-show, then mark _readySnapshots.
   /// This mirrors what startScreenCapture does for the standalone flow.
   Future<void> _captureInitialSnapshots() async {
+    _ScreenCaptureTrace.event('widget.initialSnapshots.begin');
     Settings.load();
     final CaptureEngine captureEngine = Settings.getCaptureEngine();
     final int hwnd = Win32Window.getHwnd();
+    _ScreenCaptureTrace.event('widget.initialSnapshots.window', 'hwnd=$hwnd engine=${captureEngine.name}');
     if (hwnd != 0) {
       ShowWindow(hwnd, SW_HIDE);
       await Future<void>.delayed(const Duration(milliseconds: 120));
@@ -883,27 +1034,41 @@ class _FancyShotCaptureWidgetState extends State<FancyShotCaptureWidget> {
 
     final Map<int, FrozenMonitorSnapshot> captured = <int, FrozenMonitorSnapshot>{};
     try {
+      _ScreenCaptureTrace.event('widget.initialSnapshots.monitors.begin');
       Monitor.fetchMonitors();
+      _ScreenCaptureTrace.event('widget.initialSnapshots.monitors.complete', 'count=${Monitor.list.length}');
       for (final int monitorHandle in Monitor.list) {
+        _ScreenCaptureTrace.event('widget.initialSnapshots.monitor.begin', 'handle=$monitorHandle');
         final FrozenMonitorSnapshot? snapshot = await ScreenCapture.captureMonitorSnapshot(
           monitorHandle,
           engine: captureEngine,
         );
         if (snapshot != null) {
           captured[monitorHandle] = snapshot;
+          _ScreenCaptureTrace.event('widget.initialSnapshots.monitor.complete', 'handle=$monitorHandle');
+        } else {
+          _ScreenCaptureTrace.event('widget.initialSnapshots.monitor.empty', 'handle=$monitorHandle');
         }
       }
+    } catch (error, stack) {
+      _ScreenCaptureTrace.failure('widget.initialSnapshots.failed', error, stack);
+      await ErrorLogger.log('screenCapture.initialSnapshots', error.toString(), stack);
     } finally {
       if (hwnd != 0) {
         ShowWindow(hwnd, SW_SHOW);
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        _ScreenCaptureTrace.event('widget.initialSnapshots.windowRestored', 'hwnd=$hwnd');
       }
     }
 
-    if (!mounted) return;
+    if (!mounted) {
+      _ScreenCaptureTrace.event('widget.initialSnapshots.unmounted');
+      return;
+    }
     setState(() {
       _readySnapshots = captured;
     });
+    _ScreenCaptureTrace.event('widget.initialSnapshots.complete', 'snapshots=${captured.length}');
   }
 
   void _handleAppStateChanged() {
@@ -913,7 +1078,21 @@ class _FancyShotCaptureWidgetState extends State<FancyShotCaptureWidget> {
   }
 
   Future<void> _syncWindowForView(AppView view) async {
-    if (!mounted) return;
+    _ScreenCaptureTrace.event('widget.windowSync.begin', 'view=${view.name}');
+    try {
+      await _syncWindowForViewInternal(view);
+      _ScreenCaptureTrace.event('widget.windowSync.complete', 'view=${view.name}');
+    } catch (error, stack) {
+      _ScreenCaptureTrace.failure('widget.windowSync.failed', error, stack);
+      await ErrorLogger.log('screenCapture.windowSync', error.toString(), stack);
+    }
+  }
+
+  Future<void> _syncWindowForViewInternal(AppView view) async {
+    if (!mounted) {
+      _ScreenCaptureTrace.event('widget.windowSync.unmounted', 'view=${view.name}');
+      return;
+    }
     if (view == AppView.editor) {
       Win32Window.disableClickThrough();
       await windowManager.setAlwaysOnTop(false);
@@ -932,18 +1111,29 @@ class _FancyShotCaptureWidgetState extends State<FancyShotCaptureWidget> {
       } else {
         await windowManager.center();
       }
+      _ScreenCaptureTrace.event('widget.windowSync.editor.show.begin');
       await windowManager.show();
+      _ScreenCaptureTrace.event('widget.windowSync.editor.show.complete');
       await windowManager.focus();
+      _ScreenCaptureTrace.event('widget.windowSync.editor.focus.complete');
       return;
     }
 
     await windowManager.setHasShadow(false);
+    _ScreenCaptureTrace.event('widget.windowSync.capture.shadow.complete');
     await windowManager.setMinimumSize(const Size(200, 200));
-    Win32Window.setupOverlay();
+    _ScreenCaptureTrace.event('widget.windowSync.capture.minimumSize.complete');
+    _ScreenCaptureTrace.event('widget.windowSync.capture.setupOverlay.begin', 'hwnd=${Win32Window.getHwnd()}');
+    await Win32Window.setupOverlay();
+    _ScreenCaptureTrace.event('widget.windowSync.capture.setupOverlay.complete', 'hwnd=${Win32Window.getHwnd()}');
     await _checkMonitor(force: true);
+    _ScreenCaptureTrace.event('widget.windowSync.capture.monitor.complete');
     Win32Window.disableClickThrough();
+    _ScreenCaptureTrace.event('widget.windowSync.capture.clickThroughDisabled');
     await windowManager.show();
+    _ScreenCaptureTrace.event('widget.windowSync.capture.show.complete');
     await windowManager.focus();
+    _ScreenCaptureTrace.event('widget.windowSync.capture.focus.complete');
   }
 
   Future<void> _checkMonitor({bool force = false}) async {
@@ -970,6 +1160,7 @@ class _FancyShotCaptureWidgetState extends State<FancyShotCaptureWidget> {
 
   @override
   void dispose() {
+    _ScreenCaptureTrace.event('widget.fancyShot.dispose');
     appState.removeListener(_handleAppStateChanged);
     Win32Window.disableClickThrough();
     _monitorTimer?.cancel();
@@ -1128,6 +1319,10 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   @override
   void initState() {
     super.initState();
+    _ScreenCaptureTrace.event(
+      'widget.screenCapture.initState',
+      'freeze=${widget.freezeMode} preloaded=${widget.preloadedSnapshots.length}',
+    );
 
     _fancyShotProfiles = FancyShot.loadProfiles();
     Settings.load();
@@ -1152,14 +1347,20 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 
     // Seed the frozen snapshot maps with any snapshots captured at startup.
     _frozenMonitorSnapshots.addAll(widget.preloadedSnapshots);
+    _ScreenCaptureTrace.event(
+      'widget.screenCapture.snapshots.seeded',
+      'count=${_frozenMonitorSnapshots.length}',
+    );
 
     if (widget.freezeMode) {
+      _ScreenCaptureTrace.event('widget.screenCapture.decode.begin');
       _frozenSnapshotWarmup = _decodeFrozenMonitorImages();
       unawaited(_syncVisibleFrozenMonitor(forceRefresh: true));
     }
 
     // Initialise current-monitor rect from the cursor position.
     _updateCurrentMonitorRect();
+    _ScreenCaptureTrace.event('widget.screenCapture.initState.complete');
   }
 
   /// Called when the parent rebuilds ScreenCaptureView with new props —
@@ -1716,6 +1917,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 
   @override
   void dispose() {
+    _ScreenCaptureTrace.event('widget.screenCapture.dispose');
     _tickerTimer?.cancel();
     _annot?.dispose();
     for (final ui.Image image in _frozenMonitorImages.values) {
@@ -1725,6 +1927,10 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
   }
 
   void closeMainWindow() async {
+    _ScreenCaptureTrace.event(
+      'window.closeMainWindow.called',
+      'args=${user.args.join(' ')} quickMenuPage=${Globals.quickMenuPage.name}',
+    );
     if (Globals.quickMenuPage == QuickMenuPage.fancyShotLive ||
         Globals.quickMenuPage == QuickMenuPage.fancyShotFreeze) {
       _toggleScreenCaptureEnabled();
@@ -1734,7 +1940,11 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
       QuickMenuFunctions.refreshQuickMenu();
       // await Future<void>.delayed(const Duration(milliseconds: 200));
     } else {
-      if (user.args.contains('-screenCapture')) windowManager.close();
+      if (user.args.contains('-screenCapture')) {
+        _ScreenCaptureTrace.event('window.closeMainWindow.windowManagerClose.begin');
+        windowManager.close();
+        _ScreenCaptureTrace.event('window.closeMainWindow.windowManagerClose.called');
+      }
     }
   }
 

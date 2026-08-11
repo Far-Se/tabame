@@ -723,6 +723,8 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       return const SizedBox(width: 10);
     }
     if (kReleaseMode) {
+      // if (Globals.quickMenuPage == QuickMenuPage.quickMenu && !QuickMenuFunctions.isQuickMenuVisible)
+      //   return const SizedBox.shrink();
       return FutureBuilder<int>(
         future: quickMenuWindow,
         builder: (BuildContext x, AsyncSnapshot<Object?> snapshot) {
