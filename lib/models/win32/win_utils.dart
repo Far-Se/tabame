@@ -335,10 +335,6 @@ class WinUtils {
   //   return directory;
   // }
 
-  static Future<String> folderPicker() async {
-    return await pickFolder();
-  }
-
   // ── Install / Uninstall ──
 
   static const String _uninstallRegistryRoot = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall';

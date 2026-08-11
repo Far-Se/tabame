@@ -111,6 +111,7 @@ class AppStartup {
   /// into persistent elevation. The replacement keeps the original page and
   /// receives a one-shot marker so it can close the old process after startup.
   static Future<bool> ensureConfiguredElevation() async {
+    if (kDebugMode) return false;
     if (Globals.isStandaloneLauncher ||
         !user.runAsAdministrator ||
         user.args.contains(Globals.elevatedStartupArgument) ||

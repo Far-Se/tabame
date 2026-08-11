@@ -30,6 +30,7 @@ import 'design_relay.dart';
 import 'design_rundown.dart';
 import 'design_serene.dart';
 import 'design_steam.dart';
+import 'design_strata.dart';
 import 'design_tech.dart';
 import 'design_terminal.dart';
 import 'design_vector.dart';
@@ -112,6 +113,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.manifesto => MainMenuManifestoWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.vector => MainMenuVectorWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.ledger => MainMenuLedgerWidget(key: ValueKey<int>(_refreshCounter)),
+      // QuickMenuDesigns.ledger2 => MainMenuLedger2Widget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.console => MainMenuConsoleWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.foundry => MainMenuFoundryWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.anime => MainMenuAnimeWidget(key: ValueKey<int>(_refreshCounter)),
@@ -130,6 +132,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.relay => MainMenuRelayWidget(key: ValueKey<int>(_refreshCounter)),
       // QuickMenuDesigns.focusline => MainMenuFocuslineWidget(key: ValueKey<int>(_refreshCounter)),
       // QuickMenuDesigns.familyGuy => MainMenuFamilyGuyWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.strata => MainMenuStrataWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }
 }

@@ -999,6 +999,32 @@ class QuickMenuModalFrame extends StatelessWidget {
       //       ),
       //     ],
       //   ),
+      QuickMenuDesigns.strata => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.97),
+            border: Border.all(color: accent.withValues(alpha: isDark ? 0.3 : 0.35), width: 1),
+          ),
+          underlays: <Widget>[
+            CustomPaint(painter: _StrataSedimentPainter(text.withValues(alpha: isDark ? 0.05 : 0.04))),
+          ],
+          overlays: <Widget>[
+            CustomPaint(painter: _StrataFissurePainter(accent)),
+          ],
+        ),
+      // QuickMenuDesigns.ledger2 => _FrameSpec(
+      //     decoration: BoxDecoration(
+      //       borderRadius: radius,
+      //       color: bg.withValues(alpha: 0.97),
+      //       border: Border.all(color: accent.withValues(alpha: isDark ? 0.3 : 0.35), width: 0.6),
+      //     ),
+      //     underlays: <Widget>[
+      //       CustomPaint(painter: _LedgerRulingPopupPainter(text.withValues(alpha: isDark ? 0.08 : 0.07))),
+      //     ],
+      //     overlays: <Widget>[
+      //       CustomPaint(painter: _LedgerMarginStampPainter(accent, isDark: isDark)),
+      //     ],
+      //   ),
     };
 
     final bool hasBevel = spec.bevel != null;
@@ -1453,6 +1479,126 @@ class _RelayModalFramePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _RelayModalFramePainter oldDelegate) =>
       oldDelegate.accent != accent || oldDelegate.quiet != quiet;
+}
+
+/// Flat sediment-band underlay for modal surfaces — three broad
+/// horizontal bands of alternating tint, quieter than the QuickMenu
+/// panel's version so it doesn't compete with modal content.
+class _StrataSedimentPainter extends CustomPainter {
+  const _StrataSedimentPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()..color = color;
+    final double bandHeight = size.height / 5;
+    for (int i = 0; i < 5; i += 2) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, bandHeight * i, size.width, bandHeight),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _StrataSedimentPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Fracture-line brackets in each corner — thin jagged "fault lines" in
+/// the accent color, standing in for the vector design's clean brackets.
+class _StrataFissurePainter extends CustomPainter {
+  const _StrataFissurePainter(this.accent);
+
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = accent.withValues(alpha: 0.55)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+
+    void fissure(Offset start, Offset dir) {
+      final Path path = Path()..moveTo(start.dx, start.dy);
+      Offset p = start;
+      for (int i = 0; i < 3; i++) {
+        final Offset jitter = Offset((i.isEven ? 2 : -2).toDouble(), 0) * dir.dy.abs() +
+            Offset(0, (i.isEven ? 2 : -2).toDouble()) * dir.dx.abs();
+        p = p + dir * 6 + jitter;
+        path.lineTo(p.dx, p.dy);
+      }
+      canvas.drawPath(path, paint);
+    }
+
+    fissure(const Offset(10, 10), const Offset(1, 0));
+    fissure(const Offset(10, 10), const Offset(0, 1));
+    fissure(Offset(size.width - 10, size.height - 10), const Offset(-1, 0));
+    fissure(Offset(size.width - 10, size.height - 10), const Offset(0, -1));
+  }
+
+  @override
+  bool shouldRepaint(covariant _StrataFissurePainter oldDelegate) => oldDelegate.accent != accent;
+}
+
+/// Faint horizontal ruling printed across the popup, matching the ledger
+/// page behind the main QuickMenu surface.
+class _LedgerRulingPopupPainter extends CustomPainter {
+  const _LedgerRulingPopupPainter(this.color) : lineHeight = 19;
+
+  final Color color;
+  final double lineHeight;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    for (double y = lineHeight; y < size.height; y += lineHeight) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LedgerRulingPopupPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.lineHeight != lineHeight;
+}
+
+/// The red (or gilt) double margin rule down the left edge, plus a small
+/// ink-stamp mark in the top-right corner — the popup's "signed off" tell.
+/// Same stamp motif as the main design's footer, scaled up slightly.
+class _LedgerMarginStampPainter extends CustomPainter {
+  const _LedgerMarginStampPainter(this.accent, {required this.isDark}) : marginLeft = 26;
+
+  final Color accent;
+  final bool isDark;
+  final double marginLeft;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint rulePaint = Paint()
+      ..color = accent.withValues(alpha: isDark ? 0.55 : 0.6)
+      ..strokeWidth = 1.1;
+    final Paint ruleEchoPaint = Paint()
+      ..color = accent.withValues(alpha: isDark ? 0.22 : 0.25)
+      ..strokeWidth = 0.6;
+
+    canvas.drawLine(Offset(marginLeft, 0), Offset(marginLeft, size.height), rulePaint);
+    canvas.drawLine(Offset(marginLeft + 3, 0), Offset(marginLeft + 3, size.height), ruleEchoPaint);
+
+    // Small stamp mark, top-right — a hollow circle with a diagonal tick.
+    final Offset stampCenter = Offset(size.width - 16, 16);
+    final Paint stampPaint = Paint()
+      ..color = accent.withValues(alpha: isDark ? 0.5 : 0.55)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.1;
+    canvas.drawCircle(stampCenter, 7, stampPaint);
+    canvas.drawLine(stampCenter + const Offset(-3, 1.5), stampCenter + const Offset(3, -2.5), stampPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _LedgerMarginStampPainter oldDelegate) =>
+      oldDelegate.accent != accent || oldDelegate.isDark != isDark || oldDelegate.marginLeft != marginLeft;
 }
 
 class _FocuslineModalCalibrationPainter extends CustomPainter {

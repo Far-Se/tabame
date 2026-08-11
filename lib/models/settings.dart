@@ -50,6 +50,7 @@ enum QuickMenuDesigns {
   manifesto,
   vector,
   ledger,
+  // ledger2,
   console,
   foundry,
   anime,
@@ -65,6 +66,7 @@ enum QuickMenuDesigns {
   windows98,
   notion,
   rundown,
+  strata,
 
   /// Compact communications-console skin with routed signal rails.
   ///
@@ -1245,6 +1247,58 @@ class Settings {
       //     baseFontSize: 10,
       //   ),
       // ),
+      QuickMenuDesigns.strata.displayName: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffEDE6D6),
+          textColor: const Color(0xff2B2118),
+          accentColor: const Color(0xffB5651D),
+          gradientAlpha: 60,
+          uiFontFamily: 'Consolas',
+          uiFontWeight: 500,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
+          borderRadius: 2,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff161311),
+          textColor: const Color(0xffE8DDC8),
+          accentColor: const Color(0xffE2A33B),
+          gradientAlpha: 72,
+          uiFontFamily: 'Consolas',
+          uiFontWeight: 500,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
+          borderRadius: 2,
+          baseFontSize: 10,
+        ),
+      ),
+      // QuickMenuDesigns.ledger2.displayName: QMDesignThemeSet(
+      //   lightTheme: _defaultThemeColors(
+      //     background: const Color(0xffF3ECDD),
+      //     textColor: const Color(0xff2E2418),
+      //     accentColor: const Color(0xff8B2E2E),
+      //     gradientAlpha: 45,
+      //     uiFontFamily: 'Georgia',
+      //     uiFontWeight: 400,
+      //     entryFontFamily: 'Georgia',
+      //     entryFontWeight: 700,
+      //     borderRadius: 3,
+      //     baseFontSize: 11,
+      //   ),
+      //   darkTheme: _defaultThemeColors(
+      //     background: const Color(0xff17130D),
+      //     textColor: const Color(0xffE6D9BE),
+      //     accentColor: const Color(0xffD1A24A),
+      //     gradientAlpha: 65,
+      //     uiFontFamily: 'Georgia',
+      //     uiFontWeight: 400,
+      //     entryFontFamily: 'Georgia',
+      //     entryFontWeight: 700,
+      //     borderRadius: 3,
+      //     baseFontSize: 11,
+      //   ),
+      // ),
     };
   }
 
@@ -1400,14 +1454,20 @@ class Settings {
     ThemeColors? fallbackDarkTheme,
   }) {
     final QMDesignThemeSet? savedThemeSet = quickMenuDesignThemes[design.displayName];
-    lightTheme = (savedThemeSet?.lightTheme ??
-            fallbackLightTheme ??
-            Settings.createDefaultQuickMenuDesignThemes()[design.displayName]!.lightTheme)
-        .copyWith();
-    darkTheme = (savedThemeSet?.darkTheme ??
-            fallbackDarkTheme ??
-            Settings.createDefaultQuickMenuDesignThemes()[design.displayName]!.darkTheme)
-        .copyWith();
+    final QMDesignThemeSet? defaultThemeSet = Settings.createDefaultQuickMenuDesignThemes()[design.displayName];
+
+    final ThemeColors? resolvedLightTheme =
+        savedThemeSet?.lightTheme ?? fallbackLightTheme ?? defaultThemeSet?.lightTheme;
+    final ThemeColors? resolvedDarkTheme = savedThemeSet?.darkTheme ?? fallbackDarkTheme ?? defaultThemeSet?.darkTheme;
+
+    if (resolvedLightTheme == null || resolvedDarkTheme == null) {
+      // No saved theme, no fallback, and no default for this design.
+      // Decide how you want to handle this — return early, throw, or log.
+      return;
+    }
+
+    lightTheme = resolvedLightTheme.copyWith();
+    darkTheme = resolvedDarkTheme.copyWith();
     saveActiveThemesToCurrentDesign(design);
   }
 

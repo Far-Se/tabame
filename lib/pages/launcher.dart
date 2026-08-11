@@ -1985,6 +1985,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     if (_activePlugin != null && (_pluginFrame?.view == PluginViewType.detail || (_pluginFrame?.hasPreview ?? false))) {
       return false;
     }
+    // The development console is also selectable content. Keep its focus so
+    // mouse selections are not interrupted and Ctrl+C reaches SelectionArea.
+    if (_activePlugin?.dev == true) return false;
     return true;
   }
 

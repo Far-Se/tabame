@@ -53,9 +53,11 @@ The Store settings page exposes data-folder access, export, cache clearing, and
 explicit data deletion independently from uninstall. Installer-owned uninstall
 must not invoke **Delete all Tabame data**.
 
-First-run setup no longer contains a copy-install implementation, uninstall
-registration, or download-and-expand helper. It only explains the current
-location and advances through settings setup.
+First-run setup contains no copy-install implementation, uninstall registration,
+or download-and-expand helper. It starts with settings setup and never changes
+the application binaries or installation location. If the executable is under a
+system temporary directory, it shows a warning and blocks advancing until the
+user relaunches Tabame from a permanent folder.
 
 ## Focused evidence
 

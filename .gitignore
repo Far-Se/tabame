@@ -115,3 +115,4 @@ client_secret.json
 resources/logos_x/
 **/generated_*
 **/GeneratedPluginRegistrant*
+lib/pages/quickmenu_designs/design_ledger2.dart

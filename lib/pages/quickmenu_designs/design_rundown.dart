@@ -1,7 +1,6 @@
 // ignore_for_file: unused_element
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -299,8 +298,16 @@ class _RundownActionRailState extends State<_RundownActionRail> with QuickMenuTr
 
   void _loadActions() {
     _actions = <Widget>[];
+    const String appAudioPrefix = 'AppAudioControl';
+    final int appAudioControlCount = Boxes.appAudioControls.length;
     for (final String name in Boxes.topBarWidgets) {
       if (name == 'Deactivated:') break;
+
+      if (name.startsWith(appAudioPrefix)) {
+        final int? controlNumber = int.tryParse(name.substring(appAudioPrefix.length));
+        if (controlNumber != null && controlNumber > appAudioControlCount) continue;
+      }
+
       final QuickAction? action = quickActionsMap[name];
       if (action != null) _actions.add(action.widget());
     }
@@ -324,16 +331,6 @@ class _RundownActionRailState extends State<_RundownActionRail> with QuickMenuTr
     if (visible && _scrollController.hasClients) _scrollController.jumpTo(0);
   }
 
-  void _handlePointerSignal(PointerSignalEvent event) {
-    if (event is! PointerScrollEvent || !_scrollController.hasClients) return;
-    final double target = _scrollController.offset + event.scrollDelta.dy;
-    _scrollController.animateTo(
-      target.clamp(0, _scrollController.position.maxScrollExtent),
-      duration: const Duration(milliseconds: 90),
-      curve: Curves.easeOutCubic,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final List<Widget> actions = <Widget>[
@@ -355,23 +352,31 @@ class _RundownActionRailState extends State<_RundownActionRail> with QuickMenuTr
         ),
         child: Column(
           children: <Widget>[
-            const SizedBox(height: 28, child: LogoDragButton()),
+            const SizedBox(
+                height: 28,
+                child: Stack(
+                  children: [
+                    Positioned(left: 7, top: 7, child: LogoDragButton()),
+                  ],
+                )),
             Divider(height: 1, thickness: 0.8, color: widget.palette.rule),
             Expanded(
-              child: Listener(
-                onPointerSignal: _handlePointerSignal,
-                child: ListView.builder(
-                  controller: _scrollController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  itemCount: actions.length,
-                  itemExtent: 27,
-                  itemBuilder: (BuildContext context, int index) => Center(child: actions[index]),
+              child: ListView.builder(
+                controller: _scrollController,
+                physics: const ClampingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                itemCount: actions.length,
+                itemExtent: 27,
+                itemBuilder: (BuildContext context, int index) => Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 20, maxHeight: 20),
+                    child: actions[index],
+                  ),
                 ),
               ),
             ),
             Divider(height: 1, thickness: 0.8, color: widget.palette.rule),
-            const SizedBox(height: 28, child: Center(child: OpenSettingsButton())),
+            const SizedBox(height: 29, child: Center(child: OpenSettingsButton())),
           ],
         ),
       ),

@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../models/settings.dart';
@@ -136,30 +137,49 @@ class _PluginDebugConsoleState extends State<PluginDebugConsole> {
                 SelectionArea(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxHeight: 130),
-                    child: ListView.builder(
-                      // Newest at the visual bottom; reverse pins the scroll there
-                      // so the log follows live output until the user scrolls up.
-                      reverse: true,
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
-                      itemCount: entries.length,
-                      itemBuilder: (BuildContext context, int index) {
-                        final PluginDebugEntry entry = entries[entries.length - 1 - index];
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text.rich(
-                            TextSpan(children: <InlineSpan>[
-                              TextSpan(text: '${entry.timestamp} ', style: TextStyle(color: Design.text.withAlpha(90))),
-                              TextSpan(
-                                text: '${_kindLabel(entry.kind).padRight(6)} ',
-                                style: TextStyle(fontWeight: FontWeight.w700, color: _kindColor(entry.kind)),
-                              ),
-                              TextSpan(text: entry.message, style: TextStyle(color: Design.text.withAlpha(190))),
-                            ]),
+                    child: ScrollConfiguration(
+                      // The app enables mouse drag-to-scroll globally. Let the
+                      // selection recognizer win mouse drags in the console;
+                      // wheel scrolling and touch scrolling still work.
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: ScrollConfiguration.of(context)
+                            .dragDevices
+                            .where((PointerDeviceKind kind) => kind != PointerDeviceKind.mouse)
+                            .toSet(),
+                      ),
+                      child: ListView(
+                        // Keep all rows in one selectable paragraph. Windows
+                        // uses that geometry to decide whether a secondary
+                        // click is inside the active selection.
+                        reverse: true,
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                        children: <Widget>[
+                          Text.rich(
+                            TextSpan(
+                              children: <InlineSpan>[
+                                for (int index = 0; index < entries.length; index++) ...<InlineSpan>[
+                                  TextSpan(children: <InlineSpan>[
+                                    TextSpan(
+                                        text: '${entries[index].timestamp} ',
+                                        style: TextStyle(color: Design.text.withAlpha(90))),
+                                    TextSpan(
+                                      text: '${_kindLabel(entries[index].kind).padRight(6)} ',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w700, color: _kindColor(entries[index].kind)),
+                                    ),
+                                    TextSpan(
+                                        text: entries[index].message,
+                                        style: TextStyle(color: Design.text.withAlpha(190))),
+                                  ]),
+                                  if (index < entries.length - 1) const TextSpan(text: '\n'),
+                                ],
+                              ],
+                            ),
                             style: const TextStyle(fontSize: 10.5, fontFamily: 'Consolas', height: 1.35),
                           ),
-                        );
-                      },
+                        ],
+                      ),
                     ),
                   ),
                 ),

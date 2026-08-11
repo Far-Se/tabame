@@ -29,7 +29,7 @@ import 'pages/run.dart';
 
 Future<void> main(List<String> arguments) async {
   DistributionProfileConfig.validate();
-  WidgetsFlutterBinding.ensureInitialized();
+  // WidgetsFlutterBinding.ensureInitialized();
   await PlatformBootstrap.initialize();
   await AppPaths.initialize();
   // arguments = <String>["-screenCapture", "-frozen"];

@@ -1414,12 +1414,6 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, void Function(void Function()) setModalState) {
-            // Future<void> browseFolder() async {
-            //   final String folder = await WinUtils.folderPicker();
-            //   if (folder.isEmpty) return;
-            //   setModalState(() => _saveFolder = folder);
-            // }
-
             // ── design tokens ──────────────────────────────────────────
             const Color surface = Color(0xFF1A1D23);
             const Color surfaceElevated = Color(0xFF21252E);

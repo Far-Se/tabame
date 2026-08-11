@@ -14,7 +14,7 @@ import '../../models/settings.dart';
 import '../../models/util/main_hotkey.dart';
 import '../../models/win32/win32.dart';
 import '../../models/win32/win_utils.dart';
-import '../../services/install_lifecycle_service.dart';
+import '../../services/elevation_service.dart';
 import '../../services/native_integration_coordinator.dart';
 import '../../services/startup_registration_service.dart';
 import '../../services/update_service.dart';
@@ -45,9 +45,10 @@ class FirstRunState extends State<FirstRun> {
   final WizardlyContextMenu wizardlyContextMenu = WizardlyContextMenu();
   final PageController pageController = PageController();
   final StartupRegistrationService _startupService = StartupRegistrationService.forCurrentProfile();
-  final InstallLifecycleService _lifecycleService = InstallLifecycleService.forCurrentProfile();
+  final ElevationService _elevationService = ElevationService.forCurrentProfile();
   final UpdateService _updateService = UpdateService.forCurrentProfile();
   bool _startupEnabled = false;
+  bool _elevationBusy = false;
 
   /// Canonical, persisted list of hotkeys. Every feature row below points at
   /// one entry in here, and edits go through [HotKeySettings] which writes back
@@ -81,6 +82,24 @@ class FirstRunState extends State<FirstRun> {
     final StartupRegistrationStatus status = await _startupService.read();
     if (!mounted) return;
     setState(() => _startupEnabled = status.isEnabled);
+  }
+
+  Future<void> _setPersistentElevation(bool enabled) async {
+    if (_elevationBusy) return;
+    setState(() => _elevationBusy = true);
+    final bool previousValue = user.runAsAdministrator;
+    user.runAsAdministrator = enabled;
+    try {
+      await Boxes.updateSettings("runAsAdministrator", enabled);
+    } catch (error) {
+      user.runAsAdministrator = previousValue;
+      if (!mounted) return;
+      setState(() => _elevationBusy = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not save Elevated Permission: $error')));
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _elevationBusy = false);
   }
 
   @override
@@ -355,7 +374,6 @@ class FirstRunState extends State<FirstRun> {
                     physics: const NeverScrollableScrollPhysics(),
                     onPageChanged: (int index) => setState(() => currentStep = index),
                     children: <Widget>[
-                      _buildInstallLocationPage(theme, accent),
                       _buildHotkeysPage(theme, accent),
                       _buildSetupPage(theme, accent),
                       _buildSettingsOutroPage(theme, accent),
@@ -380,10 +398,9 @@ class FirstRunState extends State<FirstRun> {
 
   Widget _buildHero(ThemeData theme, Color accent) {
     const List<_StepMeta> steps = <_StepMeta>[
-      _StepMeta(0, "Location"),
-      _StepMeta(1, "Hotkeys"),
-      _StepMeta(2, "Preferences"),
-      _StepMeta(3, "Settings"),
+      _StepMeta(0, "Hotkeys"),
+      _StepMeta(1, "Preferences"),
+      _StepMeta(2, "Settings"),
     ];
 
     return Container(
@@ -433,27 +450,23 @@ class FirstRunState extends State<FirstRun> {
   String get _heroTitle {
     switch (currentStep) {
       case 0:
-        return "Welcome to Tabame";
-      case 1:
         return "Set up your hotkeys";
-      case 2:
+      case 1:
         return "A few helpful defaults";
-      case 3:
+      case 2:
         return "One more thing";
       default:
-        return "Welcome to Tabame";
+        return "Set up your hotkeys";
     }
   }
 
   String get _heroSubtitle {
     switch (currentStep) {
       case 0:
-        return "Make sure Tabame is running from a permanent folder on your computer.";
-      case 1:
         return "Set up your hotkeys — tap any item to configure its shortcut.";
-      case 2:
+      case 1:
         return "These settings cover startup behavior, updates, privacy-sensitive tracking, and extra tools.";
-      case 3:
+      case 2:
         return "Settings is where the real power lives — every feature has its own dedicated page.";
       default:
         return "";
@@ -463,8 +476,7 @@ class FirstRunState extends State<FirstRun> {
   Widget _buildStepChip(ThemeData theme, Color accent, int step, String label) {
     final bool active = currentStep == step;
     final bool done = currentStep > step;
-    final bool locked =
-        (_isRunningFromTempFolder && step > 0) || (step > 1 && _hotkeyFor(_Feature.quickMenu).key.isEmpty);
+    final bool locked = _isRunningFromTempFolder || (step > 0 && _hotkeyFor(_Feature.quickMenu).key.isEmpty);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -519,67 +531,21 @@ class FirstRunState extends State<FirstRun> {
     );
   }
 
-  // ─────────────────────── PAGE 0: INSTALL LOCATION ─────────────────────────
-
-  Widget _buildInstallLocationPage(ThemeData theme, Color accent) {
-    final bool runningFromTempFolder = _isRunningFromTempFolder;
-    final bool distributionOwnsInstall = !_lifecycleService.capabilities.canCustomInstall;
-    return WindowsScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            distributionOwnsInstall ? "Confirm the managed application location" : "Choose a permanent location",
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            distributionOwnsInstall
-                ? "The distribution system owns this application location. Tabame will not copy, replace, or delete installed binaries from this screen."
-                : "Tabame runs from the folder it was started from. Keep the entire Tabame folder in a permanent location, then run Tabame from there.",
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4),
-          ),
-          const SizedBox(height: 16),
-          _card(
-            theme,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Icon(Icons.folder_rounded, color: accent, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(_executableDirectory, style: theme.textTheme.bodyMedium?.copyWith(height: 1.4)),
-                ),
-              ],
-            ),
-          ),
-          if (runningFromTempFolder) ...<Widget>[
-            const SizedBox(height: 14),
-            _card(
-              theme,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Icon(Icons.warning_amber_rounded, color: Colors.amber),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Tabame appears to be running from a temporary folder, likely opened from an archive. Copy or extract the entire Tabame folder to a permanent location, then run Tabame from that folder.",
-                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
   String get _executableDirectory => File(Platform.resolvedExecutable).parent.path;
 
+  // bool get _isRunningFromTempFolder {
+  //   final String executableDirectory = _normalizeWindowsPath(_executableDirectory);
+  //   final Set<String> tempDirectories = <String>{
+  //     Directory.systemTemp.path,
+  //     if (Platform.environment['TEMP'] != null) Platform.environment['TEMP']!,
+  //     if (Platform.environment['TMP'] != null) Platform.environment['TMP']!,
+  //   }.map(_normalizeWindowsPath).where((String path) => path.isNotEmpty).toSet();
+
+  //   return tempDirectories.any(
+  //     (String tempDirectory) =>
+  //         executableDirectory == tempDirectory || executableDirectory.startsWith("$tempDirectory\\"),
+  //   );
+  // }
   bool get _isRunningFromTempFolder {
     // if (_executableDirectory.contains(r'\Temp\')) return true;
     // if (_executableDirectory.contains(r'\Temp\')) return true;
@@ -602,7 +568,7 @@ class FirstRunState extends State<FirstRun> {
   String _normalizeWindowsPath(String path) =>
       path.replaceAll('/', '\\').replaceFirst(RegExp(r'\\+$'), '').toLowerCase();
 
-  // ─────────────────────── PAGE 1: HOTKEYS ─────────────────────────
+  // ─────────────────────── PAGE 0: HOTKEYS ─────────────────────────
 
   Widget _buildHotkeysPage(ThemeData theme, Color accent) {
     return WindowsScrollView(
@@ -610,6 +576,25 @@ class FirstRunState extends State<FirstRun> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          if (_isRunningFromTempFolder) ...<Widget>[
+            _card(
+              theme,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Icon(Icons.warning_amber_rounded, color: Colors.amber),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Tabame appears to be running from a temporary folder, likely opened from an archive. Copy or extract the entire Tabame folder to a permanent location, then run Tabame from that folder.",
+                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           Text("Configure hotkeys", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
           Text(
@@ -949,6 +934,8 @@ class FirstRunState extends State<FirstRun> {
 
   Widget _buildSetupPage(ThemeData theme, Color accent) {
     final UpdateServiceCapabilities updateCapabilities = _updateService.capabilities;
+    final ElevationCapabilityResult elevationCapability = _elevationService.capability;
+    final bool canConfigurePersistentElevation = elevationCapability.canStartAutomatically && !_elevationBusy;
     return WindowsScrollView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
       child: Column(
@@ -983,6 +970,17 @@ class FirstRunState extends State<FirstRun> {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status.message)));
                         }
                       },
+                    ),
+                    const SizedBox(height: 14),
+                    _toggleCard(
+                      theme,
+                      accent: accent,
+                      title: "Elevated Permission",
+                      description: elevationCapability.canStartAutomatically
+                          ? "Request UAC and start Tabame elevated whenever it opens. UAC cancellation keeps the normal session running."
+                          : elevationCapability.message,
+                      value: elevationCapability.canStartAutomatically && user.runAsAdministrator,
+                      onChanged: canConfigurePersistentElevation ? _setPersistentElevation : null,
                     ),
                     const SizedBox(height: 14),
                     _toggleCard(
@@ -1217,20 +1215,17 @@ class FirstRunState extends State<FirstRun> {
   // ─────────────────────── FOOTER ─────────────────────────
 
   Widget _buildStickyFooter(ThemeData theme, Color accent) {
-    final bool isInstallStep = currentStep == 0;
-    final bool isHotkeysStep = currentStep == 1;
-    final bool isLastStep = currentStep == 3;
+    final bool isHotkeysStep = currentStep == 0;
+    final bool isLastStep = currentStep == 2;
     final bool runningFromTempFolder = _isRunningFromTempFolder;
     final Hotkeys quickMenu = _hotkeyFor(_Feature.quickMenu);
     final bool quickMenuSet = quickMenu.key.isNotEmpty;
 
-    final VoidCallback? onContinue = isInstallStep
-        ? (runningFromTempFolder ? null : () => _goToStep(1))
-        : isHotkeysStep
-            ? (quickMenuSet ? _continueSetup : null)
-            : isLastStep
-                ? _finishSetup
-                : () => _goToStep(currentStep + 1);
+    final VoidCallback? onContinue = isHotkeysStep
+        ? (runningFromTempFolder || !quickMenuSet ? null : _continueSetup)
+        : isLastStep
+            ? _finishSetup
+            : () => _goToStep(currentStep + 1);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
@@ -1250,7 +1245,7 @@ class FirstRunState extends State<FirstRun> {
         ),
         child: Row(
           children: <Widget>[
-            if (!isInstallStep) ...<Widget>[
+            if (currentStep > 0) ...<Widget>[
               OutlinedButton.icon(
                 onPressed: () => _goToStep(currentStep - 1),
                 icon: const Icon(Icons.arrow_back_rounded),
@@ -1259,26 +1254,24 @@ class FirstRunState extends State<FirstRun> {
               const SizedBox(width: 12),
             ],
             Expanded(
-              child: isInstallStep
+              child: isHotkeysStep
                   ? Text(
                       runningFromTempFolder
                           ? "Move or extract Tabame to a permanent folder to continue."
-                          : "Move Tabame manually if needed, then continue to set your hotkeys.",
-                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, fontWeight: FontWeight.w500),
-                      overflow: TextOverflow.ellipsis,
-                    )
-                  : isHotkeysStep
-                      ? Text(
-                          quickMenuSet
+                          : quickMenuSet
                               ? "QuickMenu: ${quickMenu.displayHotkey}"
                               : "Set the QuickMenu hotkey to continue.",
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: quickMenuSet ? theme.colorScheme.onSurface : theme.hintColor,
-                            fontWeight: quickMenuSet ? FontWeight.w600 : FontWeight.w500,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      : const SizedBox.shrink(),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: runningFromTempFolder
+                            ? theme.hintColor
+                            : quickMenuSet
+                                ? theme.colorScheme.onSurface
+                                : theme.hintColor,
+                        fontWeight: !runningFromTempFolder && quickMenuSet ? FontWeight.w600 : FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  : const SizedBox.shrink(),
             ),
             FilledButton.icon(
               onPressed: onContinue,
@@ -1291,7 +1284,7 @@ class FirstRunState extends State<FirstRun> {
               icon: Icon(isLastStep ? Icons.restart_alt_rounded : Icons.arrow_forward_rounded),
               label: Text(isLastStep
                   ? "Save and launch"
-                  : (isInstallStep || isHotkeysStep)
+                  : isHotkeysStep
                       ? "Continue"
                       : "Next"),
             ),
@@ -1405,7 +1398,7 @@ class FirstRunState extends State<FirstRun> {
 
   Future<void> _goToStep(int step) async {
     if (_isRunningFromTempFolder && step > 0) return;
-    if (step > 1 && _hotkeyFor(_Feature.quickMenu).key.isEmpty) return;
+    if (step > 0 && _hotkeyFor(_Feature.quickMenu).key.isEmpty) return;
     if (step == currentStep) return;
     await pageController.animateToPage(
       step,
@@ -1416,7 +1409,7 @@ class FirstRunState extends State<FirstRun> {
 
   Future<void> _continueSetup() async {
     // First-run edits stay in memory until the user explicitly saves and launches.
-    await _goToStep(2);
+    await _goToStep(1);
   }
 
   Future<void> _finishSetup() async {
