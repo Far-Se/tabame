@@ -569,15 +569,15 @@ class WinUtils {
 
   static Future<bool> toggleTaskbar({bool? visible}) async {
     final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
-    if (!integrations.canStart(NativeIntegrationId.shellIntegration)) {
-      integrations.reportDisabled(
-        NativeIntegrationId.shellIntegration,
-        reason: integrations.denialReason(NativeIntegrationId.shellIntegration) ??
-            'Taskbar changes are disabled; the normal taskbar remains visible.',
-        reducedMode: true,
-      );
-      return false;
-    }
+    // if (!integrations.canStart(NativeIntegrationId.shellIntegration)) {
+    //   integrations.reportDisabled(
+    //     NativeIntegrationId.shellIntegration,
+    //     reason: integrations.denialReason(NativeIntegrationId.shellIntegration) ??
+    //         'Taskbar changes are disabled; the normal taskbar remains visible.',
+    //     reducedMode: true,
+    //   );
+    //   return false;
+    // }
 
     final TaskbarVisibilityService taskbar = TaskbarVisibilityService.instance;
     final bool requestedVisible = visible ?? !taskbar.isVisible;

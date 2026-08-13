@@ -17,6 +17,7 @@ import '../models/win32/win_utils.dart';
 import '../platform/app_paths.dart';
 import '../platform/clipboard_service.dart';
 import '../platform/distribution_profile.dart';
+import '../platform/shell_integration_service.dart';
 import '../services/browser_bridge_service.dart';
 import '../services/clipboard_history_coordinator.dart';
 import '../services/elevation_service.dart';
@@ -218,6 +219,31 @@ class AppStartup {
     }
   }
 
+  /// Applies the persisted taskbar preference after Explorer and the Flutter
+  /// window are available. Windows login can finish creating the taskbar after
+  /// Tabame starts, so keep retrying for a short, bounded settling period.
+  static Future<void> _applyStartupTaskbarVisibility() async {
+    if (Globals.isStandaloneLauncher || user.page != TPage.quickmenu || !user.hideTaskbarOnStartup) return;
+
+    const int attempts = 20;
+    final TaskbarVisibilityService taskbar = TaskbarVisibilityService.instance;
+    for (int attempt = 0; attempt < attempts; attempt++) {
+      if (!user.hideTaskbarOnStartup) return;
+      final int expectedGeneration = taskbar.operationGeneration + 1;
+      final bool applied = await WinUtils.toggleTaskbar(visible: false);
+      if (taskbar.operationGeneration != expectedGeneration) return;
+      if (applied) {
+        Debug.add('Startup: Taskbar hide applied.');
+        return;
+      }
+      if (attempt + 1 < attempts) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+    }
+
+    Debug.add('Startup: Taskbar hide failed after retries.');
+  }
+
   static void registerHooks() {
     if (Globals.isStandaloneLauncher || user.page != TPage.quickmenu) return;
     final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
@@ -321,6 +347,11 @@ class AppStartup {
           );
         }
         WindowsBootstrap.refreshCapabilities();
+        if (startInInterface) {
+          await TaskbarVisibilityService.instance.restore();
+        } else {
+          unawaited(_applyStartupTaskbarVisibility());
+        }
       }
       Globals.fullLoaded.value = true;
       final bool startupReplacementReady = _signalElevatedStartupReady();

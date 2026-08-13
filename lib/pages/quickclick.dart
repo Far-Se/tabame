@@ -298,7 +298,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
       NativeHooks.removeListener(this);
       QuickClick.disableQuickClick();
     }
-    _refocusPreviousWindow();
+    // _refocusPreviousWindow();
     super.dispose();
   }
 

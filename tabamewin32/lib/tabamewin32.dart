@@ -451,11 +451,11 @@ Future<int> findTopWindow(int processID) async {
   return result;
 }
 
-Future<void> setTaskbarVisibility(bool state) async {
+Future<bool> setTaskbarVisibility(bool state) async {
   final Map<String, dynamic> arguments = <String, dynamic>{
     'state': state,
   };
-  await tabameWin32MethodChannel.invokeMethod('toggleTaskbar', arguments);
+  return await tabameWin32MethodChannel.invokeMethod<bool>('toggleTaskbar', arguments) ?? false;
 }
 
 Future<int> getFlutterMainWindow() async {

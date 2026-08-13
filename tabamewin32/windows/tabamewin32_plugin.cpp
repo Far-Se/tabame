@@ -658,8 +658,7 @@ void EnumTrayIconsH(Tabamewin32Plugin *, const MethodCall &,
 void ToggleTaskbarH(Tabamewin32Plugin *, const MethodCall &call,
                     MethodResult result) {
   auto &a = Args::Map(call);
-  ToggleTaskbar(Args::Bool(a, "state"));
-  OK(result, true);
+  OK(result, ToggleTaskbar(Args::Bool(a, "state")));
 }
 
 // ===== Win Hooks (generic) =====

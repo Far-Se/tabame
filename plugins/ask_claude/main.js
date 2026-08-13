@@ -7,6 +7,9 @@
 // Tabame's app-owned browser bridge. Every message you submit from the
 // launcher is typed into that tab, sent, and the plugin waits for Claude's
 // reply in-page before relaying the text back into the launcher's chat view.
+// The browser exposes snapshots while that response is streaming, so the
+// plugin interpolates those snapshots into character-level chat frames instead
+// of showing each polling chunk as a jump.
 //
 // Typing the prompt and clicking send happen inside one javascript.execute
 // call that runs in the connected page. The plugin then polls that same tab
@@ -18,6 +21,12 @@
 
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
+
+const SNIPPETS_STORAGE_KEY = "snippets";
+const DEFAULT_SNIPPET_TRIGGER = "$process";
+const DEFAULT_SNIPPET_TEMPLATE =
+  "Please tell me how many i have in my basked: $1, $2, $3";
 
 const DEFAULT_CONFIG = {
   claudeUrl: "https://claude.ai/new",
@@ -78,6 +87,12 @@ const POLL_REQUEST_TIMEOUT_MS = 15_000;
 const STABLE_FOR_MS = 1_200;
 const NO_PROGRESS_TIMEOUT_MS = 25_000;
 const MAX_CONSECUTIVE_POLL_FAILURES = 5;
+// The native chat view replaces item subtitles per frame, so animate the
+// growing assistant message here rather than switching away from the
+// Discord-style message layout to detail.append.
+const STREAM_TICK_MS = 24;
+const STREAM_MAX_CHARS_PER_TICK = 4;
+const STREAM_SETTLE_TIMEOUT_MS = 1_500;
 const SHUTDOWN_TAB_WAIT_MS = 500;
 const SHUTDOWN_TAB_CLOSE_TIMEOUT_MS = 1_000;
 
@@ -240,11 +255,33 @@ function send(message) {
 function command(name, fields = {}) {
   send({ type: "command", command: name, ...fields });
 }
+function toast(text, style = "success") {
+  command("toast", { text, style });
+}
 function render(rev, view, fields = {}) {
   send({ type: "render", rev, view, ...fields });
 }
 function log(...parts) {
   console.error(...parts);
+}
+
+const storageRequests = new Map();
+let storageRequestCounter = 0;
+
+function storageGet(key) {
+  return new Promise((resolve) => {
+    const requestId = `ask-claude-storage-${++storageRequestCounter}`;
+    const timer = setTimeout(() => {
+      storageRequests.delete(requestId);
+      resolve(undefined);
+    }, 1_500);
+    storageRequests.set(requestId, { resolve, timer });
+    command("storage", { op: "get", key, requestId });
+  });
+}
+
+function storageSet(key, value) {
+  command("storage", { op: "set", key, value });
 }
 
 // javascript.execute returns an execution envelope; browser-scripts and the
@@ -359,15 +396,351 @@ class BrowserBridge {
 
 const state = {
   initialized: false,
-  screen: "connection", // "connection" | "chat"
+  screen: "connection", // connection | chat | snippets | snippet_form
   tabId: null,
   tabOwned: false,
+  snippetFormMode: "create", // create | edit
+  editingSnippetId: null,
+  snippetQuery: "",
+  snippets: [],
+  snippetsLoaded: false,
+  snippetsReturnScreen: "chat",
   messages: [], // {id, role: "user"|"assistant"|"error"|"system", text, time}
   busy: false,
   thinkingStartedAt: null,
   streamingMessageId: null,
+  streamingTarget: "",
+  streamingTargetCharacters: [],
+  streamingDisplayedLength: 0,
+  streamingTimer: null,
   nextId: 1,
 };
+
+let snippetsLoadPromise = null;
+
+function newSnippetId() {
+  return `snippet-${crypto.randomUUID()}`;
+}
+
+function normalizeSnippet(value, fallbackId) {
+  if (!value || typeof value !== "object") return null;
+  const trigger = String(value.trigger || "").trim();
+  if (!trigger) return null;
+  return {
+    id: String(value.id || fallbackId || newSnippetId()),
+    trigger,
+    template: String(value.template || DEFAULT_SNIPPET_TEMPLATE),
+  };
+}
+
+function saveSnippets() {
+  storageSet(SNIPPETS_STORAGE_KEY, JSON.stringify(state.snippets));
+}
+
+function ensureSnippetsLoaded() {
+  if (state.snippetsLoaded) return Promise.resolve(state.snippets);
+  if (snippetsLoadPromise) return snippetsLoadPromise;
+
+  snippetsLoadPromise = storageGet(SNIPPETS_STORAGE_KEY)
+    .then((stored) => {
+      let parsed = [];
+      try {
+        if (Array.isArray(stored)) parsed = stored;
+        else if (typeof stored === "string" && stored.trim())
+          parsed = JSON.parse(stored);
+      } catch (error) {
+        log("Ignoring invalid saved snippets:", error.message);
+      }
+      state.snippets = Array.isArray(parsed)
+        ? parsed
+            .map((item, index) =>
+              normalizeSnippet(item, `snippet-${index + 1}`),
+            )
+            .filter(Boolean)
+        : [];
+      state.snippetsLoaded = true;
+      return state.snippets;
+    })
+    .catch((error) => {
+      state.snippets = [];
+      state.snippetsLoaded = true;
+      log("Could not load saved snippets:", error.message || error);
+      return state.snippets;
+    })
+    .finally(() => {
+      snippetsLoadPromise = null;
+    });
+
+  return snippetsLoadPromise;
+}
+
+function quotedArguments(text) {
+  const args = [];
+  const pattern = /(?:\"((?:\\.|[^\"\\])*)\"|'((?:\\.|[^'\\])*)')/g;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    const value = match[1] !== undefined ? match[1] : match[2];
+    args.push(value.replace(/\\([\\\"'])/g, "$1"));
+  }
+  return args;
+}
+
+function substituteArguments(value, args) {
+  return String(value || "").replace(/\$(\d+)/g, (_, number) => {
+    const index = Number(number) - 1;
+    return index >= 0 && index < args.length ? args[index] : "";
+  });
+}
+
+function expandSnippet(text) {
+  const source = String(text || "").trim();
+  const candidates = [...state.snippets].sort(
+    (left, right) => right.trigger.length - left.trigger.length,
+  );
+  const snippet = candidates.find(
+    (candidate) =>
+      source === candidate.trigger ||
+      source.startsWith(`${candidate.trigger} `) ||
+      source.startsWith(`${candidate.trigger}\t`),
+  );
+  if (!snippet) return source;
+
+  const remainder = source.slice(snippet.trigger.length).trim();
+  let args = quotedArguments(remainder);
+  if (!args.length && remainder) args = [remainder];
+
+  return substituteArguments(snippet.template, args).trim();
+}
+
+function snippetById(id) {
+  return state.snippets.find((snippet) => snippet.id === id) || null;
+}
+
+function snippetFormValues(snippet = null) {
+  return {
+    trigger: snippet?.trigger || DEFAULT_SNIPPET_TRIGGER,
+    template: snippet?.template || DEFAULT_SNIPPET_TEMPLATE,
+  };
+}
+
+function renderSnippets(rev, query = state.snippetQuery) {
+  const normalizedQuery = String(query || "")
+    .trim()
+    .toLowerCase();
+  const savedItems = state.snippets
+    .filter((snippet) => {
+      if (!normalizedQuery) return true;
+      return `${snippet.trigger} ${snippet.template}`
+        .toLowerCase()
+        .includes(normalizedQuery);
+    })
+    .map((snippet) => ({
+      id: snippet.id,
+      title: snippet.trigger,
+      subtitle: snippet.template,
+      icon: "code",
+      lines: 2,
+      actions: [
+        { id: "edit_snippet", title: "Edit snippet", icon: "edit" },
+        {
+          id: "delete_snippet",
+          title: "Delete snippet",
+          icon: "trash",
+          destructive: true,
+          confirm: {
+            title: "Delete this snippet?",
+            message: `Remove ${snippet.trigger} from your saved snippets.`,
+            confirmLabel: "Delete",
+          },
+        },
+      ],
+    }));
+
+  render(rev, "list", {
+    page: { id: "ask:snippets", title: "Snippets", history: "push" },
+    canGoBack: true,
+    placeholder: "Filter snippets…",
+    emptyText: normalizedQuery
+      ? "No matching snippets"
+      : "No saved snippets yet",
+    items: [
+      {
+        id: "create-snippet",
+        title: "Create new snippet",
+        subtitle: "Save a reusable prompt transformation",
+        icon: "add",
+      },
+      ...savedItems,
+    ],
+    floatingAction: {
+      id: "create_snippet",
+      title: "Create snippet",
+      icon: "add",
+    },
+  });
+}
+
+function renderSnippetForm(rev, error = null) {
+  const snippet =
+    state.snippetFormMode === "edit"
+      ? snippetById(state.editingSnippetId)
+      : null;
+  const values = snippetFormValues(snippet);
+  render(rev, "form", {
+    page: {
+      id:
+        state.snippetFormMode === "edit"
+          ? "ask:snippet:edit"
+          : "ask:snippet:new",
+      title: state.snippetFormMode === "edit" ? "Edit snippet" : "New snippet",
+      history: "push",
+    },
+    canGoBack: true,
+    placeholder: "Configure your prompt transformation…",
+    form: {
+      title:
+        state.snippetFormMode === "edit"
+          ? "Edit snippet"
+          : "Create new snippet",
+      submitLabel: state.snippetFormMode === "edit" ? "Save" : "Create",
+      error: error?.message || undefined,
+      fields: [
+        {
+          id: "trigger",
+          type: "text",
+          label: "Shortcut",
+          placeholder: DEFAULT_SNIPPET_TRIGGER,
+          value: values.trigger,
+          required: true,
+          description: "The exact prefix used in chat, for example $process.",
+          error: error?.field === "trigger" ? error.message : undefined,
+        },
+        {
+          id: "template",
+          type: "textarea",
+          label: "Snippet text",
+          value: values.template,
+          required: true,
+          description:
+            "Use $1, $2, etc. for the quoted values supplied after the shortcut.",
+          error: error?.field === "template" ? error.message : undefined,
+        },
+      ],
+    },
+  });
+}
+
+function enterSnippetForm(mode = "create", id = null) {
+  state.screen = "snippet_form";
+  state.snippetFormMode = mode;
+  state.editingSnippetId = id;
+  command("setQuery", { text: "" });
+  renderSnippetForm(0);
+}
+
+async function enterSnippets() {
+  state.snippetsReturnScreen =
+    state.screen === "snippets" || state.screen === "snippet_form"
+      ? "chat"
+      : state.screen;
+  state.screen = "snippets";
+  state.snippetQuery = "";
+  render(0, "list", {
+    loading: true,
+    loadingText: "Loading snippets…",
+    items: [],
+  });
+  command("setQuery", { text: "" });
+  await ensureSnippetsLoaded();
+  if (!shuttingDown && state.screen === "snippets") renderSnippets(0);
+}
+
+function leaveSnippets() {
+  const returnScreen = state.snippetsReturnScreen || "chat";
+  state.screen = returnScreen;
+  state.snippetQuery = "";
+  state.editingSnippetId = null;
+  command("setQuery", { text: "" });
+  renderCurrent(0);
+}
+
+function handleSnippetSubmit(values) {
+  const trigger = String(values.trigger || "").trim();
+  const template = String(values.template || "").trim();
+  if (!trigger)
+    return renderSnippetForm(0, {
+      field: "trigger",
+      message: "Trigger is required.",
+    });
+  if (!template)
+    return renderSnippetForm(0, {
+      field: "template",
+      message: "Prompt template is required.",
+    });
+
+  const duplicate = state.snippets.find(
+    (snippet) =>
+      snippet.trigger.toLowerCase() === trigger.toLowerCase() &&
+      snippet.id !== state.editingSnippetId,
+  );
+  if (duplicate)
+    return renderSnippetForm(0, {
+      field: "trigger",
+      message: "That trigger is already saved.",
+    });
+
+  if (state.snippetFormMode === "edit") {
+    const snippet = snippetById(state.editingSnippetId);
+    if (!snippet) return enterSnippets();
+    snippet.trigger = trigger;
+    snippet.template = template;
+    saveSnippets();
+    toast(`Updated ${trigger}`);
+  } else {
+    state.snippets.push({
+      id: newSnippetId(),
+      trigger,
+      template,
+    });
+    saveSnippets();
+    toast(`Saved ${trigger}`);
+  }
+
+  state.screen = "snippets";
+  state.editingSnippetId = null;
+  state.snippetFormMode = "create";
+  renderSnippets(0);
+}
+
+function handleSnippetAction(id, action) {
+  if (state.screen === "snippets") {
+    if (id === "" && (action === "create_snippet" || action === "default")) {
+      return enterSnippetForm();
+    }
+    if (id === "create-snippet" && action === "default")
+      return enterSnippetForm();
+    const snippet = snippetById(id);
+    if (!snippet) return;
+    if (action === "default" || action === "edit_snippet") {
+      return enterSnippetForm("edit", snippet.id);
+    }
+    if (action === "delete_snippet") {
+      state.snippets = state.snippets.filter(
+        (candidate) => candidate.id !== snippet.id,
+      );
+      saveSnippets();
+      renderSnippets(0);
+      toast(`Deleted ${snippet.trigger}`);
+    }
+    return;
+  }
+
+  if (state.screen === "snippet_form" && id === "" && action === "cancel") {
+    state.screen = "snippets";
+    state.editingSnippetId = null;
+    renderSnippets(0);
+  }
+}
 
 // Startup status and init can arrive at the same time. Share the in-flight
 // operations so only one Claude tab can be opened for this plugin instance.
@@ -401,33 +774,131 @@ function pushMessage(role, text) {
   return message;
 }
 
+function streamingMessage() {
+  return state.streamingMessageId
+    ? state.messages.find(
+        (candidate) => candidate.id === state.streamingMessageId,
+      )
+    : null;
+}
+
+function ensureStreamingMessage() {
+  const existing = streamingMessage();
+  if (existing) return existing;
+
+  const created = pushMessage("assistant", "");
+  state.streamingMessageId = created.id;
+  state.streamingTarget = "";
+  state.streamingTargetCharacters = [];
+  state.streamingDisplayedLength = 0;
+  return created;
+}
+
+function stopStreamingAnimation() {
+  if (state.streamingTimer !== null) {
+    clearInterval(state.streamingTimer);
+    state.streamingTimer = null;
+  }
+}
+
+function resetStreamingAnimation() {
+  stopStreamingAnimation();
+  state.streamingTarget = "";
+  state.streamingTargetCharacters = [];
+  state.streamingDisplayedLength = 0;
+}
+
+function advanceStreamingMessage() {
+  const message = streamingMessage();
+  if (!message || state.screen !== "chat") {
+    stopStreamingAnimation();
+    return;
+  }
+
+  const target = state.streamingTargetCharacters;
+  const remaining = target.length - state.streamingDisplayedLength;
+  if (remaining <= 0) {
+    stopStreamingAnimation();
+    return;
+  }
+
+  // Stay gentle when the browser is keeping up, but catch up quickly after a
+  // slower poll so the animation never falls far behind the real response.
+  const step =
+    remaining > 120 ? STREAM_MAX_CHARS_PER_TICK : remaining > 30 ? 2 : 1;
+  state.streamingDisplayedLength += Math.min(step, remaining);
+  message.text = target.slice(0, state.streamingDisplayedLength).join("");
+  renderChat(0);
+
+  if (state.streamingDisplayedLength >= target.length) {
+    stopStreamingAnimation();
+  }
+}
+
+function startStreamingAnimation() {
+  if (state.streamingTimer !== null) return;
+  state.streamingTimer = setInterval(advanceStreamingMessage, STREAM_TICK_MS);
+}
+
 function updateStreamingMessage(text) {
   const nextText = String(text ?? "").trim();
   if (!nextText) return false;
 
-  const message = state.streamingMessageId
-    ? state.messages.find(
-        (candidate) => candidate.id === state.streamingMessageId,
-      )
-    : null;
-  if (message) {
-    if (message.text === nextText) return false;
-    message.text = nextText;
-    return true;
+  const message = ensureStreamingMessage();
+  const visibleCharacters = Array.from(message.text);
+  const targetCharacters = Array.from(nextText);
+  let sharedLength = 0;
+  while (
+    sharedLength < visibleCharacters.length &&
+    sharedLength < targetCharacters.length &&
+    visibleCharacters[sharedLength] === targetCharacters[sharedLength]
+  ) {
+    sharedLength += 1;
   }
 
-  const created = pushMessage("assistant", nextText);
-  state.streamingMessageId = created.id;
-  return true;
+  // The DOM can briefly correct an earlier character while Claude streams.
+  // Keep the already-visible common prefix, then continue pouring from there.
+  if (sharedLength !== visibleCharacters.length) {
+    message.text = targetCharacters.slice(0, sharedLength).join("");
+  }
+  state.streamingDisplayedLength = sharedLength;
+
+  const changed = state.streamingTarget !== nextText;
+  state.streamingTarget = nextText;
+  state.streamingTargetCharacters = targetCharacters;
+  startStreamingAnimation();
+  return changed || sharedLength !== visibleCharacters.length;
+}
+
+async function revealStreamingMessage(text) {
+  const nextText = String(text ?? "").trim();
+  if (!nextText) return;
+
+  updateStreamingMessage(nextText);
+  const deadline = Date.now() + STREAM_SETTLE_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const message = streamingMessage();
+    if (!message || state.streamingTarget !== nextText) return;
+    if (
+      state.streamingDisplayedLength >= state.streamingTargetCharacters.length
+    ) {
+      stopStreamingAnimation();
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, STREAM_TICK_MS));
+  }
+
+  const message = streamingMessage();
+  if (!message || state.streamingTarget !== nextText) return;
+  message.text = nextText;
+  state.streamingDisplayedLength = state.streamingTargetCharacters.length;
+  stopStreamingAnimation();
+  if (state.screen === "chat") renderChat(0);
 }
 
 function finishAssistantMessage(text) {
   const nextText = String(text ?? "").trim();
-  const message = state.streamingMessageId
-    ? state.messages.find(
-        (candidate) => candidate.id === state.streamingMessageId,
-      )
-    : null;
+  const message = streamingMessage();
   if (message) {
     message.text = nextText;
   } else {
@@ -578,6 +1049,7 @@ function renderChat(rev) {
       { id: "new_chat", title: "New conversation", icon: "add" },
       { id: "reconnect", title: "Reconnect bridge", icon: "refresh" },
     ],
+    floatingAction: { id: "snippets", title: "Snippets", icon: "code" },
   });
 }
 
@@ -598,6 +1070,7 @@ function renderError(rev, error, title) {
       { id: "retry", title: "Try again", icon: "refresh" },
       { id: "reconnect", title: "Reconnect bridge", icon: "refresh" },
     ],
+    floatingAction: { id: "snippets", title: "Snippets", icon: "code" },
   });
 }
 
@@ -672,11 +1145,14 @@ function renderConnection(rev) {
       { id: "copy_address", title: "Copy bridge address", icon: "copy" },
       { id: "reconnect", title: "Refresh status", icon: "refresh" },
     ],
+    floatingAction: { id: "snippets", title: "Snippets", icon: "code" },
   });
 }
 
 function renderCurrent(rev) {
   if (state.screen === "chat") renderChat(rev);
+  else if (state.screen === "snippets") renderSnippets(rev);
+  else if (state.screen === "snippet_form") renderSnippetForm(rev);
   else renderConnection(rev);
 }
 
@@ -820,7 +1296,15 @@ async function handleSubmit(rev, text) {
     return;
   }
 
-  pushMessage("user", trimmed);
+  await ensureSnippetsLoaded();
+  const expanded = expandSnippet(trimmed);
+  if (expanded !== trimmed) {
+    log(
+      `Expanded snippet input ${JSON.stringify(trimmed)} to ${JSON.stringify(expanded)}`,
+    );
+  }
+
+  pushMessage("user", expanded);
   state.busy = true;
   state.thinkingStartedAt = Date.now();
   renderChat(rev);
@@ -830,7 +1314,7 @@ async function handleSubmit(rev, text) {
     await ensureTabOpen();
     const sendExecution = await bridge.request(
       "javascript.execute",
-      { tabId: state.tabId, code: SEND_SCRIPT, input: { text: trimmed } },
+      { tabId: state.tabId, code: SEND_SCRIPT, input: { text: expanded } },
       REQUEST_TIMEOUT_MS,
     );
     const sendResult = unwrapBrowserResult(sendExecution);
@@ -845,6 +1329,7 @@ async function handleSubmit(rev, text) {
       },
     );
     if (!replyText) throw new Error("Claude did not return a response.");
+    await revealStreamingMessage(replyText);
     finishAssistantMessage(replyText);
   } catch (error) {
     pushMessage(
@@ -855,11 +1340,14 @@ async function handleSubmit(rev, text) {
     state.busy = false;
     state.thinkingStartedAt = null;
     state.streamingMessageId = null;
+    resetStreamingAnimation();
     renderChat(0);
   }
 }
 
 async function startNewConversation() {
+  state.streamingMessageId = null;
+  resetStreamingAnimation();
   render(0, "chat", {
     loading: true,
     loadingText: "Starting a new conversation…",
@@ -883,6 +1371,14 @@ async function startNewConversation() {
 
 async function handleAction(id, action) {
   try {
+    if (state.screen === "snippets" || state.screen === "snippet_form") {
+      handleSnippetAction(id, action);
+      return;
+    }
+    if (action === "snippets") {
+      await enterSnippets();
+      return;
+    }
     if (action === "copy") {
       const message = state.messages.find((candidate) => candidate.id === id);
       if (message?.text) {
@@ -955,18 +1451,57 @@ async function handleLine(line) {
       bridge.handleHostMessage(message);
       break;
     case "init":
-    case "query":
       await handleInit(
         Number(message.rev) || 0,
         message.text ?? message.query ?? "",
       );
       break;
+    case "query": {
+      const rev = Number(message.rev) || 0;
+      if (!state.initialized) {
+        await handleInit(rev, message.text ?? message.query ?? "");
+      } else if (state.screen === "snippets") {
+        state.snippetQuery = String(message.text ?? "");
+        if (!state.snippetsLoaded) {
+          render(rev, "list", {
+            loading: true,
+            loadingText: "Loading snippets…",
+            items: [],
+          });
+        } else {
+          renderSnippets(rev, state.snippetQuery);
+        }
+      }
+      break;
+    }
     case "submitQuery":
       await handleSubmit(Number(message.rev) || 0, message.text ?? "");
+      break;
+    case "submit":
+      if (state.screen === "snippet_form")
+        handleSnippetSubmit(message.values || {});
       break;
     case "action":
       await handleAction(String(message.id || ""), message.action || "default");
       break;
+    case "back":
+      if (state.screen === "snippet_form") {
+        state.screen = "snippets";
+        state.editingSnippetId = null;
+        renderSnippets(Number(message.rev) || 0);
+      } else if (state.screen === "snippets") {
+        leaveSnippets();
+      }
+      break;
+    case "storage": {
+      const request = storageRequests.get(message.requestId);
+      if (request) {
+        clearTimeout(request.timer);
+        storageRequests.delete(message.requestId);
+        request.resolve(message.value);
+      }
+      break;
+    }
   }
 }
 
@@ -1006,6 +1541,8 @@ let shuttingDown = false;
 function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
+  state.streamingMessageId = null;
+  resetStreamingAnimation();
   void closeOwnedClaudeTab()
     .catch((error) => log("Claude tab cleanup failed:", error))
     .finally(() => {

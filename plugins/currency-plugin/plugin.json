@@ -7,5 +7,5 @@
   "icon": "currency",
   "description": "Convert currencies and view a live rate chart card",
   "pip": ["pillow"],
-  "dev": true
+  "dev": false
 }

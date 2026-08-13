@@ -34,8 +34,7 @@ class _WindowsTaskbarVisibilityAdapter implements TaskbarVisibilityAdapter {
   Future<bool> setVisible(bool visible) async {
     if (!isAvailable) return false;
     try {
-      await setTaskbarVisibility(visible);
-      return true;
+      return await setTaskbarVisibility(visible);
     } catch (_) {
       return false;
     }

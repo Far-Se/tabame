@@ -100,12 +100,17 @@ void SetTransparent(HWND target_window, bool makeTransparent) {
 // ---------------------------------------------------------------------------
 // Taskbar toggle
 // ---------------------------------------------------------------------------
-void ToggleTaskbar(bool visible) {
-  APPBARDATA abd = {sizeof(abd)};
-  abd.lParam = visible ? ABS_ALWAYSONTOP : ABS_AUTOHIDE;
-  SHAppBarMessage(ABM_SETSTATE, &abd);
+bool ToggleTaskbar(bool visible) {
+  HWND mainHwnd = FindWindow(L"Shell_TrayWnd", L"");
+  if (!IsWindow(mainHwnd))
+    return false;
 
-  HWND mainHwnd = FindWindow(L"Shell_traywnd", L"");
+  APPBARDATA abd = {sizeof(abd)};
+  abd.hWnd = mainHwnd;
+  abd.lParam = visible ? ABS_ALWAYSONTOP : ABS_AUTOHIDE;
+  if (!SHAppBarMessage(ABM_SETSTATE, &abd))
+    return false;
+
   SetTransparent(mainHwnd, !visible);
 
   HWND hwndNext = nullptr;
@@ -118,6 +123,12 @@ void ToggleTaskbar(bool visible) {
   } while (hwnd != nullptr);
 
   SHAppBarMessage(ABM_WINDOWPOSCHANGED, &abd);
+
+  const UINT state = static_cast<UINT>(SHAppBarMessage(ABM_GETSTATE, &abd));
+  const bool isAutoHidden = (state & ABS_AUTOHIDE) != 0;
+  // ABM_GETSTATE returns zero for a normal visible taskbar, so zero is not
+  // itself an error.
+  return visible ? !isAutoHidden : isAutoHidden;
 }
 
 // ---------------------------------------------------------------------------

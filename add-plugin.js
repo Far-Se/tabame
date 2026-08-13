@@ -291,7 +291,7 @@ function checkLocalPlugins() {
     fail("The LOCALAPPDATA environment variable is not set.");
   }
 
-  const localPluginsPath = path.join(localAppData, "Tabame", "plugins");
+  const localPluginsPath = path.join("E:\\Resources\\Backup", "tabame-plugins");
   if (
     !fs.existsSync(localPluginsPath) ||
     !fs.statSync(localPluginsPath).isDirectory()

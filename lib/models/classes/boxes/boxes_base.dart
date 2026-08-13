@@ -329,18 +329,19 @@ class Boxes {
       shutDownScheduler();
       if (reminders.any((Reminder reminder) => reminder.enabled)) Tasks().startReminders();
 
-      final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
-      if (user.hideTaskbarOnStartup && integrations.canStart(NativeIntegrationId.shellIntegration)) {
+      // final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
+      if (user.hideTaskbarOnStartup /*&& integrations.canStart(NativeIntegrationId.shellIntegration)*/) {
         unawaited(WinUtils.toggleTaskbar(visible: false));
         Debug.add("Registered: Taskbar");
-      } else if (user.hideTaskbarOnStartup) {
-        integrations.reportDisabled(
-          NativeIntegrationId.shellIntegration,
-          reason: integrations.denialReason(NativeIntegrationId.shellIntegration) ??
-              'Taskbar hiding is disabled; the normal taskbar remains visible.',
-          reducedMode: true,
-        );
       }
+      // else if (user.hideTaskbarOnStartup) {
+      //   integrations.reportDisabled(
+      //     NativeIntegrationId.shellIntegration,
+      //     reason: integrations.denialReason(NativeIntegrationId.shellIntegration) ??
+      //         'Taskbar hiding is disabled; the normal taskbar remains visible.',
+      //     reducedMode: true,
+      //   );
+      // }
       if (user.isWindows10 && user.volumeOSDStyle != VolumeOSDStyle.normal) {
         WinUtils.setVolumeOSDStyle(type: VolumeOSDStyle.normal, applyStyle: true);
         WinUtils.setVolumeOSDStyle(type: user.volumeOSDStyle, applyStyle: true);
