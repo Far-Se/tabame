@@ -12,7 +12,9 @@
 
 Tabame (Ta-ba-me -> **TA**sk**BA**r**ME**nu) started as a Windows taskbar replacement. I don't like the flashing icons, the badges, the notifications and all the stuff Microsoft keeps pushing into my face. So I made a little popup menu (the **QuickMenu**) that shows my open windows, my audio, my pinned apps - and nothing else unless I ask for it.
 
-Then I kept getting ideas. "It'd be nice if I could also..." - and that's how it grew into the thing you see now: a launcher, launcher plugins, a media player, screenshot and drawing tools, a password vault, an authenticator, reminders, activity tracking, file utilities, and a pile of small things I use every day that now total more than 250,000 lines of code.
+Then I kept getting ideas. "It'd be nice if I could also..." - and that's how it grew into the thing you see now: a launcher, launcher plugins, a media player, screenshot and drawing tools, a password vault, an authenticator, reminders, activity tracking, file utilities, and a pile of small things I use every day that now total more than 300,000+ lines of code.
+
+![Snapshot 14 Aug](https://raw.githubusercontent.com/far-se/tabame/main/resources/cloc.png)
 
 It's all made by one person (me), for the way I actually use my computer. It's free, it's open source, and it tries to stay out of your way until you press a hotkey.
 
