@@ -4,6 +4,14 @@ These skills are derived from the full Tabame plugin authoring skill. Each
 is standalone and should be supplied to an AI only when its workflow matches the
 plugin being requested.
 
+## 0. Main Skill
+
+The `TABAME_PLUGIN_SKILL.md` skill is the most detailed skill but it also consumes alot of tokens/context.
+
+So you can try `TABAME_PLUGIN_SKILL.min.md` or `TABAME_PLUGIN_SKILL.min2.md` for a smaller file, but it might lose some context
+
+Pick which one you think you need. The main one for a more in-detail plugin, the `.min` for a more generic plugin, or below plugins for a more specific plugin:
+
 ## 1. Search & Browse
 
 Use `TABAME_SKILL_SEARCH_BROWSE.md` for:

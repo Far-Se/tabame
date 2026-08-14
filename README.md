@@ -257,6 +257,8 @@ The Launcher isn't limited to what ships in the box - you can extend it with you
 
 You don't need to hand-write the protocol plumbing - an AI coding assistant (Claude Code, etc.) can build a plugin for you from a plain description of what you want, because the whole protocol is written down as a spec it can read and follow:
 
+### You can see all skills in the [skills folder](https://github.com/Far-Se/tabame/tree/main/skills)
+
 1. Point your assistant at `skills/TABAME_PLUGIN_SKILL.md` (or `skills/TABAME_PLUGIN_SKILL.min.md`) in this repo - it's the full, authoritative spec: every message type, render-frame field, view type and icon name, plus a matching `plugin.json` template.
 2. Look at `plugins/echo/`, `plugins/linear/` and `plugins/caniuse/` for working examples to copy the shape of (Python/Node, list/grid/detail views, calling an external API, reading secrets from `config.json`).
 3. Describe what you want in plain terms - the keyword to type, what each result should show, what Enter should do, what extra actions belong on Ctrl+K - and let the AI scaffold `plugin.json` + the entry script from the spec.

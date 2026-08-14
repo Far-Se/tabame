@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
+import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../../pages/launcher/plugins/plugin_gallery.dart';
@@ -123,6 +124,12 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
     await PluginRegistry.load();
     if (!mounted) return;
     setState(() => _reloading = false);
+  }
+
+  Future<void> _setAutoUpdatePlugins(bool enabled) async {
+    user.autoUpdatePlugins = enabled;
+    if (mounted) setState(() {});
+    await Boxes.updateSettings("autoUpdatePlugins", enabled);
   }
 
   Future<void> _changePluginDirectory() async {
@@ -493,6 +500,14 @@ Build a plugin with your favorite AI coding assistant:
           crossAxisAlignment: C.start,
           children: <Widget>[
             _buildSectionLabel(
+              label: "Plugin updates",
+              countText: user.autoUpdatePlugins ? "ON" : "OFF",
+              icon: Icons.system_update_alt_rounded,
+            ),
+            const SizedBox(height: 8),
+            _buildAutoUpdateCard(),
+            const SizedBox(height: 16),
+            _buildSectionLabel(
               label: "Plugin folder",
               countText: "CONFIG",
               icon: Icons.folder_rounded,
@@ -557,6 +572,62 @@ Build a plugin with your favorite AI coding assistant:
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(130)),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAutoUpdateCard() {
+    final bool enabled = user.autoUpdatePlugins;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
+      decoration: BoxDecoration(
+        color: enabled ? Design.accent.withAlpha(10) : Design.text.withAlpha(7),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: enabled ? Design.accent.withAlpha(30) : Design.text.withAlpha(16)),
+      ),
+      child: Row(
+        crossAxisAlignment: C.start,
+        children: <Widget>[
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: Design.accent.withAlpha(20),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.system_update_alt_rounded, size: 16, color: Design.accent),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: C.start,
+              children: <Widget>[
+                Text(
+                  'Auto Update plugins',
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize + 1.5,
+                    fontWeight: FontWeight.w700,
+                    color: Design.text.withAlpha(235),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Check the remote gallery when the launcher opens and install newer plugin versions automatically.',
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize - 0.5,
+                    height: 1.25,
+                    color: Design.text.withAlpha(140),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch.adaptive(
+            value: enabled,
+            activeThumbColor: Design.accent,
+            onChanged: _setAutoUpdatePlugins,
           ),
         ],
       ),

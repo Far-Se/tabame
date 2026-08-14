@@ -39,6 +39,7 @@ import '../platform/platform_models.dart';
 import '../platform/window_watcher_service.dart';
 import '../services/extension_policy.dart';
 import '../services/file_indexer.dart';
+import '../services/plugin_auto_update_service.dart';
 import '../widgets/itzy/quickmenu/button_currency_converter.dart';
 import '../widgets/itzy/quickmenu/button_notion.dart';
 import '../widgets/itzy/quickmenu/button_obsidian.dart';
@@ -1801,6 +1802,29 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     return TextSelection.collapsed(offset: _controller.text.length);
   }
 
+  Future<void> _loadPluginsOnFirstLauncherOpen() async {
+    await PluginRegistry.load();
+    final List<PluginUpdateResult> updates = await PluginAutoUpdateService.checkOnFirstLauncher();
+    if (updates.isNotEmpty) {
+      final List<String> newReminders = <String>[];
+      for (final PluginUpdateResult update in updates) {
+        if (!user.persistentReminders.contains(update.reminder) && !newReminders.contains(update.reminder)) {
+          newReminders.add(update.reminder);
+        }
+      }
+      if (newReminders.isNotEmpty) {
+        user.persistentReminders.addAll(newReminders);
+        await Boxes.pref.setStringList("persistentReminders", user.persistentReminders);
+        unawaited(QuickMenuFunctions.refreshQuickMenu());
+      }
+    }
+
+    if (!mounted || _activePlugin != null) return;
+    if (PluginRegistry.matchKeyword(_controller.text) != null || _controller.text.startsWith('!')) {
+      _onSearchChanged(_controller.text);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1813,12 +1837,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     // Rescan the plugins folder so freshly-dropped plugins are available without
     // an app restart. If a keyword becomes matchable after the scan, re-run the
     // current query so it activates.
-    unawaited(PluginRegistry.load().then((_) {
-      if (!mounted || _activePlugin != null) return;
-      if (PluginRegistry.matchKeyword(_controller.text) != null || _controller.text.startsWith('!')) {
-        _onSearchChanged(_controller.text);
-      }
-    }));
+    unawaited(_loadPluginsOnFirstLauncherOpen());
     // if (Globals.isStandaloneLauncher == true) {
     //   Future<void>.delayed(const Duration(milliseconds: 300), () {
     //     _controller.text = user.launcherSearchText;

@@ -239,6 +239,7 @@ class Settings {
   bool _hideTabameOnUnfocus = true;
   bool autoOpenTaskManager = false;
   bool autoCheckForUpdates = false;
+  bool autoUpdatePlugins = false;
   bool dragPopupsByIconOnly = true;
   bool quickActionsAtBottom = false;
   int quickMenuDesign = Random().nextInt(QuickMenuDesigns.values.length);

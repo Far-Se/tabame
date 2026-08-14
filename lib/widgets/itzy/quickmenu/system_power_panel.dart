@@ -61,21 +61,21 @@ class _SystemPowerWidgetState extends State<SystemPowerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final bool elevationAvailable = _elevationService.capability.isAvailable;
+    // final bool elevationAvailable = _elevationService.capability.isAvailable;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         const PanelHeader(title: "System Power", icon: Icons.power_settings_new_rounded),
-        if (elevationAvailable)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-            child: OutlinedButton.icon(
-              onPressed: _elevationBusy ? null : _restartQuickMenuElevated,
-              icon: const Icon(Icons.shield_outlined, size: 17),
-              label: Text(_elevationBusy ? 'REQUESTING UAC…' : 'RUN QUICKMENU AS ADMINISTRATOR'),
-            ),
-          ),
+        // if (elevationAvailable)
+        //   Padding(
+        //     padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+        //     child: OutlinedButton.icon(
+        //       onPressed: _elevationBusy ? null : _restartQuickMenuElevated,
+        //       icon: const Icon(Icons.shield_outlined, size: 17),
+        //       label: Text(_elevationBusy ? 'REQUESTING UAC…' : 'RUN QUICKMENU AS ADMINISTRATOR'),
+        //     ),
+        //   ),
         Flexible(
           child: SingleChildScrollView(
             child: Padding(

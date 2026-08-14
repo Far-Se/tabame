@@ -90,6 +90,7 @@ class Boxes {
       await pref.setBool("trayBarAlternative", false);
       await pref.setBool("libreStats", false);
       await pref.setBool("autoOpenTaskManager", false);
+      await pref.setBool("autoUpdatePlugins", false);
       await pref.setBool("clipboardHistoryEnabled", false);
       await pref.setBool("quickClickEnabled", false);
       await pref.setBool("runAsAdministrator", false);
@@ -171,6 +172,7 @@ class Boxes {
       ..hideDesktopFiles = pref.getBool("hideDesktopFiles") ?? user.hideDesktopFiles
       ..trktivityEnabled = pref.getBool("trktivityEnabled") ?? user.trktivityEnabled
       ..autoCheckForUpdates = pref.getBool("autoUpdate") ?? user.autoCheckForUpdates
+      ..autoUpdatePlugins = pref.getBool("autoUpdatePlugins") ?? user.autoUpdatePlugins
       ..wallpapersFolder = pref.getString("wallpapersFolder") ?? user.wallpapersFolder
       ..useCustomCursor = pref.getBool("useCustomCursor") ?? user.useCustomCursor
       ..fancyshotFolder = pref.getString("fancyshotFolder") ?? user.fancyshotFolder
