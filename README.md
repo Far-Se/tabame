@@ -6,6 +6,21 @@
 
 ![promote](https://raw.githubusercontent.com/far-se/tabame/main/resources/poster2.png)
 
+<p align="center">
+
+[![Official Downloads](https://img.shields.io/github/downloads/Far-Se/tabame/total?style=flat-square&label=Official+Release&color=success)](https://github.com/Far-Se/tabame/releases/tag/v1.3)
+[![Nightly Build](https://img.shields.io/badge/Nightly-Build-blue?style=flat-square)](https://github.com/Far-Se/tabame/releases/tag/nightly)
+![Made with Flutter](https://img.shields.io/badge/made%20with-Flutter-02569B?style=flat-square&logo=flutter&logoColor=white)
+![GitHub License](https://img.shields.io/github/license/Far-Se/tabame)
+![GitHub Contributors](https://img.shields.io/github/contributors/Far-Se/tabame)
+
+![Completely Free](https://img.shields.io/badge/price-completely%20free-purple?style=flat-square)
+![Windows Only](https://img.shields.io/badge/platform-Windows%20only-0078D4?style=flat-square&logo=windows11&logoColor=white)
+![RAM Usage](https://img.shields.io/badge/RAM-~30%20MB-orange?style=flat-square)
+![Storage](https://img.shields.io/badge/storage-~70%20MB-red?style=flat-square)
+
+</p>
+
 # PSA: You can grab the [nightly build](https://github.com/Far-Se/tabame/releases/tag/nightly)
 
 ## 🤔 What is this?
