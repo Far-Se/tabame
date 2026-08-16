@@ -21,7 +21,6 @@ import '../settings.dart';
 import '../util/scripts.dart';
 import '../../platform/app_paths.dart';
 import '../../platform/distribution_profile.dart';
-import '../../platform/shell_integration_service.dart';
 import '../../services/extension_policy.dart';
 import '../../services/native_integration_coordinator.dart';
 import 'imports.dart';
@@ -569,30 +568,28 @@ class WinUtils {
 
   static Future<bool> toggleTaskbar({bool? visible}) async {
     final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
-    // if (!integrations.canStart(NativeIntegrationId.shellIntegration)) {
-    //   integrations.reportDisabled(
-    //     NativeIntegrationId.shellIntegration,
-    //     reason: integrations.denialReason(NativeIntegrationId.shellIntegration) ??
-    //         'Taskbar changes are disabled; the normal taskbar remains visible.',
-    //     reducedMode: true,
-    //   );
-    //   return false;
-    // }
-
-    final TaskbarVisibilityService taskbar = TaskbarVisibilityService.instance;
-    final bool requestedVisible = visible ?? !taskbar.isVisible;
-    final ShellIntegrationResult result = await taskbar.setVisible(requestedVisible);
-    if (!result.success) {
+    try {
+      final bool requestedVisible = visible ?? !Win32.isTaskbarVisible();
+      final bool changed = await setTaskbarVisibility(requestedVisible);
+      if (!changed) {
+        integrations.reportError(
+          NativeIntegrationId.shellIntegration,
+          reason: 'The taskbar could not be changed; Windows kept its current state.',
+          reducedMode: true,
+        );
+        return false;
+      }
+      Globals.taskbarVisible = requestedVisible;
+      integrations.reportRunning(NativeIntegrationId.shellIntegration);
+      return true;
+    } catch (_) {
       integrations.reportError(
         NativeIntegrationId.shellIntegration,
-        reason: result.message,
+        reason: 'The taskbar could not be changed; Windows kept its current state.',
         reducedMode: true,
       );
       return false;
     }
-    Globals.taskbarVisible = result.visible;
-    integrations.reportRunning(NativeIntegrationId.shellIntegration);
-    return true;
   }
 
   static void moveDesktop(DesktopDirection direction, {bool classMethod = false}) {

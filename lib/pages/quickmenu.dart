@@ -22,7 +22,6 @@ import '../platform/hotkey_coordinator.dart';
 import '../platform/monitor_service.dart';
 import '../platform/platform_models.dart';
 import '../platform/quick_snap_service.dart';
-import '../platform/shell_integration_service.dart';
 import '../models/settings.dart';
 import '../models/util/hotkey_handler.dart';
 import '../models/util/window_layout_snapshots.dart';
@@ -327,7 +326,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
     _quickMenuFocusRetryTimer?.cancel();
     _settingsWatchSub?.cancel();
     _settingsReloadDebounce?.cancel();
-    unawaited(TaskbarVisibilityService.instance.restore());
+    unawaited(WinUtils.toggleTaskbar(visible: true));
     focusNode.dispose();
   }
 

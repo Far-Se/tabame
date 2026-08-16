@@ -17,7 +17,6 @@ import '../models/win32/win_utils.dart';
 import '../platform/app_paths.dart';
 import '../platform/clipboard_service.dart';
 import '../platform/distribution_profile.dart';
-import '../platform/shell_integration_service.dart';
 import '../services/browser_bridge_service.dart';
 import '../services/clipboard_history_coordinator.dart';
 import '../services/elevation_service.dart';
@@ -226,12 +225,9 @@ class AppStartup {
     if (Globals.isStandaloneLauncher || user.page != TPage.quickmenu || !user.hideTaskbarOnStartup) return;
 
     const int attempts = 20;
-    final TaskbarVisibilityService taskbar = TaskbarVisibilityService.instance;
     for (int attempt = 0; attempt < attempts; attempt++) {
       if (!user.hideTaskbarOnStartup) return;
-      final int expectedGeneration = taskbar.operationGeneration + 1;
       final bool applied = await WinUtils.toggleTaskbar(visible: false);
-      if (taskbar.operationGeneration != expectedGeneration) return;
       if (applied) {
         Debug.add('Startup: Taskbar hide applied.');
         return;
@@ -348,7 +344,7 @@ class AppStartup {
         }
         WindowsBootstrap.refreshCapabilities();
         if (startInInterface) {
-          await TaskbarVisibilityService.instance.restore();
+          await WinUtils.toggleTaskbar(visible: true);
         } else {
           unawaited(_applyStartupTaskbarVisibility());
         }

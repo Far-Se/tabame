@@ -13,7 +13,6 @@ import '../notification_service.dart';
 import '../platform_capabilities.dart';
 import '../quick_snap_service.dart';
 import '../screen_capture_service.dart';
-import '../shell_integration_service.dart';
 import '../window_service.dart';
 import 'win32_api.dart' as win32;
 import 'windows_app_catalog_provider.dart';
@@ -29,7 +28,6 @@ import 'windows_notification_service.dart';
 import 'windows_quick_snap_service.dart';
 import 'windows_ocr_service.dart';
 import 'windows_screen_capture_service.dart';
-import 'windows_shell_integration.dart';
 import 'windows_window_service.dart';
 import '../../services/native_integration_coordinator.dart';
 
@@ -58,7 +56,6 @@ class WindowsBootstrap {
     HotkeyService.register(WindowsHotkeyService());
     InputService.register(const WindowsInputService());
     NotificationService.register(WindowsNotificationService());
-    TaskbarVisibilityService.register(WindowsTaskbarVisibilityService());
     HotkeyActionService.register(const WindowsHotkeyActionService());
     WindowsHotkeyActionService.registerCallbacks();
     AudioSystemService.register(WindowsAudioService.instance);
