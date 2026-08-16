@@ -46,13 +46,12 @@ PluginSource parsePluginSource(Object? value, {PluginSource fallback = PluginSou
 /// Compile-time distribution policy for executable extensions and other
 /// user-authored dynamic-code surfaces.
 ///
-/// Store profiles deliberately have no executable extension source enabled in
-/// the first release. The policy is still modelled by source and trust fields
-/// so a future reviewed extension can be added without weakening the default
-/// gate or relying on package identity/runtime settings.
+/// The extension policy keeps a single, explicit enabled switch so callers do
+/// not need to infer availability from the selected distribution profile.
 class ExtensionPolicy {
   const ExtensionPolicy._({
     required this.profile,
+    required this.enabled,
     required this.canExecutePlugins,
     required this.canFetchPluginGallery,
     required this.canInstallRemotePlugins,
@@ -69,6 +68,9 @@ class ExtensionPolicy {
   });
 
   final DistributionProfile profile;
+
+  /// Whether extension functionality is enabled by policy.
+  final bool enabled;
 
   /// Whether an external runtime may be started for a plugin at all.
   final bool canExecutePlugins;
@@ -91,10 +93,10 @@ class ExtensionPolicy {
   /// Whether arbitrary PowerShell commands may be executed.
   final bool canRunArbitraryPowerShell;
 
-  /// Store uninstall must not remove existing user plugin data.
+  /// Uninstall must not remove existing user plugin data.
   final bool preservePluginData;
 
-  /// Future Store extensions must be explicitly allow-listed by origin.
+  /// Extension origins accepted by the enabled policy.
   final Set<PluginSource> allowedPluginSources;
   final Set<String> allowedPluginIds;
   final Set<String> allowedPublishers;
@@ -102,52 +104,47 @@ class ExtensionPolicy {
   final bool requiresExplicitConsent;
 
   static ExtensionPolicy forProfile(DistributionProfile profile) {
-    final bool portable = profile == DistributionProfile.portable;
     return ExtensionPolicy._(
       profile: profile,
-      canExecutePlugins: portable && profile.capabilities.executablePlugins,
-      canFetchPluginGallery: portable,
-      canInstallRemotePlugins: portable,
-      canInstallPluginDependencies: portable,
-      canEditLocalPluginConfiguration: portable,
-      canRunUserCommandTemplates: portable,
-      canRunArbitraryPowerShell: portable,
+      enabled: true,
+      canExecutePlugins: true,
+      canFetchPluginGallery: true,
+      canInstallRemotePlugins: true,
+      canInstallPluginDependencies: true,
+      canEditLocalPluginConfiguration: true,
+      canRunUserCommandTemplates: true,
+      canRunArbitraryPowerShell: true,
       preservePluginData: true,
-      allowedPluginSources: portable
-          ? const <PluginSource>{
-              PluginSource.bundled,
-              PluginSource.firstPartyGallery,
-              PluginSource.thirdPartyGallery,
-              PluginSource.localUserAuthored,
-            }
-          : const <PluginSource>{},
-      // Empty Store allow-lists are intentional: no Store extension is
-      // approved in the first release.
+      allowedPluginSources: const <PluginSource>{
+        PluginSource.bundled,
+        PluginSource.firstPartyGallery,
+        PluginSource.thirdPartyGallery,
+        PluginSource.localUserAuthored,
+      },
       allowedPluginIds: const <String>{},
       allowedPublishers: const <String>{},
-      requiresVerifiedArtifacts: !portable,
-      requiresExplicitConsent: !portable,
+      requiresVerifiedArtifacts: false,
+      requiresExplicitConsent: false,
     );
   }
 
   static ExtensionPolicy get current => forProfile(DistributionProfileConfig.current);
 
-  bool allowsPluginSource(PluginSource source) => canExecutePlugins && allowedPluginSources.contains(source);
+  bool allowsPluginSource(PluginSource source) => enabled && canExecutePlugins && allowedPluginSources.contains(source);
 
   bool allowsGallerySource(PluginSource source) {
-    if (!canInstallRemotePlugins) return false;
+    if (!enabled || !canInstallRemotePlugins) return false;
     return source == PluginSource.firstPartyGallery || source == PluginSource.thirdPartyGallery;
   }
 
   bool canInstallDependenciesFor(String runtime) {
-    if (!canInstallPluginDependencies) return false;
+    if (!enabled || !canInstallPluginDependencies) return false;
     final String normalized = runtime.trim().toLowerCase();
     return normalized.contains('py') || normalized.contains('node') || normalized.contains('bun');
   }
 
   /// Final execution decision. Settings/imported JSON can request `enabled`,
-  /// but they cannot grant a source, publisher, artifact verification, or
-  /// consent that the selected profile does not allow.
+  /// but the policy still controls whether the source is accepted.
   bool canExecutePlugin({
     required String id,
     required PluginSource source,
@@ -157,7 +154,7 @@ class ExtensionPolicy {
     bool signatureVerified = false,
     bool consentGranted = false,
   }) {
-    if (!enabled || !allowsPluginSource(source)) return false;
+    if (!this.enabled || !allowsPluginSource(source)) return false;
     if (!requiresVerifiedArtifacts && !requiresExplicitConsent) return true;
     final String normalizedId = id.trim().toLowerCase();
     final String normalizedPublisher = publisher.trim().toLowerCase();
@@ -168,14 +165,11 @@ class ExtensionPolicy {
         consentGranted;
   }
 
-  String get pluginDisabledMessage =>
-      'Executable launcher plugins and the plugin gallery are disabled in this distribution.';
+  String get pluginDisabledMessage => 'Executable launcher plugins and the plugin gallery are disabled by policy.';
 
-  String get dependencyInstallDisabledMessage =>
-      'Automatic plugin dependency installation is disabled in this distribution.';
+  String get dependencyInstallDisabledMessage => 'Automatic plugin dependency installation is disabled by policy.';
 
-  String get userCommandDisabledMessage =>
-      'User-provided command and PowerShell execution is disabled in this distribution.';
+  String get userCommandDisabledMessage => 'User-provided command and PowerShell execution is disabled by policy.';
 
   /// Script-like paths must not be handed to the shell as an implicit execution
   /// request by a Store launcher. This is deliberately conservative.
@@ -203,7 +197,7 @@ class ExtensionPolicy {
   /// Blocks a user-authored target that would route directly to a script or a
   /// general-purpose runtime. Built-in fixed actions do not use this flag.
   bool blocksUserTarget(String target) {
-    if (canRunUserCommandTemplates) return false;
+    if (enabled && canRunUserCommandTemplates) return false;
     final String normalized = target.trim().toLowerCase().replaceAll('\\', '/');
     if (isUnreviewedCodePath(normalized) || normalized.contains('executionpolicy')) return true;
     const Set<String> runtimes = <String>{

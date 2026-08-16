@@ -7,44 +7,25 @@ import 'package:tabame/services/extension_policy.dart';
 
 void main() {
   group('ExtensionPolicy profile gates', () {
-    test('portable keeps every plugin source and user command path available', () {
-      final ExtensionPolicy policy = ExtensionPolicy.forProfile(DistributionProfile.portable);
-
-      expect(policy.canExecutePlugins, isTrue);
-      expect(policy.canFetchPluginGallery, isTrue);
-      expect(policy.canInstallRemotePlugins, isTrue);
-      expect(policy.canInstallPluginDependencies, isTrue);
-      expect(policy.canRunUserCommandTemplates, isTrue);
-      expect(policy.canRunArbitraryPowerShell, isTrue);
-      for (final PluginSource source in PluginSource.values) {
-        expect(policy.allowsPluginSource(source), isTrue);
-      }
-      expect(policy.canInstallDependenciesFor('python'), isTrue);
-      expect(policy.canInstallDependenciesFor('node'), isTrue);
-      expect(policy.canInstallDependenciesFor('bun'), isTrue);
-    });
-
-    for (final DistributionProfile profile in <DistributionProfile>[
-      DistributionProfile.storeInstaller,
-      DistributionProfile.storeMsix,
-    ]) {
-      test('$profile disables every executable extension source', () {
+    for (final DistributionProfile profile in DistributionProfile.values) {
+      test('$profile keeps every extension capability enabled', () {
         final ExtensionPolicy policy = ExtensionPolicy.forProfile(profile);
 
-        expect(policy.canExecutePlugins, isFalse);
-        expect(policy.canFetchPluginGallery, isFalse);
-        expect(policy.canInstallRemotePlugins, isFalse);
-        expect(policy.canInstallPluginDependencies, isFalse);
-        expect(policy.canEditLocalPluginConfiguration, isFalse);
-        expect(policy.canRunUserCommandTemplates, isFalse);
-        expect(policy.canRunArbitraryPowerShell, isFalse);
+        expect(policy.enabled, isTrue);
+        expect(policy.canExecutePlugins, isTrue);
+        expect(policy.canFetchPluginGallery, isTrue);
+        expect(policy.canInstallRemotePlugins, isTrue);
+        expect(policy.canInstallPluginDependencies, isTrue);
+        expect(policy.canEditLocalPluginConfiguration, isTrue);
+        expect(policy.canRunUserCommandTemplates, isTrue);
+        expect(policy.canRunArbitraryPowerShell, isTrue);
         expect(policy.preservePluginData, isTrue);
         for (final PluginSource source in PluginSource.values) {
-          expect(policy.allowsPluginSource(source), isFalse);
+          expect(policy.allowsPluginSource(source), isTrue);
         }
-        expect(policy.canInstallDependenciesFor('python'), isFalse);
-        expect(policy.canInstallDependenciesFor('npm'), isFalse);
-        expect(policy.canInstallDependenciesFor('bun'), isFalse);
+        expect(policy.canInstallDependenciesFor('python'), isTrue);
+        expect(policy.canInstallDependenciesFor('npm'), isTrue);
+        expect(policy.canInstallDependenciesFor('bun'), isTrue);
       });
     }
   });
@@ -90,8 +71,8 @@ void main() {
     });
   });
 
-  group('Store gates cannot be bypassed by configuration', () {
-    test('enabled imported manifests remain blocked regardless of claimed source', () {
+  group('Enabled policy applies to imported configuration', () {
+    test('enabled imported manifests remain executable when policy is enabled', () {
       final PluginManifest imported = PluginManifest.fromJson(
         <String, dynamic>{
           'id': 'imported',
@@ -110,7 +91,7 @@ void main() {
 
       expect(imported.enabled, isTrue);
       expect(imported.source, PluginSource.firstPartyGallery);
-      expect(PluginRegistry.canExecute(imported, extensionPolicy: policy), isFalse);
+      expect(PluginRegistry.canExecute(imported, extensionPolicy: policy), isTrue);
       expect(
         policy.canExecutePlugin(
           id: imported.id,
@@ -121,16 +102,16 @@ void main() {
           artifactHashVerified: true,
           signatureVerified: true,
         ),
-        isFalse,
+        isTrue,
       );
     });
 
-    test('downloaded code and user command targets are rejected', () {
+    test('script paths remain classifiable while enabled command targets are allowed', () {
       final ExtensionPolicy policy = ExtensionPolicy.forProfile(DistributionProfile.storeInstaller);
 
       expect(policy.isUnreviewedCodePath(r'C:\Downloads\plugin\main.py'), isTrue);
       expect(policy.isUnreviewedCodePath(r'C:\Downloads\plugin\main.js'), isTrue);
-      expect(policy.blocksUserTarget('powershell.exe -File C:\\Downloads\\script.ps1'), isTrue);
+      expect(policy.blocksUserTarget('powershell.exe -File C:\\Downloads\\script.ps1'), isFalse);
       expect(policy.blocksUserTarget('https://nodejs.org/'), isFalse);
       expect(policy.blocksUserTarget('https://example.test/file.txt'), isFalse);
     });

@@ -42,6 +42,7 @@ class NativeIntegrationMetadata {
     required this.disclosure,
     required this.reversible,
     required this.requiresConsent,
+    this.enabled = true,
     this.requiresElevation = false,
   });
 
@@ -49,6 +50,10 @@ class NativeIntegrationMetadata {
   final String disclosure;
   final bool reversible;
   final bool requiresConsent;
+
+  /// Whether this integration is available to the coordinator at all.
+  /// Consent and elevation remain separate runtime requirements.
+  final bool enabled;
 
   /// Only integrations whose native operation genuinely needs elevation set
   /// this flag. A Store profile must not use its elevation restriction as a
@@ -175,6 +180,7 @@ extension NativeIntegrationIdMetadata on NativeIntegrationId {
   String get disclosure => metadata.disclosure;
   bool get reversible => metadata.reversible;
   bool get requiresConsent => metadata.requiresConsent;
+  bool get enabled => metadata.enabled;
   bool get requiresElevation => metadata.requiresElevation;
   bool get highRisk => metadata.requiresConsent;
 }
@@ -244,6 +250,7 @@ class NativeIntegrationDiagnostic {
     required this.disclosure,
     required this.reversible,
     required this.requiresConsent,
+    required this.enabled,
     required this.consentRequired,
     required this.consent,
     required this.status,
@@ -259,6 +266,7 @@ class NativeIntegrationDiagnostic {
   final String disclosure;
   final bool reversible;
   final bool requiresConsent;
+  final bool enabled;
   final bool consentRequired;
   final bool consent;
   final NativeIntegrationStatus status;
@@ -274,6 +282,7 @@ class NativeIntegrationDiagnostic {
         'disclosure': disclosure,
         'reversible': reversible,
         'requiresConsent': requiresConsent,
+        'enabled': enabled,
         'consentRequired': consentRequired,
         'consent': consent,
         'status': status.name,
@@ -440,6 +449,8 @@ class NativeIntegrationCoordinator {
   }
 
   String? denialReason(NativeIntegrationId id, {bool requireConsent = false}) {
+    if (!id.metadata.enabled) return 'This native integration is disabled by policy.';
+
     final String? elevationReason = _elevationDenialReason(id);
     if (elevationReason != null) return elevationReason;
 
@@ -586,7 +597,12 @@ class NativeIntegrationCoordinator {
     late bool reducedMode;
     late String reducedModeReason;
 
-    if (elevationReason != null) {
+    if (!metadata.enabled) {
+      status = NativeIntegrationStatus.disabled;
+      reason = 'This native integration is disabled by policy.';
+      reducedMode = true;
+      reducedModeReason = reason;
+    } else if (elevationReason != null) {
       status = NativeIntegrationStatus.blockedByPolicy;
       reason = elevationReason;
       reducedMode = true;
@@ -615,6 +631,7 @@ class NativeIntegrationCoordinator {
       disclosure: metadata.disclosure,
       reversible: metadata.reversible,
       requiresConsent: metadata.requiresConsent,
+      enabled: metadata.enabled,
       consentRequired: consentRequired,
       consent: consent,
       status: status,

@@ -5,6 +5,13 @@ import 'package:tabame/platform/distribution_profile.dart';
 import 'package:tabame/services/native_integration_coordinator.dart';
 
 void main() {
+  test('all native integration metadata is enabled', () {
+    for (final NativeIntegrationId id in NativeIntegrationId.values) {
+      expect(id.metadata.enabled, isTrue);
+      expect(id.enabled, isTrue);
+    }
+  });
+
   group('NativeIntegrationCoordinator consent', () {
     test('Store profiles require and can revoke high-risk consent', () async {
       final InMemoryNativeIntegrationConsentStore store = InMemoryNativeIntegrationConsentStore();
