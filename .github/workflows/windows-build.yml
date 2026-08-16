@@ -68,7 +68,8 @@ jobs:
 
       - name: Build Windows app
         shell: pwsh
-        run: flutter build windows --release
+        # The app restores some Material icons from persisted code points at runtime.
+        run: flutter build windows --release --no-tree-shake-icons
 
       - name: Prepare package metadata
         id: meta
