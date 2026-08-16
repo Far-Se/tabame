@@ -29,11 +29,20 @@ AppPublisherURL=https://github.com/Far-Se/tabame
 AppSupportURL=https://github.com/Far-Se/tabame/issues
 AppUpdatesURL=https://github.com/Far-Se/tabame/releases
 DefaultDirName={localappdata}\Programs\Tabame
+; Keep the AppId and install directory stable so newer installers upgrade the
+; existing installation instead of creating a second copy.
+UsePreviousAppDir=yes
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 MinVersion=10.0.19045
+; Use Windows Restart Manager to close Tabame before replacing locked files.
+; The installer is also used in silent CI/update runs, so do not restart the
+; old process after the files have been replaced.
+CloseApplications=force
+CloseApplicationsFilter=tabame.exe
+RestartApplications=no
 OutputDir={#OutputDir}
 OutputBaseFilename={#OutputBaseName}
 Compression=lzma2/ultra64

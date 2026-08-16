@@ -253,6 +253,9 @@ try {
         installer = [ordered]@{
             file = [System.IO.Path]::GetFileName($installerFullPath)
             sha256 = $installerHash
+            updateMode = 'in-place'
+            closeApplications = 'force'
+            restartApplications = $false
             silentInstallSwitches = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-'
             silentUninstallSwitches = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
             installExitCodes = @(0, 3010)
@@ -324,6 +327,9 @@ try {
         downloadUrlStatus = 'REQUIRED_BEFORE_PARTNER_CENTER_SUBMISSION'
         silentInstallSwitches = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-'
         silentUninstallSwitches = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
+        updateMode = 'in-place'
+        closeApplications = 'force'
+        restartApplications = $false
         installReturnCodes = @(0, 3010)
         installScope = 'per-user'
         sourceCommit = $CommitSha

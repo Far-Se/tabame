@@ -2173,19 +2173,22 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   // Remove this field entirely:
   // And _startWindowRefreshLoop becomes simply:
   void _startWindowRefreshLoop() {
+    _reFetchWindows();
     _windowRefreshTimer?.cancel();
-    _windowRefreshTimer = Timer.periodic(const Duration(milliseconds: 900), (Timer timer) async {
-      if (!mounted || Globals.quickMenuPage != QuickMenuPage.launcher) return;
+    _windowRefreshTimer = Timer.periodic(const Duration(milliseconds: 900), (_) => _reFetchWindows());
+  }
 
-      final WindowWatcherService watcher = WindowWatcherService.instance;
-      final bool updated = await watcher.refresh();
-      if (watcher.containsExecutable('taskmgr.exe')) {
-        await TrayWatcher.fetchTray();
-      }
-      if (!mounted || !updated || Globals.quickMenuPage != QuickMenuPage.launcher) return;
+  void _reFetchWindows() async {
+    if (!mounted || Globals.quickMenuPage != QuickMenuPage.launcher) return;
 
-      _refreshVisibleWindowResults();
-    });
+    final WindowWatcherService watcher = WindowWatcherService.instance;
+    final bool updated = await watcher.refresh();
+    if (watcher.containsExecutable('taskmgr.exe')) {
+      await TrayWatcher.fetchTray();
+    }
+    if (!mounted || !updated || Globals.quickMenuPage != QuickMenuPage.launcher) return;
+
+    _refreshVisibleWindowResults();
   }
 
   void _refreshVisibleWindowResults() {

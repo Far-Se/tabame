@@ -19,7 +19,10 @@ param(
     [switch]$RequireSigned,
 
     [Parameter(Mandatory = $false)]
-    [switch]$RunSilentInstallSmoke
+    [switch]$RunSilentInstallSmoke,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$RunUpdateSmoke
 )
 
 $ErrorActionPreference = 'Stop'
@@ -131,6 +134,7 @@ if ($RunSilentInstallSmoke) {
     $smokeRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('tabame-store-installer-smoke-' + [guid]::NewGuid().ToString('N'))
     $dataRoot = Join-Path $env:LOCALAPPDATA 'Tabame'
     $sentinel = Join-Path $dataRoot ('store-installer-smoke-' + [guid]::NewGuid().ToString('N') + '.txt')
+    $runningProcess = $null
     New-Item -ItemType Directory -Path $smokeRoot -Force | Out-Null
     New-Item -ItemType Directory -Path $dataRoot -Force | Out-Null
     Set-Content -LiteralPath $sentinel -Value 'installer-data-retention-check' -NoNewline
@@ -149,6 +153,34 @@ if ($RunSilentInstallSmoke) {
             throw 'Silent install did not create the Inno Setup uninstaller.'
         }
         Assert-Signed $uninstaller $ExpectedPublisher ([bool]$RequireSigned)
+
+        if ($RunUpdateSmoke) {
+            $powershellPath = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
+            if (-not (Test-Path -LiteralPath $powershellPath -PathType Leaf)) {
+                throw "Windows PowerShell was not found for the update shutdown smoke: $powershellPath"
+            }
+
+            # Use a harmless process with the installed executable's image path
+            # so the smoke test exercises Inno's Restart Manager handling
+            # without starting Tabame's desktop UI on the CI runner.
+            Copy-Item -LiteralPath $powershellPath -Destination (Join-Path $smokeRoot 'tabame.exe') -Force
+            $runningProcess = Start-Process `
+                -FilePath (Join-Path $smokeRoot 'tabame.exe') `
+                -ArgumentList @('-NoLogo', '-NoProfile', '-WindowStyle', 'Hidden', '-Command', 'Start-Sleep -Seconds 30') `
+                -WindowStyle Hidden `
+                -PassThru
+            Start-Sleep -Seconds 2
+            if ($runningProcess.HasExited) {
+                throw 'The update shutdown smoke process exited before the installer ran.'
+            }
+
+            Invoke-SilentInstaller $InstallerPath $installArguments
+            if (-not $runningProcess.WaitForExit(15000)) {
+                Stop-Process -Id $runningProcess.Id -Force -ErrorAction SilentlyContinue
+                throw 'The installer did not close the running Tabame process before updating.'
+            }
+            $runningProcess = $null
+        }
 
         $installedPeFiles = @(Get-ChildItem -LiteralPath $smokeRoot -Recurse -File -Force |
             Where-Object { @('.cpl', '.dll', '.exe', '.ocx', '.scr', '.sys') -contains $_.Extension.ToLowerInvariant() } |
@@ -174,6 +206,9 @@ if ($RunSilentInstallSmoke) {
         Write-Output 'Store installer silent install, reinstall, uninstall, and data-retention smoke passed.'
     }
     finally {
+        if ($runningProcess -and -not $runningProcess.HasExited) {
+            Stop-Process -Id $runningProcess.Id -Force -ErrorAction SilentlyContinue
+        }
         if (Test-Path -LiteralPath $smokeRoot) {
             Remove-Item -LiteralPath $smokeRoot -Recurse -Force
         }

@@ -188,7 +188,8 @@ jobs:
             -Sha256Path "$base.exe.sha256" `
             -ManifestPath "$base.manifest.json" `
             -ExpectedVersion "${{ steps.meta.outputs.app_version }}" `
-            -RunSilentInstallSmoke
+            -RunSilentInstallSmoke `
+            -RunUpdateSmoke
 
       - name: Upload unsigned candidate for optional signing
         uses: actions/upload-artifact@v4
@@ -287,7 +288,8 @@ jobs:
             '-ManifestPath', "$base.manifest.json",
             '-ExpectedVersion', "${{ needs.build-unsigned-candidate.outputs.app_version }}",
             '-RequireSigned',
-            '-RunSilentInstallSmoke'
+            '-RunSilentInstallSmoke',
+            '-RunUpdateSmoke'
           )
           if ($env:TABAME_STORE_SIGNER_SUBJECT) {
             $verifyArgs += @('-ExpectedPublisher', $env:TABAME_STORE_SIGNER_SUBJECT)

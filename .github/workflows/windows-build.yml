@@ -43,6 +43,13 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 60
 
+    outputs:
+      app_version: ${{ steps.meta.outputs.app_version }}
+      installer_asset_name: ${{ steps.meta.outputs.installer_asset_name }}
+      release_type: ${{ steps.meta.outputs.release_type }}
+      source_date_epoch: ${{ steps.meta.outputs.source_date_epoch }}
+      tag_name: ${{ steps.meta.outputs.tag_name }}
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -119,17 +126,20 @@ jobs:
           if ($releaseType -eq "official") {
             $releaseName = "Tabame $tagName"
             $assetName = "tabame-$tagName-windows.zip"
+            $installerAssetName = "tabame-$tagName-windows-installer"
             $prerelease = "false"
             $latest = "true"
           } else {
             $releaseName = "Tabame Nightly"
             $assetName = "tabame-nightly-windows.zip"
+            $installerAssetName = "tabame-nightly-windows-installer"
             $prerelease = "true"
             $latest = "false"
           }
 
           "app_version=$appVersion" >> $env:GITHUB_OUTPUT
           "asset_name=$assetName" >> $env:GITHUB_OUTPUT
+          "installer_asset_name=$installerAssetName" >> $env:GITHUB_OUTPUT
           "date_stamp=$dateStamp" >> $env:GITHUB_OUTPUT
           "latest=$latest" >> $env:GITHUB_OUTPUT
           "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
@@ -200,6 +210,7 @@ jobs:
           Build date: ${{ steps.meta.outputs.date_stamp }}
 
           Download `${{ steps.meta.outputs.asset_name }}`, extract it, and run `tabame.exe`.
+          The Inno Setup installer `${{ steps.meta.outputs.installer_asset_name }}.exe` is also available for per-user install and upgrades.
           '@
 
           $notes | Set-Content -Path release-notes.md
@@ -277,3 +288,139 @@ jobs:
           gh @editArgs
 
           gh release upload $env:RELEASE_TAG $env:ZIP_PATH $env:SHA256_PATH --clobber
+
+  build-windows-installer:
+    name: Build and publish Windows Inno installer
+    needs: build-windows
+    if: ${{ needs.build-windows.result == 'success' }}
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable Windows desktop
+        shell: pwsh
+        run: flutter config --enable-windows-desktop
+
+      - name: Install dependencies
+        shell: pwsh
+        run: flutter pub get
+
+      - name: Install pinned Inno Setup
+        shell: pwsh
+        env:
+          INNO_SETUP_VERSION: 6.4.2
+        run: |
+          $existing = @(
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+          ) | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }
+          if (-not $existing) {
+            choco install innosetup --version=$env:INNO_SETUP_VERSION --no-progress --yes
+          }
+          if (-not (Test-Path -LiteralPath "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" -PathType Leaf) -and
+              -not (Test-Path -LiteralPath "$env:ProgramFiles\Inno Setup 6\ISCC.exe" -PathType Leaf)) {
+            throw "Pinned Inno Setup $env:INNO_SETUP_VERSION was not installed."
+          }
+
+      - name: Build installer-managed Windows app
+        shell: pwsh
+        # This profile disables the portable ZIP updater. The installer owns
+        # binary replacement and preserves %LOCALAPPDATA%\Tabame app data.
+        run: flutter build windows --release --dart-define=TABAME_DISTRIBUTION_PROFILE=storeInstaller
+
+      - name: Resolve dependency graph
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          dart pub deps --json | Out-File -FilePath dist\pub-deps.json -Encoding utf8
+
+      - name: Package Windows Inno installer
+        shell: pwsh
+        run: |
+          $releaseDir = @(
+            "build\windows\x64\runner\Release",
+            "build\windows\runner\Release"
+          ) | Where-Object { Test-Path -LiteralPath $_ -PathType Container } | Select-Object -First 1
+          if (-not $releaseDir) {
+            throw "Could not find Flutter Windows release output."
+          }
+          $base = "dist\${{ needs.build-windows.outputs.installer_asset_name }}"
+          & .\tool\release\package-windows-store-installer.ps1 `
+            -ReleaseDir $releaseDir `
+            -StageDir "dist\windows-installer-stage" `
+            -InstallerPath "$base.exe" `
+            -Sha256Path "$base.exe.sha256" `
+            -ManifestPath "$base.manifest.json" `
+            -SbomPath "$base.sbom.cdx.json" `
+            -PartnerCenterMetadataPath "$base.partner-center.json" `
+            -Version "${{ needs.build-windows.outputs.app_version }}" `
+            -SourceDateEpoch "${{ needs.build-windows.outputs.source_date_epoch }}" `
+            -CommitSha "${{ github.sha }}" `
+            -DependencyJsonPath "dist\pub-deps.json"
+
+      - name: Verify installer install, update, and data retention
+        shell: pwsh
+        run: |
+          $base = "dist\${{ needs.build-windows.outputs.installer_asset_name }}"
+          & .\tool\release\verify-windows-store-installer.ps1 `
+            -InstallerPath "$base.exe" `
+            -Sha256Path "$base.exe.sha256" `
+            -ManifestPath "$base.manifest.json" `
+            -ExpectedVersion "${{ needs.build-windows.outputs.app_version }}" `
+            -RunSilentInstallSmoke `
+            -RunUpdateSmoke
+
+      - name: Upload installer workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ needs.build-windows.outputs.installer_asset_name }}
+          path: |
+            dist/${{ needs.build-windows.outputs.installer_asset_name }}.exe
+            dist/${{ needs.build-windows.outputs.installer_asset_name }}.exe.sha256
+            dist/${{ needs.build-windows.outputs.installer_asset_name }}.manifest.json
+            dist/${{ needs.build-windows.outputs.installer_asset_name }}.sbom.cdx.json
+            dist/${{ needs.build-windows.outputs.installer_asset_name }}.partner-center.json
+          if-no-files-found: error
+
+      - name: Attach installer to GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.build-windows.outputs.tag_name }}
+          INSTALLER_BASE: dist\${{ needs.build-windows.outputs.installer_asset_name }}
+        run: |
+          if (-not $env:RELEASE_TAG) {
+            throw "The release tag output is empty."
+          }
+          $releaseFound = $false
+          for ($attempt = 0; $attempt -lt 45; $attempt++) {
+            gh release view $env:RELEASE_TAG *> $null
+            if ($LASTEXITCODE -eq 0) {
+              $releaseFound = $true
+              break
+            }
+            Start-Sleep -Seconds 2
+          }
+          if (-not $releaseFound) {
+            throw "Could not find the GitHub Release $env:RELEASE_TAG created by the ZIP job."
+          }
+
+          $files = @(
+            "$env:INSTALLER_BASE.exe",
+            "$env:INSTALLER_BASE.exe.sha256",
+            "$env:INSTALLER_BASE.manifest.json",
+            "$env:INSTALLER_BASE.sbom.cdx.json",
+            "$env:INSTALLER_BASE.partner-center.json"
+          )
+          gh release upload $env:RELEASE_TAG @files --clobber

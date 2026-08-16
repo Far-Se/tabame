@@ -92,9 +92,12 @@ Uninstall: /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
 ```
 
 Successful install/update return codes are `0` and `3010`. The CI smoke test
-installs into an isolated directory, reinstalls the same candidate, verifies an
-app-data sentinel survives, and silently uninstalls. It does not launch the
-application or delete the real app-data root.
+installs into an isolated directory, starts a harmless process at the installed
+`tabame.exe` path, reinstalls the candidate, verifies that the installer closes
+the process before replacing the binary, verifies an app-data sentinel survives,
+and silently uninstalls. It does not launch the application or delete the real
+app-data root. `CloseApplications=force` is intentional for unattended updates;
+interactive users should save work before starting an update.
 
 ## Local use
 
