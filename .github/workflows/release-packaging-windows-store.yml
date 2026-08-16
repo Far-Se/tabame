@@ -96,7 +96,7 @@ jobs:
 
       - name: Build storeInstaller profile
         shell: pwsh
-        run: flutter build windows --release --dart-define=TABAME_DISTRIBUTION_PROFILE=storeInstaller
+        run: flutter build windows --release --no-tree-shake-icons --dart-define=TABAME_DISTRIBUTION_PROFILE=storeInstaller
 
       - name: Prepare candidate metadata
         id: meta
