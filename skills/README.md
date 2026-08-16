@@ -10,7 +10,7 @@ The `TABAME_PLUGIN_SKILL.md` skill is the most detailed skill but it also consum
 
 So you can try `TABAME_PLUGIN_SKILL.min.md` or `TABAME_PLUGIN_SKILL.min2.md` for a smaller file, but it might lose some context
 
-Pick which one you think you need. The main one for a more in-detail plugin, the `.min` for a more generic plugin, or below plugins for a more specific plugin:
+Pick which one you think you need. The main one for a more in-detail plugin, the `.min` for a more generic plugin, or a skill from below for a more specific plugin:
 
 ## 1. Search & Browse
 

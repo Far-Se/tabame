@@ -1,12 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
-import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/system_power.dart';
-import '../../../services/elevation_service.dart';
 import '../../widgets/panel_header.dart';
 
 /// Modal listing Windows power/session commands (shutdown, restart, log off …).
@@ -22,8 +18,8 @@ class SystemPowerWidget extends StatefulWidget {
 
 class _SystemPowerWidgetState extends State<SystemPowerWidget> {
   String? _armedId;
-  final ElevationService _elevationService = ElevationService.forCurrentProfile();
-  bool _elevationBusy = false;
+  // final ElevationService _elevationService = ElevationService.forCurrentProfile();
+  // final bool _elevationBusy = false;
 
   void _run(SystemPowerAction action) {
     if (action.isDestructive && _armedId != action.id) {
@@ -35,29 +31,29 @@ class _SystemPowerWidgetState extends State<SystemPowerWidget> {
     action.execute();
   }
 
-  Future<void> _restartQuickMenuElevated() async {
-    if (_elevationBusy) return;
-    if (_elevationService.readPrivilegeStatus().isElevated) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('QuickMenu is already running elevated.')),
-      );
-      return;
-    }
-    setState(() => _elevationBusy = true);
-    final ElevationRequestResult result = await _elevationService.launchApplicationElevated(
-      executable: Platform.resolvedExecutable,
-      arguments: Globals.elevatedQuickMenuArgument,
-    );
-    if (!mounted) return;
-    setState(() => _elevationBusy = false);
-    if (result.didLaunch) {
-      Navigator.of(context).maybePop();
-      await QuickMenuFunctions.hideQuickMenu();
-      Future<void>.delayed(const Duration(milliseconds: 300), () => exit(0));
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
-  }
+  // Future<void> _restartQuickMenuElevated() async {
+  //   if (_elevationBusy) return;
+  //   if (_elevationService.readPrivilegeStatus().isElevated) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('QuickMenu is already running elevated.')),
+  //     );
+  //     return;
+  //   }
+  //   setState(() => _elevationBusy = true);
+  //   final ElevationRequestResult result = await _elevationService.launchApplicationElevated(
+  //     executable: Platform.resolvedExecutable,
+  //     arguments: Globals.elevatedQuickMenuArgument,
+  //   );
+  //   if (!mounted) return;
+  //   setState(() => _elevationBusy = false);
+  //   if (result.didLaunch) {
+  //     Navigator.of(context).maybePop();
+  //     await QuickMenuFunctions.hideQuickMenu();
+  //     Future<void>.delayed(const Duration(milliseconds: 300), () => exit(0));
+  //     return;
+  //   }
+  //   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
+  // }
 
   @override
   Widget build(BuildContext context) {
