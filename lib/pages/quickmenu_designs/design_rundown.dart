@@ -355,7 +355,7 @@ class _RundownActionRailState extends State<_RundownActionRail> with QuickMenuTr
             const SizedBox(
                 height: 28,
                 child: Stack(
-                  children: [
+                  children: <Widget>[
                     Positioned(left: 7, top: 7, child: LogoDragButton()),
                   ],
                 )),

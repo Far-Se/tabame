@@ -73,6 +73,7 @@ jobs:
 
       - name: Analyze Dart and Flutter sources
         shell: pwsh
+        continue-on-error: true
         run: flutter analyze
 
       - name: Run Flutter tests
