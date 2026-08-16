@@ -119,9 +119,10 @@ if ($manifest.installer.sha256 -ne $actualHash) {
 }
 if ($ExpectedVersion) {
     $versionInfo = (Get-Item -LiteralPath $InstallerPath).VersionInfo
-    $expectedProductVersion = "$ExpectedVersion.0"
-    if ($versionInfo.ProductVersion -notlike "$expectedProductVersion*") {
-        throw "Installer version mismatch. Expected $expectedProductVersion, got $($versionInfo.ProductVersion)."
+    $actualProductVersion = ([string]$versionInfo.ProductVersion).Trim()
+    $acceptedProductVersions = @($ExpectedVersion, "$ExpectedVersion.0")
+    if ($acceptedProductVersions -notcontains $actualProductVersion) {
+        throw "Installer version mismatch. Expected $($acceptedProductVersions -join ' or '), got $actualProductVersion."
     }
     if ($manifest.appVersion -ne $ExpectedVersion) {
         throw "Store installer manifest version mismatch. Expected $ExpectedVersion, got $($manifest.appVersion)."
