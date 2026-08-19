@@ -119,6 +119,15 @@ class LauncherModalTokens {
           onSurface: NotionTokens.foreground(isDark),
           dim: NotionTokens.dim(isDark),
         );
+      case LauncherDesign.switchboard:
+        return LauncherModalTokens._(
+          design: design,
+          isDark: isDark,
+          surface: SwitchboardTokens.panel(isDark),
+          accent: Design.accent,
+          onSurface: SwitchboardTokens.foreground(isDark),
+          dim: SwitchboardTokens.dim(isDark),
+        );
       case LauncherDesign.classic:
       case LauncherDesign.serene:
       case LauncherDesign.command:
@@ -181,6 +190,7 @@ class LauncherModalTokens {
         LauncherDesign.windowsXp => 0.0,
         LauncherDesign.windows98 => 0.0,
         LauncherDesign.notion => 4.0,
+        LauncherDesign.switchboard => 3.0,
       };
 
   /// Designs whose controls carry a visible accent outline (console/drafting
@@ -192,7 +202,8 @@ class LauncherModalTokens {
       design == LauncherDesign.orbit ||
       design == LauncherDesign.manifesto ||
       design == LauncherDesign.windowsXp ||
-      design == LauncherDesign.windows98;
+      design == LauncherDesign.windows98 ||
+      design == LauncherDesign.switchboard;
 
   /// The design voice — same font family the launcher rows use.
   TextStyle text({
@@ -224,6 +235,8 @@ class LauncherModalTokens {
       LauncherDesign.windows98 => Windows98Tokens.system(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       LauncherDesign.notion => NotionTokens.ui(
+          fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
+      LauncherDesign.switchboard => SwitchboardTokens.body(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       _ => TextStyle(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
@@ -513,6 +526,11 @@ class LauncherModalHeader extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           border: Border.all(color: NotionTokens.border(tokens.isDark)),
         ),
+      LauncherDesign.switchboard => BoxDecoration(
+          color: SwitchboardTokens.raised(tokens.isDark),
+          borderRadius: BorderRadius.circular(3),
+          border: Border.all(color: SwitchboardTokens.border(tokens.isDark)),
+        ),
       _ => BoxDecoration(
           color: accent.withAlpha(28),
           borderRadius: BorderRadius.circular(8),
@@ -524,7 +542,8 @@ class LauncherModalHeader extends StatelessWidget {
       tokens.design == LauncherDesign.blueprint ||
       tokens.design == LauncherDesign.command ||
       tokens.design == LauncherDesign.orbit ||
-      tokens.design == LauncherDesign.manifesto;
+      tokens.design == LauncherDesign.manifesto ||
+      tokens.design == LauncherDesign.switchboard;
 
   @override
   Widget build(BuildContext context) {
@@ -628,6 +647,7 @@ class LauncherModalFooter extends StatelessWidget {
       LauncherDesign.windowsXp => WindowsXpTokens.orange,
       LauncherDesign.windows98 => Windows98Tokens.shadow,
       LauncherDesign.notion => NotionTokens.border(tokens.isDark),
+      LauncherDesign.switchboard => SwitchboardTokens.border(tokens.isDark),
       _ => tokens.onSurface.withAlpha(16),
     };
     return Container(
@@ -643,7 +663,9 @@ class LauncherModalFooter extends StatelessWidget {
                         ? OrbitTokens.chrome(tokens.isDark)
                         : tokens.design == LauncherDesign.notion
                             ? NotionTokens.sidebar(tokens.isDark)
-                            : null,
+                            : tokens.design == LauncherDesign.switchboard
+                                ? SwitchboardTokens.panel(tokens.isDark)
+                                : null,
         border: Border(top: BorderSide(color: lineColor)),
       ),
       child: Row(

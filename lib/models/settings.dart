@@ -114,7 +114,11 @@ enum LauncherDesign {
   windows98,
 
   /// Notion-inspired workspace launcher. Append-only to preserve preferences.
-  notion;
+  notion,
+
+  /// Three-region command workstation with source lenses and an always-visible
+  /// inspector. Append-only to preserve persisted launcher preferences.
+  switchboard;
 
   String get displayName => switch (this) {
         LauncherDesign.windowsXp => 'Windows XP',

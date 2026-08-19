@@ -34,6 +34,7 @@ part 'launcher_designs/manga_launcher_design.dart';
 part 'launcher_designs/windows_xp_launcher_design.dart';
 part 'launcher_designs/windows_98_launcher_design.dart';
 part 'launcher_designs/notion_launcher_design.dart';
+part 'launcher_designs/switchboard_launcher_design.dart';
 
 // ---------------------------------------------------------------------------
 // Extension: per-design widget factories used by LauncherState
@@ -281,6 +282,8 @@ extension LauncherDesignBuilder on LauncherDesign {
         return windows98LauncherOuterDecoration();
       case LauncherDesign.notion:
         return notionLauncherOuterDecoration(surface);
+      case LauncherDesign.switchboard:
+        return switchboardLauncherOuterDecoration(surface, accent);
     }
   }
 
@@ -477,6 +480,15 @@ extension LauncherDesignBuilder on LauncherDesign {
         );
       case LauncherDesign.notion:
         return NotionLauncherSearchBar(
+          accent: accent,
+          onSurface: onSurface,
+          dragHandle: dragHandle,
+          textField: textField,
+          trailingBadge: trailingBadge,
+          isSearching: isSearching,
+        );
+      case LauncherDesign.switchboard:
+        return SwitchboardLauncherSearchBar(
           accent: accent,
           onSurface: onSurface,
           dragHandle: dragHandle,
@@ -774,6 +786,8 @@ extension LauncherDesignBuilder on LauncherDesign {
         return Windows98LauncherHeader(label: label);
       case LauncherDesign.notion:
         return NotionLauncherHeader(label: label);
+      case LauncherDesign.switchboard:
+        return SwitchboardLauncherHeader(label: label, accent: accent);
     }
   }
 }

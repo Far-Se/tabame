@@ -15,6 +15,7 @@ import 'package:markdown_widget/markdown_widget.dart';
 import '../../../platform/clipboard_service.dart';
 import '../../../platform/platform_models.dart';
 
+import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../../widgets/widgets/windows_scroll.dart';
@@ -141,6 +142,8 @@ class PluginView extends StatefulWidget {
 }
 
 class _PluginViewState extends State<PluginView> {
+  static const String _previewWidthPercentSetting = 'pluginPreviewWidthPercent';
+
   final ScrollController _scrollController = ScrollController();
   final ScrollController _dashboardScrollController = ScrollController();
   final Map<String, ScrollController> _dashboardPanelScrollControllers = <String, ScrollController>{};
@@ -148,7 +151,6 @@ class _PluginViewState extends State<PluginView> {
   final Map<String, double> _pageScrollOffsets = <String, double>{};
   final Map<String, double> _pageDetailOffsets = <String, double>{};
   final Map<String, Map<String, Object?>> _formStateByPage = <String, Map<String, Object?>>{};
-  final Map<String, double> _previewWidths = <String, double>{};
   final Map<String, Map<String, double>> _tableWidths = <String, Map<String, double>>{};
   final Map<String, Set<String>> _hiddenTableColumns = <String, Set<String>>{};
   final Map<String, (String, String)> _tableSortState = <String, (String, String)>{};
@@ -183,10 +185,12 @@ class _PluginViewState extends State<PluginView> {
   bool _chatLoadMoreRequested = false;
   double? _chatLoadMorePreviousPixels;
   double? _chatLoadMorePreviousMaxExtent;
+  double? _previewWidthPercent;
 
   @override
   void initState() {
     super.initState();
+    _previewWidthPercent = Boxes.pref.getDouble(_previewWidthPercentSetting)?.clamp(0.0, 100.0).toDouble();
     _mediaSubscriptions.addAll(<StreamSubscription<dynamic>>[
       _mediaPlayer.positionStream.listen((Duration value) {
         if (mounted) setState(() => _mediaPosition = value);
@@ -567,7 +571,6 @@ class _PluginViewState extends State<PluginView> {
   }
 
   Widget _buildSplitPreview(PluginRenderFrame frame, Widget itemsPane, PluginItem item) {
-    final String key = _pageKey(frame);
     if (!frame.previewResizable) {
       return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
         Expanded(flex: 5, child: itemsPane),
@@ -577,11 +580,13 @@ class _PluginViewState extends State<PluginView> {
     }
     return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
       final double fallback = frame.previewInitialWidth ?? constraints.maxWidth * 0.44;
-      final double availableMax =
-          (constraints.maxWidth - 180).clamp(160, frame.previewMaxWidth).toDouble();
+      final double appWidth =
+          MediaQuery.sizeOf(context).width > 0 ? MediaQuery.sizeOf(context).width : constraints.maxWidth;
+      final double availableMax = (constraints.maxWidth - 180).clamp(160, frame.previewMaxWidth).toDouble();
       final double minWidth = frame.previewMinWidth.clamp(160, availableMax).toDouble();
       final double maxWidth = frame.previewMaxWidth.clamp(minWidth, availableMax).toDouble();
-      final double width = (_previewWidths[key] ?? fallback).clamp(minWidth, maxWidth).toDouble();
+      final double preferredWidth = _previewWidthPercent == null ? fallback : appWidth * _previewWidthPercent! / 100;
+      final double width = preferredWidth.clamp(minWidth, maxWidth).toDouble();
       return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
         Expanded(child: itemsPane),
         MouseRegion(
@@ -589,9 +594,11 @@ class _PluginViewState extends State<PluginView> {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onHorizontalDragUpdate: (DragUpdateDetails details) {
-              setState(() =>
-                  _previewWidths[key] = (width - details.delta.dx).clamp(minWidth, maxWidth).toDouble());
+              final double resizedWidth = (width - details.delta.dx).clamp(minWidth, maxWidth).toDouble();
+              setState(() => _previewWidthPercent = resizedWidth / appWidth * 100);
             },
+            onHorizontalDragEnd: (_) => _persistPreviewWidthPercent(),
+            onHorizontalDragCancel: _persistPreviewWidthPercent,
             child: SizedBox(
               width: 7,
               child: Center(child: Container(width: 1, color: Design.accent.withAlpha(45))),
@@ -601,6 +608,12 @@ class _PluginViewState extends State<PluginView> {
         SizedBox(width: width, child: _buildPreviewPane(item, scope: _scopeFor(frame))),
       ]);
     });
+  }
+
+  void _persistPreviewWidthPercent() {
+    final double? percent = _previewWidthPercent;
+    if (percent == null) return;
+    unawaited(Boxes.updateSettings(_previewWidthPercentSetting, percent));
   }
 
   Widget _withFloatingActions(Widget child, PluginRenderFrame frame, PluginEventScope scope) {
@@ -1572,8 +1585,7 @@ class _PluginViewState extends State<PluginView> {
         tooltip: 'Edit field',
         iconSize: 15,
         padding: EdgeInsets.zero,
-        onSelected: (String field) =>
-            _beginInlineEdit(frame, item.id, field, _tableValue(item, field)),
+        onSelected: (String field) => _beginInlineEdit(frame, item.id, field, _tableValue(item, field)),
         itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
           for (final String field in editable)
             PopupMenuItem<String>(
@@ -3405,7 +3417,9 @@ class _PluginCalendarEventChip extends StatelessWidget {
     final Color color = item.calendar?.color ?? Design.accent;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => onHover(),
+      onHover: (PointerHoverEvent event) {
+        if (event.delta != Offset.zero) onHover();
+      },
       child: GestureDetector(
         onTap: onTap,
         child: Container(
@@ -3474,7 +3488,9 @@ class _PluginAgendaEventRow extends StatelessWidget {
             : '${_pluginClock(calendar.start)}–${_pluginClock(calendar.end!)}';
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => onHover(),
+      onHover: (PointerHoverEvent event) {
+        if (event.delta != Offset.zero) onHover();
+      },
       child: GestureDetector(
         onTap: onTap,
         child: Container(
@@ -3858,7 +3874,9 @@ class _PluginGalleryTile extends StatelessWidget {
         .join(' · ');
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => onHover(),
+      onHover: (PointerHoverEvent event) {
+        if (event.delta != Offset.zero) onHover();
+      },
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
@@ -4020,7 +4038,11 @@ class _PluginKanbanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MouseRegion(
         cursor: onTap == null ? SystemMouseCursors.grabbing : SystemMouseCursors.click,
-        onEnter: onHover == null ? null : (_) => onHover!(),
+        onHover: onHover == null
+            ? null
+            : (PointerHoverEvent event) {
+                if (event.delta != Offset.zero) onHover!();
+              },
         child: GestureDetector(
           onTap: onTap,
           child: Container(
@@ -4257,7 +4279,9 @@ class _PluginStructuredRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MouseRegion(
         cursor: SystemMouseCursors.click,
-        onHover: (_) => onHover(),
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
         child: GestureDetector(
           onTap: onTap,
           child: Container(

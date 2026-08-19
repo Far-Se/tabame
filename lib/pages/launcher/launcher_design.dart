@@ -411,6 +411,52 @@ abstract final class NotionTokens {
   }
 }
 
+/// Operations-desk palette and typography for the Switchboard launcher.
+///
+/// Switchboard treats the launcher as a compact workstation rather than a
+/// themed list. Its tinted neutral surfaces create hierarchy without relying
+/// on blur or heavy shadows; the user's accent is reserved for live controls.
+abstract final class SwitchboardTokens {
+  static Color canvas(bool isDark) => isDark ? const Color(0xFF141816) : const Color(0xFFEDF0EB);
+  static Color panel(bool isDark) => isDark ? const Color(0xFF1B211E) : const Color(0xFFF8F9F5);
+  static Color raised(bool isDark) => isDark ? const Color(0xFF242C28) : const Color(0xFFE2E8E1);
+  static Color foreground(bool isDark) => isDark ? const Color(0xFFE8EEE9) : const Color(0xFF1C251F);
+  static Color dim(bool isDark) => isDark ? const Color(0xFF93A198) : const Color(0xFF66746B);
+  static Color border(bool isDark) => isDark ? const Color(0xFF35413B) : const Color(0xFFCBD3CC);
+
+  static TextStyle body({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return launcherTextStyle(GoogleFonts.publicSans(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    ));
+  }
+
+  static TextStyle label({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return launcherTextStyle(GoogleFonts.barlowCondensed(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    ));
+  }
+}
+
 /// Shared palette and typography for the Manifesto editorial launcher.
 abstract final class ManifestoTokens {
   static const Color _bgLight = Color(0xFFF2EEDB);
@@ -554,6 +600,7 @@ class LauncherThemeData {
   bool get isWindowsXp => design == LauncherDesign.windowsXp;
   bool get isWindows98 => design == LauncherDesign.windows98;
   bool get isNotion => design == LauncherDesign.notion;
+  bool get isSwitchboard => design == LauncherDesign.switchboard;
   bool get isQuickMenuInspired => switch (design) {
         LauncherDesign.tech ||
         LauncherDesign.vector ||
@@ -592,6 +639,7 @@ class LauncherThemeData {
         LauncherDesign.windowsXp => Icons.search,
         LauncherDesign.windows98 => Icons.search,
         LauncherDesign.notion => Icons.search_rounded,
+        LauncherDesign.switchboard => Icons.tune_rounded,
       };
 
   double get searchIconSize => switch (design) {
@@ -617,6 +665,7 @@ class LauncherThemeData {
         LauncherDesign.windowsXp => 18.0,
         LauncherDesign.windows98 => 16.0,
         LauncherDesign.notion => 17.0,
+        LauncherDesign.switchboard => 18.0,
       };
 
   bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent || isNotion;
@@ -644,6 +693,7 @@ class LauncherThemeData {
         LauncherDesign.windowsXp => 14.0,
         LauncherDesign.windows98 => 13.0,
         LauncherDesign.notion => 15.0,
+        LauncherDesign.switchboard => 15.0,
       };
   FontWeight? get searchFontWeight => switch (design) {
         LauncherDesign.serene => FontWeight.w400,
@@ -668,6 +718,7 @@ class LauncherThemeData {
         LauncherDesign.windowsXp => FontWeight.w400,
         LauncherDesign.windows98 => FontWeight.w400,
         LauncherDesign.notion => FontWeight.w400,
+        LauncherDesign.switchboard => FontWeight.w500,
       };
 
   double get frameRadius => switch (design) {
@@ -693,6 +744,7 @@ class LauncherThemeData {
         LauncherDesign.windowsXp => 7.0,
         LauncherDesign.windows98 => 0.0,
         LauncherDesign.notion => 8.0,
+        LauncherDesign.switchboard => 4.0,
       };
 
   EdgeInsets get resultsListPadding => const EdgeInsets.all(8.0);

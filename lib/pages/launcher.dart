@@ -189,7 +189,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   static const double _maxResultsHeight = 454;
   static const double _designResultExtent = 52;
   static const double _minPreviewAppWidth = 500;
+  static const double _minPreviewPanelWidth = 180;
+  static const double _minResultsPanelWidth = 180;
+  static const double _previewResizeHandleWidth = 8;
   static const String _filePreviewVisiblePreferenceKey = 'launcherFilePreviewVisible';
+  static const String _previewWidthPercentPreferenceKey = 'launcherPreviewWidthPercent';
 
   final LauncherSearchToken _searchToken = LauncherSearchToken();
 
@@ -218,6 +222,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   bool _isResizeHandleHovered = false;
   bool _isResizingResults = false;
   bool _isFilePreviewVisible = true;
+  double? _previewWidthPercent;
 
   final Map<String, PlatformWindowPreview> _windowPreviewCache = <String, PlatformWindowPreview>{};
   final Map<String, Future<PlatformWindowPreview?>> _windowPreviewCaptures = <String, Future<PlatformWindowPreview?>>{};
@@ -231,6 +236,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   final List<String> _folderBrowsingQueryStack = <String>[];
 
   List<LauncherSearchResultItem> _results = <LauncherSearchResultItem>[];
+  String? _keyboardSelectedResultId;
+  int _keyboardSelectedResultIndex = 0;
   bool _isSearching = false;
   bool _canConsumePendingInput = false;
   LauncherSearchMode _searchMode = LauncherSearchMode.mixed;
@@ -662,15 +669,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       final int keyboardSelectedIndex = !keepKeyboardSelection
           ? -1
           : frame.items.indexWhere((PluginItem item) => item.id == _pluginKeyboardSelectedItemId);
-      if (selectIdIndex >= 0) {
+      // A frame may be the delayed response to an earlier `select` event. Keep
+      // the newer keyboard choice when that item still exists; otherwise an
+      // explicit plugin selection is allowed to drive a genuinely new screen.
+      if (keyboardSelectedIndex >= 0) {
+        _activeIndexNotifier.value = keyboardSelectedIndex;
+        _pluginKeyboardSelectedIndex = keyboardSelectedIndex;
+      } else if (selectIdIndex >= 0) {
         _activeIndexNotifier.value = selectIdIndex;
       } else if (restoredIndex >= 0) {
         _activeIndexNotifier.value = restoredIndex;
       } else if (appendedSelectionIndex >= 0) {
         _activeIndexNotifier.value = appendedSelectionIndex;
       } else if (keepKeyboardSelection && count > 0) {
-        _activeIndexNotifier.value =
-            keyboardSelectedIndex >= 0 ? keyboardSelectedIndex : _pluginKeyboardSelectedIndex.clamp(0, count - 1);
+        _activeIndexNotifier.value = _pluginKeyboardSelectedIndex.clamp(0, count - 1);
         _pluginKeyboardSelectedIndex = _activeIndexNotifier.value;
       } else if (count == 0 || !sameItemSet) {
         _activeIndexNotifier.value = 0;
@@ -996,6 +1008,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _activeIndexNotifier.value = index;
     if (fromKeyboard) {
       _hasKeyboardNavigatedCurrentQuery = true;
+      _pluginKeyboardSelectedItemId = frame.items[index].id;
+      _pluginKeyboardSelectedIndex = index;
+    } else if (_hasKeyboardNavigatedCurrentQuery) {
+      // A real hover after keyboard navigation is newer user intent. Keep the
+      // durable anchor in sync so the next async plugin frame does not jump
+      // back to the row that was selected before the pointer moved.
       _pluginKeyboardSelectedItemId = frame.items[index].id;
       _pluginKeyboardSelectedIndex = index;
     }
@@ -1727,11 +1745,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   void _enterResultBrowsing(LogicalKeyboardKey key) {
     if (_results.isEmpty) return;
     _resultsFocusNode.requestFocus();
-    _hasKeyboardNavigatedCurrentQuery = true;
     final int current = _activeIndexNotifier.value.clamp(0, _results.length - 1);
     _activeIndexNotifier.value = key == LogicalKeyboardKey.arrowUp
         ? (current - 1 + _results.length) % _results.length
         : (current + 1) % _results.length;
+    _rememberKeyboardResultSelection();
     _scrollToActiveIndex();
   }
 
@@ -1803,6 +1821,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     QuickMenuFunctions.addListener(this);
     _design = user.launcherDesign;
     _isFilePreviewVisible = Boxes.pref.getBool(_filePreviewVisiblePreferenceKey) ?? true;
+    _previewWidthPercent = Boxes.pref.getDouble(_previewWidthPercentPreferenceKey)?.clamp(0.0, 100.0).toDouble();
     _resultsMaxHeight = (Boxes.pref.getDouble('launcherResultsHeight') ?? _maxResultsHeight)
         .clamp(_minResultsHeight, _maxResultsHeight);
     // Rescan the plugins folder so freshly-dropped plugins are available without
@@ -2031,11 +2050,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
   void _handleKeyStep(LogicalKeyboardKey key, {bool initial = false}) {
     if (_results.isEmpty) return;
-    _hasKeyboardNavigatedCurrentQuery = true;
     if (key == LogicalKeyboardKey.arrowDown) {
       _activeIndexNotifier.value = (_activeIndexNotifier.value + 1).clamp(0, _results.length - 1);
     } else if (key == LogicalKeyboardKey.arrowUp) {
       if (_activeIndexNotifier.value == 0) {
+        _rememberKeyboardResultSelection();
         _focusSearch();
         return;
       }
@@ -2045,6 +2064,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     } else if (key == LogicalKeyboardKey.end) {
       _activeIndexNotifier.value = _results.length - 1;
     }
+    _rememberKeyboardResultSelection();
     _scrollToActiveIndex();
   }
 
@@ -2300,6 +2320,18 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   bool _hasKeyboardNavigatedCurrentQuery = false;
   String _keyboardNavigationQuery = '';
 
+  /// Keeps the user's arrow-key target independently of the visible list.
+  /// Async search phases can temporarily publish an empty or shorter list; if
+  /// selection lived only in [_activeIndexNotifier], that intermediate frame
+  /// would collapse it to zero and the later complete frame could not recover.
+  void _rememberKeyboardResultSelection() {
+    if (_results.isEmpty) return;
+    final int index = _activeIndexNotifier.value.clamp(0, _results.length - 1);
+    _hasKeyboardNavigatedCurrentQuery = true;
+    _keyboardSelectedResultId = _results[index].id;
+    _keyboardSelectedResultIndex = index;
+  }
+
   /// The query text that produced the currently displayed [_results].
   /// Selection is only carried over between result sets of the same query —
   /// results for a different query always start at the first row.
@@ -2311,6 +2343,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     if (query != _keyboardNavigationQuery) {
       _keyboardNavigationQuery = query;
       _hasKeyboardNavigatedCurrentQuery = false;
+      _keyboardSelectedResultId = null;
+      _keyboardSelectedResultIndex = 0;
       _pluginKeyboardSelectedItemId = null;
       _pluginKeyboardSelectedIndex = 0;
     }
@@ -4112,13 +4146,17 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
     final int activeDesignIndex = _activeDesignResultIndex(results);
     int nextIndex = activeDesignIndex < 0 ? 0 : activeDesignIndex;
-    if (keepSelection && _results.isNotEmpty && _activeIndexNotifier.value < _results.length) {
-      final String activeId = _results[_activeIndexNotifier.value].id;
+    final bool hasKeyboardAnchor = _hasKeyboardNavigatedCurrentQuery && _keyboardSelectedResultId != null;
+    final bool hasVisibleSelection = _results.isNotEmpty && _activeIndexNotifier.value < _results.length;
+    if (keepSelection && (hasKeyboardAnchor || hasVisibleSelection)) {
+      final String activeId = hasKeyboardAnchor ? _keyboardSelectedResultId! : _results[_activeIndexNotifier.value].id;
       final int foundIndex = results.indexWhere((LauncherSearchResultItem r) => r.id == activeId);
       if (foundIndex != -1) {
         nextIndex = foundIndex;
+        if (hasKeyboardAnchor) _keyboardSelectedResultIndex = foundIndex;
       } else {
-        nextIndex = _activeIndexNotifier.value.clamp(0, (results.length - 1).clamp(0, 999999)).toInt();
+        final int fallbackIndex = hasKeyboardAnchor ? _keyboardSelectedResultIndex : _activeIndexNotifier.value;
+        nextIndex = fallbackIndex.clamp(0, (results.length - 1).clamp(0, 999999)).toInt();
       }
     }
 
@@ -4595,6 +4633,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     if (_activeIndexNotifier.value != index) {
       _activeIndexNotifier.value = index;
     }
+    // If keyboard navigation already established a durable selection anchor,
+    // a real pointer move becomes the newer user intent for late result frames.
+    if (_hasKeyboardNavigatedCurrentQuery) {
+      _keyboardSelectedResultId = _results[index].id;
+      _keyboardSelectedResultIndex = index;
+    }
   }
 
   void _runQuickAction(QuickActionMenuEntry entry) {
@@ -4649,6 +4693,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final bool isWindowsXp = _design == LauncherDesign.windowsXp;
     final bool isWindows98 = _design == LauncherDesign.windows98;
     final bool isNotion = _design == LauncherDesign.notion;
+    final bool isSwitchboard = _design == LauncherDesign.switchboard;
     // Terminal, Zen, Blueprint, Transit and Fluent force their own palette +
     // text theme. Every result builder reads its colors from this theme, so
     // they all inherit the look without per-builder branching. Terminal,
@@ -4793,10 +4838,23 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                                                     bodyColor: OrbitTokens.fg(isDark),
                                                     displayColor: OrbitTokens.fg(isDark)),
                                               )
-                                            : isGlass
+                                            : isSwitchboard
                                                 ? baseTheme.copyWith(
-                                                    textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme))
-                                                : baseTheme;
+                                                    colorScheme: baseTheme.colorScheme.copyWith(
+                                                      surface: SwitchboardTokens.canvas(isDark),
+                                                      onSurface: SwitchboardTokens.foreground(isDark),
+                                                    ),
+                                                    highlightColor: accent.withAlpha(28),
+                                                    textTheme:
+                                                        GoogleFonts.publicSansTextTheme(baseTheme.textTheme).apply(
+                                                      bodyColor: SwitchboardTokens.foreground(isDark),
+                                                      displayColor: SwitchboardTokens.foreground(isDark),
+                                                    ),
+                                                  )
+                                                : isGlass
+                                                    ? baseTheme.copyWith(
+                                                        textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme))
+                                                    : baseTheme;
     final ThemeData theme =
         Design.useCustomFont ? designTheme.copyWith(textTheme: launcherTextTheme(designTheme.textTheme)) : designTheme;
     final Color onSurface = theme.colorScheme.onSurface;
@@ -4865,6 +4923,14 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                 _buildResultsHeaderWithBadges(accent, onSurface),
               if (_activePlugin != null)
                 Expanded(child: _buildPluginBody())
+              else if (_results.isEmpty && isSwitchboard)
+                Expanded(
+                  child: SwitchboardEmptyState(
+                    isSearching: _isSearching,
+                    hasQuery: hasInput,
+                    accent: accent,
+                  ),
+                )
               else
                 Expanded(
                   child: Padding(
@@ -4883,12 +4949,27 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                                 final bool showPreview = _isFilePreviewVisible &&
                                     previewResult != null &&
                                     MediaQuery.sizeOf(context).width >= _minPreviewAppWidth;
-                                final double previewWidth = constraints.maxWidth * 0.40;
+                                final double appWidth = MediaQuery.sizeOf(context).width > 0
+                                    ? MediaQuery.sizeOf(context).width
+                                    : constraints.maxWidth;
+                                final double maxPreviewWidth =
+                                    (constraints.maxWidth - _minResultsPanelWidth - _previewResizeHandleWidth)
+                                        .clamp(0, constraints.maxWidth)
+                                        .toDouble();
+                                final double minPreviewWidth =
+                                    _minPreviewPanelWidth.clamp(0, maxPreviewWidth).toDouble();
+                                final double preferredPreviewWidth = _previewWidthPercent == null
+                                    ? constraints.maxWidth * 0.40
+                                    : appWidth * _previewWidthPercent! / 100;
+                                final double previewWidth =
+                                    preferredPreviewWidth.clamp(minPreviewWidth, maxPreviewWidth).toDouble();
                                 return Stack(
                                   children: <Widget>[
                                     Positioned.fill(
                                       child: Padding(
-                                        padding: EdgeInsets.only(right: showPreview ? previewWidth + 8 : 0),
+                                        padding: EdgeInsets.only(
+                                          right: showPreview ? previewWidth + _previewResizeHandleWidth : 0,
+                                        ),
                                         child: ListView.builder(
                                           controller: _scrollController,
                                           shrinkWrap: true,
@@ -4990,6 +5071,33 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                                                   );
                                                 },
                                               ),
+                                      ),
+                                    if (showPreview)
+                                      Positioned(
+                                        top: 0,
+                                        right: previewWidth,
+                                        bottom: 0,
+                                        width: _previewResizeHandleWidth,
+                                        child: MouseRegion(
+                                          cursor: SystemMouseCursors.resizeLeftRight,
+                                          child: GestureDetector(
+                                            behavior: HitTestBehavior.opaque,
+                                            onHorizontalDragUpdate: (DragUpdateDetails details) {
+                                              final double resizedWidth = (previewWidth - details.delta.dx)
+                                                  .clamp(minPreviewWidth, maxPreviewWidth)
+                                                  .toDouble();
+                                              setState(() => _previewWidthPercent = resizedWidth / appWidth * 100);
+                                            },
+                                            onHorizontalDragEnd: (_) => _persistPreviewWidthPercent(),
+                                            onHorizontalDragCancel: _persistPreviewWidthPercent,
+                                            child: Center(
+                                              child: Container(
+                                                width: 1,
+                                                color: accent.withAlpha(45),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                   ],
                                 );
@@ -5170,6 +5278,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
           resultCount: _results.length,
           child: innerContent,
         ),
+      LauncherDesign.switchboard => SwitchboardLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          resultCount: _results.length,
+          child: innerContent,
+        ),
     };
 
     final bool usesDesignFont = isTerminal ||
@@ -5183,7 +5297,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         isAnime ||
         isWindowsXp ||
         isWindows98 ||
-        isNotion;
+        isNotion ||
+        isSwitchboard;
     final ThemeData launcherThemeData = !Design.useCustomFont || usesDesignFont
         ? theme
         : theme.copyWith(
@@ -5233,6 +5348,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       ).createShader(bounds),
       child: frame,
     );
+  }
+
+  void _persistPreviewWidthPercent() {
+    final double? percent = _previewWidthPercent;
+    if (percent == null) return;
+    unawaited(Boxes.updateSettings(_previewWidthPercentPreferenceKey, percent));
   }
 
   Widget _buildHeightResizeHandle(Color accent, Color onSurface) {
