@@ -75,11 +75,18 @@ function Get-MsiProperty([string]$DatabasePath, [string]$PropertyName) {
     )
 }
 
-function Invoke-MsiExec([string[]]$Arguments, [string]$Description) {
-    & "$env:SystemRoot\System32\msiexec.exe" @Arguments
-    $exitCode = $LASTEXITCODE
-    if ($exitCode -notin @(0, 1641, 3010)) {
-        throw "$Description failed with Windows Installer exit code $exitCode."
+function Invoke-MsiExec([string]$ArgumentList, [string]$Description) {
+    # msiexec.exe is a GUI-subsystem executable. Invoking it directly with &
+    # can return before it finishes and leave $LASTEXITCODE unset, especially
+    # under PowerShell 7 on GitHub-hosted runners.
+    $process = Start-Process `
+        -FilePath "$env:SystemRoot\System32\msiexec.exe" `
+        -ArgumentList $ArgumentList `
+        -Wait `
+        -PassThru `
+        -WindowStyle Hidden
+    if ($process.ExitCode -notin @(0, 1641, 3010)) {
+        throw "$Description failed with Windows Installer exit code $($process.ExitCode)."
     }
 }
 
@@ -127,6 +134,8 @@ if ($RunInstallSmoke) {
     $smokeRoot = Join-Path $temporaryRoot ('tabame-installer-smoke-' + [guid]::NewGuid().ToString('N'))
     $innoInstallRoot = Join-Path $smokeRoot 'inno'
     $msiInstallRoot = Join-Path $smokeRoot 'msi'
+    $msiInstallLog = Join-Path $smokeRoot 'msi-install.log'
+    $msiUninstallLog = Join-Path $smokeRoot 'msi-uninstall.log'
     $markerRoot = Join-Path $env:LOCALAPPDATA 'Tabame'
     $markerPath = Join-Path $markerRoot ('installer-smoke-' + [guid]::NewGuid().ToString('N') + '.txt')
     New-Item -ItemType Directory -Path $smokeRoot -Force | Out-Null
@@ -156,18 +165,31 @@ if ($RunInstallSmoke) {
             throw "Silent Inno Setup uninstall failed with exit code $($uninstallProcess.ExitCode)."
         }
 
-        $msiLog = Join-Path $smokeRoot 'msi-install.log'
-        Invoke-MsiExec @('/i', $msiFullPath, '/qn', '/norestart', "INSTALLFOLDER=$msiInstallRoot", '/l*v', $msiLog) 'Silent MSI install'
+        # Inno's uninstaller runs before the MSI smoke. Recreate the shared
+        # parent defensively, then quote every path as one msiexec command line.
+        New-Item -ItemType Directory -Path $smokeRoot -Force | Out-Null
+        $msiInstallArguments = "/i `"$msiFullPath`" /qn /norestart INSTALLFOLDER=`"$msiInstallRoot`" /l*v `"$msiInstallLog`""
+        Invoke-MsiExec $msiInstallArguments 'Silent MSI install'
         foreach ($required in @('tabame.exe', 'flutter_windows.dll', 'data')) {
             if (-not (Test-Path -LiteralPath (Join-Path $msiInstallRoot $required))) {
                 throw "MSI install is missing $required."
             }
         }
-        Invoke-MsiExec @('/x', $msiProductCode, '/qn', '/norestart') 'Silent MSI uninstall'
+        $msiUninstallArguments = "/x $msiProductCode /qn /norestart /l*v `"$msiUninstallLog`""
+        Invoke-MsiExec $msiUninstallArguments 'Silent MSI uninstall'
 
         if (-not (Test-Path -LiteralPath $markerPath -PathType Leaf)) {
             throw 'Installer uninstall removed data from %LOCALAPPDATA%\Tabame.'
         }
+    }
+    catch {
+        foreach ($logPath in @($msiInstallLog, $msiUninstallLog)) {
+            if (Test-Path -LiteralPath $logPath -PathType Leaf) {
+                Write-Host "--- Tail of $logPath ---"
+                Get-Content -LiteralPath $logPath -Tail 120 | Write-Host
+            }
+        }
+        throw
     }
     finally {
         if (Test-Path -LiteralPath $markerPath -PathType Leaf) {
