@@ -24,14 +24,14 @@ Typical plugins:
 
 Choose the dominant view from the data shape:
 
-| Need | View |
-| --- | --- |
-| Scan short results with one dominant label | `list` |
-| Pick a visual/spatial option | `grid` |
-| Compare the same fields across records | `table` |
-| Browse a hierarchy | `tree` |
-| Browse media assets | `gallery` |
-| Read one result in depth | `detail` |
+| Need                                       | View            |
+| ------------------------------------------ | --------------- |
+| Scan short results with one dominant label | `list`          |
+| Pick a visual/spatial option               | `grid`          |
+| Compare the same fields across records     | `table`         |
+| Browse a hierarchy                         | `tree`          |
+| Browse media assets                        | `gallery`       |
+| Read one result in depth                   | `detail`        |
 | Quickly inspect adjacent list/grid results | split `preview` |
 
 A split preview is a modifier for `list` and `grid`, not the architecture of
@@ -98,20 +98,20 @@ Install each plugin under:
 
 Fields:
 
-| Field | Required | Meaning |
-| --- | --- | --- |
-| `keyword` | yes | Short unique activation keyword. |
-| `runtime` | yes | `python`, `node`, or `bun`; must be on `PATH`. |
-| `version` | yes | Start with `1.0.0`. |
-| `entry` | yes | Script path relative to plugin folder. |
-| `id` | yes | Stable plugin identifier; normally folder name. |
-| `name` | yes | Human-readable title. |
-| `description` | yes | One-line description. |
-| `icon` | yes | Icon name, color, data URI, or file/HTTPS image. |
-| `args` | no | Arguments inserted before `entry`. |
-| `pip` | no | Python packages auto-installed into `.pluginlibs`. |
-| `env` | no | Extra environment variables. |
-| `dev` | no | Hot reload and debug console while developing. |
+| Field         | Required | Meaning                                            |
+| ------------- | -------- | -------------------------------------------------- |
+| `keyword`     | yes      | Short unique activation keyword.                   |
+| `runtime`     | yes      | `python`, `node`, or `bun`; must be on `PATH`.     |
+| `version`     | yes      | Start with `1.0.0`.                                |
+| `entry`       | yes      | Script path relative to plugin folder.             |
+| `id`          | yes      | Stable plugin identifier; normally folder name.    |
+| `name`        | yes      | Human-readable title.                              |
+| `description` | yes      | One-line description.                              |
+| `icon`        | yes      | Icon name, color, data URI, or file/HTTPS image.   |
+| `args`        | no       | Arguments inserted before `entry`.                 |
+| `pip`         | no       | Python packages auto-installed into `.pluginlibs`. |
+| `env`         | no       | Extra environment variables.                       |
+| `dev`         | no       | Hot reload and debug console while developing.     |
 
 The launch command is effectively:
 
@@ -165,7 +165,7 @@ through the same query handler. On `init`, read `query`; on `query`, read `text`
 Sent on each keystroke while the keyword is active:
 
 ```json
-{"type":"query","text":"flutter","rev":7}
+{ "type": "query", "text": "flutter", "rev": 7 }
 ```
 
 Use the `rev` staleness rule in section 6.
@@ -175,7 +175,7 @@ Use the `rev` staleness rule in section 6.
 Sent when the highlighted item changes:
 
 ```json
-{"type":"select","id":"pkg:flutter","rev":7}
+{ "type": "select", "id": "pkg:flutter", "rev": 7 }
 ```
 
 Usually no handler is required because each item's preview is already present
@@ -204,7 +204,7 @@ lists a default action.
 ### `tab`
 
 ```json
-{"type":"tab","id":"pkg:flutter","rev":7}
+{ "type": "tab", "id": "pkg:flutter", "rev": 7 }
 ```
 
 Use `setQuery` to autocomplete from the selected item.
@@ -214,7 +214,7 @@ Use `setQuery` to autocomplete from the selected item.
 Sent near the end of a frame with `hasMore: true`:
 
 ```json
-{"type":"loadMore","rev":7}
+{ "type": "loadMore", "rev": 7 }
 ```
 
 Respond with the **complete list accumulated so far plus the new page**, not
@@ -225,7 +225,7 @@ only the new items.
 Tree disclosure event:
 
 ```json
-{"type":"toggle","id":"folder:src","expanded":true,"rev":7}
+{ "type": "toggle", "id": "folder:src", "expanded": true, "rev": 7 }
 ```
 
 Update your tree state and render the complete flattened visible tree.
@@ -242,7 +242,7 @@ Use these for detail pages and breadcrumbs. Render the target route yourself.
 ### `close`
 
 ```json
-{"type":"close"}
+{ "type": "close" }
 ```
 
 Stop workers and exit. Also exit when stdin reaches EOF.
@@ -254,21 +254,21 @@ Stop workers and exit. Also exit when stdin reaches EOF.
 Commands are stdout messages with no `rev`:
 
 ```json
-{"type":"command","command":"copy","text":"value"}
+{ "type": "command", "command": "copy", "text": "value" }
 ```
 
 Relevant commands:
 
-| Command | Fields | Effect |
-| --- | --- | --- |
-| `copy` | `text` | Copy and show a toast. |
-| `paste` | `text` | Copy, hide launcher, reactivate previous window, send Ctrl+V. |
-| `open` | `url` or `path` | Open URL/file/folder with default handler. |
-| `hide` | — | Hide launcher. |
-| `toast` | `text`, optional `style`, `progress` | Show success/error/info/progress feedback. |
-| `setQuery` | `text` | Replace post-keyword query; triggers another `query`. |
-| `clipboardRead` | optional `requestId` | Request clipboard text; reply is `clipboard`. |
-| `clipboardHistory` | `op`, request/paging fields | Read Tabame clipboard history. |
+| Command            | Fields                               | Effect                                                        |
+| ------------------ | ------------------------------------ | ------------------------------------------------------------- |
+| `copy`             | `text`                               | Copy and show a toast.                                        |
+| `paste`            | `text`                               | Copy, hide launcher, reactivate previous window, send Ctrl+V. |
+| `open`             | `url` or `path`                      | Open URL/file/folder with default handler.                    |
+| `hide`             | —                                    | Hide launcher.                                                |
+| `toast`            | `text`, optional `style`, `progress` | Show success/error/info/progress feedback.                    |
+| `setQuery`         | `text`                               | Replace post-keyword query; triggers another `query`.         |
+| `clipboardRead`    | optional `requestId`                 | Request clipboard text; reply is `clipboard`.                 |
+| `clipboardHistory` | `op`, request/paging fields          | Read Tabame clipboard history.                                |
 
 Examples:
 
@@ -321,7 +321,7 @@ A render frame fully describes what Tabame displays:
     "title": "Results",
     "history": "none",
     "preserveState": true,
-    "breadcrumbs": [{"id":"docs:home","label":"Home"}]
+    "breadcrumbs": [{ "id": "docs:home", "label": "Home" }],
   },
   "elementId": "results",
   "placeholder": "Search docs…",
@@ -332,39 +332,39 @@ A render frame fully describes what Tabame displays:
     "icon": "search",
     "title": "No matches",
     "hint": "Try a shorter query",
-    "action": {"id":"clear","title":"Clear query","icon":"close"}
+    "action": { "id": "clear", "title": "Clear query", "icon": "close" },
   },
-  "preview": {"enabled": true, "wide": true},
+  "preview": { "enabled": true, "wide": true },
   "actions": [],
-  "floatingAction": {"id":"refresh","title":"Refresh","icon":"refresh"},
-  "selection": {"enabled": true, "max": 50},
+  "floatingAction": { "id": "refresh", "title": "Refresh", "icon": "refresh" },
+  "selection": { "enabled": true, "max": 50 },
   "selectId": "item-42",
   "hasMore": false,
-  "items": []
+  "items": [],
 }
 ```
 
 Important fields:
 
-| Field | Notes |
-| --- | --- |
-| `type` | Always `render`. |
-| `rev` | Query rev or `0` for unsolicited/action/navigation frames. |
-| `view` | One of the views covered in this skill. |
-| `page` | Stable destination identity and history behavior. |
-| `elementId` | Stable source ID returned on scoped events. |
-| `placeholder` | Context-specific search-field hint. |
-| `loading` | Boolean or `{ "progress": 0..1 }`. |
-| `loadingText` | Caption under spinner. |
-| `emptyText` | Simple empty message when not loading. |
-| `empty` | Rich empty state; overrides `emptyText`. |
-| `preview` | Split preview settings for list/grid. |
-| `actions` | Frame-level Ctrl+K actions. |
-| `floatingAction` | Discoverable frame-level button(s). |
-| `selection` | Bulk selection enabled or `{enabled,max}`. |
-| `selectId` | Restore/move highlight after refresh. |
-| `hasMore` | Enables `loadMore`. |
-| `items` | Complete current item collection. |
+| Field            | Notes                                                      |
+| ---------------- | ---------------------------------------------------------- |
+| `type`           | Always `render`.                                           |
+| `rev`            | Query rev or `0` for unsolicited/action/navigation frames. |
+| `view`           | One of the views covered in this skill.                    |
+| `page`           | Stable destination identity and history behavior.          |
+| `elementId`      | Stable source ID returned on scoped events.                |
+| `placeholder`    | Context-specific search-field hint.                        |
+| `loading`        | Boolean or `{ "progress": 0..1 }`.                         |
+| `loadingText`    | Caption under spinner.                                     |
+| `emptyText`      | Simple empty message when not loading.                     |
+| `empty`          | Rich empty state; overrides `emptyText`.                   |
+| `preview`        | Split preview settings for list/grid.                      |
+| `actions`        | Frame-level Ctrl+K actions.                                |
+| `floatingAction` | Discoverable frame-level button(s).                        |
+| `selection`      | Bulk selection enabled or `{enabled,max}`.                 |
+| `selectId`       | Restore/move highlight after refresh.                      |
+| `hasMore`        | Enables `loadMore`.                                        |
+| `items`          | Complete current item collection.                          |
 
 ### Page identity and history
 
@@ -378,8 +378,8 @@ Use stable conceptual IDs:
     "history": "push",
     "preserveState": true,
     "breadcrumbs": [
-      {"id":"packages:home","label":"Packages"},
-      {"id":"packages:results","label":"Results"}
+      { "id": "packages:home", "label": "Packages" },
+      { "id": "packages:results", "label": "Results" }
     ]
   }
 }
@@ -410,7 +410,7 @@ General item shape:
   "lines": 2,
   "progress": 0.6,
   "tileColor": "#0EA5E9",
-  "cells": {"version":"3.35", "license":"BSD", "downloads":"2.1M"},
+  "cells": { "version": "3.35", "license": "BSD", "downloads": "2.1M" },
   "depth": 1,
   "expanded": true,
   "media": {
@@ -420,25 +420,23 @@ General item shape:
     "duration": "02:18",
     "size": 2480000,
     "width": 1920,
-    "height": 1080
+    "height": 1080,
   },
-  "accessories": [
-    {"text":"Popular","color":"#63A0EA","icon":"star"}
-  ],
+  "accessories": [{ "text": "Popular", "color": "#63A0EA", "icon": "star" }],
   "actions": [
-    {"id":"copy-name","title":"Copy name","icon":"copy"},
-    {"id":"open-site","title":"Open site","icon":"open"}
+    { "id": "copy-name", "title": "Copy name", "icon": "copy" },
+    { "id": "open-site", "title": "Open site", "icon": "open" },
   ],
   "preview": {
     "markdown": "## Flutter\n\nCross-platform UI toolkit.",
-    "image": {"url":"https://example.com/logo.png","width":120},
+    "image": { "url": "https://example.com/logo.png", "width": 120 },
     "metadata": [
-      {"label":"Version","text":"3.35"},
-      {"label":"License","text":"BSD","icon":"document"},
-      {"label":"Trend","text":"+12%","sparkline":[8,9,12,11,15]},
-      {"label":"Docs","text":"flutter.dev","url":"https://flutter.dev"}
-    ]
-  }
+      { "label": "Version", "text": "3.35" },
+      { "label": "License", "text": "BSD", "icon": "document" },
+      { "label": "Trend", "text": "+12%", "sparkline": [8, 9, 12, 11, 15] },
+      { "label": "Docs", "text": "flutter.dev", "url": "https://flutter.dev" },
+    ],
+  },
 }
 ```
 
@@ -462,16 +460,16 @@ Use metadata instead of markdown tables for aligned facts:
 
 ```jsonc
 [
-  {"label":"Status","text":"Ready","color":"#22C55E"},
-  {"label":"Owner","text":"Team Core","icon":"people"},
-  {"separator":true},
-  {"label":"Homepage","text":"example.com","url":"https://example.com"},
-  {"label":"Trend","text":"−3%","sparkline":[12,14,11,9]},
+  { "label": "Status", "text": "Ready", "color": "#22C55E" },
+  { "label": "Owner", "text": "Team Core", "icon": "people" },
+  { "separator": true },
+  { "label": "Homepage", "text": "example.com", "url": "https://example.com" },
+  { "label": "Trend", "text": "−3%", "sparkline": [12, 14, 11, 9] },
   {
-    "label":"Source",
-    "text":"Open repository",
-    "actions":[{"id":"open-source","title":"Open","icon":"open"}]
-  }
+    "label": "Source",
+    "text": "Open repository",
+    "actions": [{ "id": "open-source", "title": "Open", "icon": "open" }],
+  },
 ]
 ```
 
@@ -501,11 +499,11 @@ Best for visual options such as emoji, colors, apps, themes, or presets.
 
 ```jsonc
 {
-  "view":"grid",
-  "grid":{"columns":5,"aspectRatio":1.0},
-  "items":[
-    {"id":"red","title":"Red","icon":"#EF4444","tileColor":"#EF4444"}
-  ]
+  "view": "grid",
+  "grid": { "columns": 5, "aspectRatio": 1.0 },
+  "items": [
+    { "id": "red", "title": "Red", "icon": "#EF4444", "tileColor": "#EF4444" },
+  ],
 }
 ```
 
@@ -517,20 +515,20 @@ Best when users compare the same fields across many records:
 
 ```jsonc
 {
-  "view":"table",
-  "columns":[
-    {"id":"title","label":"Package","width":220},
-    {"id":"version","label":"Version"},
-    {"id":"license","label":"License"},
-    {"id":"downloads","label":"Downloads","align":"end"}
+  "view": "table",
+  "columns": [
+    { "id": "title", "label": "Package", "width": 220 },
+    { "id": "version", "label": "Version" },
+    { "id": "license", "label": "License" },
+    { "id": "downloads", "label": "Downloads", "align": "end" },
   ],
-  "items":[
+  "items": [
     {
-      "id":"pkg:flutter",
-      "title":"Flutter",
-      "cells":{"version":"3.35","license":"BSD","downloads":"2.1M"}
-    }
-  ]
+      "id": "pkg:flutter",
+      "title": "Flutter",
+      "cells": { "version": "3.35", "license": "BSD", "downloads": "2.1M" },
+    },
+  ],
 }
 ```
 
@@ -543,11 +541,17 @@ The plugin sends the currently visible flattened nodes:
 
 ```jsonc
 {
-  "view":"tree",
-  "items":[
-    {"id":"folder:src","title":"src","icon":"folder","depth":0,"expanded":true},
-    {"id":"file:main","title":"main.py","icon":"file","depth":1}
-  ]
+  "view": "tree",
+  "items": [
+    {
+      "id": "folder:src",
+      "title": "src",
+      "icon": "folder",
+      "depth": 0,
+      "expanded": true,
+    },
+    { "id": "file:main", "title": "main.py", "icon": "file", "depth": 1 },
+  ],
 }
 ```
 
@@ -560,15 +564,20 @@ Use for image/video/audio/file collections:
 
 ```jsonc
 {
-  "view":"gallery",
-  "gallery":{"columns":4,"aspectRatio":1.15,"fit":"cover","showLabels":true},
-  "items":[
+  "view": "gallery",
+  "gallery": {
+    "columns": 4,
+    "aspectRatio": 1.15,
+    "fit": "cover",
+    "showLabels": true,
+  },
+  "items": [
     {
-      "id":"media:1",
-      "title":"Screenshot",
-      "media":{"url":"file:///C:/images/shot.png","type":"image"}
-    }
-  ]
+      "id": "media:1",
+      "title": "Screenshot",
+      "media": { "url": "file:///C:/images/shot.png", "type": "image" },
+    },
+  ],
 }
 ```
 
@@ -580,13 +589,13 @@ Use a full page for long content or a destination with its own actions/history:
 
 ```jsonc
 {
-  "view":"detail",
-  "detail":{
-    "markdown":"# Result title\n\nLong-form **Markdown** content.",
-    "metadata":[{"label":"Source","text":"Local index"}],
-    "wide":true
+  "view": "detail",
+  "detail": {
+    "markdown": "# Result title\n\nLong-form **Markdown** content.",
+    "metadata": [{ "label": "Source", "text": "Local index" }],
+    "wide": true,
   },
-  "actions":[{"id":"copy-all","title":"Copy all","icon":"copy"}]
+  "actions": [{ "id": "copy-all", "title": "Copy all", "icon": "copy" }],
 }
 ```
 
@@ -598,7 +607,7 @@ selectable text, code-block copy buttons, and image lightboxes.
 Enable only on list/grid:
 
 ```json
-{"preview":{"enabled":true,"wide":true}}
+{ "preview": { "enabled": true, "wide": true } }
 ```
 
 The selected item's `preview` is shown on the right. `wide` belongs to the frame,
@@ -612,25 +621,25 @@ Item actions and frame actions use the same shape:
 
 ```jsonc
 {
-  "id":"delete",
-  "title":"Remove bookmark",
-  "icon":"trash",
-  "shortcut":"ctrl+shift+d",
-  "destructive":true,
-  "confirm":{
-    "title":"Remove this bookmark?",
-    "message":"This cannot be undone.",
-    "confirmLabel":"Remove"
+  "id": "delete",
+  "title": "Remove bookmark",
+  "icon": "trash",
+  "shortcut": "ctrl+shift+d",
+  "destructive": true,
+  "confirm": {
+    "title": "Remove this bookmark?",
+    "message": "This cannot be undone.",
+    "confirmLabel": "Remove",
   },
-  "parameters":[
+  "parameters": [
     {
-      "id":"format",
-      "type":"dropdown",
-      "label":"Format",
-      "required":true,
-      "options":["plain","markdown"]
-    }
-  ]
+      "id": "format",
+      "type": "dropdown",
+      "label": "Format",
+      "required": true,
+      "options": ["plain", "markdown"],
+    },
+  ],
 }
 ```
 
@@ -676,13 +685,13 @@ Both frames use the same query `rev`.
 
 ```jsonc
 {
-  "empty":{
-    "icon":"search",
-    "title":"No matching packages",
-    "hint":"Try removing a filter",
-    "action":{"id":"clear","title":"Clear filters","icon":"close"}
+  "empty": {
+    "icon": "search",
+    "title": "No matching packages",
+    "hint": "Try removing a filter",
+    "action": { "id": "clear", "title": "Clear filters", "icon": "close" },
   },
-  "items":[]
+  "items": [],
 }
 ```
 
@@ -729,7 +738,7 @@ This template demonstrates the focused architecture for this skill:
 
 `main.py`:
 
-```python
+````python
 #!/usr/bin/env python3
 import json
 import sys
@@ -909,7 +918,7 @@ def handle_action(msg):
 
     if not item_id:
         if action == "clear-query":
-            send({"type": "command", "command": "setQuery", "text": ""})
+            send({"type": "command", "command": "setQuery", "text": " "})
         elif action == "refresh":
             send({"type": "command", "command": "toast", "text": "Packages refreshed"})
             render_results(0)
@@ -986,7 +995,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
+````
 
 For a real API search, replace `filtered_packages()` with async/network work.
 Show a loading frame first and keep the stdin loop responsive, using a worker

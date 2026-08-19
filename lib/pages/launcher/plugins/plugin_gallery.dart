@@ -121,11 +121,42 @@ abstract final class PluginGallery {
     return PluginRegistry.manifests.any((PluginManifest m) => m.id.toLowerCase() == lower);
   }
 
+  /// Compares the numeric dot-separated versions used by gallery manifests.
+  /// Invalid or missing versions are never considered newer, which keeps
+  /// automatic updates from guessing when a local plugin is unversioned.
+  static bool isRemoteVersionGreater(String remoteVersion, String installedVersion) {
+    final List<int>? remoteParts = _parseVersion(remoteVersion);
+    final List<int>? installedParts = _parseVersion(installedVersion);
+    if (remoteParts == null || installedParts == null) return false;
+
+    final int length = remoteParts.length > installedParts.length ? remoteParts.length : installedParts.length;
+    for (int index = 0; index < length; index++) {
+      final int remotePart = index < remoteParts.length ? remoteParts[index] : 0;
+      final int installedPart = index < installedParts.length ? installedParts[index] : 0;
+      if (remotePart != installedPart) return remotePart > installedPart;
+    }
+    return false;
+  }
+
+  static List<int>? _parseVersion(String version) {
+    final String normalized = version.trim().replaceFirst(RegExp(r'^[vV]'), '');
+    if (normalized.isEmpty) return null;
+
+    final List<int> parts = <int>[];
+    for (final String part in normalized.split('.')) {
+      final int? number = int.tryParse(part);
+      if (number == null || number < 0) return null;
+      parts.add(number);
+    }
+    return parts;
+  }
+
   /// Installs [entry] into the plugins folder and rescans the registry.
   /// Returns null on success, or a short human-readable error.
   static Future<String?> install(PluginGalleryEntry entry) async {
     try {
       final Directory target = Directory(p.join(AppPaths.pluginsDirectory, entry.id));
+      final Map<String, Object?> manifestOverrides = await _readManifestOverrides(target);
       String? error;
       if (entry.files.isNotEmpty) {
         error = await _installFromFiles(entry, target);
@@ -139,12 +170,42 @@ abstract final class PluginGallery {
       if (!File(p.join(target.path, 'plugin.json')).existsSync()) {
         return 'Downloaded plugin has no plugin.json';
       }
+      await _restoreManifestOverrides(target, manifestOverrides);
       await PluginRegistry.load();
       return null;
     } catch (e, s) {
       unawaited(ErrorLogger.log('PluginGallery', 'Install ${entry.id} failed: $e', s));
       return e.toString();
     }
+  }
+
+  /// Keep settings owned by the local Plugin Manager when an update replaces
+  /// plugin.json. In particular, a disabled plugin must not become enabled
+  /// again merely because a new release was installed.
+  static Future<Map<String, Object?>> _readManifestOverrides(Directory target) async {
+    final File manifestFile = File(p.join(target.path, 'plugin.json'));
+    if (!manifestFile.existsSync()) return <String, Object?>{};
+    try {
+      final Object? decoded = jsonDecode(await manifestFile.readAsString());
+      if (decoded is! Map) return <String, Object?>{};
+      final Map<String, dynamic> json = decoded.cast<String, dynamic>();
+      return <String, Object?>{
+        if (json['enabled'] is bool) 'enabled': json['enabled'],
+        if (json['keyword'] is String) 'keyword': json['keyword'],
+        if (json['dev'] is bool) 'dev': json['dev'],
+      };
+    } catch (_) {
+      return <String, Object?>{};
+    }
+  }
+
+  static Future<void> _restoreManifestOverrides(Directory target, Map<String, Object?> overrides) async {
+    if (overrides.isEmpty) return;
+    final File manifestFile = File(p.join(target.path, 'plugin.json'));
+    final Object? decoded = jsonDecode(await manifestFile.readAsString());
+    if (decoded is! Map) return;
+    final Map<String, dynamic> json = decoded.cast<String, dynamic>()..addAll(overrides);
+    await manifestFile.writeAsString(const JsonEncoder.withIndent('  ').convert(json));
   }
 
   static Future<String?> _installFromFiles(PluginGalleryEntry entry, Directory target) async {

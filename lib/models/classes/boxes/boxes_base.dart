@@ -9,6 +9,7 @@ import '../../../platform/windows/tabamewin32_api.dart';
 import '../../../platform/windows/win32_api.dart';
 
 import '../../../logic/error_handler.dart';
+import '../../../pages/launcher/plugins/plugin_auto_updater.dart';
 import '../../../platform/app_paths.dart';
 import '../../../services/notification_coordinator.dart';
 import '../../globals.dart';
@@ -98,6 +99,7 @@ class Boxes {
       await pref.setInt("lightSwitchSunset", 18 * 60);
       await pref.setInt("lightSwitchLastFetch", 0);
       await pref.setBool("rewindlyEnabled", false);
+      await pref.setBool(PluginAutoUpdater.settingKey, false);
       await pref.setInt("rewindlyFps", 2);
       await pref.setInt("rewindlyClipMinutes", 1);
       await pref.setInt("rewindlyRetentionMinutes", 60);
@@ -164,6 +166,7 @@ class Boxes {
       ..hideDesktopFiles = pref.getBool("hideDesktopFiles") ?? user.hideDesktopFiles
       ..trktivityEnabled = pref.getBool("trktivityEnabled") ?? user.trktivityEnabled
       ..autoCheckForUpdates = pref.getBool("autoUpdate") ?? user.autoCheckForUpdates
+      ..pluginAutoUpdate = pref.getBool(PluginAutoUpdater.settingKey) ?? user.pluginAutoUpdate
       ..wallpapersFolder = pref.getString("wallpapersFolder") ?? user.wallpapersFolder
       ..useCustomCursor = pref.getBool("useCustomCursor") ?? user.useCustomCursor
       ..fancyshotFolder = pref.getString("fancyshotFolder") ?? user.fancyshotFolder
@@ -332,6 +335,7 @@ class Boxes {
         Debug.add("Registered: Volume");
       }
       if (user.autoCheckForUpdates) checkForUpdates(autoInstall: false);
+      if (user.pluginAutoUpdate) unawaited(PluginAutoUpdater.checkAndUpdate());
 
       if (user.autoOpenTaskManager) {
         if (Win32.getProcessIdsByName('taskmgr.exe').isEmpty) {

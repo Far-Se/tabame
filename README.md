@@ -61,17 +61,17 @@ You will need to use the mouse, so either setup the QuickMenu hotkey with a "mov
 
 # 📥 How to install
 
-I did not want to create a installer because it's another app that needs signing.
+Download the Windows format you prefer from [Releases](https://github.com/Far-Se/tabame/releases/):
 
-So the easy way to install:
+- `*-setup.exe` is the recommended installer. It installs just for your account without an administrator prompt.
+- `*.msi` is the standard Windows Installer package. It installs for all users and requires administrator approval.
+- `*.zip` is portable. Extract it anywhere and run `tabame.exe`.
 
-1. Download the zip from [Releases](https://github.com/Far-Se/tabame/releases/).
-2. Extract it wherever you like, in `%localappdata%` Or Program Files or any folder you want.
-3. Open `tabame.exe`.
+Pick one installed format (`.exe` or `.msi`) on a computer rather than installing both. Updates keep settings, plugins, and other user data in `%LOCALAPPDATA%\Tabame`.
 
 ### 📤 How to uninstall:
 
-Either manually delete the folder, or from `Program and Features` or Open Tabame -> Settings Button -> Settings Tab -> Scroll down and Uninstall.
+For `.exe` and `.msi` installs, use **Settings → Apps → Installed apps → Tabame → Uninstall**. For the ZIP, close Tabame and delete the extracted folder. Uninstalling the app keeps `%LOCALAPPDATA%\Tabame` so a reinstall can reuse your settings.
 
 ## 🐛 Found a bug?
 

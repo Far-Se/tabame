@@ -134,16 +134,16 @@ Sent when a form is submitted:
 
 ```json
 {
-  "type":"submit",
-  "values":{
-    "title":"Fix login",
-    "description":"Reproduce and patch the issue",
-    "priority":"high",
-    "urgent":true,
-    "estimate":3,
-    "labels":["bug","auth"]
+  "type": "submit",
+  "values": {
+    "title": "Fix login",
+    "description": "Reproduce and patch the issue",
+    "priority": "high",
+    "urgent": true,
+    "estimate": 3,
+    "labels": ["bug", "auth"]
   },
-  "button":"save"
+  "button": "save"
 }
 ```
 
@@ -156,9 +156,9 @@ A field with `watch: true` changed:
 
 ```json
 {
-  "type":"change",
-  "id":"project",
-  "values":{"project":"core","assignee":""}
+  "type": "change",
+  "id": "project",
+  "values": { "project": "core", "assignee": "" }
 }
 ```
 
@@ -168,7 +168,7 @@ entered values survive.
 ### `select`
 
 ```json
-{"type":"select","id":"task:42","rev":4}
+{ "type": "select", "id": "task:42", "rev": 4 }
 ```
 
 Optional for record workflows unless lazy data loading is needed.
@@ -186,11 +186,11 @@ The plugin owns its routes and renders the destination.
 
 ```json
 {
-  "type":"kanbanMove",
-  "id":"task:42",
-  "columnId":"done",
-  "index":0,
-  "rev":4
+  "type": "kanbanMove",
+  "id": "task:42",
+  "columnId": "done",
+  "index": 0,
+  "rev": 4
 }
 ```
 
@@ -200,10 +200,10 @@ Apply the move and render the complete board.
 
 ```json
 {
-  "type":"calendarNavigate",
-  "date":"2026-08-01",
-  "mode":"month",
-  "rev":4
+  "type": "calendarNavigate",
+  "date": "2026-08-01",
+  "mode": "month",
+  "rev": 4
 }
 ```
 
@@ -250,21 +250,26 @@ tasks:calendar
 ## 6. Host commands for record workflows
 
 ```json
-{"type":"command","command":"toast","text":"Task saved","style":"success"}
+{
+  "type": "command",
+  "command": "toast",
+  "text": "Task saved",
+  "style": "success"
+}
 ```
 
 Relevant commands:
 
-| Command | Fields | Use |
-| --- | --- | --- |
-| `copy` | `text` | Copy field/record content. |
-| `paste` | `text` | Paste into the previous app and hide launcher. |
-| `open` | `url` or `path` | Open linked resource. |
-| `hide` | — | Dismiss launcher. |
-| `toast` | `text`, optional `style`, `progress` | Feedback after create/update/delete. |
-| `setQuery` | `text` | Reset/rewrite post-keyword query. |
-| `storage` | `op`, `key`, `value`, `secret`, `requestId` | Persistent plugin state and secrets. |
-| `notify` | optional `title`, `text` | Native Windows notification. |
+| Command    | Fields                                      | Use                                            |
+| ---------- | ------------------------------------------- | ---------------------------------------------- |
+| `copy`     | `text`                                      | Copy field/record content.                     |
+| `paste`    | `text`                                      | Paste into the previous app and hide launcher. |
+| `open`     | `url` or `path`                             | Open linked resource.                          |
+| `hide`     | —                                           | Dismiss launcher.                              |
+| `toast`    | `text`, optional `style`, `progress`        | Feedback after create/update/delete.           |
+| `setQuery` | `text`                                      | Reset/rewrite post-keyword query.              |
+| `storage`  | `op`, `key`, `value`, `secret`, `requestId` | Persistent plugin state and secrets.           |
+| `notify`   | optional `title`, `text`                    | Native Windows notification.                   |
 
 Storage operations:
 
@@ -295,32 +300,32 @@ Example list frame:
 
 ```jsonc
 {
-  "type":"render",
-  "rev":0,
-  "view":"list",
-  "page":{
-    "id":"tasks:home",
-    "title":"Tasks",
-    "history":"none",
-    "preserveState":true
+  "type": "render",
+  "rev": 0,
+  "view": "list",
+  "page": {
+    "id": "tasks:home",
+    "title": "Tasks",
+    "history": "none",
+    "preserveState": true,
   },
-  "elementId":"task-list",
-  "placeholder":"Filter tasks…",
-  "loading":false,
-  "loadingText":"Loading tasks…",
-  "empty":{
-    "icon":"check",
-    "title":"No tasks",
-    "hint":"Create your first task",
-    "action":{"id":"create","title":"Create task","icon":"add"}
+  "elementId": "task-list",
+  "placeholder": "Filter tasks…",
+  "loading": false,
+  "loadingText": "Loading tasks…",
+  "empty": {
+    "icon": "check",
+    "title": "No tasks",
+    "hint": "Create your first task",
+    "action": { "id": "create", "title": "Create task", "icon": "add" },
   },
-  "selection":{"enabled":true,"max":100},
-  "actions":[
-    {"id":"refresh","title":"Refresh","icon":"refresh"},
-    {"id":"archive-selected","title":"Archive selected","icon":"folder"}
+  "selection": { "enabled": true, "max": 100 },
+  "actions": [
+    { "id": "refresh", "title": "Refresh", "icon": "refresh" },
+    { "id": "archive-selected", "title": "Archive selected", "icon": "folder" },
   ],
-  "floatingAction":{"id":"create","title":"Create","icon":"add"},
-  "items":[]
+  "floatingAction": { "id": "create", "title": "Create", "icon": "add" },
+  "items": [],
 }
 ```
 
@@ -328,34 +333,34 @@ General record item:
 
 ```jsonc
 {
-  "id":"task:42",
-  "title":"Fix login",
-  "subtitle":"Authentication fails after token expiry",
-  "icon":"warning",
-  "section":"Today",
-  "accessories":[
-    {"text":"High","color":"#EF4444"},
-    {"text":"Core","icon":"people"}
+  "id": "task:42",
+  "title": "Fix login",
+  "subtitle": "Authentication fails after token expiry",
+  "icon": "warning",
+  "section": "Today",
+  "accessories": [
+    { "text": "High", "color": "#EF4444" },
+    { "text": "Core", "icon": "people" },
   ],
-  "cells":{"status":"In progress","owner":"Alex","due":"Aug 8"},
-  "column":"doing",
-  "start":"2026-08-08T10:00:00",
-  "end":"2026-08-08T11:00:00",
-  "allDay":false,
-  "color":"#EF4444",
-  "location":"Online",
-  "actions":[
-    {"id":"default","title":"Open","icon":"open"},
-    {"id":"edit","title":"Edit","icon":"edit"},
-    {"id":"duplicate","title":"Duplicate","icon":"copy"},
+  "cells": { "status": "In progress", "owner": "Alex", "due": "Aug 8" },
+  "column": "doing",
+  "start": "2026-08-08T10:00:00",
+  "end": "2026-08-08T11:00:00",
+  "allDay": false,
+  "color": "#EF4444",
+  "location": "Online",
+  "actions": [
+    { "id": "default", "title": "Open", "icon": "open" },
+    { "id": "edit", "title": "Edit", "icon": "edit" },
+    { "id": "duplicate", "title": "Duplicate", "icon": "copy" },
     {
-      "id":"delete",
-      "title":"Delete",
-      "icon":"trash",
-      "destructive":true,
-      "confirm":true
-    }
-  ]
+      "id": "delete",
+      "title": "Delete",
+      "icon": "trash",
+      "destructive": true,
+      "confirm": true,
+    },
+  ],
 }
 ```
 
@@ -378,20 +383,20 @@ Use when the same 3–6 fields must be compared:
 
 ```jsonc
 {
-  "view":"table",
-  "columns":[
-    {"id":"title","label":"Task","width":260},
-    {"id":"status","label":"Status"},
-    {"id":"owner","label":"Owner"},
-    {"id":"estimate","label":"Hours","align":"end"}
+  "view": "table",
+  "columns": [
+    { "id": "title", "label": "Task", "width": 260 },
+    { "id": "status", "label": "Status" },
+    { "id": "owner", "label": "Owner" },
+    { "id": "estimate", "label": "Hours", "align": "end" },
   ],
-  "items":[
+  "items": [
     {
-      "id":"task:42",
-      "title":"Fix login",
-      "cells":{"status":"Doing","owner":"Alex","estimate":"3"}
-    }
-  ]
+      "id": "task:42",
+      "title": "Fix login",
+      "cells": { "status": "Doing", "owner": "Alex", "estimate": "3" },
+    },
+  ],
 }
 ```
 
@@ -403,28 +408,34 @@ Use for one record, a success/error result, or a confirmation:
 
 ```jsonc
 {
-  "view":"detail",
-  "page":{
-    "id":"tasks:item:42",
-    "title":"Fix login",
-    "history":"push",
-    "preserveState":true,
-    "breadcrumbs":[{"id":"tasks:home","label":"Tasks"}]
+  "view": "detail",
+  "page": {
+    "id": "tasks:item:42",
+    "title": "Fix login",
+    "history": "push",
+    "preserveState": true,
+    "breadcrumbs": [{ "id": "tasks:home", "label": "Tasks" }],
   },
-  "detail":{
-    "wide":true,
-    "markdown":"# Fix login\n\nAuthentication fails after token expiry.",
-    "metadata":[
-      {"label":"Status","text":"In progress","color":"#F59E0B"},
-      {"label":"Owner","text":"Alex","icon":"person"},
-      {"label":"Due","text":"August 8, 2026","icon":"calendar"}
-    ]
+  "detail": {
+    "wide": true,
+    "markdown": "# Fix login\n\nAuthentication fails after token expiry.",
+    "metadata": [
+      { "label": "Status", "text": "In progress", "color": "#F59E0B" },
+      { "label": "Owner", "text": "Alex", "icon": "person" },
+      { "label": "Due", "text": "August 8, 2026", "icon": "calendar" },
+    ],
   },
-  "actions":[
-    {"id":"edit","title":"Edit","icon":"edit"},
-    {"id":"delete","title":"Delete","icon":"trash","destructive":true,"confirm":true}
+  "actions": [
+    { "id": "edit", "title": "Edit", "icon": "edit" },
+    {
+      "id": "delete",
+      "title": "Delete",
+      "icon": "trash",
+      "destructive": true,
+      "confirm": true,
+    },
   ],
-  "floatingAction":{"id":"edit","title":"Edit","icon":"edit"}
+  "floatingAction": { "id": "edit", "title": "Edit", "icon": "edit" },
 }
 ```
 
@@ -435,17 +446,15 @@ in plugin state.
 
 ```jsonc
 {
-  "view":"kanban",
-  "kanban":{
-    "columns":[
-      {"id":"todo","title":"To do","color":"#64748B"},
-      {"id":"doing","title":"Doing","color":"#3B82F6","limit":5},
-      {"id":"done","title":"Done","color":"#22C55E"}
-    ]
+  "view": "kanban",
+  "kanban": {
+    "columns": [
+      { "id": "todo", "title": "To do", "color": "#64748B" },
+      { "id": "doing", "title": "Doing", "color": "#3B82F6", "limit": 5 },
+      { "id": "done", "title": "Done", "color": "#22C55E" },
+    ],
   },
-  "items":[
-    {"id":"task:42","title":"Fix login","column":"doing"}
-  ]
+  "items": [{ "id": "task:42", "title": "Fix login", "column": "doing" }],
 }
 ```
 
@@ -456,23 +465,23 @@ board.
 
 ```jsonc
 {
-  "view":"calendar",
-  "calendar":{
-    "mode":"month",
-    "date":"2026-08-01",
-    "weekStart":"monday",
-    "days":30
+  "view": "calendar",
+  "calendar": {
+    "mode": "month",
+    "date": "2026-08-01",
+    "weekStart": "monday",
+    "days": 30,
   },
-  "items":[
+  "items": [
     {
-      "id":"event:1",
-      "title":"Release",
-      "start":"2026-08-08T10:00:00",
-      "end":"2026-08-08T11:00:00",
-      "color":"#8B5CF6",
-      "location":"Online"
-    }
-  ]
+      "id": "event:1",
+      "title": "Release",
+      "start": "2026-08-08T10:00:00",
+      "end": "2026-08-08T11:00:00",
+      "color": "#8B5CF6",
+      "location": "Online",
+    },
+  ],
 }
 ```
 
@@ -486,126 +495,126 @@ A form frame:
 
 ```jsonc
 {
-  "type":"render",
-  "rev":0,
-  "view":"form",
-  "page":{
-    "id":"tasks:create",
-    "title":"New Task",
-    "history":"push",
-    "preserveState":false,
-    "breadcrumbs":[{"id":"tasks:home","label":"Tasks"}]
+  "type": "render",
+  "rev": 0,
+  "view": "form",
+  "page": {
+    "id": "tasks:create",
+    "title": "New Task",
+    "history": "push",
+    "preserveState": false,
+    "breadcrumbs": [{ "id": "tasks:home", "label": "Tasks" }],
   },
-  "placeholder":"New task…",
-  "form":{
-    "title":"New Task",
-    "error":"Please review the highlighted fields",
-    "sections":[
-      {"id":"main","title":"Task","description":"Required details"},
-      {"id":"advanced","title":"Advanced","collapsible":true}
+  "placeholder": "New task…",
+  "form": {
+    "title": "New Task",
+    "error": "Please review the highlighted fields",
+    "sections": [
+      { "id": "main", "title": "Task", "description": "Required details" },
+      { "id": "advanced", "title": "Advanced", "collapsible": true },
     ],
-    "submitLabel":"Create",
-    "buttons":[
-      {"id":"save","label":"Save"},
-      {"id":"save-close","label":"Save and close"},
-      {"id":"delete","label":"Delete","destructive":true}
+    "submitLabel": "Create",
+    "buttons": [
+      { "id": "save", "label": "Save" },
+      { "id": "save-close", "label": "Save and close" },
+      { "id": "delete", "label": "Delete", "destructive": true },
     ],
-    "fields":[
+    "fields": [
       {
-        "id":"title",
-        "type":"text",
-        "label":"Title",
-        "placeholder":"Summary…",
-        "required":true,
-        "minLength":3,
-        "maxLength":120,
-        "description":"Shown in the task list",
-        "section":"main"
+        "id": "title",
+        "type": "text",
+        "label": "Title",
+        "placeholder": "Summary…",
+        "required": true,
+        "minLength": 3,
+        "maxLength": 120,
+        "description": "Shown in the task list",
+        "section": "main",
       },
       {
-        "id":"description",
-        "type":"textarea",
-        "label":"Description",
-        "section":"main"
+        "id": "description",
+        "type": "textarea",
+        "label": "Description",
+        "section": "main",
       },
       {
-        "id":"secret",
-        "type":"password",
-        "label":"API key",
-        "section":"advanced"
+        "id": "secret",
+        "type": "password",
+        "label": "API key",
+        "section": "advanced",
       },
       {
-        "id":"estimate",
-        "type":"number",
-        "label":"Estimate",
-        "value":1,
-        "min":0,
-        "max":100,
-        "section":"main"
+        "id": "estimate",
+        "type": "number",
+        "label": "Estimate",
+        "value": 1,
+        "min": 0,
+        "max": 100,
+        "section": "main",
       },
       {
-        "id":"due",
-        "type":"date",
-        "label":"Due date",
-        "value":"2026-08-08",
-        "section":"main"
+        "id": "due",
+        "type": "date",
+        "label": "Due date",
+        "value": "2026-08-08",
+        "section": "main",
       },
       {
-        "id":"attachment",
-        "type":"filepicker",
-        "label":"Attachment",
-        "section":"advanced"
+        "id": "attachment",
+        "type": "filepicker",
+        "label": "Attachment",
+        "section": "advanced",
       },
       {
-        "id":"output",
-        "type":"folderpicker",
-        "label":"Output folder",
-        "section":"advanced"
+        "id": "output",
+        "type": "folderpicker",
+        "label": "Output folder",
+        "section": "advanced",
       },
       {
-        "id":"labels",
-        "type":"tags",
-        "label":"Labels",
-        "value":["bug"],
-        "options":["bug","feature",{"value":"docs","label":"Docs"}],
-        "section":"main"
+        "id": "labels",
+        "type": "tags",
+        "label": "Labels",
+        "value": ["bug"],
+        "options": ["bug", "feature", { "value": "docs", "label": "Docs" }],
+        "section": "main",
       },
       {
-        "id":"project",
-        "type":"combobox",
-        "label":"Project",
-        "value":"core",
-        "watch":true,
-        "optionsLoading":false,
-        "allowCustom":false,
-        "options":["core",{"value":"ops","label":"Operations"}],
-        "section":"main"
+        "id": "project",
+        "type": "combobox",
+        "label": "Project",
+        "value": "core",
+        "watch": true,
+        "optionsLoading": false,
+        "allowCustom": false,
+        "options": ["core", { "value": "ops", "label": "Operations" }],
+        "section": "main",
       },
       {
-        "id":"priority",
-        "type":"dropdown",
-        "label":"Priority",
-        "value":"normal",
-        "options":["low","normal","high"],
-        "section":"main",
-        "enabledWhen":{"field":"title","truthy":true}
+        "id": "priority",
+        "type": "dropdown",
+        "label": "Priority",
+        "value": "normal",
+        "options": ["low", "normal", "high"],
+        "section": "main",
+        "enabledWhen": { "field": "title", "truthy": true },
       },
       {
-        "id":"urgent",
-        "type":"checkbox",
-        "label":"Urgent",
-        "value":false,
-        "section":"main"
+        "id": "urgent",
+        "type": "checkbox",
+        "label": "Urgent",
+        "value": false,
+        "section": "main",
       },
       {
-        "id":"reason",
-        "type":"textarea",
-        "label":"Urgency reason",
-        "section":"main",
-        "visibleWhen":{"field":"urgent","equals":true}
-      }
-    ]
-  }
+        "id": "reason",
+        "type": "textarea",
+        "label": "Urgency reason",
+        "section": "main",
+        "visibleWhen": { "field": "urgent", "equals": true },
+      },
+    ],
+  },
 }
 ```
 
@@ -670,21 +679,21 @@ Action shape:
 
 ```jsonc
 {
-  "id":"move",
-  "title":"Move tasks",
-  "icon":"folder",
-  "shortcut":"ctrl+shift+m",
-  "destructive":false,
-  "confirm":false,
-  "parameters":[
+  "id": "move",
+  "title": "Move tasks",
+  "icon": "folder",
+  "shortcut": "ctrl+shift+m",
+  "destructive": false,
+  "confirm": false,
+  "parameters": [
     {
-      "id":"status",
-      "type":"dropdown",
-      "label":"Destination",
-      "required":true,
-      "options":["todo","doing","done"]
-    }
-  ]
+      "id": "status",
+      "type": "dropdown",
+      "label": "Destination",
+      "required": true,
+      "options": ["todo", "doing", "done"],
+    },
+  ],
 }
 ```
 
@@ -702,7 +711,7 @@ Rules:
 Selection:
 
 ```json
-{"selection":{"enabled":true,"max":50}}
+{ "selection": { "enabled": true, "max": 50 } }
 ```
 
 Use it when users reasonably perform the same action on several records. Name
@@ -742,7 +751,7 @@ This example provides a complete local task manager skeleton. It demonstrates:
 
 `main.py`:
 
-```python
+````python
 #!/usr/bin/env python3
 import json
 import sys
@@ -1044,7 +1053,7 @@ def handle_action(message):
 
     if not item_id:
         if action == "create":
-            send({"type": "command", "command": "setQuery", "text": ""})
+            send({"type": "command", "command": "setQuery", "text": " "})
             render_form()
         elif action == "complete-selected":
             selected = {value.removeprefix("task:") for value in ids}
@@ -1140,7 +1149,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
+````
 
 ### Notes about the example
 
@@ -1265,7 +1274,7 @@ note run open
 
 > Build a Tabame QuickLaunch **forms/record-management plugin** in
 > `<Python|Node|Bun>`. Keyword: `<keyword>`. Records are `<describe records and
-> data source>`. Users must be able to `<browse/create/edit/delete/organize>`.
+data source>`. Users must be able to `<browse/create/edit/delete/organize>`.
 > Use list/table/kanban/calendar only where each fits; use detail pages and full
 > forms for record workflows. Make Create/Edit discoverable with Enter or
 > floating actions, and use Ctrl+K for contextual alternatives, confirmations,

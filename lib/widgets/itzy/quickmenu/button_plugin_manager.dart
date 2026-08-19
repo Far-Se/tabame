@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
+import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
+import '../../../pages/launcher/plugins/plugin_auto_updater.dart';
 import '../../../pages/launcher/plugins/plugin_gallery.dart';
 import '../../../pages/launcher/plugins/plugin_icons.dart';
 import '../../../pages/launcher/plugins/plugin_manifest.dart';
@@ -48,33 +50,6 @@ PluginManifest? _findInstalledPlugin(String id) {
   return null;
 }
 
-bool _isRemoteVersionGreater(String remoteVersion, String installedVersion) {
-  final List<int>? remoteParts = _parsePluginVersion(remoteVersion);
-  final List<int>? installedParts = _parsePluginVersion(installedVersion);
-  if (remoteParts == null || installedParts == null) return false;
-
-  final int length = remoteParts.length > installedParts.length ? remoteParts.length : installedParts.length;
-  for (int index = 0; index < length; index++) {
-    final int remotePart = index < remoteParts.length ? remoteParts[index] : 0;
-    final int installedPart = index < installedParts.length ? installedParts[index] : 0;
-    if (remotePart != installedPart) return remotePart > installedPart;
-  }
-  return false;
-}
-
-List<int>? _parsePluginVersion(String version) {
-  final String normalized = version.trim().replaceFirst(RegExp(r'^[vV]'), '');
-  if (normalized.isEmpty) return null;
-
-  final List<int> parts = <int>[];
-  for (final String part in normalized.split('.')) {
-    final int? number = int.tryParse(part);
-    if (number == null || number < 0) return null;
-    parts.add(number);
-  }
-  return parts;
-}
-
 /// Three-mode panel for installed plugins, the community gallery, and authoring
 /// guidance for local plugins.
 class PluginManagerPanel extends StatefulWidget {
@@ -100,6 +75,8 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   bool _pluginDirectoryBusy = false;
   String _pluginDirectoryStatus = '';
   bool _pluginDirectoryStatusError = false;
+  bool _autoUpdateBusy = false;
+  String _autoUpdateError = '';
 
   @override
   void dispose() {
@@ -153,6 +130,22 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
     await PluginRegistry.setEnabled(manifest, enabled);
     if (!mounted) return;
     setState(() => _busyId = null);
+  }
+
+  Future<void> _setAutoUpdate(bool enabled) async {
+    if (_autoUpdateBusy) return;
+    setState(() {
+      _autoUpdateBusy = true;
+      _autoUpdateError = '';
+    });
+    try {
+      await Boxes.updateSettings(PluginAutoUpdater.settingKey, enabled);
+      user.pluginAutoUpdate = enabled;
+    } catch (_) {
+      _autoUpdateError = 'Could not save the automatic update setting.';
+    }
+    if (!mounted) return;
+    setState(() => _autoUpdateBusy = false);
   }
 
   Future<void> _editKeyword(PluginManifest manifest) async {
@@ -444,6 +437,14 @@ Build a plugin with your favorite AI coding assistant:
             _buildPluginDirectoryCard(),
             const SizedBox(height: 16),
             _buildSectionLabel(
+              label: "Updates",
+              countText: user.pluginAutoUpdate ? "ON" : "OFF",
+              icon: Icons.system_update_alt_rounded,
+            ),
+            const SizedBox(height: 8),
+            _buildAutoUpdateCard(),
+            const SizedBox(height: 16),
+            _buildSectionLabel(
               label: "Browser integration",
               countText: "Optional",
               icon: Icons.language_rounded,
@@ -609,6 +610,94 @@ Build a plugin with your favorite AI coding assistant:
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAutoUpdateCard() {
+    final Color accent = Design.accent;
+    final Color text = Design.text;
+    final bool enabled = user.pluginAutoUpdate;
+
+    return InkWell(
+      onTap: _autoUpdateBusy ? null : () => _setAutoUpdate(!enabled),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
+        decoration: BoxDecoration(
+          color: enabled ? accent.withAlpha(10) : text.withAlpha(7),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: enabled ? accent.withAlpha(30) : text.withAlpha(16)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: (enabled ? accent : text).withAlpha(enabled ? 24 : 12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.update_rounded, size: 16, color: enabled ? accent : text.withAlpha(130)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: C.start,
+                children: <Widget>[
+                  Text(
+                    'Update plugins at startup',
+                    style: TextStyle(
+                      fontSize: Design.baseFontSize + 1.5,
+                      fontWeight: FontWeight.w700,
+                      color: text.withAlpha(235),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Checks plugins.json and installs newer versions of your gallery plugins.',
+                    style: TextStyle(
+                      fontSize: Design.baseFontSize - 0.5,
+                      height: 1.25,
+                      color: text.withAlpha(140),
+                    ),
+                  ),
+                  if (_autoUpdateError.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 4),
+                    Text(
+                      _autoUpdateError,
+                      style: TextStyle(
+                        fontSize: Design.baseFontSize - 1,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red.shade400,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 40,
+              height: 30,
+              child: Center(
+                child: _autoUpdateBusy
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: accent),
+                      )
+                    : Transform.scale(
+                        scale: 0.7,
+                        child: Switch(
+                          value: enabled,
+                          activeThumbColor: accent,
+                          onChanged: _setAutoUpdate,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1325,7 +1414,8 @@ class _GalleryCard extends StatelessWidget {
     final Color accent = Design.accent;
     final Color text = Design.text;
     final PluginManifest? manifest = installedManifest;
-    final bool updateAvailable = manifest != null && _isRemoteVersionGreater(entry.version, manifest.version);
+    final bool updateAvailable =
+        manifest != null && PluginGallery.isRemoteVersionGreater(entry.version, manifest.version);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),

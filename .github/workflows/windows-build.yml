@@ -45,10 +45,12 @@ jobs:
 
     outputs:
       app_version: ${{ steps.meta.outputs.app_version }}
-      installer_asset_name: ${{ steps.meta.outputs.installer_asset_name }}
+      exe_asset_name: ${{ steps.meta.outputs.exe_asset_name }}
+      msi_asset_name: ${{ steps.meta.outputs.msi_asset_name }}
       release_type: ${{ steps.meta.outputs.release_type }}
       source_date_epoch: ${{ steps.meta.outputs.source_date_epoch }}
       tag_name: ${{ steps.meta.outputs.tag_name }}
+      zip_asset_name: ${{ steps.meta.outputs.asset_name }}
 
     steps:
       - name: Check out repository
@@ -126,20 +128,23 @@ jobs:
           if ($releaseType -eq "official") {
             $releaseName = "Tabame $tagName"
             $assetName = "tabame-$tagName-windows.zip"
-            $installerAssetName = "tabame-$tagName-windows-installer"
+            $exeAssetName = "tabame-$tagName-windows-x64-setup.exe"
+            $msiAssetName = "tabame-$tagName-windows-x64.msi"
             $prerelease = "false"
             $latest = "true"
           } else {
             $releaseName = "Tabame Nightly"
             $assetName = "tabame-nightly-windows.zip"
-            $installerAssetName = "tabame-nightly-windows-installer"
+            $exeAssetName = "tabame-nightly-windows-x64-setup.exe"
+            $msiAssetName = "tabame-nightly-windows-x64.msi"
             $prerelease = "true"
             $latest = "false"
           }
 
           "app_version=$appVersion" >> $env:GITHUB_OUTPUT
           "asset_name=$assetName" >> $env:GITHUB_OUTPUT
-          "installer_asset_name=$installerAssetName" >> $env:GITHUB_OUTPUT
+          "exe_asset_name=$exeAssetName" >> $env:GITHUB_OUTPUT
+          "msi_asset_name=$msiAssetName" >> $env:GITHUB_OUTPUT
           "date_stamp=$dateStamp" >> $env:GITHUB_OUTPUT
           "latest=$latest" >> $env:GITHUB_OUTPUT
           "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
@@ -210,7 +215,9 @@ jobs:
           Build date: ${{ steps.meta.outputs.date_stamp }}
 
           Download `${{ steps.meta.outputs.asset_name }}`, extract it, and run `tabame.exe`.
-          The Inno Setup installer `${{ steps.meta.outputs.installer_asset_name }}.exe` is also available for per-user install and upgrades.
+          Prefer an installer? `${{ steps.meta.outputs.exe_asset_name }}` is a per-user setup without an elevation prompt, while `${{ steps.meta.outputs.msi_asset_name }}` is a standard all-users MSI.
+
+          Settings, plugins, and other user data remain in `%LOCALAPPDATA%\Tabame` when either installer is upgraded or removed.
           '@
 
           $notes | Set-Content -Path release-notes.md
@@ -289,116 +296,95 @@ jobs:
 
           gh release upload $env:RELEASE_TAG $env:ZIP_PATH $env:SHA256_PATH --clobber
 
-  build-windows-installer:
-    name: Build and publish Windows Inno installer
+  build-windows-installers:
+    name: Build and publish Windows EXE and MSI installers
     needs: build-windows
     if: ${{ needs.build-windows.result == 'success' }}
     runs-on: windows-2022
-    timeout-minutes: 90
+    timeout-minutes: 45
+
+    env:
+      INNO_SETUP_VERSION: 6.7.1
+      WIX_VERSION: 6.0.2
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Download packaged Windows payload
+        uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Enable Windows desktop
-        shell: pwsh
-        run: flutter config --enable-windows-desktop
-
-      - name: Install dependencies
-        shell: pwsh
-        run: flutter pub get
+          name: ${{ needs.build-windows.outputs.zip_asset_name }}
+          path: installer-input
 
       - name: Install pinned Inno Setup
         shell: pwsh
-        env:
-          INNO_SETUP_VERSION: 6.4.2
         run: |
-          $existing = @(
+          choco install innosetup --version=$env:INNO_SETUP_VERSION --no-progress --yes --allow-downgrade
+          $iscc = @(
             "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
             "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
-          ) | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }
-          if (-not $existing) {
-            choco install innosetup --version=$env:INNO_SETUP_VERSION --no-progress --yes
-          }
-          if (-not (Test-Path -LiteralPath "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" -PathType Leaf) -and
-              -not (Test-Path -LiteralPath "$env:ProgramFiles\Inno Setup 6\ISCC.exe" -PathType Leaf)) {
+          ) | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+          if (-not $iscc) {
             throw "Pinned Inno Setup $env:INNO_SETUP_VERSION was not installed."
           }
+          "INNO_COMPILER_PATH=$iscc" >> $env:GITHUB_ENV
 
-      - name: Build installer-managed Windows app
-        shell: pwsh
-        # This profile disables the portable ZIP updater. The installer owns
-        # binary replacement and preserves %LOCALAPPDATA%\Tabame app data.
-        run: flutter build windows --release --no-tree-shake-icons --dart-define=TABAME_DISTRIBUTION_PROFILE=storeInstaller
-
-      - name: Resolve dependency graph
+      - name: Install pinned WiX toolset
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path dist -Force | Out-Null
-          dart pub deps --json | Out-File -FilePath dist\pub-deps.json -Encoding utf8
-
-      - name: Package Windows Inno installer
-        shell: pwsh
-        run: |
-          $releaseDir = @(
-            "build\windows\x64\runner\Release",
-            "build\windows\runner\Release"
-          ) | Where-Object { Test-Path -LiteralPath $_ -PathType Container } | Select-Object -First 1
-          if (-not $releaseDir) {
-            throw "Could not find Flutter Windows release output."
+          $toolDir = Join-Path $env:RUNNER_TEMP 'tabame-wix'
+          dotnet tool install wix --tool-path $toolDir --version $env:WIX_VERSION
+          $wix = Join-Path $toolDir 'wix.exe'
+          & $wix extension add --global "WixToolset.UI.wixext/$env:WIX_VERSION"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not install WixToolset.UI.wixext $env:WIX_VERSION."
           }
-          $base = "dist\${{ needs.build-windows.outputs.installer_asset_name }}"
-          & .\tool\release\package-windows-store-installer.ps1 `
+          "WIX_PATH=$wix" >> $env:GITHUB_ENV
+
+      - name: Package Windows EXE and MSI installers
+        shell: pwsh
+        run: |
+          $zipPath = "installer-input\${{ needs.build-windows.outputs.zip_asset_name }}"
+          $releaseDir = Join-Path $env:RUNNER_TEMP 'tabame-installer-payload'
+          Expand-Archive -LiteralPath $zipPath -DestinationPath $releaseDir -Force
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          & .\tool\release\package-windows-installers.ps1 `
             -ReleaseDir $releaseDir `
             -StageDir "dist\windows-installer-stage" `
-            -InstallerPath "$base.exe" `
-            -Sha256Path "$base.exe.sha256" `
-            -ManifestPath "$base.manifest.json" `
-            -SbomPath "$base.sbom.cdx.json" `
-            -PartnerCenterMetadataPath "$base.partner-center.json" `
+            -ExePath "dist\${{ needs.build-windows.outputs.exe_asset_name }}" `
+            -MsiPath "dist\${{ needs.build-windows.outputs.msi_asset_name }}" `
             -Version "${{ needs.build-windows.outputs.app_version }}" `
-            -SourceDateEpoch "${{ needs.build-windows.outputs.source_date_epoch }}" `
-            -CommitSha "${{ github.sha }}" `
-            -DependencyJsonPath "dist\pub-deps.json"
+            -InnoCompilerPath $env:INNO_COMPILER_PATH `
+            -WixPath $env:WIX_PATH
 
-      - name: Verify installer install, update, and data retention
+      - name: Verify install, uninstall, and data retention
         shell: pwsh
         run: |
-          $base = "dist\${{ needs.build-windows.outputs.installer_asset_name }}"
-          & .\tool\release\verify-windows-store-installer.ps1 `
-            -InstallerPath "$base.exe" `
-            -Sha256Path "$base.exe.sha256" `
-            -ManifestPath "$base.manifest.json" `
+          & .\tool\release\verify-windows-installers.ps1 `
+            -ExePath "dist\${{ needs.build-windows.outputs.exe_asset_name }}" `
+            -MsiPath "dist\${{ needs.build-windows.outputs.msi_asset_name }}" `
             -ExpectedVersion "${{ needs.build-windows.outputs.app_version }}" `
-            -RunSilentInstallSmoke `
-            -RunUpdateSmoke
+            -RunInstallSmoke
 
-      - name: Upload installer workflow artifact
+      - name: Upload installer workflow artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ needs.build-windows.outputs.installer_asset_name }}
+          name: tabame-windows-installers-${{ github.run_id }}
           path: |
-            dist/${{ needs.build-windows.outputs.installer_asset_name }}.exe
-            dist/${{ needs.build-windows.outputs.installer_asset_name }}.exe.sha256
-            dist/${{ needs.build-windows.outputs.installer_asset_name }}.manifest.json
-            dist/${{ needs.build-windows.outputs.installer_asset_name }}.sbom.cdx.json
-            dist/${{ needs.build-windows.outputs.installer_asset_name }}.partner-center.json
+            dist/${{ needs.build-windows.outputs.exe_asset_name }}
+            dist/${{ needs.build-windows.outputs.exe_asset_name }}.sha256
+            dist/${{ needs.build-windows.outputs.msi_asset_name }}
+            dist/${{ needs.build-windows.outputs.msi_asset_name }}.sha256
           if-no-files-found: error
 
-      - name: Attach installer to GitHub Release
+      - name: Attach installers to GitHub Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.build-windows.outputs.tag_name }}
-          INSTALLER_BASE: dist\${{ needs.build-windows.outputs.installer_asset_name }}
+          EXE_PATH: dist\${{ needs.build-windows.outputs.exe_asset_name }}
+          MSI_PATH: dist\${{ needs.build-windows.outputs.msi_asset_name }}
         run: |
           if (-not $env:RELEASE_TAG) {
             throw "The release tag output is empty."
@@ -417,10 +403,9 @@ jobs:
           }
 
           $files = @(
-            "$env:INSTALLER_BASE.exe",
-            "$env:INSTALLER_BASE.exe.sha256",
-            "$env:INSTALLER_BASE.manifest.json",
-            "$env:INSTALLER_BASE.sbom.cdx.json",
-            "$env:INSTALLER_BASE.partner-center.json"
+            $env:EXE_PATH,
+            "$env:EXE_PATH.sha256",
+            $env:MSI_PATH,
+            "$env:MSI_PATH.sha256"
           )
           gh release upload $env:RELEASE_TAG @files --clobber
