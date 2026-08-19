@@ -11,7 +11,7 @@ behavior.
 
 | Target | Artifact | Baseline | Installation path | Upgrade path |
 | --- | --- | --- | --- | --- |
-| Windows | ZIP, Inno Setup `.exe`, and WiX `.msi` for nightly and official builds | Windows 10 version 1809 or newer, x64 | Use the per-user EXE, the all-users MSI, or extract the portable ZIP | Install a newer artifact of the same format; all formats keep `%LOCALAPPDATA%\Tabame` |
+| Windows | ZIP and Inno Setup `.exe` for nightly and official builds | Windows 10 version 1809 or newer, x64 | Use the per-user EXE or extract the portable ZIP | Install a newer EXE or replace the portable files; both formats keep `%LOCALAPPDATA%\Tabame` |
 | macOS Intel | `tabame-<version>-macos-x86_64.dmg` and matching ZIP | macOS 13 Ventura or newer, x86_64 | Open the DMG and copy `tabame.app` to `/Applications` | Replace the app bundle with the newer signed/notarized bundle; user data is outside the app bundle |
 | macOS Apple Silicon | `tabame-<version>-macos-arm64.dmg` and matching ZIP | macOS 13 Ventura or newer, arm64 | Open the DMG and copy `tabame.app` to `/Applications` | Replace the app bundle with the newer signed/notarized bundle; user data is outside the app bundle |
 | Linux | `tabame_<version>_<arch>.deb` for `amd64` and `arm64` | Ubuntu 22.04+ with GTK 3; X11 is the advanced integration target | `sudo apt install ./tabame_<version>_<arch>.deb` | Install the newer `.deb` with the same command; `dpkg` replaces `/opt/tabame` and preserves user data |
@@ -127,38 +127,33 @@ release publication:
   `tabame-nightly-windows.zip` plus its SHA-256 file.
 - Official builds still upload `tabame-v<version>-windows.zip` plus its
   SHA-256 file.
-- Every release also publishes a per-user `*-setup.exe`, an all-users `.msi`,
-  and a SHA-256 file for each installer. Both installers use stable upgrade
-  identities and preserve `%LOCALAPPDATA%\Tabame` during uninstall.
+- Every release also publishes a per-user `*-setup.exe` and its SHA-256 file.
+  The installer uses a stable upgrade identity and preserves
+  `%LOCALAPPDATA%\Tabame` during uninstall.
 - MSIX/Store metadata remains independent under `packaging/windows/store-msix`.
 
 The ZIP layout is checked with
 [`verify-windows-package.ps1`](../../tool/release/verify-windows-package.ps1).
-[`package-windows-installers.ps1`](../../tool/release/package-windows-installers.ps1)
-builds both installed formats from that exact ZIP payload, and
-[`verify-windows-installers.ps1`](../../tool/release/verify-windows-installers.ps1)
-checks metadata, hashes, silent install/uninstall, and user-data retention.
+[`package-windows-installer.ps1`](../../tool/release/package-windows-installer.ps1)
+builds the EXE from that exact ZIP payload, and
+[`verify-windows-installer.ps1`](../../tool/release/verify-windows-installer.ps1)
+checks metadata, its hash, silent install/uninstall, and user-data retention.
 
-For a local packaging run, install Inno Setup 6 and the WiX 6 .NET tool plus
-`WixToolset.UI.wixext`, then run:
+For a local packaging run, install Inno Setup 6, then run:
 
 ```powershell
-.\tool\release\package-windows-installers.ps1 `
+.\tool\release\package-windows-installer.ps1 `
   -ReleaseDir build\windows\x64\runner\Release `
   -ExePath dist\tabame-v2.0.0-windows-x64-setup.exe `
-  -MsiPath dist\tabame-v2.0.0-windows-x64.msi `
   -Version 2.0.0
 
-.\tool\release\verify-windows-installers.ps1 `
+.\tool\release\verify-windows-installer.ps1 `
   -ExePath dist\tabame-v2.0.0-windows-x64-setup.exe `
-  -MsiPath dist\tabame-v2.0.0-windows-x64.msi `
   -ExpectedVersion 2.0.0
 ```
 
-Use only one installed format on a machine. The Inno EXE installs under
-`%LOCALAPPDATA%\Programs\Tabame` without elevation. The MSI installs under
-`%ProgramFiles%\Tabame` for all users and requires elevation. The portable ZIP
-can live anywhere.
+The Inno EXE installs under `%LOCALAPPDATA%\Programs\Tabame` without elevation.
+The portable ZIP can live anywhere.
 
 ## Logs and first-run diagnostics
 
@@ -213,16 +208,17 @@ before replacing an app bundle or package.
    Upgrade using the target's documented path and confirm that all values remain.
 3. Confirm SQLite `-wal`/`-shm` sidecars are retained or checkpointed before
    copying data. The path service never deletes the old root automatically.
-4. On Windows, upgrade the EXE and MSI separately and confirm both still read
-   settings and databases from `%LOCALAPPDATA%\Tabame`. Also replace a ZIP
+4. On Windows, upgrade the EXE and confirm it still reads settings and
+   databases from `%LOCALAPPDATA%\Tabame`. Also replace a ZIP
    installation in place and confirm it uses the same data root.
 5. On macOS and Linux, confirm the platform-native application-support/data
    root is retained across app replacement or `.deb` upgrade. Machine-bound
    DPAPI/Keychain/Secret Service values are not expected to decrypt on another
    OS; verify the explicit re-entry fallback instead.
 6. Remove the application using the platform path: delete the extracted
-   Windows ZIP directory, uninstall the EXE/MSI from Installed apps, move the
-   macOS app to Trash, or run `sudo apt remove tabame`. Uninstall must not delete the user data root unless the user
+   Windows ZIP directory, uninstall the EXE from Installed apps, move the
+   macOS app to Trash, or run `sudo apt remove tabame`. Uninstall must not
+   delete the user data root unless the user
    explicitly chooses a separate data cleanup operation.
 7. Reinstall the same artifact and repeat the cold-start, summon/hide, focus,
    monitor, sleep/wake, and log checks.
@@ -236,7 +232,7 @@ replace, the manual permission and desktop-session checks.
 
 | Check | Windows | macOS | Linux X11 | Linux Wayland |
 | --- | --- | --- | --- | --- |
-| Artifact structure and checksum | ZIP and EXE/MSI verification in `windows-build.yml` | `smoke-macos.sh`; `codesign` required on tags | `dpkg-deb`, AppStream, and `smoke-linux.sh` | Same package structure; portable bundle smoke under Weston |
+| Artifact structure and checksum | ZIP and EXE verification in `windows-build.yml` | `smoke-macos.sh`; `codesign` required on tags | `dpkg-deb`, AppStream, and `smoke-linux.sh` | Same package structure; portable bundle smoke under Weston |
 | Cold start and clean shutdown | Package workflow layout check plus manual launch | DMG mount plus optional liveness launch | `xvfb-run` + session D-Bus liveness launch | `wayland-smoke.yml` runs the bundle under headless Weston |
 | Summon/hide and focus restoration | Existing Windows workflow/manual desktop check | Manual permissioned desktop check; Carbon/manual fallback when denied | Manual X11 check with passive hotkey capability | Manual visible-window fallback; no global shortcut claim |
 | Monitor changes and sleep/wake | Manual Windows desktop check | Manual Retina/non-Retina and above/below-display check | Manual multi-monitor X11 check | Compositor-managed placement only; restricted capability is expected |

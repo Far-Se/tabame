@@ -63,6 +63,8 @@ class _DateTimeWidgetState extends State<DateTimeWidget> with QuickMenuTriggers 
 
   @override
   Widget build(BuildContext context) {
+    final double windowWidth = MediaQuery.maybeOf(context)?.size.width ?? double.infinity;
+    if (windowWidth < 400) return const SizedBox.shrink();
     return Padding(
       padding: widget.padding,
       child: Text(

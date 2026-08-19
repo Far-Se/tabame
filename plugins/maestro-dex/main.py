@@ -5,11 +5,11 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import re
 import sqlite3
 import sys
 import unicodedata
+from pathlib import Path
 from typing import Any
 
 try:
@@ -34,7 +34,9 @@ PAGE_SETTINGS = "maestro:settings"
 
 def send(message: dict[str, Any]) -> None:
     """Write exactly one protocol message to stdout."""
-    sys.stdout.write(json.dumps(message, ensure_ascii=True, separators=(",", ":")) + "\n")
+    sys.stdout.write(
+        json.dumps(message, ensure_ascii=True, separators=(",", ":")) + "\n"
+    )
     sys.stdout.flush()
 
 
@@ -164,7 +166,9 @@ def registry_installation_candidates() -> list[Path]:
                         continue
                     try:
                         try:
-                            display_name = str(winreg.QueryValueEx(child, "DisplayName")[0])
+                            display_name = str(
+                                winreg.QueryValueEx(child, "DisplayName")[0]
+                            )
                         except OSError:
                             continue
                         normalized = display_name.lower()
@@ -175,10 +179,14 @@ def registry_installation_candidates() -> list[Path]:
                         except OSError:
                             location = None
                         if isinstance(location, str) and location.strip():
-                            candidates.append(Path(os.path.expandvars(location.strip().strip('"'))))
+                            candidates.append(
+                                Path(os.path.expandvars(location.strip().strip('"')))
+                            )
                         for field in ("DisplayIcon", "UninstallString"):
                             try:
-                                parent_path = quoted_executable_parent(winreg.QueryValueEx(child, field)[0])
+                                parent_path = quoted_executable_parent(
+                                    winreg.QueryValueEx(child, field)[0]
+                                )
                             except OSError:
                                 parent_path = None
                             if parent_path is not None:
@@ -210,7 +218,9 @@ def common_installation_candidates() -> list[Path]:
 
 def detect_installation() -> tuple[Path, Path] | None:
     seen: set[str] = set()
-    for candidate in registry_installation_candidates() + common_installation_candidates():
+    for candidate in (
+        registry_installation_candidates() + common_installation_candidates()
+    ):
         key = str(candidate).lower()
         if key in seen:
             continue
@@ -249,7 +259,9 @@ class MaestroDatabase:
         missing = self.REQUIRED_TABLES - tables
         if missing:
             connection.close()
-            raise ValueError("The selected dex file is missing tables: " + ", ".join(sorted(missing)))
+            raise ValueError(
+                "The selected dex file is missing tables: " + ", ".join(sorted(missing))
+            )
         self.path = path
         self.connection = connection
 
@@ -352,8 +364,10 @@ class MaestroDatabase:
         return results
 
     def details(self, entry: dict[str, Any]) -> dict[str, Any]:
-        rows = self.require_connection().execute(
-            """
+        rows = (
+            self.require_connection()
+            .execute(
+                """
             SELECT
               d.id AS id,
               s.shortname AS sourceShortName,
@@ -367,8 +381,10 @@ class MaestroDatabase:
             WHERE ld.lexem_id = ?
             ORDER BY s.shortname COLLATE NOCASE, d.id
             """,
-            (entry["lexemId"],),
-        ).fetchall()
+                (entry["lexemId"],),
+            )
+            .fetchall()
+        )
 
         definitions = [dict(row) for row in rows]
         markdown_blocks: list[str] = []
@@ -405,7 +421,11 @@ class MaestroDatabase:
         return {
             "markdown": "\n\n".join(header)
             + "\n\n"
-            + ("\n\n---\n\n".join(markdown_blocks) if markdown_blocks else no_definitions),
+            + (
+                "\n\n---\n\n".join(markdown_blocks)
+                if markdown_blocks
+                else no_definitions
+            ),
             "plainText": lemma
             + "\n\n"
             + ("\n\n".join(plain_blocks) if plain_blocks else no_definitions),
@@ -432,7 +452,9 @@ STATE: dict[str, Any] = {
 
 
 def page(page_id: str, title: str, history: str = "none") -> dict[str, Any]:
-    breadcrumbs = [] if page_id == PAGE_SEARCH else [{"id": PAGE_SEARCH, "label": PLUGIN_NAME}]
+    breadcrumbs = (
+        [] if page_id == PAGE_SEARCH else [{"id": PAGE_SEARCH, "label": PLUGIN_NAME}]
+    )
     return {
         "id": page_id,
         "title": title,
@@ -509,26 +531,50 @@ def installation_metadata() -> list[dict[str, Any]]:
     database = STATE["database_path"]
     rows: list[dict[str, Any]] = []
     if installation:
-        rows.append({"label": "Installation", "text": str(installation), "icon": "folder"})
+        rows.append(
+            {"label": "Installation", "text": str(installation), "icon": "folder"}
+        )
     if database:
         try:
             size_mb = Path(database).stat().st_size / (1024 * 1024)
-            rows.append({"label": "Database", "text": f"{size_mb:,.1f} MB", "icon": "database"})
+            rows.append(
+                {"label": "Database", "text": f"{size_mb:,.1f} MB", "icon": "database"}
+            )
         except OSError:
             pass
-    rows.append({"label": "Result limit", "text": str(STATE["max_results"]), "icon": "list"})
+    rows.append(
+        {"label": "Result limit", "text": str(STATE["max_results"]), "icon": "list"}
+    )
     return rows
 
 
 def frame_actions() -> list[dict[str, Any]]:
     actions = [
-        {"id": "settings", "title": "Maestro DEX Settings", "icon": "settings", "shortcut": "ctrl+alt+s"},
-        {"id": "refresh", "title": "Reload Database", "icon": "refresh", "shortcut": "ctrl+r"},
+        {
+            "id": "settings",
+            "title": "Maestro DEX Settings",
+            "icon": "settings",
+            "shortcut": "ctrl+alt+s",
+        },
+        {
+            "id": "refresh",
+            "title": "Reload Database",
+            "icon": "refresh",
+            "shortcut": "ctrl+r",
+        },
     ]
     if STATE["installation_path"]:
-        actions.append({"id": "open-installation", "title": "Open Installation Folder", "icon": "folder"})
+        actions.append(
+            {
+                "id": "open-installation",
+                "title": "Open Installation Folder",
+                "icon": "folder",
+            }
+        )
     if executable_in(STATE["installation_path"]):
-        actions.append({"id": "launch-maestro", "title": "Launch Maestro DEX", "icon": "open"})
+        actions.append(
+            {"id": "launch-maestro", "title": "Launch Maestro DEX", "icon": "open"}
+        )
     return actions
 
 
@@ -566,14 +612,14 @@ def search_empty_frame(rev: int, *, history: str = "none") -> None:
             "items": [],
             "empty": empty,
             "actions": frame_actions(),
-            "floatingAction": [
-                {"id": "settings", "title": "Settings", "icon": "settings"},
-                *(
-                    [{"id": "launch-maestro", "title": "Open Maestro DEX", "icon": "open"}]
-                    if executable_in(STATE["installation_path"])
-                    else []
-                ),
-            ],
+            # "floatingAction": [
+            #     {"id": "settings", "title": "Settings", "icon": "settings"},
+            #     *(
+            #         [{"id": "launch-maestro", "title": "Open Maestro DEX", "icon": "open"}]
+            #         if executable_in(STATE["installation_path"])
+            #         else []
+            #     ),
+            # ],
         }
     )
 
@@ -594,7 +640,9 @@ def accessory_text(entry: dict[str, Any]) -> str:
     return f"{definition_count} defs"
 
 
-def entry_preview(entry: dict[str, Any], details: dict[str, Any] | None) -> dict[str, Any]:
+def entry_preview(
+    entry: dict[str, Any], details: dict[str, Any] | None
+) -> dict[str, Any]:
     if details and details["definitions"]:
         blocks = []
         for definition in details["definitions"][:3]:
@@ -602,7 +650,9 @@ def entry_preview(entry: dict[str, Any], details: dict[str, Any] | None) -> dict
             blocks.append(f"### {title}\n{make_preview(definition.get('definition'))}")
         remaining = len(details["definitions"]) - len(blocks)
         if remaining > 0:
-            blocks.append(f"*Press Enter to read {remaining} more definition{'s' if remaining != 1 else ''}.*")
+            blocks.append(
+                f"*Press Enter to read {remaining} more definition{'s' if remaining != 1 else ''}.*"
+            )
         markdown = "\n\n".join(blocks)
     else:
         markdown = "Select this result to load its definition preview."
@@ -613,7 +663,11 @@ def entry_preview(entry: dict[str, Any], details: dict[str, Any] | None) -> dict
         "metadata": [
             {"label": "Lemma", "text": entry["lemma"], "icon": "book"},
             {"label": "Matched form", "text": entry["matchedForm"], "icon": "search"},
-            {"label": "Definitions", "text": str(entry["definitionCount"]), "icon": "document"},
+            {
+                "label": "Definitions",
+                "text": str(entry["definitionCount"]),
+                "icon": "document",
+            },
             {"separator": True},
             {"label": "Sources", "text": sources, "icon": "database"},
         ],
@@ -643,8 +697,18 @@ def item_for_entry(entry: dict[str, Any]) -> dict[str, Any]:
         "accessories": accessories,
         "actions": [
             {"id": "default", "title": "Show Full Definitions", "icon": "document"},
-            {"id": "copy-definitions", "title": "Copy Definitions", "icon": "copy", "shortcut": "ctrl+shift+c"},
-            {"id": "copy-lemma", "title": "Copy Lemma", "icon": "content_copy", "shortcut": "ctrl+alt+c"},
+            {
+                "id": "copy-definitions",
+                "title": "Copy Definitions",
+                "icon": "copy",
+                "shortcut": "ctrl+shift+c",
+            },
+            {
+                "id": "copy-lemma",
+                "title": "Copy Lemma",
+                "icon": "content_copy",
+                "shortcut": "ctrl+alt+c",
+            },
         ],
         "preview": entry_preview(entry, details),
     }
@@ -682,17 +746,17 @@ def send_result_list(rev: int, history: str = "none") -> None:
         "page": page(PAGE_SEARCH, PLUGIN_NAME, history),
         "elementId": "maestro-results",
         "placeholder": "Search a Romanian word in Maestro DEX…",
-        "preview": {"enabled": True},
+        "preview": {"enabled": True, "wide": False},
         "items": items,
         "actions": frame_actions(),
-        "floatingAction": [
-            {"id": "settings", "title": "Settings", "icon": "settings"},
-            *(
-                [{"id": "launch-maestro", "title": "Open Maestro DEX", "icon": "open"}]
-                if executable_in(STATE["installation_path"])
-                else []
-            ),
-        ],
+        # "floatingAction": [
+        #     {"id": "settings", "title": "Settings", "icon": "settings"},
+        #     *(
+        #         [{"id": "launch-maestro", "title": "Open Maestro DEX", "icon": "open"}]
+        #         if executable_in(STATE["installation_path"])
+        #         else []
+        #     ),
+        # ],
     }
     if STATE["selected_id"]:
         frame["selectId"] = STATE["selected_id"]
@@ -753,6 +817,7 @@ def render_search(rev: int, text: str | None = None, *, history: str = "none") -
                 "rev": rev,
                 "view": "detail",
                 "page": page(PAGE_SEARCH, PLUGIN_NAME),
+                "wide": False,
                 "detail": {
                     "markdown": "# Maestro DEX search failed\n\n"
                     "The configured database could not be queried. Open settings to select the installation again.\n\n"
@@ -760,7 +825,11 @@ def render_search(rev: int, text: str | None = None, *, history: str = "none") -
                     "metadata": installation_metadata(),
                 },
                 "actions": frame_actions(),
-                "floatingAction": {"id": "settings", "title": "Settings", "icon": "settings"},
+                "floatingAction": {
+                    "id": "settings",
+                    "title": "Settings",
+                    "icon": "settings",
+                },
             }
         )
 
@@ -774,11 +843,19 @@ def render_settings(
 ) -> None:
     STATE["route"] = PAGE_SETTINGS
     values = values or {}
-    installation_value = values.get("installationPath", STATE["installation_path"] or "")
+    installation_value = values.get(
+        "installationPath", STATE["installation_path"] or ""
+    )
     max_value = clamp_result_limit(values.get("maxResults", STATE["max_results"]))
     actions: list[dict[str, Any]] = []
     if STATE["installation_path"]:
-        actions.append({"id": "open-installation", "title": "Open Installation Folder", "icon": "folder"})
+        actions.append(
+            {
+                "id": "open-installation",
+                "title": "Open Installation Folder",
+                "icon": "folder",
+            }
+        )
     send(
         {
             "type": "render",
@@ -845,23 +922,49 @@ def render_entry(entry: dict[str, Any], rev: int = 0, *, history: str = "none") 
             "page": page(route, entry["lemma"], history),
             "elementId": "maestro-entry-detail",
             "placeholder": "Definition details",
+            "wide": False,
+            "preview": {"wide": False},
             "detail": {
                 "markdown": details["markdown"],
-                "wide": True,
+                "wide": False,
                 "metadata": [
                     {"label": "Lemma", "text": entry["lemma"], "icon": "book"},
-                    {"label": "Matched form", "text": entry["matchedForm"], "icon": "search"},
-                    {"label": "Definitions", "text": str(len(details["definitions"])), "icon": "document"},
+                    {
+                        "label": "Matched form",
+                        "text": entry["matchedForm"],
+                        "icon": "search",
+                    },
+                    {
+                        "label": "Definitions",
+                        "text": str(len(details["definitions"])),
+                        "icon": "document",
+                    },
                     {"separator": True},
                     {"label": "Sources", "text": sources, "icon": "database"},
                 ],
             },
             "actions": [
-                {"id": "copy-definitions", "title": "Copy Definitions", "icon": "copy", "shortcut": "ctrl+shift+c"},
-                {"id": "copy-lemma", "title": "Copy Lemma", "icon": "content_copy", "shortcut": "ctrl+alt+c"},
+                {
+                    "id": "copy-definitions",
+                    "title": "Copy Definitions",
+                    "icon": "copy",
+                    "shortcut": "ctrl+shift+c",
+                },
+                {
+                    "id": "copy-lemma",
+                    "title": "Copy Lemma",
+                    "icon": "content_copy",
+                    "shortcut": "ctrl+alt+c",
+                },
                 {"id": "settings", "title": "Maestro DEX Settings", "icon": "settings"},
                 *(
-                    [{"id": "launch-maestro", "title": "Launch Maestro DEX", "icon": "open"}]
+                    [
+                        {
+                            "id": "launch-maestro",
+                            "title": "Launch Maestro DEX",
+                            "icon": "open",
+                        }
+                    ]
                     if executable_in(STATE["installation_path"])
                     else []
                 ),
@@ -923,7 +1026,11 @@ def handle_action(message: dict[str, Any]) -> None:
             if executable:
                 command("open", path=str(executable))
             else:
-                command("toast", text="MaestroDEX.exe was not found in the configured folder", style="error")
+                command(
+                    "toast",
+                    text="MaestroDEX.exe was not found in the configured folder",
+                    style="error",
+                )
         elif action == "copy-lemma" and entry:
             command("copy", text=entry["lemma"])
         elif action == "copy-definitions" and entry:
@@ -1002,7 +1109,9 @@ def handle_query(message: dict[str, Any]) -> None:
         render_search(rev, text)
     elif STATE["route"] == PAGE_SETTINGS:
         render_settings(rev)
-    elif str(STATE["route"]).startswith("maestro:entry:") and STATE.get("current_entry"):
+    elif str(STATE["route"]).startswith("maestro:entry:") and STATE.get(
+        "current_entry"
+    ):
         render_entry(STATE["current_entry"], rev)
 
 
@@ -1021,7 +1130,9 @@ def handle_message(message: dict[str, Any]) -> bool:
         STATE["search_query"] = str(message.get("query") or "")
         if not STATE["settings_requested"]:
             STATE["settings_requested"] = True
-            command("storage", op="get", key=SETTINGS_KEY, requestId=SETTINGS_REQUEST_ID)
+            command(
+                "storage", op="get", key=SETTINGS_KEY, requestId=SETTINGS_REQUEST_ID
+            )
         render_search(0)
     elif message_type == "query":
         handle_query(message)
@@ -1064,6 +1175,7 @@ def main() -> None:
                     "type": "render",
                     "rev": 0,
                     "view": "detail",
+                    "wide": False,
                     "detail": {
                         "markdown": "# Maestro DEX error\n\n"
                         "The plugin recovered from an unexpected error.\n\n"

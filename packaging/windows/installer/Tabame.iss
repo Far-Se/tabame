@@ -73,3 +73,43 @@ Name: "{userdesktop}\Tabame"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "Launch Tabame"; Flags: nowait postinstall skipifsilent
+
+[Code]
+function InitializeUninstall(): Boolean;
+var
+  ResultCode: Integer;
+  ErrorMessage: String;
+begin
+  Result := True;
+
+  { Close Tabame and its child processes before the uninstaller removes files. }
+  if not Exec(
+    ExpandConstant('{sys}\taskkill.exe'),
+    '/T /F /IM "{#AppExeName}"',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  ) then
+  begin
+    ErrorMessage := 'Windows could not start the command that closes Tabame. ' +
+      'Close Tabame manually, then try uninstalling again.';
+    Log(ErrorMessage + ' ' + SysErrorMessage(ResultCode));
+    if not UninstallSilent then
+      MsgBox(ErrorMessage, mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
+
+  { taskkill returns 128 when no matching process exists. }
+  if (ResultCode <> 0) and (ResultCode <> 128) then
+  begin
+    ErrorMessage := 'Tabame is still running and Windows could not close it. ' +
+      'Close Tabame manually (use Task Manager if it is running as administrator), ' +
+      'then try uninstalling again.';
+    Log(Format('%s taskkill exit code: %d.', [ErrorMessage, ResultCode]));
+    if not UninstallSilent then
+      MsgBox(ErrorMessage, mbError, MB_OK);
+    Result := False;
+  end;
+end;

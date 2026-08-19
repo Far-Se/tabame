@@ -18,8 +18,20 @@ void main() {
     expect(service.isMonitoringAvailable, isTrue);
 
     final Future<PlatformClipboardText> event = service.changes.first;
-    bridge.emitChange();
-    expect((await event).text, 'from Windows');
+    bridge.emitChange(1);
+    final PlatformClipboardText change = await event;
+    expect(change.text, isEmpty);
+    expect(change.changeCount, 1);
+    expect(change.isSnapshot, isFalse);
+    expect(bridge.readContentCalls, 0);
+
+    final List<PlatformClipboardText> coalesced = <PlatformClipboardText>[];
+    final StreamSubscription<PlatformClipboardText> subscription = service.changes.listen(coalesced.add);
+    bridge.emitChange(2);
+    bridge.emitChange(2);
+    await Future<void>.delayed(Duration.zero);
+    expect(coalesced, hasLength(1));
+    await subscription.cancel();
 
     await service.stop();
     await service.stop();
@@ -48,6 +60,26 @@ void main() {
     expect(copiedFile, isTrue);
     expect(bridge.lastFile, r'C:\demo.txt');
     expect(await service.revealFile(r'C:\demo.txt'), isTrue);
+
+    bridge.capture = const PlatformClipboardFileCapture(
+      captured: true,
+      textPreview: 'preview',
+      textLength: 30000,
+      byteLength: 30000,
+      contentHash: 'hash',
+    );
+    final PlatformClipboardFileCapture? capture = await service.captureClipboardToFiles(
+      textPath: r'C:\text.txt',
+      htmlPath: r'C:\html.txt',
+    );
+    expect(capture?.textPreview, 'preview');
+    expect(capture?.textLength, 30000);
+
+    expect(
+      await service.writeContentFromFiles(textPath: r'C:\text.txt'),
+      isTrue,
+    );
+    expect(bridge.lastTextPath, r'C:\text.txt');
   });
 
   test('unavailable Windows adapter returns safe capability state', () async {
@@ -66,10 +98,13 @@ class _FakeWindowsClipboardBridge implements WindowsClipboardBridge {
   _FakeWindowsClipboardBridge({this.content, this.available = true});
 
   final bool available;
-  final StreamController<void> _events = StreamController<void>.broadcast();
+  final StreamController<int?> _events = StreamController<int?>.broadcast();
   PlatformClipboardContent? content;
   PlatformClipboardContent? lastWrite;
+  PlatformClipboardFileCapture? capture;
   String? lastFile;
+  String? lastTextPath;
+  int readContentCalls = 0;
   int startCalls = 0;
   int stopCalls = 0;
   bool started = false;
@@ -78,7 +113,7 @@ class _FakeWindowsClipboardBridge implements WindowsClipboardBridge {
   bool get isAvailable => available;
 
   @override
-  Stream<void> get changes => _events.stream;
+  Stream<int?> get changes => _events.stream;
 
   @override
   Future<bool> start() async {
@@ -94,7 +129,10 @@ class _FakeWindowsClipboardBridge implements WindowsClipboardBridge {
   }
 
   @override
-  Future<PlatformClipboardContent?> readContent() async => content;
+  Future<PlatformClipboardContent?> readContent() async {
+    readContentCalls++;
+    return content;
+  }
 
   @override
   Future<bool> writeContent(PlatformClipboardContent content) async {
@@ -104,6 +142,24 @@ class _FakeWindowsClipboardBridge implements WindowsClipboardBridge {
 
   @override
   Future<PlatformClipboardImageInfo?> saveImageToFile(String path) async => null;
+
+  @override
+  Future<PlatformClipboardFileCapture?> captureClipboardToFiles({
+    required String textPath,
+    required String htmlPath,
+    int previewLimit = 5000,
+  }) async =>
+      capture;
+
+  @override
+  Future<bool> writeContentFromFiles({
+    String textPath = '',
+    String htmlPath = '',
+    String imagePath = '',
+  }) async {
+    lastTextPath = textPath;
+    return available;
+  }
 
   @override
   Future<Uint8List?> readImage() async => null;
@@ -117,5 +173,5 @@ class _FakeWindowsClipboardBridge implements WindowsClipboardBridge {
   @override
   Future<bool> revealFile(String path) async => available;
 
-  void emitChange() => _events.add(null);
+  void emitChange([int? sequence]) => _events.add(sequence);
 }

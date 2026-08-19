@@ -7,16 +7,10 @@ param(
     [string]$ExePath,
 
     [Parameter(Mandatory = $true)]
-    [string]$MsiPath,
-
-    [Parameter(Mandatory = $true)]
     [string]$Version,
 
     [Parameter(Mandatory = $false)]
     [string]$ExeSha256Path = '',
-
-    [Parameter(Mandatory = $false)]
-    [string]$MsiSha256Path = '',
 
     [Parameter(Mandatory = $false)]
     [string]$StageDir = '',
@@ -25,10 +19,7 @@ param(
     [string]$RepoRoot = '',
 
     [Parameter(Mandatory = $false)]
-    [string]$InnoCompilerPath = '',
-
-    [Parameter(Mandatory = $false)]
-    [string]$WixPath = ''
+    [string]$InnoCompilerPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -61,25 +52,6 @@ function Get-InnoCompiler([string]$RequestedPath) {
     return $candidates[0]
 }
 
-function Get-Wix([string]$RequestedPath) {
-    if ($RequestedPath) {
-        $resolved = (Resolve-Path -LiteralPath $RequestedPath).Path
-        if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) {
-            throw "WiX executable does not exist: $RequestedPath"
-        }
-        return $resolved
-    }
-
-    $command = Get-Command wix.exe -ErrorAction SilentlyContinue
-    if (-not $command) {
-        $command = Get-Command wix -ErrorAction SilentlyContinue
-    }
-    if (-not $command) {
-        throw 'wix.exe was not found. Install the pinned WiX .NET tool or pass -WixPath.'
-    }
-    return $command.Source
-}
-
 function Write-Sha256([string]$ArtifactPath, [string]$ChecksumPath) {
     $checksumParent = Split-Path -Parent $ChecksumPath
     if ($checksumParent) {
@@ -97,7 +69,6 @@ if ([string]::IsNullOrWhiteSpace($repoRootValue)) {
 $repoRootResolved = (Resolve-Path -LiteralPath $repoRootValue).Path
 $releaseRoot = (Resolve-Path -LiteralPath $ReleaseDir).Path
 $exeFullPath = Get-FullPath $ExePath
-$msiFullPath = Get-FullPath $MsiPath
 
 $versionMatch = [regex]::Match($Version.Trim(), '^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$')
 if (-not $versionMatch.Success) {
@@ -151,14 +122,12 @@ try {
 
     Copy-Item -LiteralPath (Join-Path $repoRootResolved 'LICENSE') -Destination (Join-Path $stageRoot 'LICENSE') -Force
 
-    foreach ($outputPath in @($exeFullPath, $msiFullPath)) {
-        $parent = Split-Path -Parent $outputPath
-        if ($parent) {
-            New-Item -ItemType Directory -Path $parent -Force | Out-Null
-        }
-        if (Test-Path -LiteralPath $outputPath -PathType Leaf) {
-            Remove-Item -LiteralPath $outputPath -Force
-        }
+    $outputParent = Split-Path -Parent $exeFullPath
+    if ($outputParent) {
+        New-Item -ItemType Directory -Path $outputParent -Force | Out-Null
+    }
+    if (Test-Path -LiteralPath $exeFullPath -PathType Leaf) {
+        Remove-Item -LiteralPath $exeFullPath -Force
     }
 
     $innoCompiler = Get-InnoCompiler $InnoCompilerPath
@@ -171,7 +140,7 @@ try {
         "/DAppVersion=$appVersion",
         "/DVersionInfoVersion=$versionInfoVersion",
         "/DPayloadDir=$stageRoot",
-        "/DOutputDir=$(Split-Path -Parent $exeFullPath)",
+        "/DOutputDir=$outputParent",
         "/DOutputBaseName=$exeBaseName",
         "/DRepoRoot=$repoRootResolved",
         $innoSource
@@ -184,44 +153,14 @@ try {
         throw "Inno Setup did not create the expected installer: $exeFullPath"
     }
 
-    $wix = Get-Wix $WixPath
-    $wixSource = Join-Path $repoRootResolved 'packaging\windows\installer\Tabame.wxs'
-    if (-not (Test-Path -LiteralPath $wixSource -PathType Leaf)) {
-        throw "WiX source does not exist: $wixSource"
-    }
-    $wixArguments = @(
-        'build',
-        '-arch', 'x64',
-        '-ext', 'WixToolset.UI.wixext',
-        '-d', "AppVersion=$appVersion",
-        '-d', "PayloadDir=$stageRoot",
-        '-d', "RepoRoot=$repoRootResolved",
-        '-out', $msiFullPath,
-        $wixSource
-    )
-    & $wix @wixArguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "WiX compilation failed with exit code $LASTEXITCODE."
-    }
-    if (-not (Test-Path -LiteralPath $msiFullPath -PathType Leaf)) {
-        throw "WiX did not create the expected installer: $msiFullPath"
-    }
-
     if ([string]::IsNullOrWhiteSpace($ExeSha256Path)) {
         $ExeSha256Path = "$exeFullPath.sha256"
     }
-    if ([string]::IsNullOrWhiteSpace($MsiSha256Path)) {
-        $MsiSha256Path = "$msiFullPath.sha256"
-    }
     $exeShaFullPath = Get-FullPath $ExeSha256Path
-    $msiShaFullPath = Get-FullPath $MsiSha256Path
     Write-Sha256 $exeFullPath $exeShaFullPath
-    Write-Sha256 $msiFullPath $msiShaFullPath
 
     Write-Output "Created $exeFullPath"
     Write-Output "Created $exeShaFullPath"
-    Write-Output "Created $msiFullPath"
-    Write-Output "Created $msiShaFullPath"
 }
 finally {
     if ($ownsTemporaryStage -and (Test-Path -LiteralPath $stageRoot)) {

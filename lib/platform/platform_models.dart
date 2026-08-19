@@ -428,10 +428,45 @@ class HotkeyRegistrationResult {
 }
 
 class PlatformClipboardText {
-  const PlatformClipboardText({required this.text, this.changeCount});
+  const PlatformClipboardText({
+    required this.text,
+    this.changeCount,
+    this.isSnapshot = true,
+  });
 
   final String text;
   final int? changeCount;
+
+  /// Whether [text] is the authoritative clipboard snapshot.
+  ///
+  /// Windows emits a notification-only event because reading a large clipboard
+  /// value just to report a change would copy it across the platform channel.
+  final bool isSnapshot;
+}
+
+/// Metadata returned after a platform adapter captures text/rich text directly
+/// into the payload files supplied by the caller.
+///
+/// The payload itself must never be placed in this object. This is the boundary
+/// that keeps large clipboard values off the Flutter isolate and method channel.
+class PlatformClipboardFileCapture {
+  const PlatformClipboardFileCapture({
+    required this.captured,
+    this.textPreview = '',
+    this.htmlPreview = '',
+    this.textLength = 0,
+    this.htmlLength = 0,
+    this.byteLength = 0,
+    this.contentHash = '',
+  });
+
+  final bool captured;
+  final String textPreview;
+  final String htmlPreview;
+  final int textLength;
+  final int htmlLength;
+  final int byteLength;
+  final String contentHash;
 }
 
 /// Clipboard payload shared by the history orchestrator and platform adapters.
