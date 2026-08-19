@@ -7,7 +7,6 @@ import 'package:path/path.dart' as p;
 
 import '../../../logic/error_handler.dart';
 import '../../../platform/app_paths.dart';
-import '../../../services/extension_policy.dart';
 import 'plugin_manifest.dart';
 import 'plugin_registry.dart';
 
@@ -30,10 +29,6 @@ class PluginGalleryEntry {
     required this.homepage,
     required this.zip,
     required this.files,
-    this.source = PluginSource.firstPartyGallery,
-    this.publisher = '',
-    this.artifactSha256 = '',
-    this.artifactSignature = '',
   });
 
   final String id;
@@ -47,12 +42,6 @@ class PluginGalleryEntry {
   final String homepage;
   final String zip;
   final Map<String, String> files;
-
-  /// A feed entry is classified separately from the local manifest it creates.
-  final PluginSource source;
-  final String publisher;
-  final String artifactSha256;
-  final String artifactSignature;
 
   bool get installable => files.isNotEmpty || zip.isNotEmpty;
 
@@ -80,15 +69,6 @@ class PluginGalleryEntry {
       }
     }
 
-    final PluginSource parsedSource = parsePluginSource(
-      json['source'],
-      fallback: PluginSource.firstPartyGallery,
-    );
-    final PluginSource source = parsedSource == PluginSource.thirdPartyGallery
-        ? PluginSource.thirdPartyGallery
-        : PluginSource.firstPartyGallery;
-    final String author = str('author', str('publisher'));
-
     return PluginGalleryEntry(
       id: id,
       name: name,
@@ -96,15 +76,11 @@ class PluginGalleryEntry {
       description: str('description'),
       icon: str('icon', 'extension'),
       runtime: str('runtime'),
-      author: author,
+      author: str('author'),
       version: str('version'),
       homepage: str('homepage'),
       zip: str('zip'),
       files: files,
-      source: source,
-      publisher: str('publisher', author),
-      artifactSha256: str('artifactSha256', str('sha256')),
-      artifactSignature: str('artifactSignature', str('signature')),
     );
   }
 }
@@ -117,9 +93,7 @@ abstract final class PluginGallery {
   static List<PluginGalleryEntry>? _cache;
   static List<PluginGalleryEntry>? get cached => _cache;
 
-  static Future<List<PluginGalleryEntry>> fetchIndex({bool force = false, ExtensionPolicy? extensionPolicy}) async {
-    final ExtensionPolicy policy = extensionPolicy ?? ExtensionPolicy.current;
-    if (!policy.canFetchPluginGallery) return const <PluginGalleryEntry>[];
+  static Future<List<PluginGalleryEntry>> fetchIndex({bool force = false}) async {
     if (!force && _cache != null) return _cache!;
 
     // Hour-based cache buster, same trick as the sponsor.json fetch.
@@ -149,11 +123,7 @@ abstract final class PluginGallery {
 
   /// Installs [entry] into the plugins folder and rescans the registry.
   /// Returns null on success, or a short human-readable error.
-  static Future<String?> install(PluginGalleryEntry entry, {ExtensionPolicy? extensionPolicy}) async {
-    final ExtensionPolicy policy = extensionPolicy ?? ExtensionPolicy.current;
-    if (!policy.canInstallRemotePlugins || !policy.allowsGallerySource(entry.source)) {
-      return policy.pluginDisabledMessage;
-    }
+  static Future<String?> install(PluginGalleryEntry entry) async {
     try {
       final Directory target = Directory(p.join(AppPaths.pluginsDirectory, entry.id));
       String? error;
@@ -169,18 +139,6 @@ abstract final class PluginGallery {
       if (!File(p.join(target.path, 'plugin.json')).existsSync()) {
         return 'Downloaded plugin has no plugin.json';
       }
-      final File originFile = File(p.join(target.path, PluginRegistry.originFileName));
-      await originFile.writeAsString(
-        jsonEncode(
-          PluginOrigin(
-            source: entry.source,
-            publisher: entry.publisher,
-            artifactSha256: entry.artifactSha256,
-            artifactSignature: entry.artifactSignature,
-          ).toJson(),
-        ),
-        flush: true,
-      );
       await PluginRegistry.load();
       return null;
     } catch (e, s) {

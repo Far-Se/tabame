@@ -37,9 +37,7 @@ import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
 import '../platform/platform_models.dart';
 import '../platform/window_watcher_service.dart';
-import '../services/extension_policy.dart';
 import '../services/file_indexer.dart';
-import '../services/plugin_auto_update_service.dart';
 import '../widgets/itzy/quickmenu/button_currency_converter.dart';
 import '../widgets/itzy/quickmenu/button_notion.dart';
 import '../widgets/itzy/quickmenu/button_obsidian.dart';
@@ -189,7 +187,6 @@ class Launcher extends StatefulWidget {
 class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTickerProviderStateMixin {
   static const double _minResultsHeight = 300;
   static const double _maxResultsHeight = 454;
-  static const double _sidePreviewBreakpoint = 500;
   static const String _filePreviewVisiblePreferenceKey = 'launcherFilePreviewVisible';
 
   final LauncherSearchToken _searchToken = LauncherSearchToken();
@@ -465,12 +462,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       caption: 'Functions',
       prefix: r'$',
       icon: Icons.functions_rounded,
-    )),
-    const LauncherSearchResultItem.shortcut(LauncherShortcut(
-      label: '!',
-      caption: 'Launcher Plugins',
-      prefix: '!',
-      icon: Icons.extension_outlined,
     )),
     const LauncherSearchResultItem.info(LauncherInfoResult(
       id: 'ctrlKInfo',
@@ -1201,39 +1192,28 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     return false;
   }
 
-  Future<void> _handleLauncherWindowAction({String? query, bool forceOpenInNewWindow = false}) async {
-    if (Globals.isStandaloneLauncher && !forceOpenInNewWindow) {
+  Future<void> _handleLauncherWindowAction() async {
+    if (Globals.isStandaloneLauncher) {
       await windowManager.close();
       return;
     }
     try {
       await Process.start(
         Platform.resolvedExecutable,
-        <String>['-launcher', query ?? _controller.text],
+        <String>['-launcher', _controller.text],
         mode: ProcessStartMode.detached,
         runInShell: false,
       );
-      await QuickMenuFunctions.hideQuickMenu();
+      QuickMenuFunctions.hideQuickMenu();
     } catch (_) {
       _showPluginToast('Could not open external launcher', style: 'error');
     }
-  }
-
-  Future<void> _openPluginInNewWindow(PluginManifest plugin) {
-    return _handleLauncherWindowAction(
-      query: plugin.keyword.trim(),
-      forceOpenInNewWindow: true,
-    );
   }
 
   /// Handles key events while a plugin owns the launcher. Returns
   /// [KeyEventResult.ignored] to let the normal handler run.
   KeyEventResult _handlePluginKey(KeyEvent event) {
     final PluginRenderFrame? frame = _pluginFrame;
-    if (event.logicalKey == LogicalKeyboardKey.escape && event is KeyRepeatEvent) {
-      _exitPlugin();
-      return KeyEventResult.handled;
-    }
     if (frame == null) {
       // Process launched but no frame yet — still swallow Escape so it exits.
       if (event.logicalKey == LogicalKeyboardKey.escape && event is KeyDownEvent) {
@@ -1535,13 +1515,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       return KeyEventResult.ignored;
     }
 
-    // Home/End are text-editing commands when the search field is focused.
-    // Let TextField handle them instead of routing them to result selection.
-    if (node == _searchFocusNode &&
-        (event.logicalKey == LogicalKeyboardKey.home || event.logicalKey == LogicalKeyboardKey.end)) {
-      return KeyEventResult.ignored;
-    }
-
     if (event is KeyDownEvent || event is KeyRepeatEvent) {
       if (event is KeyDownEvent &&
           event.logicalKey == LogicalKeyboardKey.keyP &&
@@ -1622,11 +1595,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       }
       // Escape: go back to quickmenu
       if (event.logicalKey == LogicalKeyboardKey.escape) {
-        if (event is KeyRepeatEvent) {
-          QuickMenuFunctions.hideQuickMenu();
-          Win32.activateWindow(Globals.lastFocusedWinHWND);
-          return KeyEventResult.handled;
-        }
         if (node == _resultsFocusNode) {
           if (event is KeyDownEvent) _focusSearch();
           return KeyEventResult.handled;
@@ -1802,29 +1770,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     return TextSelection.collapsed(offset: _controller.text.length);
   }
 
-  Future<void> _loadPluginsOnFirstLauncherOpen() async {
-    await PluginRegistry.load();
-    final List<PluginUpdateResult> updates = await PluginAutoUpdateService.checkOnFirstLauncher();
-    if (updates.isNotEmpty) {
-      final List<String> newReminders = <String>[];
-      for (final PluginUpdateResult update in updates) {
-        if (!user.persistentReminders.contains(update.reminder) && !newReminders.contains(update.reminder)) {
-          newReminders.add(update.reminder);
-        }
-      }
-      if (newReminders.isNotEmpty) {
-        user.persistentReminders.addAll(newReminders);
-        await Boxes.pref.setStringList("persistentReminders", user.persistentReminders);
-        unawaited(QuickMenuFunctions.refreshQuickMenu());
-      }
-    }
-
-    if (!mounted || _activePlugin != null) return;
-    if (PluginRegistry.matchKeyword(_controller.text) != null || _controller.text.startsWith('!')) {
-      _onSearchChanged(_controller.text);
-    }
-  }
-
   @override
   void initState() {
     super.initState();
@@ -1837,7 +1782,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     // Rescan the plugins folder so freshly-dropped plugins are available without
     // an app restart. If a keyword becomes matchable after the scan, re-run the
     // current query so it activates.
-    unawaited(_loadPluginsOnFirstLauncherOpen());
+    unawaited(PluginRegistry.load().then((_) {
+      if (!mounted || _activePlugin != null) return;
+      if (PluginRegistry.matchKeyword(_controller.text) != null) _onSearchChanged(_controller.text);
+    }));
     // if (Globals.isStandaloneLauncher == true) {
     //   Future<void>.delayed(const Duration(milliseconds: 300), () {
     //     _controller.text = user.launcherSearchText;
@@ -2004,9 +1952,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     if (_activePlugin != null && (_pluginFrame?.view == PluginViewType.detail || (_pluginFrame?.hasPreview ?? false))) {
       return false;
     }
-    // The development console is also selectable content. Keep its focus so
-    // mouse selections are not interrupted and Ctrl+C reaches SelectionArea.
-    if (_activePlugin?.dev == true) return false;
     return true;
   }
 
@@ -2173,22 +2118,19 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   // Remove this field entirely:
   // And _startWindowRefreshLoop becomes simply:
   void _startWindowRefreshLoop() {
-    _reFetchWindows();
     _windowRefreshTimer?.cancel();
-    _windowRefreshTimer = Timer.periodic(const Duration(milliseconds: 900), (_) => _reFetchWindows());
-  }
+    _windowRefreshTimer = Timer.periodic(const Duration(milliseconds: 900), (Timer timer) async {
+      if (!mounted || Globals.quickMenuPage != QuickMenuPage.launcher) return;
 
-  void _reFetchWindows() async {
-    if (!mounted || Globals.quickMenuPage != QuickMenuPage.launcher) return;
+      final WindowWatcherService watcher = WindowWatcherService.instance;
+      final bool updated = await watcher.refresh();
+      if (watcher.containsExecutable('taskmgr.exe')) {
+        await TrayWatcher.fetchTray();
+      }
+      if (!mounted || !updated || Globals.quickMenuPage != QuickMenuPage.launcher) return;
 
-    final WindowWatcherService watcher = WindowWatcherService.instance;
-    final bool updated = await watcher.refresh();
-    if (watcher.containsExecutable('taskmgr.exe')) {
-      await TrayWatcher.fetchTray();
-    }
-    if (!mounted || !updated || Globals.quickMenuPage != QuickMenuPage.launcher) return;
-
-    _refreshVisibleWindowResults();
+      _refreshVisibleWindowResults();
+    });
   }
 
   void _refreshVisibleWindowResults() {
@@ -2408,9 +2350,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     );
 
     switch (searchMode) {
-      case LauncherSearchMode.pluginsOnly:
-        _handlePluginSearch(context);
-        break;
       case LauncherSearchMode.windowsOnly:
         WindowsSearchHandler.handle(context);
         break;
@@ -3107,7 +3046,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
           searchTerms: <String>['spotify', 'open', 'launch'],
           onExecute: () {
             SpotifyController.launchApp();
-            // _finishLauncherFunctionExecution(hide: false);
+            _finishLauncherFunctionExecution();
           },
         )),
       ], isSearching: false);
@@ -3225,7 +3164,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
   void _executeSpotifyCommand(PlatformMediaSession session, String command) {
     unawaited(SpotifyController.command(session, command));
-    // _finishLauncherFunctionExecution();
+    _finishLauncherFunctionExecution();
   }
 
   void _createLauncherTimer(_ParsedLauncherTimer timer) {
@@ -3243,7 +3182,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     _finishLauncherFunctionExecution();
   }
 
-  void _finishLauncherFunctionExecution({bool hide = true}) {
+  void _finishLauncherFunctionExecution() {
     user.launcherSearchText = '';
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
 
@@ -3253,7 +3192,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       _focusSearch();
     }
 
-    if (kReleaseMode && hide) {
+    if (kReleaseMode) {
       QuickMenuFunctions.hideQuickMenu();
     }
   }
@@ -4012,65 +3951,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     }
   }
 
-  void _handlePluginSearch(LauncherSearchContext context) {
-    final String query = context.normalizedQuery.trim().toLowerCase();
-    final List<PluginManifest> plugins = PluginRegistry.manifests
-        .where((PluginManifest plugin) => PluginRegistry.canExecute(plugin))
-        .where((PluginManifest plugin) => query.isEmpty || _pluginMatchesSearch(plugin, query))
-        .toList()
-      ..sort((PluginManifest a, PluginManifest b) {
-        int rank(PluginManifest plugin) {
-          if (plugin.keywordLower == query) return 0;
-          if (plugin.name.toLowerCase() == query) return 1;
-          if (plugin.keywordLower.startsWith(query)) return 2;
-          if (plugin.name.toLowerCase().startsWith(query)) return 3;
-          return 4;
-        }
-
-        final int rankComparison = rank(a).compareTo(rank(b));
-        if (rankComparison != 0) return rankComparison;
-        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-      });
-
-    if (plugins.isEmpty) {
-      context.setResults(<LauncherSearchResultItem>[
-        LauncherSearchResultItem.info(LauncherInfoResult(
-          id: query.isEmpty ? 'plugin-search-empty' : 'plugin-search-no-match:$query',
-          title: query.isEmpty ? 'No launcher plugins installed' : 'No matching plugin',
-          subtitle: query.isEmpty
-              ? 'Install or enable plugins from the Plugins manager'
-              : 'Search by plugin name, keyword, or description',
-          icon: Icons.extension_outlined,
-        )),
-      ], isSearching: false);
-      return;
-    }
-
-    context.setResults(
-      plugins
-          .map((PluginManifest plugin) => LauncherSearchResultItem.quickAction(_buildPluginQuickAction(plugin)))
-          .toList(growable: false),
-      isSearching: false,
-    );
-  }
-
-  bool _pluginMatchesSearch(PluginManifest plugin, String query) {
-    return <String>[plugin.name, plugin.keyword, plugin.description, plugin.id]
-        .any((String value) => value.toLowerCase().contains(query));
-  }
-
-  QuickActionMenuEntry _buildPluginQuickAction(PluginManifest plugin) {
-    final String description = plugin.description.trim();
-    return _buildFunctionAction(
-      id: 'plugin-window:${plugin.id}:${plugin.keywordLower}',
-      title: plugin.name,
-      subtitle: description.isEmpty ? '${plugin.keyword} · Open in new window' : '${plugin.keyword} · $description',
-      icon: PluginIcons.resolve(plugin.icon),
-      searchTerms: <String>['!', plugin.id, plugin.name, plugin.keyword, plugin.description],
-      onExecute: () => unawaited(_openPluginInNewWindow(plugin)),
-    );
-  }
-
   void _handleWorkspacesSearch(LauncherSearchContext context) {
     final List<Workspace> workspaces = Boxes.workspaces;
     if (workspaces.isEmpty) {
@@ -4335,7 +4215,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   void _openBookmarkResult(BookmarkSearchResult result) {
     switch (result.kind) {
       case BookmarkResultKind.bookmark:
-        WinUtils.open(result.bookmark!.stringToExecute, parseParamaters: true, userProvided: true);
+        WinUtils.open(result.bookmark!.stringToExecute, parseParamaters: true);
         QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
         user.launcherSearchText = '';
       case BookmarkResultKind.cliBook:
@@ -4355,17 +4235,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       unawaited(_recordFileOpen(nodeId));
     }
 
-    final ExtensionPolicy extensionPolicy = ExtensionPolicy.current;
-    if (extensionPolicy.blocksUserTarget(path)) {
-      _flashLauncherInfo(extensionPolicy.userCommandDisabledMessage, icon: Icons.block_rounded);
-      return;
-    }
-
-    if (path.toLowerCase().endsWith('.ps1')) {
+    if (path.endsWith('ps1')) {
       final String openPath = 'powershell -ExecutionPolicy Bypass -File "$path"';
-      WinUtils.open(openPath, parseParamaters: true, userProvided: true);
+      WinUtils.open(openPath, parseParamaters: true);
     } else {
-      WinUtils.open(path, userProvided: true);
+      WinUtils.open(path);
     }
     QuickMenuFunctions.hideQuickMenu(launcherActivateLastWin: false);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
@@ -4903,7 +4777,6 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       isSearching: _isSearching,
     );
     final ({int height, int width}) size = Win32.getSize();
-    final double windowWidth = MediaQuery.maybeOf(context)?.size.width ?? size.width.toDouble();
     final Widget resultsContent = Focus(
       focusNode: _resultsFocusNode,
       skipTraversal: true,
@@ -4934,9 +4807,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                             final PlatformWindow? previewWindow = previewResult?.window;
                             return LayoutBuilder(
                               builder: (BuildContext context, BoxConstraints constraints) {
-                                final bool showPreview = windowWidth >= _sidePreviewBreakpoint &&
-                                    _isFilePreviewVisible &&
-                                    previewResult != null;
+                                final bool showPreview = _isFilePreviewVisible && previewResult != null;
                                 final double previewWidth = constraints.maxWidth * 0.40;
                                 return Stack(
                                   children: <Widget>[

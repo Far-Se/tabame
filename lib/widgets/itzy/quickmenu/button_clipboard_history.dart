@@ -8,7 +8,7 @@ import '../../../models/classes/boxes/quick_menu_box.dart';
 import '../../../models/clipboard_history.dart';
 import '../../../models/settings.dart';
 import '../../../platform/clipboard_service.dart';
-import '../../../services/clipboard_history_coordinator.dart';
+import '../../../platform/platform_capabilities.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/mini_switch.dart';
 import '../../widgets/mix_widgets.dart';
@@ -22,8 +22,7 @@ class ClipboardHistoryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Keep the panel visible in reduced mode so the user can see why monitoring
-    // is paused and explicitly revoke or grant consent.
+    if (!PlatformCapabilities.current.clipboardMonitoring) return const SizedBox.shrink();
     return ModalButton(
       actionName: "Clipboard History",
       icon: const Icon(Icons.content_paste_search_rounded),
@@ -142,19 +141,9 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
 
   Future<void> _toggleEnabled(bool value) async {
     await ClipboardHistoryStore.setEnabled(value);
-    bool effective = value;
-    if (value) {
-      effective = await ClipboardHistoryCoordinator.instance.start();
-      if (!effective) {
-        await ClipboardHistoryStore.setEnabled(false);
-      }
-    } else {
-      await ClipboardHistoryCoordinator.instance.stop();
-    }
     if (mounted) {
       setState(() {
-        _enabled = effective;
-        if (!effective && value) _error = ClipboardService.instance.unavailableReason;
+        _enabled = value;
       });
     }
   }
@@ -166,8 +155,8 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
   }
 
   Future<void> _copy(ClipboardHistoryEntry entry) async {
-    final bool copied = await ClipboardHistoryStore.copyEntry(entry);
-    if (!mounted || !copied) return;
+    await ClipboardHistoryStore.copyEntry(entry);
+    if (!mounted) return;
     QuickMenuFunctions.hideQuickMenu();
   }
 
@@ -286,7 +275,7 @@ class _ClipboardHistoryPanelState extends State<ClipboardHistoryPanel> {
           onSurface: onSurface,
           icon: Icons.cleaning_services_rounded,
           title: "Prune history",
-          subtitle: "Remove entries older than ${ClipboardHistoryStore.cacheDays}d and orphaned payloads.",
+          subtitle: "Remove entries older than ${ClipboardHistoryStore.cacheDays}d and orphaned images.",
           trailing: TextButton(
             onPressed: _pruneHistory,
             child: const Text("Prune"),

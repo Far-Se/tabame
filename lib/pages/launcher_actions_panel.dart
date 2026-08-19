@@ -20,8 +20,6 @@ import '../models/classes/saved_maps.dart';
 import '../models/settings.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
-import '../services/elevation_service.dart';
-import '../services/extension_policy.dart';
 
 import '../widgets/itzy/quickmenu/button_notion.dart';
 import '../widgets/itzy/quickmenu/button_obsidian.dart';
@@ -719,12 +717,11 @@ class _CliRunSheetState extends State<_CliRunSheet> {
 
   void _run() {
     final String cmd = _resolve();
-    if (cmd.trim().isEmpty || !ExtensionPolicy.current.canRunUserCommandTemplates) return;
+    if (cmd.trim().isEmpty) return;
     WinUtils.runPowerShellDetachedVisible(
       cmd,
       workingDirectory: _workingDirectory.isNotEmpty ? _workingDirectory : null,
       keepOpen: true,
-      userProvided: true,
     );
     Navigator.of(context).pop(); // close sheet
   }

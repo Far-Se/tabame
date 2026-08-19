@@ -133,13 +133,13 @@ class _ClaudeUsagePanelState extends State<ClaudeUsagePanel> {
             type: MaterialType.transparency,
             child: WindowsScrollView(
               child: Padding(
-                padding: const EdgeInsets.all(15),
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: C.start,
                   children: <Widget>[
                     _buildClaudeSection(),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     _buildCodexSection(),
                     if (lastUpdatedAt != null) ...<Widget>[
                       const SizedBox(height: 10),

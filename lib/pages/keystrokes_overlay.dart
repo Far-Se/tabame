@@ -8,7 +8,6 @@ import 'package:window_manager/window_manager.dart';
 import '../logic/app_startup.dart';
 import '../models/classes/boxes.dart';
 import '../models/settings.dart';
-import '../services/native_integration_coordinator.dart';
 
 /// Keystroke & Click Visualizer overlay.
 ///
@@ -25,7 +24,6 @@ Future<void> startKeystrokes() async {
   await AppStartup.initialize();
   await windowManager.ensureInitialized();
   await Boxes.registerBoxes(justLoad: true);
-  await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.globalHooks);
 
   const WindowOptions windowOptions = WindowOptions(
     backgroundColor: Colors.transparent,
@@ -110,28 +108,17 @@ class _KeystrokesOverlayState extends State<KeystrokesOverlay> with TabameListen
   static const int _groupGapMs = 1200;
   static const int _maxRows = 6;
   static const int _maxRowLen = 12;
-  bool _nativeEnabled = false;
 
   @override
   void initState() {
     super.initState();
-    _nativeEnabled = NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.globalHooks);
-    if (_nativeEnabled) {
-      NativeHooks.registerCallHandler();
-      NativeHooks.addListener(this);
-    } else {
-      NativeIntegrationCoordinator.instance.reportDisabled(
-        NativeIntegrationId.globalHooks,
-        reason: NativeIntegrationCoordinator.instance.denialReason(NativeIntegrationId.globalHooks) ??
-            'Keystroke observation is disabled; the visible overlay remains available.',
-        reducedMode: true,
-      );
-    }
+    NativeHooks.registerCallHandler();
+    NativeHooks.addListener(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _sizeToVirtualScreen();
       _setupOverlayWindow();
-      if (_nativeEnabled) await enableKeystrokeVisualizer(true);
+      await enableKeystrokeVisualizer(true);
     });
 
     // ~30fps drives badge fade-out and click-ripple animation.
@@ -141,10 +128,8 @@ class _KeystrokesOverlayState extends State<KeystrokesOverlay> with TabameListen
   @override
   void dispose() {
     _ticker?.cancel();
-    if (_nativeEnabled) {
-      NativeHooks.removeListener(this);
-      unawaited(enableKeystrokeVisualizer(false));
-    }
+    NativeHooks.removeListener(this);
+    unawaited(enableKeystrokeVisualizer(false));
     super.dispose();
   }
 

@@ -7,7 +7,6 @@ import '../platform/windows/win32_api.dart';
 
 import '../logic/error_handler.dart';
 import '../models/classes/boxes.dart';
-import 'native_integration_coordinator.dart';
 import '../models/classes/hotkeys.dart';
 import '../models/classes/saved_maps.dart';
 import '../models/settings.dart';
@@ -45,17 +44,6 @@ class MouseGesturesService with TabameListener {
   bool _cornerFired = false;
 
   void init() {
-    final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
-    if (!integrations.canStart(NativeIntegrationId.globalHooks)) {
-      dispose();
-      integrations.reportDisabled(
-        NativeIntegrationId.globalHooks,
-        reason: integrations.denialReason(NativeIntegrationId.globalHooks) ??
-            'Mouse gestures are disabled with global hooks.',
-        reducedMode: true,
-      );
-      return;
-    }
     if (!_listening) {
       NativeHooks.addListener(this);
       _listening = true;
@@ -63,15 +51,9 @@ class MouseGesturesService with TabameListener {
     applyConfig();
   }
 
-  bool get isListening => _listening;
-
   /// (Re)reads the config and starts/stops the poller accordingly. Call after
   /// every settings change.
   void applyConfig() {
-    if (!NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.globalHooks)) {
-      dispose();
-      return;
-    }
     _config = Boxes.mouseControl;
     _cornerTimer?.cancel();
     _cornerTimer = null;
@@ -85,14 +67,11 @@ class MouseGesturesService with TabameListener {
   }
 
   void dispose() {
-    final bool wasActive = _listening || _cornerTimer != null;
     _cornerTimer?.cancel();
-    if (wasActive) {
-      unawaited(tabameWin32MethodChannel.invokeMethod<void>('configureMouseGestures', <String, bool>{
-        'rightEnabled': false,
-        'middleEnabled': false,
-      }));
-    }
+    unawaited(tabameWin32MethodChannel.invokeMethod<void>('configureMouseGestures', <String, bool>{
+      'rightEnabled': false,
+      'middleEnabled': false,
+    }));
     if (_listening) NativeHooks.removeListener(this);
     _listening = false;
   }

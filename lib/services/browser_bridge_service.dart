@@ -9,10 +9,8 @@ import 'package:uuid/uuid.dart';
 
 import '../models/classes/boxes.dart';
 import '../platform/app_paths.dart';
-import '../platform/distribution_profile.dart';
-import 'native_integration_coordinator.dart';
 
-enum BrowserBridgePhase { disabled, starting, waiting, connected, error, blocked }
+enum BrowserBridgePhase { disabled, starting, waiting, connected, error }
 
 class BrowserBridgeStatus {
   const BrowserBridgeStatus({
@@ -162,7 +160,6 @@ class BrowserBridgeService {
   bool _launcherClient = false;
   bool _enabled = false;
   bool _starting = false;
-  bool _blockedByPolicy = false;
   String _lastError = '';
   int _generation = 0;
   int _requestCounter = 0;
@@ -176,34 +173,15 @@ class BrowserBridgeService {
 
   Future<void> setEnabled(bool enabled) async {
     if (_enabled == enabled) {
-      if (enabled && !_transportRunning && !_starting) {
-        await NativeIntegrationCoordinator.instance.setConsent(
-          NativeIntegrationId.browserBridge,
-          true,
-        );
-        await start();
-      } else if (!enabled) {
-        await NativeIntegrationCoordinator.instance.revokeConsent(NativeIntegrationId.browserBridge);
-        await stop();
-        _config = null;
-        _deletePersistedConfig();
-      }
+      if (enabled && !_transportRunning && !_starting) await start();
       return;
     }
     _enabled = enabled;
-    _blockedByPolicy = false;
     await Boxes.pref.setBool(settingKey, enabled);
     if (enabled) {
-      await NativeIntegrationCoordinator.instance.setConsent(
-        NativeIntegrationId.browserBridge,
-        true,
-      );
       await start();
     } else {
-      await NativeIntegrationCoordinator.instance.revokeConsent(NativeIntegrationId.browserBridge);
       await stop();
-      _config = null;
-      _deletePersistedConfig();
     }
   }
 
@@ -211,21 +189,6 @@ class BrowserBridgeService {
 
   Future<void> start() async {
     if (!_enabled || _transportRunning || _starting) return;
-    final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
-    if (!integrations.canStart(NativeIntegrationId.browserBridge)) {
-      _blockedByPolicy = true;
-      _starting = false;
-      _lastError = integrations.denialReason(NativeIntegrationId.browserBridge) ??
-          'Browser bridge consent is required before localhost communication can start.';
-      integrations.reportDisabled(
-        NativeIntegrationId.browserBridge,
-        reason: _lastError,
-        reducedMode: true,
-      );
-      _publishStatus();
-      return;
-    }
-    _blockedByPolicy = false;
     if (_launcherClient) {
       await _startLauncherClient();
       return;
@@ -260,25 +223,16 @@ class BrowserBridgeService {
         },
       );
       _publishStatus();
-      integrations.reportRunning(NativeIntegrationId.browserBridge);
     } catch (error) {
       if (generation != _generation) return;
       _starting = false;
-      _lastError = NativeIntegrationCoordinator.instance.profile == DistributionProfile.portable
-          ? error.toString()
-          : 'The local browser bridge could not start; use Retry after checking the port.';
+      _lastError = error.toString();
       _publishStatus();
-      integrations.reportError(
-        NativeIntegrationId.browserBridge,
-        reason: 'The local browser bridge could not start; use Retry after checking the port.',
-        reducedMode: true,
-      );
       _scheduleRetry();
     }
   }
 
   Future<void> _startLauncherClient() async {
-    final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
     final int generation = ++_generation;
     _retryTimer?.cancel();
     _retryTimer = null;
@@ -318,19 +272,11 @@ class BrowserBridgeService {
         'client': 'launcher',
       });
       _publishStatus();
-      integrations.reportRunning(NativeIntegrationId.browserBridge);
     } catch (error) {
       if (generation != _generation) return;
       _starting = false;
-      _lastError = NativeIntegrationCoordinator.instance.profile == DistributionProfile.portable
-          ? error.toString()
-          : 'The local browser bridge client could not connect; use Retry after pairing.';
+      _lastError = error.toString();
       _publishStatus();
-      integrations.reportError(
-        NativeIntegrationId.browserBridge,
-        reason: 'The local browser bridge client could not connect; use Retry after pairing.',
-        reducedMode: true,
-      );
       _scheduleRetry();
     }
   }
@@ -381,14 +327,6 @@ class BrowserBridgeService {
     if (!_enabled) {
       return Future<Object?>.error(
         StateError('The persistent browser connector is disabled in Launcher Plugins.'),
-      );
-    }
-    if (!NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.browserBridge)) {
-      return Future<Object?>.error(
-        StateError(
-          NativeIntegrationCoordinator.instance.denialReason(NativeIntegrationId.browserBridge) ??
-              'Browser bridge consent is required before a request can be sent.',
-        ),
       );
     }
     final WebSocket? socket = _launcherClient ? _proxySocket : _socket;
@@ -770,11 +708,7 @@ class BrowserBridgeService {
   }
 
   void _scheduleRetry() {
-    if (!_enabled || _blockedByPolicy || _retryTimer != null) return;
-    // A Store-profile bind/pairing failure is terminal until the user explicitly
-    // retries. This avoids an unbounded localhost retry loop after policy or
-    // Windows-controlled denial.
-    if (NativeIntegrationCoordinator.instance.profile != DistributionProfile.portable) return;
+    if (!_enabled || _retryTimer != null) return;
     _retryTimer = Timer(const Duration(seconds: 2), () {
       _retryTimer = null;
       unawaited(start());
@@ -800,17 +734,6 @@ class BrowserBridgeService {
       );
     }
     return config;
-  }
-
-  void _deletePersistedConfig() {
-    try {
-      final File shared = File(AppPaths.currentPath('browser-bridge.json'));
-      if (shared.existsSync()) shared.deleteSync();
-    } catch (_) {}
-    try {
-      final File legacy = File(AppPaths.resolvePath(p.join('plugins', 'browser', 'bridge-config.json')));
-      if (legacy.existsSync()) legacy.deleteSync();
-    } catch (_) {}
   }
 
   static _BrowserBridgeConfig? _readConfig(File file) {
@@ -845,8 +768,6 @@ class BrowserBridgeService {
       final BrowserBridgePhase phase;
       if (!_enabled) {
         phase = BrowserBridgePhase.disabled;
-      } else if (_blockedByPolicy) {
-        phase = BrowserBridgePhase.blocked;
       } else if (_starting) {
         phase = BrowserBridgePhase.starting;
       } else if (_lastError.isNotEmpty && _proxySocket == null) {
@@ -866,8 +787,6 @@ class BrowserBridgeService {
     final BrowserBridgePhase phase;
     if (!_enabled) {
       phase = BrowserBridgePhase.disabled;
-    } else if (_blockedByPolicy) {
-      phase = BrowserBridgePhase.blocked;
     } else if (_starting) {
       phase = BrowserBridgePhase.starting;
     } else if (_lastError.isNotEmpty && _server == null) {

@@ -18,8 +18,6 @@ class SystemPowerWidget extends StatefulWidget {
 
 class _SystemPowerWidgetState extends State<SystemPowerWidget> {
   String? _armedId;
-  // final ElevationService _elevationService = ElevationService.forCurrentProfile();
-  // final bool _elevationBusy = false;
 
   void _run(SystemPowerAction action) {
     if (action.isDestructive && _armedId != action.id) {
@@ -31,47 +29,13 @@ class _SystemPowerWidgetState extends State<SystemPowerWidget> {
     action.execute();
   }
 
-  // Future<void> _restartQuickMenuElevated() async {
-  //   if (_elevationBusy) return;
-  //   if (_elevationService.readPrivilegeStatus().isElevated) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text('QuickMenu is already running elevated.')),
-  //     );
-  //     return;
-  //   }
-  //   setState(() => _elevationBusy = true);
-  //   final ElevationRequestResult result = await _elevationService.launchApplicationElevated(
-  //     executable: Platform.resolvedExecutable,
-  //     arguments: Globals.elevatedQuickMenuArgument,
-  //   );
-  //   if (!mounted) return;
-  //   setState(() => _elevationBusy = false);
-  //   if (result.didLaunch) {
-  //     Navigator.of(context).maybePop();
-  //     await QuickMenuFunctions.hideQuickMenu();
-  //     Future<void>.delayed(const Duration(milliseconds: 300), () => exit(0));
-  //     return;
-  //   }
-  //   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
-  // }
-
   @override
   Widget build(BuildContext context) {
-    // final bool elevationAvailable = _elevationService.capability.isAvailable;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         const PanelHeader(title: "System Power", icon: Icons.power_settings_new_rounded),
-        // if (elevationAvailable)
-        //   Padding(
-        //     padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-        //     child: OutlinedButton.icon(
-        //       onPressed: _elevationBusy ? null : _restartQuickMenuElevated,
-        //       icon: const Icon(Icons.shield_outlined, size: 17),
-        //       label: Text(_elevationBusy ? 'REQUESTING UAC…' : 'RUN QUICKMENU AS ADMINISTRATOR'),
-        //     ),
-        //   ),
         Flexible(
           child: SingleChildScrollView(
             child: Padding(

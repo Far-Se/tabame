@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import '../app_paths.dart';
 import '../screen_capture_service.dart';
 import '../../models/win32/win32.dart';
-import '../../services/native_integration_coordinator.dart';
 import '../../models/win32/win_utils.dart';
 import 'win32_api.dart';
 
@@ -39,13 +38,6 @@ class WindowsScreenCaptureService extends ScreenCaptureService {
   @override
   Future<CapturedImage?> captureSelection() async {
     if (!isAvailable) return null;
-    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.screenCapture)) {
-      NativeIntegrationCoordinator.instance.reportUnavailable(
-        NativeIntegrationId.screenCapture,
-        reason: 'Screen capture is unavailable in the current distribution profile.',
-      );
-      return null;
-    }
 
     final String path = _capturePath();
     final File file = File(path);

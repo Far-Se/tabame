@@ -15,12 +15,10 @@ import 'package:intl/intl.dart';
 import 'package:intl/intl_standalone.dart';
 
 import '../platform/audio_system_service.dart';
-import '../platform/distribution_profile.dart';
 import '../platform/monitor_service.dart';
 import '../platform/quick_snap_service.dart';
 import '../platform/windows/tabamewin32_api.dart';
-import '../services/native_integration_coordinator.dart';
-// import '../services/rewindly_service.dart';
+import '../services/rewindly_service.dart';
 import 'classes/boxes.dart';
 import 'classes/saved_maps.dart';
 import 'globals.dart';
@@ -50,7 +48,6 @@ enum QuickMenuDesigns {
   manifesto,
   vector,
   ledger,
-  // ledger2,
   console,
   foundry,
   anime,
@@ -66,19 +63,6 @@ enum QuickMenuDesigns {
   windows98,
   notion,
   rundown,
-  strata,
-
-  /// Compact communications-console skin with routed signal rails.
-  ///
-  /// Persisted by index — append new designs at the end to preserve existing
-  /// QuickMenu preferences.
-  relay,
-
-  /// Full-width task-first skin with monitor filters and a focused-window bay.
-  ///
-  /// Persisted by index — append new designs at the end to preserve existing
-  /// QuickMenu preferences.
-  // focusline,
   // familyGuy,
   ;
 
@@ -239,7 +223,6 @@ class Settings {
   bool _hideTabameOnUnfocus = true;
   bool autoOpenTaskManager = false;
   bool autoCheckForUpdates = false;
-  bool autoUpdatePlugins = false;
   bool dragPopupsByIconOnly = true;
   bool quickActionsAtBottom = false;
   int quickMenuDesign = Random().nextInt(QuickMenuDesigns.values.length);
@@ -259,10 +242,10 @@ class Settings {
   bool trktivitySaveAllTitles = false;
   bool quickMenuAtTaskbarLevel = true;
   // Rewindly (background "instant replay" DVR)
-  // bool rewindlyEnabled = false;
-  // int rewindlyFps = 2; // capture frame rate, 1-10
-  // int rewindlyClipMinutes = 1; // length of an exported clip, 1-10
-  // int rewindlyRetentionMinutes = 60; // rolling buffer history to keep
+  bool rewindlyEnabled = false;
+  int rewindlyFps = 2; // capture frame rate, 1-10
+  int rewindlyClipMinutes = 1; // length of an exported clip, 1-10
+  int rewindlyRetentionMinutes = 60; // rolling buffer history to keep
   // Keystroke & Click Visualizer overlay
   bool keystrokesShowClicks = true; // render mouse click ripples
   bool keystrokesModifiersOnly = false; // only show chords that use a modifier
@@ -1170,58 +1153,6 @@ class Settings {
           baseFontSize: 10,
         ),
       ),
-      QuickMenuDesigns.relay.displayName: QMDesignThemeSet(
-        lightTheme: _defaultThemeColors(
-          background: const Color(0xFFE7EEF0),
-          textColor: const Color(0xFF18272C),
-          accentColor: const Color(0xFF007F91),
-          gradientAlpha: 42,
-          uiFontFamily: 'Bahnschrift',
-          uiFontWeight: 500,
-          entryFontFamily: 'Consolas',
-          entryFontWeight: 700,
-          borderRadius: 5,
-          baseFontSize: 10,
-        ),
-        darkTheme: _defaultThemeColors(
-          background: const Color(0xFF0B151A),
-          textColor: const Color(0xFFD6E7E8),
-          accentColor: const Color(0xFF2DE2C4),
-          gradientAlpha: 58,
-          uiFontFamily: 'Bahnschrift',
-          uiFontWeight: 500,
-          entryFontFamily: 'Consolas',
-          entryFontWeight: 700,
-          borderRadius: 5,
-          baseFontSize: 10,
-        ),
-      ),
-      // QuickMenuDesigns.focusline.displayName: QMDesignThemeSet(
-      //   lightTheme: _defaultThemeColors(
-      //     background: const Color(0xFFE8EDF0),
-      //     textColor: const Color(0xFF1D2A31),
-      //     accentColor: const Color(0xFFB85B34),
-      //     gradientAlpha: 34,
-      //     uiFontFamily: 'Bahnschrift',
-      //     uiFontWeight: 500,
-      //     entryFontFamily: 'Segoe UI',
-      //     entryFontWeight: 600,
-      //     borderRadius: 4,
-      //     baseFontSize: 10,
-      //   ),
-      //   darkTheme: _defaultThemeColors(
-      //     background: const Color(0xFF11171B),
-      //     textColor: const Color(0xFFE1E8E8),
-      //     accentColor: const Color(0xFFE18A4A),
-      //     gradientAlpha: 48,
-      //     uiFontFamily: 'Bahnschrift',
-      //     uiFontWeight: 500,
-      //     entryFontFamily: 'Segoe UI',
-      //     entryFontWeight: 600,
-      //     borderRadius: 4,
-      //     baseFontSize: 10,
-      //   ),
-      // ),
       // QuickMenuDesigns.familyGuy.displayName: QMDesignThemeSet(
       //   lightTheme: _defaultThemeColors(
       //     background: const Color(0xffF0EBE0), // Living-room wall beige
@@ -1246,58 +1177,6 @@ class Settings {
       //     entryFontWeight: 700,
       //     borderRadius: 6,
       //     baseFontSize: 10,
-      //   ),
-      // ),
-      QuickMenuDesigns.strata.displayName: QMDesignThemeSet(
-        lightTheme: _defaultThemeColors(
-          background: const Color(0xffEDE6D6),
-          textColor: const Color(0xff2B2118),
-          accentColor: const Color(0xffB5651D),
-          gradientAlpha: 60,
-          uiFontFamily: 'Consolas',
-          uiFontWeight: 500,
-          entryFontFamily: 'Consolas',
-          entryFontWeight: 700,
-          borderRadius: 2,
-          baseFontSize: 10,
-        ),
-        darkTheme: _defaultThemeColors(
-          background: const Color(0xff161311),
-          textColor: const Color(0xffE8DDC8),
-          accentColor: const Color(0xffE2A33B),
-          gradientAlpha: 72,
-          uiFontFamily: 'Consolas',
-          uiFontWeight: 500,
-          entryFontFamily: 'Consolas',
-          entryFontWeight: 700,
-          borderRadius: 2,
-          baseFontSize: 10,
-        ),
-      ),
-      // QuickMenuDesigns.ledger2.displayName: QMDesignThemeSet(
-      //   lightTheme: _defaultThemeColors(
-      //     background: const Color(0xffF3ECDD),
-      //     textColor: const Color(0xff2E2418),
-      //     accentColor: const Color(0xff8B2E2E),
-      //     gradientAlpha: 45,
-      //     uiFontFamily: 'Georgia',
-      //     uiFontWeight: 400,
-      //     entryFontFamily: 'Georgia',
-      //     entryFontWeight: 700,
-      //     borderRadius: 3,
-      //     baseFontSize: 11,
-      //   ),
-      //   darkTheme: _defaultThemeColors(
-      //     background: const Color(0xff17130D),
-      //     textColor: const Color(0xffE6D9BE),
-      //     accentColor: const Color(0xffD1A24A),
-      //     gradientAlpha: 65,
-      //     uiFontFamily: 'Georgia',
-      //     uiFontWeight: 400,
-      //     entryFontFamily: 'Georgia',
-      //     entryFontWeight: 700,
-      //     borderRadius: 3,
-      //     baseFontSize: 11,
       //   ),
       // ),
     };
@@ -1455,20 +1334,14 @@ class Settings {
     ThemeColors? fallbackDarkTheme,
   }) {
     final QMDesignThemeSet? savedThemeSet = quickMenuDesignThemes[design.displayName];
-    final QMDesignThemeSet? defaultThemeSet = Settings.createDefaultQuickMenuDesignThemes()[design.displayName];
-
-    final ThemeColors? resolvedLightTheme =
-        savedThemeSet?.lightTheme ?? fallbackLightTheme ?? defaultThemeSet?.lightTheme;
-    final ThemeColors? resolvedDarkTheme = savedThemeSet?.darkTheme ?? fallbackDarkTheme ?? defaultThemeSet?.darkTheme;
-
-    if (resolvedLightTheme == null || resolvedDarkTheme == null) {
-      // No saved theme, no fallback, and no default for this design.
-      // Decide how you want to handle this — return early, throw, or log.
-      return;
-    }
-
-    lightTheme = resolvedLightTheme.copyWith();
-    darkTheme = resolvedDarkTheme.copyWith();
+    lightTheme = (savedThemeSet?.lightTheme ??
+            fallbackLightTheme ??
+            Settings.createDefaultQuickMenuDesignThemes()[design.displayName]!.lightTheme)
+        .copyWith();
+    darkTheme = (savedThemeSet?.darkTheme ??
+            fallbackDarkTheme ??
+            Settings.createDefaultQuickMenuDesignThemes()[design.displayName]!.darkTheme)
+        .copyWith();
     saveActiveThemesToCurrentDesign(design);
   }
 
@@ -1594,15 +1467,11 @@ Future<void> registerAll() async {
     if (QuickMenuFunctions.isQuickMenuVisible) checkThemeChange();
   });
   Timer.periodic(const Duration(seconds: 5), (Timer timer) {
-    if (user.page != TPage.quickmenu || !user.hideDesktopFiles) return;
+    if (!user.hideDesktopFiles) return;
     WinUtils.toggleDesktopFiles(visible: false);
   });
   //register
   await Boxes.registerBoxes(justLoad: Globals.currentPage == Pages.interface ? true : false);
-  NativeIntegrationCoordinator.configure(
-    profile: DistributionProfileConfig.current,
-    consentStore: SaveSettingsNativeIntegrationConsentStore(Boxes.pref),
-  );
   Debug.add("Registered: Boxes");
   //Schedule Theme
   user.setScheduleThemeChange();
@@ -1610,17 +1479,7 @@ Future<void> registerAll() async {
     SolarCalculator.updateSolarData();
   }
   Debug.add("Registered: ScheduleTheme");
-  final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
-  if (user.page == TPage.quickmenu && integrations.canStart(NativeIntegrationId.quickSnap)) {
-    await QuickSnapService.instance.enable();
-    integrations.reportRunning(NativeIntegrationId.quickSnap);
-  } else if (user.page == TPage.quickmenu) {
-    integrations.reportDisabled(
-      NativeIntegrationId.quickSnap,
-      reason: 'Drag-triggered QuickSnap is disabled; manual snapping remains available.',
-      reducedMode: true,
-    );
-  }
+  await QuickSnapService.instance.enable();
   //
 
   await AudioSystemService.instance.initialize();
@@ -1628,8 +1487,8 @@ Future<void> registerAll() async {
 
   // Rewindly background DVR — main/QuickMenu process only, never the Interface
   // settings window (which runs as a separate process).
-  if (user.page != TPage.interface && !user.args.contains('-interface')) {
-    // RewindlyService.instance.init();
+  if (Globals.currentPage != Pages.interface) {
+    RewindlyService.instance.init();
     Debug.add("Registered: Rewindly");
   }
 }

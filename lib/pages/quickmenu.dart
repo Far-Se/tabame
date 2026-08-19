@@ -32,7 +32,6 @@ import '../models/win32/win_utils.dart';
 import '../models/win32/window.dart';
 import '../models/window_watcher.dart';
 import '../services/file_indexer.dart';
-import '../services/native_integration_coordinator.dart';
 import '../services/mouse_gestures_service.dart';
 import '../services/wallpaper_service.dart';
 import 'emoji_page.dart';
@@ -235,59 +234,25 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       Debug.add("Standalone launcher: init");
       return;
     }
-    final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
-    final bool hooksEnabled = integrations.canStart(NativeIntegrationId.globalHooks);
-    if (hooksEnabled) {
-      NativeHooks.unHook();
-      NativeHooks.addListener(this);
-      unawaited(hotkeyCoordinator.start());
-      unawaited(WinHotkeys.update());
-      integrations.reportAvailable(NativeIntegrationId.globalHooks);
-    } else {
-      integrations.reportDisabled(
-        NativeIntegrationId.globalHooks,
-        reason: integrations.denialReason(NativeIntegrationId.globalHooks) ??
-            'Global hooks are disabled; visible/manual summon remains available.',
-        reducedMode: true,
-      );
-    }
+    NativeHooks.unHook();
+    NativeHooks.addListener(this);
     _quickSnapEvents = QuickSnapService.instance.events.listen(_onQuickSnapEvent, onError: (_) {});
+    unawaited(hotkeyCoordinator.start());
     QuickMenuFunctions.addListener(this);
     WindowManager.instance.addListener(this);
     QuickMenuFunctions.syncSelectedBackdrop();
+
+    unawaited(WinHotkeys.update());
     TextSnippetsManager.pushToNative();
     _startSettingsWatcher();
     ClipboardHistoryStore.clearCache();
-    if (user.trktivityEnabled &&
-        NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.backgroundCapture)) {
-      enableTrcktivity(true);
-      NativeIntegrationCoordinator.instance.reportRunning(NativeIntegrationId.backgroundCapture);
-    } else if (user.trktivityEnabled) {
-      NativeIntegrationCoordinator.instance.reportDisabled(
-        NativeIntegrationId.backgroundCapture,
-        reason: NativeIntegrationCoordinator.instance.denialReason(NativeIntegrationId.backgroundCapture) ??
-            'Activity capture is disabled; the launcher remains usable.',
-        reducedMode: true,
-      );
-    }
+    if (user.trktivityEnabled) enableTrcktivity(user.trktivityEnabled);
     Globals.changingPages = false;
-    if (user.trktivityEnabled &&
-        NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.backgroundCapture)) {
-      trk.startTimer();
-    }
+    if (user.trktivityEnabled) trk.startTimer();
     WallpaperService.instance.init();
     FileIndexer.instance.init();
     WindowLayoutSnapshots.rememberCurrentSignature();
-    if (hooksEnabled) {
-      MouseGesturesService.instance.init();
-    } else {
-      MouseGesturesService.instance.dispose();
-      integrations.reportDisabled(
-        NativeIntegrationId.globalHooks,
-        reason: 'Mouse gestures are disabled with global hooks; use visible/manual controls instead.',
-        reducedMode: true,
-      );
-    }
+    MouseGesturesService.instance.init();
     WinUtils.deleteOldFiles(AppPaths.cachePath('icon_cache', forWrite: true), days: 4);
     if (kDebugMode) {
       Timer(const Duration(milliseconds: 2000), () async {
@@ -326,7 +291,6 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
     _quickMenuFocusRetryTimer?.cancel();
     _settingsWatchSub?.cancel();
     _settingsReloadDebounce?.cancel();
-    unawaited(WinUtils.toggleTaskbar(visible: true));
     focusNode.dispose();
   }
 
@@ -644,10 +608,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
     Monitor.fetchMonitors();
     WindowLayoutSnapshots.onDisplayChanged();
     Future<void>.delayed(const Duration(milliseconds: 700), () {
-      if (user.hideTaskbarOnStartup &&
-          NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.shellIntegration)) {
-        unawaited(WinUtils.toggleTaskbar(visible: false));
-      }
+      if (user.hideTaskbarOnStartup) WinUtils.toggleTaskbar(visible: false);
     });
   }
 
@@ -722,8 +683,6 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       return const SizedBox(width: 10);
     }
     if (kReleaseMode) {
-      // if (Globals.quickMenuPage == QuickMenuPage.quickMenu && !QuickMenuFunctions.isQuickMenuVisible)
-      //   return const SizedBox.shrink();
       return FutureBuilder<int>(
         future: quickMenuWindow,
         builder: (BuildContext x, AsyncSnapshot<Object?> snapshot) {

@@ -61,89 +61,6 @@ class CurrencyConverterService {
   static const String _fallbackBaseTemplate = "https://{date}.currency-api.pages.dev/v1/currencies";
 
   static Map<String, String>? _currencyCatalogCache;
-  static const Map<String, String> _currencySymbolAliases = <String, String>{
-    // Dollar variants
-    "us\$": "usd",
-    "ca\$": "cad",
-    "au\$": "aud",
-    "hk\$": "hkd",
-    "nz\$": "nzd",
-    "sg\$": "sgd",
-    "mex\$": "mxn",
-    "nt\$": "twd",
-    "r\$": "brl",
-    "c\$": "cad",
-    "a\$": "aud",
-    "m\$": "mop",
-    "\$": "usd",
-
-    // Yen / Yuan
-    "cn¥": "cny",
-    "jp¥": "jpy",
-    "¥": "jpy",
-    "円": "jpy",
-    "元": "cny",
-
-    // Major
-    "€": "eur",
-    "£": "gbp",
-
-    // Rupee family
-    "₹": "inr",
-    "₨": "pkr", // generic rupee sign — ambiguous (PKR/NPR/LKR); defaulting to PKR
-    "s/": "pen",
-
-    // Cyrillic / Eastern Europe
-    "₽": "rub",
-    "₴": "uah",
-    "₸": "kzt",
-    "₼": "azn",
-    "лв": "bgn",
-    "zł": "pln",
-    "kč": "czk",
-    "ft": "huf",
-    "din": "rsd",
-    "lek": "all",
-
-    // Middle East / Central Asia
-    "₪": "ils",
-    "₺": "try",
-    "₾": "gel",
-    "؋": "afn",
-    "֏": "amd",
-
-    // South/Southeast Asia
-    "₩": "krw",
-    "₫": "vnd",
-    "৳": "bdt",
-    "៛": "khr",
-    "฿": "thb",
-    "rp": "idr",
-    "rm": "myr",
-
-    // Africa
-    "₦": "ngn",
-    "₵": "ghs",
-    "r": "zar",
-
-    // Latin America
-    "₱": "php",
-    "₡": "crc",
-    "₲": "pyg",
-
-    // Other / historic
-    "₭": "lak",
-    "₮": "mnt",
-    "chf": "chf",
-    "kr": "sek", // ambiguous — SEK/NOK/DKK all use "kr"; defaulting to SEK
-    "nkr": "nok",
-    "dkr": "dkk",
-    "₧": "esp", // historic peseta
-    "₣": "frf", // historic franc
-    "₤": "itl", // historic lira
-  };
-  static final RegExp _conversionSeparator = RegExp(r'\s+(?:to|in|into|=|->)\s+');
-  static final RegExp _amountToken = RegExp(r'^\d[\d.,]*$');
 
   Future<CurrencyConversionResult> convert(
     String rawInput, {
@@ -190,7 +107,7 @@ class CurrencyConverterService {
       return const ParsedConversionInput(message: "Loading currencies...");
     }
 
-    String normalized = normalizeInput(rawInput);
+    String normalized = normalizeAlias(rawInput);
     if (normalized.isEmpty) {
       return const ParsedConversionInput(
         message: "Type something like 1 usd to ron.",
@@ -199,22 +116,31 @@ class CurrencyConverterService {
 
     final String? defaultTarget =
         defaultTargetCurrency == null ? null : resolveCurrencyAlias(defaultTargetCurrency, aliases: aliases);
-    if (defaultTarget != null && !_conversionSeparator.hasMatch(normalized)) {
+    if (defaultTarget != null && !RegExp(r'\s+(?:to|in|into|=|->)\s+').hasMatch(normalized)) {
       normalized = '$normalized to $defaultTarget';
     }
 
-    final List<String> parts = normalized.split(_conversionSeparator);
+    final RegExpMatch? amountMatch = RegExp(
+      r'^(?:(\d+(?:[.,]\d+)?)\s+)?(.+)$',
+    ).firstMatch(normalized);
+    if (amountMatch == null) {
+      return const ParsedConversionInput(
+        message: "Use a format like 1 usd to ron.",
+      );
+    }
+
+    final double amount = double.tryParse((amountMatch.group(1) ?? "1").replaceAll(',', '.')) ?? 1;
+    final String remainder = (amountMatch.group(2) ?? "").trim();
+    final List<String> parts = remainder.split(RegExp(r'\s+(?:to|in|into|=|->)\s+'));
+
     if (parts.length != 2) {
       return const ParsedConversionInput(
         message: "Use a format like 1 usd to ron.",
       );
     }
 
-    final ({double amount, String currency})? source = _parseAmountAndCurrency(
-      parts[0],
-      aliases: aliases,
-    );
-    if (source == null) {
+    final String? fromCode = resolveCurrencyAlias(parts[0], aliases: aliases);
+    if (fromCode == null) {
       return ParsedConversionInput(
         message: "I couldn't recognize `${parts[0].trim()}`.",
       );
@@ -227,113 +153,23 @@ class CurrencyConverterService {
       );
     }
 
-    final String fromName = currencies[source.currency] ?? source.currency.toUpperCase();
+    final String fromName = currencies[fromCode] ?? fromCode.toUpperCase();
     final String toName = currencies[toCode] ?? toCode.toUpperCase();
 
     return ParsedConversionInput(
       query: ConversionQuery(
-        amount: source.amount,
-        fromCurrency: source.currency,
+        amount: amount,
+        fromCurrency: fromCode,
         toCurrency: toCode,
       ),
-      message: "${source.currency.toUpperCase()} ($fromName) to ${toCode.toUpperCase()} ($toName)",
+      message: "${fromCode.toUpperCase()} ($fromName) to ${toCode.toUpperCase()} ($toName)",
     );
-  }
-
-  static ({double amount, String currency})? _parseAmountAndCurrency(
-    String rawSource, {
-    required Map<String, String> aliases,
-  }) {
-    final String source = rawSource.trim();
-    if (source.isEmpty) return null;
-
-    for (final MapEntry<String, String> symbolEntry in _currencySymbolAliases.entries) {
-      if (!source.startsWith(symbolEntry.key)) continue;
-      final double? amount = _parseAmount(source.substring(symbolEntry.key.length).trim());
-      if (amount != null && aliases.containsKey(symbolEntry.value)) {
-        return (amount: amount, currency: symbolEntry.value);
-      }
-    }
-
-    final RegExpMatch? amountFirst = RegExp(r'^(\d[\d.,]*)(?:\s*(.*))$').firstMatch(source);
-    if (amountFirst != null) {
-      final double? amount = _parseAmount(amountFirst.group(1)!);
-      final String? currency = resolveCurrencyAlias(amountFirst.group(2)!, aliases: aliases);
-      if (amount != null && currency != null) {
-        return (amount: amount, currency: currency);
-      }
-    }
-
-    final RegExpMatch? currencyFirst = RegExp(r'^(.+?)\s+(\d[\d.,]*)$').firstMatch(source);
-    if (currencyFirst != null) {
-      final double? amount = _parseAmount(currencyFirst.group(2)!);
-      final String? currency = resolveCurrencyAlias(currencyFirst.group(1)!, aliases: aliases);
-      if (amount != null && currency != null) {
-        return (amount: amount, currency: currency);
-      }
-    }
-
-    final String? currency = resolveCurrencyAlias(source, aliases: aliases);
-    if (currency == null) return null;
-    return (amount: 1, currency: currency);
-  }
-
-  static double? _parseAmount(String rawAmount) {
-    final String value = rawAmount.replaceAll(' ', '');
-    if (!_amountToken.hasMatch(value)) return null;
-
-    String normalized;
-    final bool hasComma = value.contains(',');
-    final bool hasDot = value.contains('.');
-    if (hasComma && hasDot) {
-      final int commaIndex = value.lastIndexOf(',');
-      final int dotIndex = value.lastIndexOf('.');
-      if (commaIndex > dotIndex) {
-        final String withoutDots = value.replaceAll('.', '');
-        final int decimalIndex = withoutDots.lastIndexOf(',');
-        final String integer = withoutDots.substring(0, decimalIndex).replaceAll(',', '');
-        final String fraction = withoutDots.substring(decimalIndex + 1);
-        normalized = '$integer.$fraction';
-      } else {
-        final String withoutCommas = value.replaceAll(',', '');
-        final int decimalIndex = withoutCommas.lastIndexOf('.');
-        final String integer = withoutCommas.substring(0, decimalIndex).replaceAll('.', '');
-        final String fraction = withoutCommas.substring(decimalIndex + 1);
-        normalized = '$integer.$fraction';
-      }
-    } else if (hasComma) {
-      normalized = _isThousandsSeparated(value, ',') ? value.replaceAll(',', '') : value.replaceAll(',', '.');
-    } else if (value.indexOf('.') != value.lastIndexOf('.') && _isThousandsSeparated(value, '.')) {
-      normalized = value.replaceAll('.', '');
-    } else {
-      normalized = value;
-    }
-
-    return double.tryParse(normalized);
-  }
-
-  static bool _isThousandsSeparated(String value, String separator) {
-    final List<String> groups = value.split(separator);
-    if (groups.length < 2 || groups.first.isEmpty || groups.first.length > 3 || groups.first == '0') {
-      return false;
-    }
-    if (groups.last.length != 3) return false;
-    if (groups.length == 2) return true;
-
-    final bool westernGrouping = groups.skip(1).every((String group) => group.length == 3);
-    final bool indianGrouping = groups.sublist(1, groups.length - 1).every((String group) => group.length == 2);
-    return westernGrouping || indianGrouping;
   }
 
   static String? resolveCurrencyAlias(
     String rawAlias, {
     required Map<String, String> aliases,
   }) {
-    final String? symbolCode = _currencySymbolAliases[normalizeInput(rawAlias).replaceAll(RegExp(r'\s+'), '')];
-    if (symbolCode != null) {
-      return aliases.containsKey(symbolCode) ? symbolCode : null;
-    }
-
     final String normalized = normalizeAlias(rawAlias);
     if (normalized.isEmpty) return null;
     return aliases[normalized];
@@ -383,10 +219,6 @@ class CurrencyConverterService {
     });
 
     return aliases;
-  }
-
-  static String normalizeInput(String value) {
-    return value.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
   static String normalizeAlias(String value) {
@@ -712,7 +544,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
           decoration: InputDecoration(
             isDense: true,
-            hintText: "₹10,342 to usd",
+            hintText: "1 usd to eur",
             prefixIcon: Icon(Icons.payments_outlined, size: 16, color: accent),
             filled: true,
             fillColor: accent.withAlpha(12),
@@ -1153,7 +985,7 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
         _currencyCatalogCache = Map<String, String>.from(_currencies);
       }
 
-      _currencyAliases = CurrencyConverterService.buildCurrencyAliases(_currencies);
+      _currencyAliases = _buildCurrencyAliases(_currencies);
 
       if (!_currencies.containsKey(_fromCurrency)) {
         _fromCurrency = "usd";
@@ -1475,11 +1307,130 @@ class _CurrencyConverterWidgetState extends State<CurrencyConverterWidget> {
       return const ParsedConversionInput(message: "Loading currencies...");
     }
 
-    return CurrencyConverterService.parseConversionInput(
-      rawInput,
-      currencies: _currencies,
-      aliases: _currencyAliases,
+    final String normalized = _normalizeAlias(rawInput);
+    if (normalized.isEmpty) {
+      return const ParsedConversionInput(
+        message: "Type something like 1 usd to ron.",
+      );
+    }
+
+    final RegExpMatch? amountMatch = RegExp(
+      r'^(?:(\d+(?:[.,]\d+)?)\s+)?(.+)$',
+    ).firstMatch(normalized);
+    if (amountMatch == null) {
+      return const ParsedConversionInput(
+        message: "Use a format like 1 usd to ron.",
+      );
+    }
+
+    final double amount = double.tryParse((amountMatch.group(1) ?? "1").replaceAll(',', '.')) ?? 1;
+    final String remainder = (amountMatch.group(2) ?? "").trim();
+    final List<String> parts = remainder.split(RegExp(r'\s+(?:to|in|into|=|->)\s+'));
+
+    if (parts.length != 2) {
+      return const ParsedConversionInput(
+        message: "Use a format like 1 usd to ron.",
+      );
+    }
+
+    final String? fromCode = _resolveCurrencyAlias(parts[0]);
+    if (fromCode == null) {
+      return ParsedConversionInput(
+        message: "I couldn't recognize `${parts[0].trim()}`.",
+      );
+    }
+
+    final String? toCode = _resolveCurrencyAlias(parts[1]);
+    if (toCode == null) {
+      return ParsedConversionInput(
+        message: "I couldn't recognize `${parts[1].trim()}`.",
+      );
+    }
+
+    final String fromName = _currencies[fromCode] ?? fromCode.toUpperCase();
+    final String toName = _currencies[toCode] ?? toCode.toUpperCase();
+
+    return ParsedConversionInput(
+      query: ConversionQuery(
+        amount: amount,
+        fromCurrency: fromCode,
+        toCurrency: toCode,
+      ),
+      message: "${fromCode.toUpperCase()} ($fromName) to ${toCode.toUpperCase()} ($toName)",
     );
+  }
+
+  String? _resolveCurrencyAlias(String rawAlias) {
+    final String normalized = _normalizeAlias(rawAlias);
+    if (normalized.isEmpty) return null;
+    return _currencyAliases[normalized];
+  }
+
+  Map<String, String> _buildCurrencyAliases(Map<String, String> currencies) {
+    final Map<String, String> aliases = <String, String>{};
+
+    void register(String alias, String code) {
+      final String normalized = _normalizeAlias(alias);
+      if (normalized.isEmpty) return;
+      aliases.putIfAbsent(normalized, () => code);
+    }
+
+    currencies.forEach((String code, String name) {
+      register(code, code);
+      register(name, code);
+    });
+
+    const Map<String, List<String>> manualAliases = <String, List<String>>{
+      "usd": <String>[
+        "us dollar",
+        "us dollars",
+        "american dollar",
+        "american dollars",
+      ],
+      "eur": <String>["euro", "euros"],
+      "gbp": <String>["british pound", "british pounds", "quid"],
+      "ron": <String>["leu", "lei", "romanian leu", "romanian lei"],
+      "jpy": <String>["yen", "japanese yen"],
+      "cny": <String>["yuan", "renminbi", "chinese yuan"],
+      "inr": <String>["rupee", "rupees", "indian rupee", "indian rupees"],
+      "try": <String>["turkish lira"],
+      "cad": <String>["canadian dollar", "canadian dollars"],
+      "aud": <String>["australian dollar", "australian dollars"],
+      "brl": <String>["brazilian real", "brazilian reais"],
+      "aed": <String>["uae dirham", "emirati dirham"],
+      "mxn": <String>["mexican peso", "mexican pesos"],
+      "rub": <String>["ruble", "rubles", "rouble", "roubles"],
+    };
+
+    manualAliases.forEach((String code, List<String> values) {
+      if (!currencies.containsKey(code)) return;
+      for (final String alias in values) {
+        register(alias, code);
+      }
+    });
+
+    return aliases;
+  }
+
+  String _normalizeAlias(String value) {
+    final String normalized = value
+        .toLowerCase()
+        .replaceAll('\u0103', 'a')
+        .replaceAll('\u00e2', 'a')
+        .replaceAll('\u00ee', 'i')
+        .replaceAll('\u0219', 's')
+        .replaceAll('\u015f', 's')
+        .replaceAll('\u021b', 't')
+        .replaceAll('\u0163', 't')
+        .replaceAll('ă', 'a')
+        .replaceAll('â', 'a')
+        .replaceAll('î', 'i')
+        .replaceAll('ș', 's')
+        .replaceAll('ş', 's')
+        .replaceAll('ț', 't')
+        .replaceAll('ţ', 't');
+
+    return normalized.replaceAll(RegExp(r'[^a-z0-9\s.,-]'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
   String _catalogUrl({bool fallback = false}) {

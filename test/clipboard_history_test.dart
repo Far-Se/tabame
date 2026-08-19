@@ -28,7 +28,6 @@ void main() {
       migrateLegacyData: false,
     );
     ClipboardHistoryStore.resetForTesting();
-    await ClipboardHistoryStore.setEnabled(true);
     service = _FakeClipboardService();
     ClipboardService.register(service);
     await ClipboardHistoryCoordinator.instance.stop();
@@ -54,53 +53,18 @@ void main() {
     expect(File(ClipboardHistoryStore.historyFilePath).existsSync(), isTrue);
   });
 
-  test('large text is stored in a bounded metadata line and a sidecar', () async {
-    final String largeText = '${List<String>.filled(3000, 'clipboard-data-0123456789\\n').join()}TAIL-SENTINEL';
-    service.content = PlatformClipboardContent(text: largeText);
+  test('coordinator subscribes once and records target adapter events', () async {
+    expect(await ClipboardHistoryCoordinator.instance.start(), isTrue);
+    expect(await ClipboardHistoryCoordinator.instance.start(), isTrue);
+    expect(service.startCalls, 1);
 
-    await ClipboardHistoryStore.recordCurrentClipboard();
-
-    final String metadata = await File(ClipboardHistoryStore.historyFilePath).readAsString();
-    expect(metadata.length, lessThan(10000));
-    expect(metadata, contains('textPath'));
+    service.content = null;
+    service.emit(const PlatformClipboardText(text: 'from Linux X11'));
+    await _waitForHistoryEntry();
 
     final List<ClipboardHistoryEntry> entries = await ClipboardHistoryStore.loadPaged(limit: 20);
-    expect(entries, hasLength(1));
-    expect(entries.single.text.length, lessThanOrEqualTo(5000));
-
-    final ClipboardHistoryEntry? full = await ClipboardHistoryStore.getFullEntry(entries.single.id);
-    expect(full, isNotNull);
-    expect(full!.text, largeText);
-    expect(await File(full.textPath).readAsString(), largeText);
-
-    await ClipboardHistoryStore.copyEntry(entries.single);
-    expect(service.lastWrite?.text, largeText);
+    expect(entries.single.text, 'from Linux X11');
   });
-
-  test('deduplication expires after ten newer clipboard entries', () async {
-    await ClipboardHistoryStore.recordClipboardChange(const PlatformClipboardText(text: 'first'));
-    for (int index = 0; index < 10; index++) {
-      await ClipboardHistoryStore.recordClipboardChange(PlatformClipboardText(text: 'unique-$index'));
-    }
-    await ClipboardHistoryStore.recordClipboardChange(const PlatformClipboardText(text: 'first'));
-
-    final List<ClipboardHistoryEntry> entries = await ClipboardHistoryStore.loadPaged(limit: 30);
-    expect(entries, hasLength(12));
-    expect(entries.where((ClipboardHistoryEntry entry) => entry.text == 'first'), hasLength(2));
-  });
-
-  // test('coordinator subscribes once and records target adapter events', () async {
-  //   expect(await ClipboardHistoryCoordinator.instance.start(), isTrue);
-  //   expect(await ClipboardHistoryCoordinator.instance.start(), isTrue);
-  //   expect(service.startCalls, 1);
-
-  //   service.content = null;
-  //   service.emit(const PlatformClipboardText(text: 'from Linux X11'));
-  //   await _waitForHistoryEntry();
-
-  //   final List<ClipboardHistoryEntry> entries = await ClipboardHistoryStore.loadPaged(limit: 20);
-  //   expect(entries.single.text, 'from Linux X11');
-  // });
 
   testWidgets('portable history explains when monitoring is unavailable', (WidgetTester tester) async {
     PlatformCapabilities.register(const PlatformCapabilities());
@@ -126,7 +90,6 @@ void main() {
   });
 }
 
-// ignore: unused_element
 Future<void> _waitForHistoryEntry() async {
   for (int attempt = 0; attempt < 20; attempt++) {
     final List<ClipboardHistoryEntry> entries = await ClipboardHistoryStore.loadPaged(limit: 20);

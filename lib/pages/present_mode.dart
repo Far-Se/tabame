@@ -15,7 +15,6 @@ import '../models/classes/boxes.dart';
 import '../models/classes/hotkeys.dart';
 import '../models/win32/keys.dart';
 import '../models/win32/mixed.dart';
-import '../services/native_integration_coordinator.dart';
 
 /// Presentation Toolkit overlay.
 ///
@@ -43,8 +42,6 @@ Future<void> startPresentMode() async {
   await AppStartup.initialize();
   await windowManager.ensureInitialized();
   await Boxes.registerBoxes(justLoad: true);
-  await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.globalHooks);
-  await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.screenCapture);
 
   const WindowOptions windowOptions = WindowOptions(
     backgroundColor: Colors.transparent,
@@ -95,8 +92,6 @@ class _PresentOverlayState extends State<PresentOverlay> with TabameListener {
   int _currentMonitor = 0;
   bool _resizeInProgress = false;
   bool _snapshotInProgress = false;
-  bool _nativeEnabled = false;
-  bool _captureEnabled = false;
 
   Square _monitorData = Square(x: 0, y: 0, width: 0, height: 0);
 
@@ -119,24 +114,20 @@ class _PresentOverlayState extends State<PresentOverlay> with TabameListener {
     _zoom = Boxes.pref.getDouble('presentZoom') ?? 2.5;
 
     Monitor.fetchMonitors();
-    _nativeEnabled = NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.globalHooks);
-    _captureEnabled = NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.screenCapture);
-    if (_nativeEnabled) {
-      NativeHooks.registerCallHandler();
-      NativeHooks.addListener(this);
-    }
+    NativeHooks.registerCallHandler();
+    NativeHooks.addListener(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _checkResize(force: _captureEnabled);
+      await _checkResize(force: true);
       _setupOverlayWindow();
       _enableClickThrough();
-      if (_nativeEnabled) await _registerHotkeys();
-      if (_captureEnabled) await _captureMonitorSnapshot();
+      await _registerHotkeys();
+      await _captureMonitorSnapshot();
     });
 
     _timer = Timer.periodic(_pollInterval, (_) => _tick());
     _captureTimer = Timer.periodic(const Duration(milliseconds: 400), (_) {
-      if (_captureEnabled && _tool == PresentTool.magnifier) unawaited(_captureMonitorSnapshot());
+      if (_tool == PresentTool.magnifier) unawaited(_captureMonitorSnapshot());
     });
   }
 
@@ -144,10 +135,8 @@ class _PresentOverlayState extends State<PresentOverlay> with TabameListener {
   void dispose() {
     _timer?.cancel();
     _captureTimer?.cancel();
-    if (_nativeEnabled) {
-      NativeHooks.removeListener(this);
-      unawaited(NativeHooks.unHook());
-    }
+    NativeHooks.removeListener(this);
+    unawaited(NativeHooks.unHook());
     if (_overlayHwnd != 0) unawaited(includeWindowFromCapture(_overlayHwnd));
     _monitorImage?.dispose();
     super.dispose();
@@ -278,7 +267,7 @@ class _PresentOverlayState extends State<PresentOverlay> with TabameListener {
 
   // ---- Monitor snapshot (for the magnifier lens) --------------------------
   Future<void> _captureMonitorSnapshot() async {
-    if (!_captureEnabled || _snapshotInProgress || _overlayHwnd == 0) return;
+    if (_snapshotInProgress || _overlayHwnd == 0) return;
     _snapshotInProgress = true;
     try {
       final int monitorIndex = (Monitor.monitorIds[_currentMonitor] ?? 1) - 1;

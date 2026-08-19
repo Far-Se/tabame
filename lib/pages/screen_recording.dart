@@ -19,7 +19,6 @@ import '../logic/app_startup.dart';
 import '../models/classes/boxes.dart';
 import '../platform/app_paths.dart';
 import '../platform/clipboard_service.dart';
-import '../services/native_integration_coordinator.dart';
 import '../models/settings.dart' as settings_model;
 import '../models/settings.dart';
 import '../models/win32/mixed.dart';
@@ -43,7 +42,6 @@ Future<void> startScreenRecordingPage() async {
   await windowManager.waitUntilReadyToShow(windowOptions, () async {
     RecordingOverlayWindow._hwnd = GetAncestor(GetActiveWindow(), 2);
     await Boxes.registerBoxes(justLoad: true);
-    await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.screenRecording);
     RecordingSettingsStore.load();
     await windowManager.setAsFrameless();
     await windowManager.setHasShadow(false);
@@ -54,7 +52,6 @@ Future<void> startScreenRecordingPage() async {
 
 class RecordingSettingsStore {
   static String get _path => AppPaths.settingsPath('screen_recording.json');
-  static String get _writePath => AppPaths.settingsPath('screen_recording.json', forWrite: true);
   static Map<String, dynamic> _data = <String, dynamic>{};
 
   static void load() {
@@ -70,8 +67,7 @@ class RecordingSettingsStore {
 
   static void save() {
     try {
-      final File file = File(_writePath);
-      file.parent.createSync(recursive: true);
+      final File file = File(_path);
       file.writeAsStringSync(jsonEncode(_data));
     } catch (_) {}
   }
@@ -1414,6 +1410,12 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, void Function(void Function()) setModalState) {
+            // Future<void> browseFolder() async {
+            //   final String folder = await WinUtils.folderPicker();
+            //   if (folder.isEmpty) return;
+            //   setModalState(() => _saveFolder = folder);
+            // }
+
             // ── design tokens ──────────────────────────────────────────
             const Color surface = Color(0xFF1A1D23);
             const Color surfaceElevated = Color(0xFF21252E);

@@ -10,7 +10,6 @@ import 'logic/app_startup.dart';
 import 'logic/error_handler.dart';
 import 'models/classes/save_settings.dart';
 import 'platform/app_paths.dart';
-import 'platform/distribution_profile.dart';
 import 'platform/platform_bootstrap.dart';
 import 'platform/portable_application.dart';
 import 'pages/color_picker/color_picker.dart';
@@ -28,12 +27,10 @@ import 'pages/spotlight.dart';
 import 'pages/run.dart';
 
 Future<void> main(List<String> arguments) async {
-  DistributionProfileConfig.validate();
-  // WidgetsFlutterBinding.ensureInitialized();
-  await PlatformBootstrap.initialize();
+  WidgetsFlutterBinding.ensureInitialized();
   await AppPaths.initialize();
-  // arguments = <String>["-screenCapture", "-frozen"];
   AppStartup.parseArguments(arguments);
+  await PlatformBootstrap.initialize();
 
   if (!PlatformBootstrap.isWindows) return startPortableApplication(arguments);
   // return startScreenCapture();
@@ -58,8 +55,9 @@ Future<void> main(List<String> arguments) async {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
       SaveSettings.suppressWrites = !AppPaths.hasSettingsFile;
-      if (await AppStartup.registerServices()) exit(0);
+      await AppStartup.registerServices();
       AppStartup.registerHooks();
+      if (await AppStartup.checkAdminAndRestart()) return;
       await AppStartup.setupWindow(arguments);
       await AppStartup.finalizeStartup();
       PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;

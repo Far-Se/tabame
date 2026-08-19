@@ -3,7 +3,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../models/globals.dart';
 import '../../models/settings.dart';
 import 'launcher_design.dart';
 import 'launcher_design_builder.dart';
@@ -534,16 +533,17 @@ class LauncherModalHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: <Widget>[
-          MouseRegion(
-            cursor: user.useCustomCursor ? Globals.customCursor ?? SystemMouseCursors.move : SystemMouseCursors.basic,
-            child: DragToMoveArea(
-              child: Container(
-                width: 36,
-                height: 36,
-                alignment: Alignment.center,
-                decoration: _chipDecoration(),
-                child: icon,
-              ),
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onPanStart: (DragStartDetails details) {
+              windowManager.startDragging();
+            },
+            child: Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: _chipDecoration(),
+              child: icon,
             ),
           ),
           const SizedBox(width: 12),

@@ -10,18 +10,6 @@ void main() {
       expect(themes[QuickMenuDesigns.rundown.displayName], isNotNull);
     });
 
-    test('registers the Relay theme set', () {
-      final Map<String, QMDesignThemeSet> themes = Settings.createDefaultQuickMenuDesignThemes();
-
-      expect(themes[QuickMenuDesigns.relay.displayName], isNotNull);
-    });
-
-    // test('registers the Focusline theme set', () {
-    // final Map<String, QMDesignThemeSet> themes = Settings.createDefaultQuickMenuDesignThemes();
-
-    // expect(themes[QuickMenuDesigns.focusline.displayName], isNotNull);
-    // });
-
     test('uses Classic themes for the XP and Windows 98 Interface process', () {
       final Settings settings = Settings()..page = TPage.interface;
       final QMDesignThemeSet classicThemes = settings.quickMenuDesignThemes[QuickMenuDesigns.classic.displayName]!;

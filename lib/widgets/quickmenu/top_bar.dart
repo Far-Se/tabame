@@ -32,7 +32,7 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
     // (everything before the "Deactivated:" marker). Building the full
     // quickActionsMap up front allocated a widget for every action, including
     // the deactivated ones that never get mounted.
-    for (final String name in Boxes.topBarWidgets) {
+    for (final String name in Boxes().topBarWidgets) {
       if (name == "Deactivated:") break;
       final QuickAction? action = quickActionsMap[name];
       if (action != null) showWidgets.add(action.widget());

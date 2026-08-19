@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../../platform/windows/tabamewin32_api.dart';
 
 import '../../models/classes/boxes.dart';
@@ -14,10 +16,6 @@ import '../../models/settings.dart';
 import '../../models/util/main_hotkey.dart';
 import '../../models/win32/win32.dart';
 import '../../models/win32/win_utils.dart';
-import '../../services/elevation_service.dart';
-import '../../services/native_integration_coordinator.dart';
-import '../../services/startup_registration_service.dart';
-import '../../services/update_service.dart';
 import '../widgets/info_widget.dart';
 import '../widgets/mini_switch.dart';
 import '../widgets/windows_scroll.dart';
@@ -44,11 +42,6 @@ class FirstRun extends StatefulWidget {
 class FirstRunState extends State<FirstRun> {
   final WizardlyContextMenu wizardlyContextMenu = WizardlyContextMenu();
   final PageController pageController = PageController();
-  final StartupRegistrationService _startupService = StartupRegistrationService.forCurrentProfile();
-  final ElevationService _elevationService = ElevationService.forCurrentProfile();
-  final UpdateService _updateService = UpdateService.forCurrentProfile();
-  bool _startupEnabled = false;
-  bool _elevationBusy = false;
 
   /// Canonical, persisted list of hotkeys. Every feature row below points at
   /// one entry in here, and edits go through [HotKeySettings] which writes back
@@ -62,6 +55,13 @@ class FirstRunState extends State<FirstRun> {
 
   int currentStep = 0;
 
+  // ── Legacy copy-installation implementation (page 0 no longer invokes it) ──
+  String installLocation = AppPaths.root;
+  // ignore: unused_field
+  bool _installing = false;
+  // ignore: unused_field
+  int? _sourceSizeBytes;
+
   // ── Modal State Setter (QuickSnap toggle modal only) ──
   StateSetter? _activeModalState;
 
@@ -72,34 +72,10 @@ class FirstRunState extends State<FirstRun> {
   void initState() {
     super.initState();
     _resolveFeatureIndices();
-    _refreshStartupStatus();
     _syncQuickClickEnabled();
+    _calculateSourceSize();
     WinUtils.fixDrawBug();
     WinUtils.disableClickThrough(Win32.hWnd);
-  }
-
-  Future<void> _refreshStartupStatus() async {
-    final StartupRegistrationStatus status = await _startupService.read();
-    if (!mounted) return;
-    setState(() => _startupEnabled = status.isEnabled);
-  }
-
-  Future<void> _setPersistentElevation(bool enabled) async {
-    if (_elevationBusy) return;
-    setState(() => _elevationBusy = true);
-    final bool previousValue = user.runAsAdministrator;
-    user.runAsAdministrator = enabled;
-    try {
-      await Boxes.updateSettings("runAsAdministrator", enabled);
-    } catch (error) {
-      user.runAsAdministrator = previousValue;
-      if (!mounted) return;
-      setState(() => _elevationBusy = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not save Elevated Permission: $error')));
-      return;
-    }
-    if (!mounted) return;
-    setState(() => _elevationBusy = false);
   }
 
   @override
@@ -374,6 +350,7 @@ class FirstRunState extends State<FirstRun> {
                     physics: const NeverScrollableScrollPhysics(),
                     onPageChanged: (int index) => setState(() => currentStep = index),
                     children: <Widget>[
+                      _buildInstallLocationPage(theme, accent),
                       _buildHotkeysPage(theme, accent),
                       _buildSetupPage(theme, accent),
                       _buildSettingsOutroPage(theme, accent),
@@ -398,9 +375,10 @@ class FirstRunState extends State<FirstRun> {
 
   Widget _buildHero(ThemeData theme, Color accent) {
     const List<_StepMeta> steps = <_StepMeta>[
-      _StepMeta(0, "Hotkeys"),
-      _StepMeta(1, "Preferences"),
-      _StepMeta(2, "Settings"),
+      _StepMeta(0, "Location"),
+      _StepMeta(1, "Hotkeys"),
+      _StepMeta(2, "Preferences"),
+      _StepMeta(3, "Settings"),
     ];
 
     return Container(
@@ -450,23 +428,27 @@ class FirstRunState extends State<FirstRun> {
   String get _heroTitle {
     switch (currentStep) {
       case 0:
-        return "Set up your hotkeys";
+        return "Welcome to Tabame";
       case 1:
-        return "A few helpful defaults";
+        return "Set up your hotkeys";
       case 2:
+        return "A few helpful defaults";
+      case 3:
         return "One more thing";
       default:
-        return "Set up your hotkeys";
+        return "Welcome to Tabame";
     }
   }
 
   String get _heroSubtitle {
     switch (currentStep) {
       case 0:
-        return "Set up your hotkeys — tap any item to configure its shortcut.";
+        return "Make sure Tabame is running from a permanent folder on your computer.";
       case 1:
-        return "These settings cover startup behavior, updates, privacy-sensitive tracking, and extra tools.";
+        return "Set up your hotkeys — tap any item to configure its shortcut.";
       case 2:
+        return "These settings cover startup behavior, admin access, updates, privacy-sensitive tracking, and extra tools.";
+      case 3:
         return "Settings is where the real power lives — every feature has its own dedicated page.";
       default:
         return "";
@@ -476,7 +458,8 @@ class FirstRunState extends State<FirstRun> {
   Widget _buildStepChip(ThemeData theme, Color accent, int step, String label) {
     final bool active = currentStep == step;
     final bool done = currentStep > step;
-    final bool locked = _isRunningFromTempFolder || (step > 0 && _hotkeyFor(_Feature.quickMenu).key.isEmpty);
+    final bool locked =
+        (_isRunningFromTempFolder && step > 0) || (step > 1 && _hotkeyFor(_Feature.quickMenu).key.isEmpty);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -531,21 +514,61 @@ class FirstRunState extends State<FirstRun> {
     );
   }
 
+  // ─────────────────────── PAGE 0: INSTALL LOCATION ─────────────────────────
+
+  Widget _buildInstallLocationPage(ThemeData theme, Color accent) {
+    final bool runningFromTempFolder = _isRunningFromTempFolder;
+    return WindowsScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text("Choose a permanent location", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(
+            "Tabame runs from the folder it was started from. Move the entire Tabame folder wherever you want to keep it, then run it from there.",
+            style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4),
+          ),
+          const SizedBox(height: 16),
+          _card(
+            theme,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Icon(Icons.folder_rounded, color: accent, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(_executableDirectory, style: theme.textTheme.bodyMedium?.copyWith(height: 1.4)),
+                ),
+              ],
+            ),
+          ),
+          if (runningFromTempFolder) ...<Widget>[
+            const SizedBox(height: 14),
+            _card(
+              theme,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Icon(Icons.warning_amber_rounded, color: Colors.amber),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Tabame appears to be running from a temporary folder, likely opened from an archive. Copy or extract the entire Tabame folder to a permanent location, then run Tabame from that folder.",
+                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   String get _executableDirectory => File(Platform.resolvedExecutable).parent.path;
 
-  // bool get _isRunningFromTempFolder {
-  //   final String executableDirectory = _normalizeWindowsPath(_executableDirectory);
-  //   final Set<String> tempDirectories = <String>{
-  //     Directory.systemTemp.path,
-  //     if (Platform.environment['TEMP'] != null) Platform.environment['TEMP']!,
-  //     if (Platform.environment['TMP'] != null) Platform.environment['TMP']!,
-  //   }.map(_normalizeWindowsPath).where((String path) => path.isNotEmpty).toSet();
-
-  //   return tempDirectories.any(
-  //     (String tempDirectory) =>
-  //         executableDirectory == tempDirectory || executableDirectory.startsWith("$tempDirectory\\"),
-  //   );
-  // }
   bool get _isRunningFromTempFolder {
     // if (_executableDirectory.contains(r'\Temp\')) return true;
     // if (_executableDirectory.contains(r'\Temp\')) return true;
@@ -568,7 +591,53 @@ class FirstRunState extends State<FirstRun> {
   String _normalizeWindowsPath(String path) =>
       path.replaceAll('/', '\\').replaceFirst(RegExp(r'\\+$'), '').toLowerCase();
 
-  // ─────────────────────── PAGE 0: HOTKEYS ─────────────────────────
+  Future<void> _calculateSourceSize() async {
+    final String exeDir = File(Platform.resolvedExecutable).parent.path;
+    final int size = await _directorySize(Directory(exeDir));
+    if (!mounted) return;
+    setState(() => _sourceSizeBytes = size);
+  }
+
+  Future<int> _directorySize(Directory directory) async {
+    int total = 0;
+    try {
+      final List<FileSystemEntity> entities = await directory.list(recursive: true, followLinks: false).toList();
+      for (final FileSystemEntity entity in entities) {
+        if (entity is File) {
+          try {
+            total += await entity.length();
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+    return total;
+  }
+
+  // ignore: unused_element
+  String _formatBytes(int bytes) {
+    if (bytes <= 0) return "0 B";
+    const List<String> suffixes = <String>["B", "KB", "MB", "GB", "TB"];
+    final int index = math.min((math.log(bytes) / math.log(1024)).floor(), suffixes.length - 1);
+    final double value = bytes / math.pow(1024, index);
+    return "${value.toStringAsFixed(index == 0 ? 0 : 1)} ${suffixes[index]}";
+  }
+
+  // ignore: unused_element
+  Future<void> _continueInstall() async {
+    // Intentionally retained while the copy-installation implementation is repaired.
+    // The first-run flow now advances directly to hotkey setup instead.
+    setState(() => _installing = true);
+    try {
+      final String exeDir = File(Platform.resolvedExecutable).parent.path;
+      await WinUtils.copyDirectoryContents(exeDir, installLocation);
+      WinUtils.registerUninstallEntry(installLocation: installLocation);
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() => _installing = false);
+    await _goToStep(1);
+  }
+
+  // ─────────────────────── PAGE 1: HOTKEYS ─────────────────────────
 
   Widget _buildHotkeysPage(ThemeData theme, Color accent) {
     return WindowsScrollView(
@@ -576,25 +645,6 @@ class FirstRunState extends State<FirstRun> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          if (_isRunningFromTempFolder) ...<Widget>[
-            _card(
-              theme,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Icon(Icons.warning_amber_rounded, color: Colors.amber),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Tabame appears to be running from a temporary folder, likely opened from an archive. Copy or extract the entire Tabame folder to a permanent location, then run Tabame from that folder.",
-                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
           Text("Configure hotkeys", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
           Text(
@@ -933,9 +983,6 @@ class FirstRunState extends State<FirstRun> {
   // ─────────────────────── PAGE 1: PREFERENCES ─────────────────────────
 
   Widget _buildSetupPage(ThemeData theme, Color accent) {
-    final UpdateServiceCapabilities updateCapabilities = _updateService.capabilities;
-    final ElevationCapabilityResult elevationCapability = _elevationService.capability;
-    final bool canConfigurePersistentElevation = elevationCapability.canStartAutomatically && !_elevationBusy;
     return WindowsScrollView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
       child: Column(
@@ -960,43 +1007,41 @@ class FirstRunState extends State<FirstRun> {
                       accent: accent,
                       title: "Run on startup",
                       description: "Launch Tabame with Windows so your hotkey is available immediately.",
-                      value: _startupEnabled,
+                      value: WinUtils.checkIfRegisterAsStartup(),
                       onChanged: (bool value) async {
-                        final StartupRegistrationStatus status = await _startupService.setEnabled(value);
+                        await WinUtils.setStartUpShortcut(value);
                         if (!mounted) return;
-                        setState(() => _startupEnabled = status.isEnabled);
-                        if (status.state == StartupRegistrationState.error ||
-                            status.state == StartupRegistrationState.unavailable) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status.message)));
-                        }
+                        setState(() {});
                       },
                     ),
                     const SizedBox(height: 14),
                     _toggleCard(
                       theme,
                       accent: accent,
-                      title: "Elevated Permission",
-                      description: elevationCapability.canStartAutomatically
-                          ? "Request UAC and start Tabame elevated whenever it opens. UAC cancellation keeps the normal session running."
-                          : elevationCapability.message,
-                      value: elevationCapability.canStartAutomatically && user.runAsAdministrator,
-                      onChanged: canConfigurePersistentElevation ? _setPersistentElevation : null,
+                      title: "Run as administrator",
+                      description: "Recommended. This helps Tabame focus and manage elevated windows more reliably.",
+                      value: user.runAsAdministrator,
+                      onChanged: (bool value) async {
+                        user.runAsAdministrator = value;
+                        await Boxes.updateSettings("runAsAdministrator", value);
+                        if (!mounted) return;
+                        setState(() {});
+                      },
                     ),
                     const SizedBox(height: 14),
                     _toggleCard(
                       theme,
                       accent: accent,
                       title: "Auto check for updates",
-                      description: updateCapabilities.message,
-                      value: updateCapabilities.canCheckRemoteReleases && user.autoCheckForUpdates,
-                      onChanged: updateCapabilities.canCheckRemoteReleases
-                          ? (bool value) async {
-                              user.autoCheckForUpdates = value;
-                              await Boxes.updateSettings("autoUpdate", value);
-                              if (!mounted) return;
-                              setState(() {});
-                            }
-                          : null,
+                      description:
+                          "Tabame will check for new versions on startup and notify you if an update is available.",
+                      value: user.autoCheckForUpdates,
+                      onChanged: (bool value) async {
+                        user.autoCheckForUpdates = value;
+                        await Boxes.updateSettings("autoUpdate", value);
+                        if (!mounted) return;
+                        setState(() {});
+                      },
                     ),
                   ],
                 ),
@@ -1012,13 +1057,8 @@ class FirstRunState extends State<FirstRun> {
                           "\nAtention: You can show the taskbar by moving the mouse at the bottom of the screen then pressing the selected hotkey",
                       value: user.hideTaskbarOnStartup,
                       onChanged: (bool value) async {
-                        await NativeIntegrationCoordinator.instance.setConsent(
-                          NativeIntegrationId.shellIntegration,
-                          value,
-                        );
                         user.hideTaskbarOnStartup = value;
                         await Boxes.updateSettings("hideTaskbarOnStartup", value);
-                        if (!value) await WinUtils.toggleTaskbar(visible: true);
                         if (!mounted) return;
                         setState(() {});
                       },
@@ -1034,20 +1074,7 @@ class FirstRunState extends State<FirstRun> {
                       trailing: InfoWidget("Open saved data folder", onTap: () {
                         WinUtils.open(AppPaths.root);
                       }),
-                      onChanged: (bool value) async {
-                        await NativeIntegrationCoordinator.instance.setConsent(
-                          NativeIntegrationId.backgroundCapture,
-                          value,
-                        );
-                        if (value &&
-                            !NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.backgroundCapture)) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Activity capture is unavailable in this profile.')),
-                            );
-                          }
-                          return;
-                        }
+                      onChanged: (bool value) {
                         setState(() {
                           user.trktivityEnabled = value;
                           Boxes.updateSettings("trktivityEnabled", value);
@@ -1064,18 +1091,6 @@ class FirstRunState extends State<FirstRun> {
                           "Adds quick file and folder tools like search, rename helpers, project overview, and folder-size scanning.",
                       value: wizardlyContextMenu.isWizardlyInstalledInContextMenu(),
                       onChanged: (bool value) async {
-                        await NativeIntegrationCoordinator.instance.setConsent(
-                          NativeIntegrationId.contextMenu,
-                          value,
-                        );
-                        if (value && !NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.contextMenu)) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Context-menu integration is unavailable in this profile.')),
-                            );
-                          }
-                          return;
-                        }
                         wizardlyContextMenu.toggleWizardlyToContextMenu();
                         if (!mounted) return;
                         setState(() {});
@@ -1215,17 +1230,20 @@ class FirstRunState extends State<FirstRun> {
   // ─────────────────────── FOOTER ─────────────────────────
 
   Widget _buildStickyFooter(ThemeData theme, Color accent) {
-    final bool isHotkeysStep = currentStep == 0;
-    final bool isLastStep = currentStep == 2;
+    final bool isInstallStep = currentStep == 0;
+    final bool isHotkeysStep = currentStep == 1;
+    final bool isLastStep = currentStep == 3;
     final bool runningFromTempFolder = _isRunningFromTempFolder;
     final Hotkeys quickMenu = _hotkeyFor(_Feature.quickMenu);
     final bool quickMenuSet = quickMenu.key.isNotEmpty;
 
-    final VoidCallback? onContinue = isHotkeysStep
-        ? (runningFromTempFolder || !quickMenuSet ? null : _continueSetup)
-        : isLastStep
-            ? _finishSetup
-            : () => _goToStep(currentStep + 1);
+    final VoidCallback? onContinue = isInstallStep
+        ? (runningFromTempFolder ? null : () => _goToStep(1))
+        : isHotkeysStep
+            ? (quickMenuSet ? _continueSetup : null)
+            : isLastStep
+                ? _finishSetup
+                : () => _goToStep(currentStep + 1);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
@@ -1245,7 +1263,7 @@ class FirstRunState extends State<FirstRun> {
         ),
         child: Row(
           children: <Widget>[
-            if (currentStep > 0) ...<Widget>[
+            if (!isInstallStep) ...<Widget>[
               OutlinedButton.icon(
                 onPressed: () => _goToStep(currentStep - 1),
                 icon: const Icon(Icons.arrow_back_rounded),
@@ -1254,24 +1272,26 @@ class FirstRunState extends State<FirstRun> {
               const SizedBox(width: 12),
             ],
             Expanded(
-              child: isHotkeysStep
+              child: isInstallStep
                   ? Text(
                       runningFromTempFolder
                           ? "Move or extract Tabame to a permanent folder to continue."
-                          : quickMenuSet
-                              ? "QuickMenu: ${quickMenu.displayHotkey}"
-                              : "Set the QuickMenu hotkey to continue.",
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: runningFromTempFolder
-                            ? theme.hintColor
-                            : quickMenuSet
-                                ? theme.colorScheme.onSurface
-                                : theme.hintColor,
-                        fontWeight: !runningFromTempFolder && quickMenuSet ? FontWeight.w600 : FontWeight.w500,
-                      ),
+                          : "Move Tabame manually if needed, then continue to set your hotkeys.",
+                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, fontWeight: FontWeight.w500),
                       overflow: TextOverflow.ellipsis,
                     )
-                  : const SizedBox.shrink(),
+                  : isHotkeysStep
+                      ? Text(
+                          quickMenuSet
+                              ? "QuickMenu: ${quickMenu.displayHotkey}"
+                              : "Set the QuickMenu hotkey to continue.",
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: quickMenuSet ? theme.colorScheme.onSurface : theme.hintColor,
+                            fontWeight: quickMenuSet ? FontWeight.w600 : FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : const SizedBox.shrink(),
             ),
             FilledButton.icon(
               onPressed: onContinue,
@@ -1284,7 +1304,7 @@ class FirstRunState extends State<FirstRun> {
               icon: Icon(isLastStep ? Icons.restart_alt_rounded : Icons.arrow_forward_rounded),
               label: Text(isLastStep
                   ? "Save and launch"
-                  : isHotkeysStep
+                  : (isInstallStep || isHotkeysStep)
                       ? "Continue"
                       : "Next"),
             ),
@@ -1339,7 +1359,7 @@ class FirstRunState extends State<FirstRun> {
     required String title,
     required String description,
     required bool value,
-    required ValueChanged<bool>? onChanged,
+    required ValueChanged<bool> onChanged,
     Widget? trailing,
   }) {
     return Container(
@@ -1354,7 +1374,7 @@ class FirstRunState extends State<FirstRun> {
         child: InkWell(
           borderRadius: BorderRadius.circular(24),
           // Inverts the current boolean value when the card is tapped
-          onTap: onChanged == null ? null : () => onChanged(!value),
+          onTap: () => onChanged(!value),
           child: Padding(
             padding: const EdgeInsets.all(18),
             child: Row(
@@ -1398,7 +1418,7 @@ class FirstRunState extends State<FirstRun> {
 
   Future<void> _goToStep(int step) async {
     if (_isRunningFromTempFolder && step > 0) return;
-    if (step > 0 && _hotkeyFor(_Feature.quickMenu).key.isEmpty) return;
+    if (step > 1 && _hotkeyFor(_Feature.quickMenu).key.isEmpty) return;
     if (step == currentStep) return;
     await pageController.animateToPage(
       step,
@@ -1409,17 +1429,11 @@ class FirstRunState extends State<FirstRun> {
 
   Future<void> _continueSetup() async {
     // First-run edits stay in memory until the user explicitly saves and launches.
-    await _goToStep(1);
+    await _goToStep(2);
   }
 
   Future<void> _finishSetup() async {
     _syncQuickClickEnabled();
-    if (remap.isNotEmpty) {
-      await NativeIntegrationCoordinator.instance.setConsent(
-        NativeIntegrationId.globalHooks,
-        true,
-      );
-    }
     await Boxes.updateSettings("remap", jsonEncode(remap));
     await Boxes.updateSettings("justInstalled", true);
     await Boxes.pref.setInt("installDate", DateTime.now().millisecondsSinceEpoch);
@@ -1433,6 +1447,30 @@ class FirstRunState extends State<FirstRun> {
       setState(() {});
       Globals.mainPageViewController.jumpToPage(Pages.quickmenu.index);
     }
+  }
+
+  void downloadTabame() async {
+    final http.Response response = await http.get(Uri.parse("https://api.github.com/repos/far-se/tabame/releases"));
+    if (response.statusCode != 200) return;
+    final List<dynamic> json = jsonDecode(response.body);
+    if (json.isEmpty) return;
+    final Map<String, dynamic> lastVersion = json[0];
+    String downloadLink = "";
+    for (Map<String, dynamic> x in lastVersion["assets"]) {
+      if (!x["name"].endsWith("zip")) continue;
+      if (x.containsKey("browser_download_url")) {
+        downloadLink = x["browser_download_url"];
+        break;
+      }
+    }
+    final String fileName = AppPaths.temporaryPath('tabame_${lastVersion["tag_name"]}.zip');
+    await WinUtils.downloadFile(downloadLink, fileName, () {
+      final String dir = AppPaths.root;
+      WinUtils.runPowerShell(<String>[
+        'Expand-Archive -LiteralPath "$fileName" -DestinationPath "$dir" -Force;',
+        'Remove-Item -LiteralPath "$fileName" -Force;',
+      ]);
+    });
   }
 }
 

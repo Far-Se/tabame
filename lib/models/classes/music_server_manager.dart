@@ -21,13 +21,9 @@ class MusicServerManager {
   static const Duration _maxSongDuration = Duration(hours: 24);
 
   static String get _filePath => AppPaths.settingsPath('music_servers.json');
-  static String get _writableFilePath => AppPaths.settingsPath('music_servers.json', forWrite: true);
   static String get _activeSourcePath => AppPaths.settingsPath('music_active_source.txt');
-  static String get _writableActiveSourcePath => AppPaths.settingsPath('music_active_source.txt', forWrite: true);
   static String get _queueFilePath =>
       AppPaths.cachePath(kDebugMode ? p.join('debug', 'music_queue.json') : 'music_queue.json');
-  static String get _writableQueueFilePath =>
-      AppPaths.cachePath(kDebugMode ? p.join('debug', 'music_queue.json') : 'music_queue.json', forWrite: true);
 
   static List<MusicServerConfig> _configs = <MusicServerConfig>[];
   static String? _activeConfigId;
@@ -62,7 +58,6 @@ class MusicServerManager {
   static final ValueNotifier<Duration?> sleepRemainingNotifier = ValueNotifier<Duration?>(null);
 
   static String get _playbackPrefsPath => AppPaths.settingsPath('music_playback_prefs.json');
-  static String get _writablePlaybackPrefsPath => AppPaths.settingsPath('music_playback_prefs.json', forWrite: true);
 
   static List<MusicServerConfig> get configs => _configs;
   static String? get activeConfigId => _activeConfigId;
@@ -141,7 +136,7 @@ class MusicServerManager {
 
   static Future<void> _savePlaybackPrefs() async {
     try {
-      final File file = File(_writablePlaybackPrefsPath);
+      final File file = File(_playbackPrefsPath);
       if (!file.existsSync()) await file.create(recursive: true);
       await file.writeAsString(jsonEncode(<String, dynamic>{
         'volume': volumeNotifier.value,
@@ -261,7 +256,7 @@ class MusicServerManager {
 
   static void _updateCacheIndex(int index) {
     try {
-      final File file = File(_writableQueueFilePath);
+      final File file = File(_queueFilePath);
       if (!file.existsSync()) return;
       final String content = file.readAsStringSync();
       // Use regex to replace currentIndex value without full decode/encode
@@ -288,7 +283,7 @@ class MusicServerManager {
   }
 
   static Future<void> saveConfigs() async {
-    final File file = File(_writableFilePath);
+    final File file = File(_filePath);
     if (!file.existsSync()) await file.create(recursive: true);
     await file.writeAsString(jsonEncode(_configs.map((MusicServerConfig e) => e.toMap()).toList()));
   }
@@ -296,7 +291,7 @@ class MusicServerManager {
   static Future<bool> saveCurrentQueue() async {
     final List<MusicItem> items = _currentPlaybackQueue();
     if (items.isEmpty || _activeConfigId == null) return false;
-    final File file = File(_writableQueueFilePath);
+    final File file = File(_queueFilePath);
     if (!file.existsSync()) await file.create(recursive: true);
     await file.writeAsString(jsonEncode(<String, dynamic>{
       'serverId': _activeConfigId,
@@ -393,7 +388,7 @@ class MusicServerManager {
   }
 
   static Future<void> _saveActiveSourceId(String? id) async {
-    final File file = File(_writableActiveSourcePath);
+    final File file = File(_activeSourcePath);
     if (id == null || id.trim().isEmpty) {
       if (file.existsSync()) await file.delete();
       return;

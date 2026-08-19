@@ -8,7 +8,6 @@ import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../../pages/quickmenu.dart';
-import '../../../services/update_service.dart';
 import '../../widgets/custom_tooltip.dart';
 import 'system_power_panel.dart';
 
@@ -17,9 +16,6 @@ class OpenSettingsButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool updatesAvailable = UpdateService.forCurrentProfile().capabilities.canCheckRemoteReleases &&
-        user.autoCheckForUpdates &&
-        Globals.version != user.newVersion;
     return Material(
       type: MaterialType.transparency,
       child: SizedBox(
@@ -32,12 +28,15 @@ class OpenSettingsButton extends StatelessWidget {
             );
           },
           child: CustomTooltip(
-            message:
-                updatesAvailable ? "New Version Available\nRight-click for power" : "Settings\nRight-click for power",
+            message: user.autoCheckForUpdates && Globals.version != user.newVersion
+                ? "New Version Available\nRight-click for power"
+                : "Settings\nRight-click for power",
             child: IconButton(
               padding: const EdgeInsets.all(0),
               splashRadius: 25,
-              icon: updatesAvailable ? const Icon(Icons.new_releases) : const Icon(Icons.settings),
+              icon: user.autoCheckForUpdates && Globals.version != user.newVersion
+                  ? const Icon(Icons.new_releases)
+                  : const Icon(Icons.settings),
               onPressed: () {
                 // if (Boxes.quickTimers.isNotEmpty) {
                 //   WinUtils.msgBox("You Have Running Timers", "You Have Running Timers and you can not open Settings because you will loose them.");

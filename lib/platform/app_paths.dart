@@ -1,67 +1,8 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-
-import 'app_data_locations.dart';
-import 'distribution_profile.dart';
-import 'windows/windows_application_data.dart';
-
-enum AppDataMigrationStatus {
-  notRun,
-  skipped,
-  notNeeded,
-  completed,
-  incomplete,
-}
-
-class AppDataMigrationReport {
-  const AppDataMigrationReport({
-    required this.status,
-    required this.version,
-    required this.copiedFiles,
-    this.error,
-  });
-
-  const AppDataMigrationReport.notRun()
-      : status = AppDataMigrationStatus.notRun,
-        version = 0,
-        copiedFiles = 0,
-        error = null;
-
-  const AppDataMigrationReport.skipped()
-      : status = AppDataMigrationStatus.skipped,
-        version = 0,
-        copiedFiles = 0,
-        error = null;
-
-  const AppDataMigrationReport.notNeeded()
-      : status = AppDataMigrationStatus.notNeeded,
-        version = 1,
-        copiedFiles = 0,
-        error = null;
-
-  const AppDataMigrationReport.completed({required this.version, required this.copiedFiles})
-      : status = AppDataMigrationStatus.completed,
-        error = null;
-
-  const AppDataMigrationReport.failed({required this.version, required this.copiedFiles, required this.error})
-      : status = AppDataMigrationStatus.incomplete;
-
-  final AppDataMigrationStatus status;
-  final int version;
-  final int copiedFiles;
-  final String? error;
-}
-
-class _MigrationFile {
-  const _MigrationFile({required this.source, required this.relativePath});
-
-  final File source;
-  final String relativePath;
-}
 
 /// Owns Tabame's platform-neutral application data locations.
 ///
@@ -82,40 +23,30 @@ class AppPaths {
 
   String? _rootPath;
   String? _legacyRootPath;
-  String? _cacheRootPath;
   String? _temporaryBasePath;
   String? _pluginsDirectoryPath;
-  DistributionProfile? _profile;
-  AppDataMigrationReport _migration = const AppDataMigrationReport.notRun();
 
   /// Initializes the path service and performs an idempotent legacy migration.
   ///
   /// The provider callbacks exist for focused tests and do not change the
   /// production path-provider behavior. [rootOverride] and
   /// [legacyRootOverride] are likewise test/import hooks; normal application
-  /// startup leaves them null. [applicationDataLocations] allows tests to
-  /// provide package-like locations without requiring a package identity.
+  /// startup leaves them null.
   static Future<void> initialize({
     Future<Directory> Function()? applicationSupportDirectory,
     Future<Directory> Function()? applicationCacheDirectory,
     Future<Directory> Function()? temporaryDirectory,
-    Future<AppDataLocations?> Function()? applicationDataLocations,
-    DistributionProfile? profile,
     String? rootOverride,
     String? legacyRootOverride,
     bool migrateLegacyData = true,
-    Future<void> Function(File source, File destination)? copyFile,
   }) {
     return instance._initialize(
       applicationSupportDirectory: applicationSupportDirectory,
       applicationCacheDirectory: applicationCacheDirectory,
       temporaryDirectory: temporaryDirectory,
-      applicationDataLocations: applicationDataLocations,
-      profile: profile,
       rootOverride: rootOverride,
       legacyRootOverride: legacyRootOverride,
       migrateLegacyData: migrateLegacyData,
-      copyFile: copyFile,
     );
   }
 
@@ -123,59 +54,28 @@ class AppPaths {
     Future<Directory> Function()? applicationSupportDirectory,
     Future<Directory> Function()? applicationCacheDirectory,
     Future<Directory> Function()? temporaryDirectory,
-    Future<AppDataLocations?> Function()? applicationDataLocations,
-    DistributionProfile? profile,
     String? rootOverride,
     String? legacyRootOverride,
     required bool migrateLegacyData,
-    Future<void> Function(File source, File destination)? copyFile,
   }) async {
     final Directory supportDirectory =
         await (applicationSupportDirectory == null ? getApplicationSupportDirectory() : applicationSupportDirectory());
-    final Directory hostCacheDirectory =
+    final Directory cacheDirectory =
         await (applicationCacheDirectory == null ? getApplicationCacheDirectory() : applicationCacheDirectory());
     final Directory hostTemporaryDirectory =
         await (temporaryDirectory == null ? getTemporaryDirectory() : temporaryDirectory());
 
-    final DistributionProfile selectedProfile = profile ?? DistributionProfileConfig.current;
-    AppDataLocations? packageLocations;
-    if (selectedProfile == DistributionProfile.storeMsix && Platform.isWindows) {
-      packageLocations =
-          await (applicationDataLocations == null ? WindowsApplicationData.resolve() : applicationDataLocations());
-      if (packageLocations == null) {
-        throw StateError('Windows.Storage.ApplicationData is unavailable for the storeMsix profile.');
-      }
-    }
-
-    final String localAppData = _environmentPath('LOCALAPPDATA') ?? hostCacheDirectory.path;
+    final String localAppData = _environmentPath('LOCALAPPDATA') ?? cacheDirectory.path;
     final String legacyRoot = legacyRootOverride ?? p.join(localAppData, 'Tabame');
-    final String canonicalRoot;
-    final String cacheRoot;
-    final String temporaryRoot;
-    if (packageLocations != null) {
-      canonicalRoot = rootOverride ?? packageLocations.localFolder.path;
-      cacheRoot = packageLocations.localCacheFolder.path;
-      temporaryRoot = packageLocations.temporaryFolder.path;
-    } else {
-      canonicalRoot = rootOverride ??
-          (Platform.isWindows ? p.join(localAppData, 'Tabame') : p.join(supportDirectory.path, 'Tabame'));
-      cacheRoot = p.join(canonicalRoot, 'cache');
-      temporaryRoot = hostTemporaryDirectory.path;
-    }
+    final String canonicalRoot =
+        rootOverride ?? (Platform.isWindows ? p.join(localAppData, 'Tabame') : p.join(supportDirectory.path, 'Tabame'));
 
     _rootPath = canonicalRoot;
     _legacyRootPath = legacyRoot;
-    _cacheRootPath = cacheRoot;
-    _temporaryBasePath = temporaryRoot;
-    _profile = selectedProfile;
+    _temporaryBasePath = hostTemporaryDirectory.path;
     _pluginsDirectoryPath = null;
-    _migration = const AppDataMigrationReport.notRun();
 
-    if (migrateLegacyData) {
-      await _migrateLegacyData(copyFile: copyFile);
-    } else {
-      _migration = const AppDataMigrationReport.skipped();
-    }
+    if (migrateLegacyData) await _migrateLegacyData();
     _pluginsDirectoryPath = _readConfiguredPluginsDirectory();
   }
 
@@ -189,38 +89,25 @@ class AppPaths {
   static void resetForTesting() {
     instance._rootPath = null;
     instance._legacyRootPath = null;
-    instance._cacheRootPath = null;
     instance._temporaryBasePath = null;
     instance._pluginsDirectoryPath = null;
-    instance._profile = null;
-    instance._migration = const AppDataMigrationReport.notRun();
   }
 
   static bool get isInitialized => instance._rootPath != null;
-  static DistributionProfile get profile => instance._profile ?? DistributionProfileConfig.current;
-  static AppDataMigrationReport get migration => instance._migration;
 
-  /// Whether persisted settings are available. A settings directory alone
-  /// does not mean that first-run setup has been completed. The last-known-good
-  /// backup also counts while settings.json is being replaced, so a second
-  /// Tabame process cannot mistake a normal write window for first run.
-  static bool get hasSettingsFile {
-    final String readablePath = settingsPath('settings.json');
-    if (File(readablePath).existsSync()) return true;
-
-    final String writablePath = settingsPath('settings.json', forWrite: true);
-    return File('$readablePath.bk').existsSync() || File('$writablePath.bk').existsSync();
-  }
+  /// Whether the persisted settings file exists. A settings directory alone
+  /// does not mean that first-run setup has been completed.
+  static bool get hasSettingsFile => File(settingsPath('settings.json')).existsSync();
 
   static String get root => instance._requireRoot();
   static String get legacyRoot => instance._requireLegacyRoot();
   static String get settingsDirectory => currentPath(
         kDebugMode ? p.join('settings', 'debug') : 'settings',
       );
-  static String get cacheDirectory => instance._requireCacheRoot();
+  static String get cacheDirectory => currentPath('cache');
   static String get pluginsDirectory => instance._pluginsDirectoryPath ?? currentPath('plugins');
   static String get fancyshotDirectory => currentPath('fancyshot');
-  // static String get rewindlyDirectory => currentPath('rewindly');
+  static String get rewindlyDirectory => currentPath('rewindly');
   static String get temporaryDirectory => instance._requireTemporaryBasePath();
 
   /// Returns a canonical path for an app-owned relative storage location.
@@ -248,7 +135,7 @@ class AppPaths {
   }
 
   static String cachePath(String relativePath, {bool forWrite = false}) {
-    return instance._resolveCachePath(relativePath, forWrite: forWrite);
+    return resolvePath(p.join('cache', relativePath), forWrite: forWrite);
   }
 
   static String pluginsPath(String relativePath, {bool forWrite = false}) {
@@ -267,36 +154,12 @@ class AppPaths {
     return instance._setPluginsDirectory(directoryPath);
   }
 
-  /// Database files are opened read/write, so they always use the canonical
-  /// root after migration. WAL and SHM sidecars therefore stay beside the same
-  /// database instead of silently reopening a legacy copy.
-  static String databasePath(String fileName, {bool forWrite = true}) {
+  static String databasePath(String fileName, {bool forWrite = false}) {
     return resolvePath(fileName, forWrite: forWrite);
   }
 
   static String temporaryPath(String relativePath) {
     return p.join(temporaryDirectory, relativePath);
-  }
-
-  /// Removes only disposable cache data. Settings, databases, secrets, logs,
-  /// plugins, and user-created output are deliberately preserved.
-  static Future<void> clearCache() async {
-    final Directory directory = Directory(cacheDirectory);
-    if (await directory.exists()) await directory.delete(recursive: true);
-    await directory.create(recursive: true);
-  }
-
-  /// Deletes all app-owned data after an explicit user decision. Installers do
-  /// not call this automatically; it is separate from uninstall lifecycle.
-  static Future<void> deleteAllData() async {
-    final String rootPath = root;
-    final String cachePath = cacheDirectory;
-    if (!instance._samePath(rootPath, cachePath)) {
-      final Directory cache = Directory(cachePath);
-      if (await cache.exists()) await cache.delete(recursive: true);
-    }
-    final Directory data = Directory(rootPath);
-    if (await data.exists()) await data.delete(recursive: true);
   }
 
   static Uri fileUri(String relativePath, {bool forWrite = false}) {
@@ -311,14 +174,6 @@ class AppPaths {
 
   static bool _exists(String path) {
     return FileSystemEntity.typeSync(path, followLinks: false) != FileSystemEntityType.notFound;
-  }
-
-  String _resolveCachePath(String relativePath, {required bool forWrite}) {
-    final String normalized = relativePath.trim().replaceAll('\\', '/');
-    final String canonical = _join(_requireCacheRoot(), normalized);
-    if (forWrite || _exists(canonical)) return canonical;
-    final String legacy = _join(_requireLegacyRoot(), p.join('cache', normalized));
-    return _exists(legacy) ? legacy : canonical;
   }
 
   static const String _pluginsDirectoryConfigName = 'plugins_directory.txt';
@@ -497,12 +352,6 @@ class AppPaths {
     return value;
   }
 
-  String _requireCacheRoot() {
-    final String? value = _cacheRootPath;
-    if (value == null) throw StateError('AppPaths.initialize() must complete before paths are used.');
-    return value;
-  }
-
   String _join(String base, String relativePath) {
     final String normalized = relativePath.trim().replaceAll('\\', '/');
     if (normalized.isEmpty) return base;
@@ -517,128 +366,35 @@ class AppPaths {
     return p.joinAll(<String>[base, ...segments]);
   }
 
-  Future<void> _migrateLegacyData({Future<void> Function(File source, File destination)? copyFile}) async {
+  Future<void> _migrateLegacyData() async {
     final String sourcePath = _requireLegacyRoot();
     final String destinationPath = _requireRoot();
-    if (_samePath(sourcePath, destinationPath)) {
-      _migration = const AppDataMigrationReport.notNeeded();
-      return;
-    }
+    if (_samePath(sourcePath, destinationPath)) return;
 
     final Directory source = Directory(sourcePath);
-    if (!source.existsSync()) {
-      _migration = const AppDataMigrationReport.notNeeded();
-      return;
-    }
+    if (!source.existsSync()) return;
 
-    const int version = 1;
-    final File marker = File(p.join(destinationPath, '.tabame-data-migration.json'));
-    if (marker.existsSync()) {
-      try {
-        final Object? decoded = jsonDecode(marker.readAsStringSync());
-        if (decoded is Map &&
-            decoded['status'] == 'complete' &&
-            decoded['version'] is num &&
-            (decoded['version'] as num).toInt() >= version) {
-          _migration = AppDataMigrationReport.completed(
-            version: (decoded['version'] as num).toInt(),
-            copiedFiles: (decoded['copiedFiles'] as num?)?.toInt() ?? 0,
-          );
-          return;
-        }
-      } catch (_) {}
-    }
-    final Directory staging = Directory(p.join(destinationPath, '.tabame-data-migration-staging'));
-    int copiedFiles = 0;
-    try {
-      if (staging.existsSync()) await staging.delete(recursive: true);
-      await staging.create(recursive: true);
-      await _writeMigrationMarker(marker, version: version, status: 'in_progress');
-
-      final List<_MigrationFile> files = <_MigrationFile>[];
-      await _collectMigrationFiles(source, source, files);
-      for (final _MigrationFile file in files) {
-        final String targetPath = _migrationTarget(file.relativePath);
-        if (File(targetPath).existsSync()) continue;
-        final String stagedPath = p.join(staging.path, file.relativePath);
-        await File(stagedPath).parent.create(recursive: true);
-        if (copyFile == null) {
-          await file.source.copy(stagedPath);
-        } else {
-          await copyFile(file.source, File(stagedPath));
-        }
-        final File staged = File(stagedPath);
-        if (!staged.existsSync()) throw StateError('Migration copy produced no file: $stagedPath');
-        await File(targetPath).parent.create(recursive: true);
-        if (!File(targetPath).existsSync()) {
-          await staged.rename(targetPath);
-          copiedFiles++;
-        }
-      }
-
-      await _writeMigrationMarker(
-        marker,
-        version: version,
-        status: 'complete',
-        copiedFiles: copiedFiles,
-      );
-      await staging.delete(recursive: true);
-      _migration = AppDataMigrationReport.completed(version: version, copiedFiles: copiedFiles);
-    } catch (error) {
-      // Never delete source data or overwrite a destination file. The staging
-      // directory is disposable, so a later startup can retry cleanly.
-      _migration = AppDataMigrationReport.failed(version: version, copiedFiles: copiedFiles, error: '$error');
-      try {
-        await _writeMigrationMarker(
-          marker,
-          version: version,
-          status: 'incomplete',
-          copiedFiles: copiedFiles,
-          error: '$error',
-        );
-      } catch (_) {}
-    }
+    await _copyDirectoryContents(source, Directory(destinationPath));
   }
 
-  Future<void> _collectMigrationFiles(Directory root, Directory current, List<_MigrationFile> files) async {
-    for (final FileSystemEntity entity in current.listSync(followLinks: false)) {
+  Future<void> _copyDirectoryContents(Directory source, Directory destination) async {
+    if (_samePath(source.path, destination.path)) return;
+    if (!destination.existsSync()) destination.createSync(recursive: true);
+
+    for (final FileSystemEntity entity in source.listSync(followLinks: false)) {
       if (entity is Link) continue;
+      final String destinationPath = p.join(destination.path, p.basename(entity.path));
       if (entity is Directory) {
-        await _collectMigrationFiles(root, entity, files);
-      } else if (entity is File) {
-        files.add(_MigrationFile(
-          source: entity,
-          relativePath: p.relative(entity.path, from: root.path),
-        ));
+        await _copyDirectoryContents(entity, Directory(destinationPath));
+      } else if (entity is File && !File(destinationPath).existsSync()) {
+        try {
+          await entity.copy(destinationPath);
+        } catch (_) {
+          // A locked or partially-written legacy file remains available through
+          // [resolvePath] and can be retried during a later startup.
+        }
       }
     }
-  }
-
-  String _migrationTarget(String relativePath) {
-    final String normalized = relativePath.replaceAll('\\', '/');
-    if (normalized == 'cache' || normalized.startsWith('cache/')) {
-      final String cacheRelative = normalized == 'cache' ? '' : normalized.substring('cache/'.length);
-      return _join(_requireCacheRoot(), cacheRelative);
-    }
-    return _join(_requireRoot(), normalized);
-  }
-
-  Future<void> _writeMigrationMarker(
-    File marker, {
-    required int version,
-    required String status,
-    int copiedFiles = 0,
-    String? error,
-  }) async {
-    await marker.parent.create(recursive: true);
-    final Map<String, Object?> data = <String, Object?>{
-      'version': version,
-      'status': status,
-      'copiedFiles': copiedFiles,
-      'updatedAt': DateTime.now().toUtc().toIso8601String(),
-      if (error != null) 'error': error,
-    };
-    await marker.writeAsString(jsonEncode(data), flush: true);
   }
 
   bool _samePath(String left, String right) {

@@ -20,9 +20,6 @@ import '../globals.dart';
 import '../settings.dart';
 import '../util/scripts.dart';
 import '../../platform/app_paths.dart';
-import '../../platform/distribution_profile.dart';
-import '../../services/extension_policy.dart';
-import '../../services/native_integration_coordinator.dart';
 import 'imports.dart';
 import 'keys.dart';
 import 'mixed.dart';
@@ -31,18 +28,9 @@ import 'win32.dart';
 
 typedef ExtractedIcon = Object?;
 
-final class _TokenElevation extends Struct {
-  @Uint32()
-  external int tokenIsElevated;
-}
-
-const int _tokenQuery = 0x0008;
-const int _tokenElevationInformation = 20;
-
 class WinUtils {
   WinUtils._();
-  static int _isAdministratorAccount = -1;
-  static DynamicLibrary? _advapi32;
+  static int _isAdministrator = -1;
   static String _programFilesPath = "";
 
   static const Set<String> _perPathIconExtensions = <String>{'.exe', '.lnk', '.url', '.ico'};
@@ -124,65 +112,12 @@ class WinUtils {
   }
 
   // Environment and system information
-  /// Returns whether the account belongs to the local Administrators group.
-  ///
-  /// Group membership is intentionally separate from process elevation. An
-  /// administrator account normally starts at medium integrity under UAC.
-  static bool isAdministratorAccount() {
-    if (_isAdministratorAccount == -1) {
-      _isAdministratorAccount = IsUserAnAdmin() == true ? 1 : 0;
+  static bool isAdministrator() {
+    if (_isAdministrator == -1) {
+      _isAdministrator = IsUserAnAdmin() == true ? 1 : 0;
     }
-    return _isAdministratorAccount == 1;
+    return _isAdministrator == 1;
   }
-
-  /// Returns whether this process currently has an elevated token.
-  ///
-  /// Do not replace this with [isAdministratorAccount]; the latter is true for
-  /// a medium-integrity administrator account and cannot authorize access to
-  /// elevated windows or protected registry keys.
-  static bool isProcessElevated() {
-    if (!Platform.isWindows) {
-      //TODO: Implement multiplatform
-      return false;
-    }
-
-    final Pointer<IntPtr> tokenHandle = calloc<IntPtr>();
-    final Pointer<_TokenElevation> elevation = calloc<_TokenElevation>();
-    final Pointer<Uint32> returnLength = calloc<Uint32>();
-    try {
-      final DynamicLibrary advapi32 = _advapi32 ??= DynamicLibrary.open('advapi32.dll');
-      final int openResult = advapi32
-          .lookupFunction<Int32 Function(IntPtr, Uint32, Pointer<IntPtr>), int Function(int, int, Pointer<IntPtr>)>(
-        'OpenProcessToken',
-      )(GetCurrentProcess(), _tokenQuery, tokenHandle);
-      if (openResult == 0 || tokenHandle.value == 0) return false;
-
-      final int queryResult = advapi32.lookupFunction<
-          Int32 Function(IntPtr, Uint32, Pointer<Void>, Uint32, Pointer<Uint32>),
-          int Function(int, int, Pointer<Void>, int, Pointer<Uint32>)>('GetTokenInformation')(
-        tokenHandle.value,
-        _tokenElevationInformation,
-        elevation.cast<Void>(),
-        sizeOf<_TokenElevation>(),
-        returnLength,
-      );
-      return queryResult != 0 && elevation.ref.tokenIsElevated != 0;
-    } catch (_) {
-      return false;
-    } finally {
-      if (tokenHandle.value != 0) CloseHandle(tokenHandle.value);
-      free(tokenHandle);
-      free(elevation);
-      free(returnLength);
-    }
-  }
-
-  /// Returns the process-elevation state used by existing Windows callers.
-  ///
-  /// Older call sites used the administrator-group check as if it represented
-  /// the current token. Keep the method name for compatibility, but make its
-  /// meaning match the access checks those callers perform.
-  static bool isAdministrator() => isProcessElevated();
 
   static bool isWindows11() {
     final RegistryKey currentVersionKey =
@@ -328,19 +263,62 @@ class WinUtils {
 
   /// Root folder holding Rewindly's rolling segment buffer
   /// (`<root>\\<monitorIndex>\\seg_<epochMs>.mp4`). Exported clips go to FancyShot.
-  // static String getRewindlyFolder() {
-  //   final String directory = AppPaths.rewindlyDirectory;
-  //   Directory(directory).createSync(recursive: true);
-  //   return directory;
-  // }
+  static String getRewindlyFolder() {
+    final String directory = AppPaths.rewindlyDirectory;
+    Directory(directory).createSync(recursive: true);
+    return directory;
+  }
+
+  static Future<String> folderPicker() async {
+    return await pickFolder();
+  }
 
   // ── Install / Uninstall ──
 
   static const String _uninstallRegistryRoot = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall';
 
-  /// Removes the legacy portable "Apps & Features" entry during the
-  /// service-owned custom uninstall flow.
-  static void _unregisterUninstallEntry() {
+  /// Recursively copies every file and folder under [sourcePath] into
+  /// [destinationPath]. No-op if both paths point to the same folder.
+  static Future<void> copyDirectoryContents(String sourcePath, String destinationPath) async {
+    if (p.normalize(sourcePath).toLowerCase() == p.normalize(destinationPath).toLowerCase()) return;
+    final Directory destinationDir = Directory(destinationPath);
+    if (!destinationDir.existsSync()) destinationDir.createSync(recursive: true);
+    for (final FileSystemEntity entity in Directory(sourcePath).listSync()) {
+      final String newPath = p.join(destinationPath, p.basename(entity.path));
+      if (entity is Directory) {
+        await copyDirectoryContents(entity.path, newPath);
+      } else if (entity is File) {
+        try {
+          await entity.copy(newPath);
+        } catch (_) {}
+      }
+    }
+  }
+
+  /// Registers Tabame in Windows' "Apps & Features" / "Programs and Features"
+  /// list, with an uninstall command that re-launches the app in uninstall mode.
+  static void registerUninstallEntry({String? installLocation}) {
+    try {
+      final RegistryKey uninstallRoot = Registry.openPath(RegistryHive.currentUser,
+          path: _uninstallRegistryRoot, desiredAccessRights: AccessRights.allAccess);
+      if (uninstallRoot.subkeyNames.contains('Tabame')) uninstallRoot.deleteKey('Tabame');
+      final RegistryKey tabameKey = uninstallRoot.createKey('Tabame');
+      final String exe = Platform.resolvedExecutable;
+      tabameKey.createValue(const RegistryValue('DisplayName', RegistryValueType.string, 'Tabame'));
+      tabameKey.createValue(RegistryValue('UninstallString', RegistryValueType.string, '"$exe" -interface -uninstall'));
+      tabameKey.createValue(RegistryValue('DisplayIcon', RegistryValueType.string, exe));
+      tabameKey.createValue(
+          RegistryValue('InstallLocation', RegistryValueType.string, installLocation ?? File(exe).parent.path));
+      tabameKey.createValue(const RegistryValue('Publisher', RegistryValueType.string, 'Tabame'));
+      tabameKey.createValue(const RegistryValue('NoModify', RegistryValueType.int32, 1));
+      tabameKey.createValue(const RegistryValue('NoRepair', RegistryValueType.int32, 1));
+      tabameKey.close();
+      uninstallRoot.close();
+    } catch (_) {}
+  }
+
+  /// Removes the "Apps & Features" entry created by [registerUninstallEntry].
+  static void unregisterUninstallEntry() {
     try {
       final RegistryKey uninstallRoot = Registry.openPath(RegistryHive.currentUser,
           path: _uninstallRegistryRoot, desiredAccessRights: AccessRights.allAccess);
@@ -354,7 +332,7 @@ class WinUtils {
   /// a detached script (since the running exe can't delete its own files) and exits.
 
   static Future<void> performUninstall() async {
-    if (!DistributionProfileConfig.current.capabilities.customUninstall || !kReleaseMode) return;
+    if (!kReleaseMode) return;
 
     await setStartUpShortcut(false);
 
@@ -363,13 +341,13 @@ class WinUtils {
       wizardlyContextMenu.toggleWizardlyToContextMenu();
     }
 
-    _unregisterUninstallEntry();
+    unregisterUninstallEntry();
 
     // 1. Strip trailing slashes/backslashes to prevent path issues
     final String exeDir = Directory(Platform.resolvedExecutable).parent.path.replaceAll(RegExp(r'[/\\]+$'), '');
     final String appData = getTabameAppDataFolder().replaceAll(RegExp(r'[/\\]+$'), '');
     final String exeName = p.basenameWithoutExtension(Platform.resolvedExecutable);
-    await toggleTaskbar(visible: true);
+    toggleTaskbar(visible: true);
 
     final String tempDir = getTempFolder().replaceAll(RegExp(r'[/\\]+$'), '');
     final String scriptPath = p.join(tempDir, 'uninstall_$exeName.ps1');
@@ -432,7 +410,7 @@ class WinUtils {
   static Future<void> setStartUpShortcut(bool enabled, {String args = "", String? exePath, int showCmd = 1}) async {
     if (kDebugMode) return;
     exePath ??= Platform.resolvedExecutable;
-    await setStartOnSystemStartup(enabled, args: args, exePath: exePath, showCmd: showCmd);
+    setStartOnSystemStartup(enabled, args: args, exePath: exePath, showCmd: showCmd);
   }
 
   static void startOnStartup({
@@ -509,8 +487,7 @@ class WinUtils {
     }
     final String startupProgramsPath = startupProgramsPathBuffer.toDartString();
     free(startupProgramsPathBuffer);
-    final String executableName = p.basenameWithoutExtension(Platform.resolvedExecutable);
-    return "$startupProgramsPath\\Startup\\$executableName.lnk";
+    return "$startupProgramsPath\\Startup\\tabame.lnk";
   }
 
   static bool checkIfRegisterAsStartup() {
@@ -566,30 +543,9 @@ class WinUtils {
     return pinnedAppPaths;
   }
 
-  static Future<bool> toggleTaskbar({bool? visible}) async {
-    final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
-    try {
-      final bool requestedVisible = visible ?? !Win32.isTaskbarVisible();
-      final bool changed = await setTaskbarVisibility(requestedVisible);
-      if (!changed) {
-        integrations.reportError(
-          NativeIntegrationId.shellIntegration,
-          reason: 'The taskbar could not be changed; Windows kept its current state.',
-          reducedMode: true,
-        );
-        return false;
-      }
-      Globals.taskbarVisible = requestedVisible;
-      integrations.reportRunning(NativeIntegrationId.shellIntegration);
-      return true;
-    } catch (_) {
-      integrations.reportError(
-        NativeIntegrationId.shellIntegration,
-        reason: 'The taskbar could not be changed; Windows kept its current state.',
-        reducedMode: true,
-      );
-      return false;
-    }
+  static void toggleTaskbar({bool? visible}) {
+    Globals.taskbarVisible = visible ?? !Win32.isTaskbarVisible();
+    setTaskbarVisibility(Globals.taskbarVisible);
   }
 
   static void moveDesktop(DesktopDirection direction, {bool classMethod = false}) {
@@ -604,23 +560,12 @@ class WinUtils {
     WinKeys.send("{#WIN}{#CTRL}{$directionKey}");
   }
 
-  static void closeAllTabameExProcesses({bool closeInterface = true, bool closeQuickMenu = true}) {
+  static void closeAllTabameExProcesses() {
     final List<int> windowHandles = enumWindows();
     final int mainHandle = Win32.getMainHandle();
     for (final int windowHandle in windowHandles) {
-      if (Win32.getClass(windowHandle) != "TABAME_WIN32_WINDOW" || windowHandle == mainHandle) continue;
-      if (Win32.getTitle(windowHandle).contains("Debug")) continue;
-
-      final String title = Win32.getTitle(windowHandle);
-      if (closeInterface && closeQuickMenu) {
-        Win32.closeWindow(windowHandle);
-        continue;
-      }
-
-      final bool isInterfaceWindow =
-          title == "Tabame - Interface" || title == "Tabame - Wizardly" || title == "Tabame - Fancyshot";
-      final bool isQuickMenuWindow = title == "Tabame";
-      if ((isInterfaceWindow && closeInterface) || (isQuickMenuWindow && closeQuickMenu)) {
+      if (Win32.getClass(windowHandle) == "TABAME_WIN32_WINDOW" && windowHandle != mainHandle) {
+        if (Win32.getTitle(windowHandle).contains("Debug")) continue;
         Win32.closeWindow(windowHandle);
       }
     }
@@ -790,8 +735,7 @@ class WinUtils {
     ]);
   }
 
-  static Future<List<String>> runPowerShell(List<String> commands, {bool userProvided = false}) async {
-    if (userProvided && !ExtensionPolicy.current.canRunArbitraryPowerShell) return const <String>[];
+  static Future<List<String>> runPowerShell(List<String> commands) async {
     final ProcessResult processResult = await Process.run(
       'powershell',
       <String>['-NoProfile', ...commands],
@@ -808,9 +752,7 @@ class WinUtils {
     String command, {
     String? workingDirectory,
     bool keepOpen = true,
-    bool userProvided = false,
   }) async {
-    if (userProvided && !ExtensionPolicy.current.canRunArbitraryPowerShell) return;
     final String scriptContent = keepOpen ? '$command\nRead-Host "Press Enter to close"' : command;
     final List<int> utf16leBytes = <int>[
       for (final int codeUnit in scriptContent.codeUnits) ...<int>[
@@ -840,14 +782,7 @@ class WinUtils {
     );
   }
 
-  static void open(
-    String path, {
-    String? arguments,
-    bool parseParamaters = true,
-    String? workingDirectory,
-    bool userProvided = false,
-  }) {
-    if (userProvided && ExtensionPolicy.current.blocksUserTarget(path)) return;
+  static void open(String path, {String? arguments, bool parseParamaters = true, String? workingDirectory}) {
     final bool shouldParseParameters = parseParamaters;
     final String resolvedWorkingDirectory = workingDirectory ?? "";
     if (shouldParseParameters) {
@@ -870,20 +805,14 @@ class WinUtils {
     launchWithExplorer(path, arguments: arguments, workingDirectory: resolvedWorkingDirectory);
   }
 
-  /// Requests a UAC launch and returns ShellExecute's result code.
-  ///
-  /// Callers that need user-facing cancellation/error handling should use the
-  /// elevation service rather than interpreting this native result directly.
-  static int runAsAdmin(String link, {String? arguments}) {
-    return ShellExecute(
+  static void runAsAdmin(String link, {String? arguments}) {
+    ShellExecute(
         NULL, TEXT("runas"), TEXT(link), arguments == null ? nullptr : TEXT(arguments), nullptr, SW_SHOWNORMAL);
   }
 
-  /// Starts a Tabame child process without changing its integrity by default.
-  ///
-  /// Only an explicit, user-confirmed caller may pass `admin: true`.
   static void startTabame({bool closeCurrent = false, String? arguments, bool? admin}) {
-    admin == true
+    admin ??= WinUtils.isAdministrator();
+    WinUtils.isAdministrator()
         ? WinUtils.runAsAdmin(Platform.resolvedExecutable, arguments: arguments)
         : WinUtils.open(Platform.resolvedExecutable, arguments: arguments);
     if (closeCurrent) {

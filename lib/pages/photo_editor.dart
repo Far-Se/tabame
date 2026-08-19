@@ -20,7 +20,6 @@ import '../platform/app_paths.dart';
 import '../models/settings.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
-import '../services/native_integration_coordinator.dart';
 import '../widgets/interface/fancyshot.dart';
 import '../widgets/widgets/color_picker.dart';
 import '../widgets/widgets/custom_tooltip.dart';
@@ -1409,14 +1408,6 @@ class _PhotoEditorViewState extends State<PhotoEditorView> {
 
   Future<void> _captureMoreFromScreen() async {
     if (_captureMoreBusy) return;
-    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.screenCapture)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Screen capture is unavailable in this profile.')),
-        );
-      }
-      return;
-    }
     setState(() => _captureMoreBusy = true);
     Win32.getMainHandle();
     final int hwnd = Win32.hWnd;

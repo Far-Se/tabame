@@ -4,10 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../models/settings.dart';
 import '../../models/win32/registry.dart';
-import '../../models/win32/win32.dart';
+import '../../models/win32/win_utils.dart';
 import '../../models/wizardly/context_menu_item.dart';
-import '../../services/elevation_service.dart';
-import '../../services/native_integration_coordinator.dart';
 import '../widgets/custom_tooltip.dart';
 import '../widgets/extracted_icon.dart';
 import '../widgets/mini_switch.dart';
@@ -28,35 +26,15 @@ class ContextMenuCleanerState extends State<ContextMenuCleaner> {
   List<ContextMenuItem> items = <ContextMenuItem>[];
   bool isLoading = false;
   bool isAdmin = false;
-  final ElevationService _elevationService = ElevationService.forCurrentProfile();
 
   @override
   void initState() {
     super.initState();
-    isAdmin = _elevationService.readPrivilegeStatus().isElevated;
+    isAdmin = WinUtils.isAdministrator();
     WidgetsBinding.instance.addPostFrameCallback((_) => _scan());
   }
 
   Future<void> _scan() async {
-    final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
-    // Opening the cleaner and pressing Scan are explicit user invocation for
-    // registry inspection; persist that consent before reading Windows state.
-    await integrations.setConsent(NativeIntegrationId.contextMenu, true);
-    if (!integrations.canStart(NativeIntegrationId.contextMenu)) {
-      integrations.reportDisabled(
-        NativeIntegrationId.contextMenu,
-        reason: integrations.denialReason(NativeIntegrationId.contextMenu) ??
-            'Context-menu inspection is unavailable in this profile.',
-        reducedMode: true,
-      );
-      if (mounted) {
-        setState(() {
-          items.clear();
-          isLoading = false;
-        });
-      }
-      return;
-    }
     setState(() {
       isLoading = true;
       items.clear();
@@ -262,34 +240,13 @@ class ContextMenuCleanerState extends State<ContextMenuCleaner> {
               style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w500),
             ),
           ),
-          if (_elevationService.capability.isAvailable)
-            TextButton(
-              onPressed: _restartElevated,
-              child: Text("Restart elevated for this session", style: TextStyle(fontSize: Design.baseFontSize + 1)),
-            )
-          else
-            Text(
-              "Elevation is unavailable in this distribution.",
-              style: TextStyle(fontSize: Design.baseFontSize + 1, color: Colors.orange),
-            ),
+          TextButton(
+            onPressed: () => WinUtils.runAsAdmin(Platform.resolvedExecutable),
+            child: Text("Restart as Admin", style: TextStyle(fontSize: Design.baseFontSize + 1)),
+          ),
         ],
       ),
     );
-  }
-
-  Future<void> _restartElevated() async {
-    final ElevationRequestResult result = await _elevationService.restartCurrentSessionElevated(
-      executable: Platform.resolvedExecutable,
-      arguments: user.args,
-    );
-    if (!mounted) return;
-    if (result.shouldCloseCurrentProcess) {
-      final int hWnd = Win32.findWindow("Tabame");
-      if (hWnd != 0) Win32.closeWindow(hWnd);
-      Future<void>.delayed(const Duration(milliseconds: 300), () => exit(0));
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
   }
 
   Widget _buildHeader(Color accent, Color background, Color onSurface) {
@@ -435,19 +392,8 @@ class ContextMenuCleanerState extends State<ContextMenuCleaner> {
                 child: MiniToggleSwitch(
                   value: item.isEnabled,
                   onChanged: (bool val) async {
-                    try {
-                      await item.toggle();
-                      if (mounted) setState(() {});
-                    } catch (error) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'This registry change was blocked. Use an elevated session if Windows requires it: $error',
-                          ),
-                        ),
-                      );
-                    }
+                    await item.toggle();
+                    setState(() {});
                   },
                   activeThumbColor: accent,
                   activeTrackColor: accent.withValues(alpha: 0.5),

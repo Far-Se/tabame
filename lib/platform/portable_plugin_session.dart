@@ -7,7 +7,6 @@ import 'package:path/path.dart' as p;
 import '../pages/launcher/plugins/plugin_manifest.dart';
 import '../pages/launcher/plugins/plugin_protocol.dart';
 import '../pages/launcher/plugins/plugin_storage.dart';
-import '../services/extension_policy.dart';
 import '../services/notification_coordinator.dart';
 import 'portable_actions.dart';
 import 'portable_settings.dart';
@@ -44,20 +43,6 @@ class PortablePluginSession {
 
   Future<void> start(String query) async {
     await stop();
-    final ExtensionPolicy policy = ExtensionPolicy.current;
-    if (!policy.canExecutePlugin(
-      id: manifest.id,
-      source: manifest.source,
-      enabled: manifest.enabled,
-      publisher: manifest.publisher,
-      artifactHashVerified: false,
-      signatureVerified: false,
-      consentGranted: false,
-    )) {
-      onStatus(policy.pluginDisabledMessage);
-      onFrame(PluginRenderFrame.errorFrame(policy.pluginDisabledMessage));
-      return;
-    }
     _closing = false;
     _backgroundGrace = null;
     final int generation = ++_generation;

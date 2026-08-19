@@ -130,7 +130,9 @@ class TestingChild extends StatelessWidget {
             mainAxisAlignment: M.start,
             crossAxisAlignment: C.start,
             children: <Widget>[
+              Text('user.runAsAdministrator : ${user.runAsAdministrator}'),
               Text('WinUtils.isAdministrator : ${WinUtils.isAdministrator()}'),
+              Text('user.args.contains -tryadmin: ${user.args.join(' ').contains('-tryadmin')}'),
               Text('user.args: ${user.args.join(' ')}'),
             ],
           ),

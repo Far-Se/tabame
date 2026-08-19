@@ -20,7 +20,6 @@ import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../platform/app_paths.dart';
 import '../../models/settings.dart';
-import '../../services/extension_policy.dart';
 import '../../models/win32/win_utils.dart';
 import '../widgets/mini_switch.dart';
 
@@ -294,9 +293,9 @@ class FancyshotState extends State<Fancyshot> {
 
   void _loadLatestScreenshotPreview() async {
     final math.Random random = Random();
-    final int n = random.nextInt(3) + 1;
+    final int n = random.nextInt(12) + 1;
 
-    final ByteData bytes = await rootBundle.load('resources/launcher$n.webp');
+    final ByteData bytes = await rootBundle.load('resources/gradient/gradient$n.jpg');
     capture = bytes.buffer.asUint8List();
     if (capture == null) {
       setState(() {
@@ -429,7 +428,6 @@ class FancyshotState extends State<Fancyshot> {
   }
 
   Future<void> _openUploadHostsSettings() async {
-    if (!ExtensionPolicy.current.canRunUserCommandTemplates) return;
     final List<ScreenCaptureUploadHost>? hosts = await showDialog<List<ScreenCaptureUploadHost>>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.36),
@@ -945,14 +943,12 @@ class FancyshotState extends State<Fancyshot> {
             onPressed: _pickFancyshotFolder,
           ),
           const SizedBox(width: 6),
-          if (ExtensionPolicy.current.canRunUserCommandTemplates) ...<Widget>[
-            _HeaderButton(
-              icon: Icons.cloud_upload_outlined,
-              label: 'Upload Hosts',
-              onPressed: _openUploadHostsSettings,
-            ),
-            const SizedBox(width: 6),
-          ],
+          _HeaderButton(
+            icon: Icons.cloud_upload_outlined,
+            label: 'Upload Hosts',
+            onPressed: _openUploadHostsSettings,
+          ),
+          const SizedBox(width: 6),
           _HeaderButton(
             icon: Icons.folder_open_rounded,
             label: 'Screenshots',
@@ -2406,13 +2402,10 @@ class FancyShot {
       "screenCaptureUploadHosts",
       def: <ScreenCaptureUploadHost>[],
     );
-    // Built-in hosts are always prepended; user-defined custom hosts follow
-    // only when the selected profile permits user PowerShell templates. The
-    // persisted custom data is intentionally left untouched for portability.
+    // Built-in hosts are always prepended; user-defined custom hosts follow.
     return <ScreenCaptureUploadHost>[
       ...ScreenCaptureUploadHost.builtInHosts,
-      if (ExtensionPolicy.current.canRunUserCommandTemplates)
-        ...custom.where((ScreenCaptureUploadHost h) => !h.isBuiltIn),
+      ...custom.where((ScreenCaptureUploadHost h) => !h.isBuiltIn),
     ];
   }
 

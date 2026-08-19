@@ -1,10 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../win32/win_utils.dart';
-import '../../services/native_integration_coordinator.dart';
 
 /// A single Windows power/session command (shutdown, restart, log off, …).
 ///
@@ -52,25 +49,13 @@ class SystemPowerAction {
   }
 
   void execute() {
-    unawaited(_execute());
-  }
-
-  Future<void> _execute() async {
-    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.processActions)) {
-      NativeIntegrationCoordinator.instance.reportDisabled(
-        NativeIntegrationId.processActions,
-        reason: 'The requested power action is unavailable in this profile.',
-        reducedMode: true,
-      );
-      return;
-    }
     // Guard the irreversible ones while developing so a stray click/keystroke
     // never tears down the dev machine. Lock/sleep are harmless, so they run.
     if (!kReleaseMode && isDestructive) {
       WinUtils.msgBox(label, 'Release mode would run: $command');
       return;
     }
-    await WinUtils.runPowerShell(<String>[command]);
+    WinUtils.runPowerShell(<String>[command]);
   }
 
   static const List<SystemPowerAction> all = <SystemPowerAction>[

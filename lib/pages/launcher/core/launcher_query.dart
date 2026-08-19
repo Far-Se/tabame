@@ -1,6 +1,5 @@
 enum LauncherSearchMode {
   mixed,
-  pluginsOnly,
   actionsOnly,
   filesOnly,
   windowsOnly,
@@ -48,7 +47,6 @@ class LauncherQuery {
   static final RegExp _mediaCommandPrefixPattern = RegExp(r'^m[1-5]? ');
 
   static LauncherSearchMode _modeFor(String query) {
-    if (query.startsWith('!')) return LauncherSearchMode.pluginsOnly;
     if (query.startsWith('/')) return LauncherSearchMode.actionsOnly;
     if (query == 'sp' || query.startsWith('sp ')) return LauncherSearchMode.spotifyCommand;
     if (_mediaCommandPrefixPattern.hasMatch(query)) return LauncherSearchMode.mediaCommand;
@@ -88,8 +86,7 @@ class LauncherQuery {
     if (query.startsWith('t ')) return query.substring(2).trimLeft();
     if (query.startsWith('ws ')) return query.substring(3).trimLeft();
     if (query.startsWith('b ')) return query.substring(2).trimLeft();
-    if (query.startsWith('!') ||
-        query.startsWith('/') ||
+    if (query.startsWith('/') ||
         query.startsWith('.') ||
         query.startsWith(',') ||
         query.startsWith(r'$') ||

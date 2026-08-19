@@ -12,9 +12,6 @@
 #include <string>
 #include <thread>
 #include <fstream>
-#include <limits>
-#include <cstring>
-#include <cctype>
 #include <bcrypt.h>
 
 // GDI+ requires min/max macros which are disabled by NOMINMAX
@@ -75,137 +72,6 @@ static bool WriteBytesToFileW(const std::wstring& path,
   return file.good();
 }
 
-// Write a text payload through a temporary sibling and replace the destination
-// only after the complete value is on disk. A clipboard event can arrive while
-// the history process is terminating, so a partial payload must never look
-// complete to a later copy operation.
-static bool WriteStringToFileAtomicW(const std::wstring& path,
-                                     const std::string& value) {
-  const std::wstring temporaryPath = path + L".part";
-  DeleteFileW(temporaryPath.c_str());
-
-  std::ofstream file(temporaryPath.c_str(), std::ios::binary | std::ios::trunc);
-  if (!file.is_open()) return false;
-  if (!value.empty()) {
-    file.write(value.data(), static_cast<std::streamsize>(value.size()));
-  }
-  file.close();
-  if (!file.good()) {
-    DeleteFileW(temporaryPath.c_str());
-    return false;
-  }
-
-  if (!MoveFileExW(temporaryPath.c_str(), path.c_str(),
-                   MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
-    DeleteFileW(temporaryPath.c_str());
-    return false;
-  }
-  return true;
-}
-
-static bool ReadStringFromFileW(const std::wstring& path, std::string& value) {
-  std::ifstream file(path.c_str(), std::ios::binary);
-  if (!file.is_open()) return false;
-  file.seekg(0, std::ios::end);
-  const std::streamoff length = file.tellg();
-  if (length < 0) return false;
-  file.seekg(0, std::ios::beg);
-  value.assign(static_cast<size_t>(length), static_cast<char>(0));
-  if (length > 0) {
-    file.read(&value[0], length);
-  }
-  return file.good() || file.eof();
-}
-
-static std::string WideToUtf8Local(const std::wstring& value) {
-  if (value.empty()) return std::string();
-  int needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
-                                   value.data(), static_cast<int>(value.size()),
-                                   nullptr, 0, nullptr, nullptr);
-  if (needed <= 0) {
-    needed = WideCharToMultiByte(CP_UTF8, 0, value.data(),
-                                 static_cast<int>(value.size()), nullptr, 0,
-                                 nullptr, nullptr);
-  }
-  if (needed <= 0) return std::string();
-  std::string result(static_cast<size_t>(needed), static_cast<char>(0));
-  WideCharToMultiByte(CP_UTF8, 0, value.data(),
-                      static_cast<int>(value.size()), &result[0], needed,
-                      nullptr, nullptr);
-  return result;
-}
-
-static std::string WidePrefixToUtf8(const std::wstring& value,
-                                    size_t characterLimit) {
-  if (value.empty() || characterLimit == 0) return std::string();
-  size_t count = std::min(characterLimit, value.size());
-  if (count < value.size() && count > 0 &&
-      value[count - 1] >= 0xD800 && value[count - 1] <= 0xDBFF &&
-      value[count] >= 0xDC00 && value[count] <= 0xDFFF) {
-    --count;
-  }
-  return WideToUtf8Local(value.substr(0, count));
-}
-
-static std::string Utf8PreviewLocal(const std::string& value,
-                                    size_t characterLimit) {
-  if (value.empty() || characterLimit == 0) return std::string();
-  const std::wstring wide = Utf8ToWideLocal(value);
-  if (!wide.empty()) return WidePrefixToUtf8(wide, characterLimit);
-  return value.substr(0, std::min(characterLimit, value.size()));
-}
-
-static std::string TrimAsciiLocal(const std::string& value) {
-  size_t start = 0;
-  while (start < value.size() &&
-         std::isspace(static_cast<unsigned char>(value[start]))) {
-    ++start;
-  }
-  size_t end = value.size();
-  while (end > start &&
-         std::isspace(static_cast<unsigned char>(value[end - 1]))) {
-    --end;
-  }
-  return value.substr(start, end - start);
-}
-
-// CF_HTML offsets are byte offsets into the original clipboard buffer. The
-// history payload stores only the fragment so the copy path can wrap it once,
-// without carrying the provider's header and full-document boilerplate.
-static std::string ExtractHtmlFragmentLocal(const std::string& value) {
-  auto readOffset = [&value](const char* field, size_t& result) -> bool {
-    const size_t start = value.find(field);
-    if (start == std::string::npos) return false;
-    size_t cursor = start + std::strlen(field);
-    if (cursor >= value.size() || value[cursor] < '0' || value[cursor] > '9') return false;
-    uint64_t parsed = 0;
-    while (cursor < value.size() && value[cursor] >= '0' && value[cursor] <= '9') {
-      parsed = (parsed * 10) + static_cast<uint64_t>(value[cursor] - '0');
-      if (parsed > value.size()) return false;
-      ++cursor;
-    }
-    result = static_cast<size_t>(parsed);
-    return true;
-  };
-
-  size_t start = 0;
-  size_t end = 0;
-  if (readOffset("StartFragment:", start) && readOffset("EndFragment:", end) &&
-      end > start && end <= value.size()) {
-    return TrimAsciiLocal(value.substr(start, end - start));
-  }
-
-  const std::string startMarker = "<!--StartFragment-->";
-  const std::string endMarker = "<!--EndFragment-->";
-  const size_t markerStart = value.find(startMarker);
-  const size_t markerEnd = value.find(endMarker);
-  if (markerStart != std::string::npos && markerEnd > markerStart) {
-    return TrimAsciiLocal(value.substr(markerStart + startMarker.size(),
-                                        markerEnd - markerStart - startMarker.size()));
-  }
-  return TrimAsciiLocal(value);
-}
-
 // MD5 hex digest of a byte buffer, byte-for-byte identical to Dart's
 // `md5.convert(bytes).toString()`. Used so image entries dedup consistently with
 // the existing clipboard-history format (`img-bytes:<md5>`).
@@ -237,128 +103,6 @@ static std::string Md5Hex(const std::vector<uint8_t>& data) {
   return result;
 }
 
-// Hash the exact same logical content as Dart's
-// md5(utf8.encode('text:<text>\\nhtml:<html>')) without constructing a second
-// 30 MB concatenated buffer.
-static std::string Md5HexTextHtml(const std::string& text,
-                                  const std::string& html) {
-  std::string result;
-  BCRYPT_ALG_HANDLE alg = nullptr;
-  if (!BCRYPT_SUCCESS(
-          BCryptOpenAlgorithmProvider(&alg, BCRYPT_MD5_ALGORITHM, nullptr, 0))) {
-    return result;
-  }
-
-  BCRYPT_HASH_HANDLE hash = nullptr;
-  bool success = BCRYPT_SUCCESS(
-      BCryptCreateHash(alg, &hash, nullptr, 0, nullptr, 0, 0));
-  auto update = [&hash, &success](const char* data, size_t length) {
-    while (success && length > 0) {
-      const ULONG chunk = static_cast<ULONG>(std::min(
-          length, static_cast<size_t>(std::numeric_limits<ULONG>::max())));
-      success = BCRYPT_SUCCESS(BCryptHashData(
-          hash, reinterpret_cast<PUCHAR>(const_cast<char*>(data)), chunk, 0));
-      data += chunk;
-      length -= chunk;
-    }
-  };
-
-  update("text:", 5);
-  update(text.data(), text.size());
-  update("\nhtml:", 6);
-  update(html.data(), html.size());
-
-  if (success) {
-    UCHAR digest[16] = {0};
-    success = BCRYPT_SUCCESS(BCryptFinishHash(hash, digest, sizeof(digest), 0));
-    if (success) {
-      static const char* kHex = "0123456789abcdef";
-      result.reserve(32);
-      for (unsigned char b : digest) {
-        result.push_back(kHex[b >> 4]);
-        result.push_back(kHex[b & 0x0F]);
-      }
-    }
-  }
-
-  if (hash != nullptr) BCryptDestroyHash(hash);
-  BCryptCloseAlgorithmProvider(alg, 0);
-  return result;
-}
-
-static bool WriteRichTextToClipboard(const std::string& text,
-                                     const std::string& html) {
-  if (text.empty() && html.empty()) return false;
-  if (!OpenClipboard(nullptr)) return false;
-
-  EmptyClipboard();
-  bool success = true;
-
-  if (!text.empty()) {
-    const int sizeNeeded = MultiByteToWideChar(
-        CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), nullptr, 0);
-    if (sizeNeeded <= 0) {
-      success = false;
-    } else {
-      std::vector<wchar_t> wide(static_cast<size_t>(sizeNeeded) + 1, static_cast<wchar_t>(0));
-      MultiByteToWideChar(CP_UTF8, 0, text.c_str(),
-                          static_cast<int>(text.size()), wide.data(), sizeNeeded);
-      const SIZE_T bytes = (wide.size()) * sizeof(wchar_t);
-      HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, bytes);
-      if (memory == nullptr) {
-        success = false;
-      } else {
-        wchar_t* target = static_cast<wchar_t*>(GlobalLock(memory));
-        if (target == nullptr) {
-          GlobalFree(memory);
-          success = false;
-        } else {
-          memcpy(target, wide.data(), bytes);
-          GlobalUnlock(memory);
-          if (SetClipboardData(CF_UNICODETEXT, memory) == nullptr) {
-            GlobalFree(memory);
-            success = false;
-          }
-        }
-      }
-    }
-  }
-
-  if (success && !html.empty()) {
-    const UINT cfHtml = RegisterClipboardFormatA("HTML Format");
-    if (cfHtml == 0) {
-      success = false;
-    } else {
-      std::string htmlFormat =
-          "Version:0.9\r\nStartHTML:00000000\r\nEndHTML:00000000\r\n"
-          "StartFragment:00000000\r\nEndFragment:00000000\r\n";
-      htmlFormat += "<html><body><!--StartFragment-->";
-      htmlFormat += html;
-      htmlFormat += "<!--EndFragment--></body></html>";
-      HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, htmlFormat.size() + 1);
-      if (memory == nullptr) {
-        success = false;
-      } else {
-        char* target = static_cast<char*>(GlobalLock(memory));
-        if (target == nullptr) {
-          GlobalFree(memory);
-          success = false;
-        } else {
-          memcpy(target, htmlFormat.c_str(), htmlFormat.size() + 1);
-          GlobalUnlock(memory);
-          if (SetClipboardData(cfHtml, memory) == 0) {
-            GlobalFree(memory);
-            success = false;
-          }
-        }
-      }
-    }
-  }
-
-  CloseClipboard();
-  return success;
-}
-
 // RAII initializer for an OLE/COM apartment on the calling thread. Browser
 // clipboard data (Chrome, Edge, …) is delivered through the OLE clipboard, and
 // GDI+ image codecs use COM internally — both require COM to be initialized on
@@ -384,7 +128,7 @@ class ClipboardPluginImpl {
   void HandleMethodCall(
       const flutter::MethodCall<flutter::EncodableValue> &method_call,
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
-
+    
     const std::string& method = method_call.method_name();
     const auto* arguments = std::get_if<EncodableMap>(method_call.arguments());
 
@@ -404,10 +148,6 @@ class ClipboardPluginImpl {
       HandlePasteImage(std::move(result));
     } else if (method == "saveImage" || method == "clipboardExtendedSaveImage") {
       HandleSaveImage(arguments, std::move(result));
-    } else if (method == "captureTextToFiles" || method == "clipboardExtendedCaptureTextToFiles") {
-      HandleCaptureTextToFiles(arguments, std::move(result));
-    } else if (method == "copyContentFromFiles" || method == "clipboardExtendedCopyContentFromFiles") {
-      HandleCopyContentFromFiles(arguments, std::move(result));
     } else if (method == "getContentType" || method == "clipboardExtendedGetContentType") {
       HandleGetContentType(std::move(result));
     } else if (method == "hasData" || method == "clipboardExtendedHasData") {
@@ -446,12 +186,12 @@ class ClipboardPluginImpl {
 
     if (OpenClipboard(nullptr)) {
       EmptyClipboard();
-
+      
       // Convert to wide string for Windows
       int size_needed = MultiByteToWideChar(CP_UTF8, 0, text->c_str(), -1, NULL, 0);
       std::vector<wchar_t> wstr(size_needed);
       MultiByteToWideChar(CP_UTF8, 0, text->c_str(), -1, &wstr[0], size_needed);
-
+      
       HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, (wstr.size()) * sizeof(wchar_t));
       if (hMem) {
         wchar_t* pMem = (wchar_t*)GlobalLock(hMem);
@@ -495,13 +235,13 @@ class ClipboardPluginImpl {
 
     if (OpenClipboard(nullptr)) {
       EmptyClipboard();
-
+      
       // Set text
       if (!text.empty()) {
         int size_needed = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, NULL, 0);
         std::vector<wchar_t> wstr(size_needed);
         MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, &wstr[0], size_needed);
-
+        
         HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, (wstr.size()) * sizeof(wchar_t));
         if (hMem) {
           wchar_t* pMem = (wchar_t*)GlobalLock(hMem);
@@ -519,7 +259,7 @@ class ClipboardPluginImpl {
           html_format += "<html><body><!--StartFragment-->";
           html_format += html;
           html_format += "<!--EndFragment--></body></html>";
-
+          
           HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, html_format.size() + 1);
           if (hMem) {
             char* pMem = (char*)GlobalLock(hMem);
@@ -590,7 +330,7 @@ class ClipboardPluginImpl {
           int size_needed = MultiByteToWideChar(CP_UTF8, 0, text->c_str(), -1, NULL, 0);
           std::vector<wchar_t> wstr(size_needed);
           MultiByteToWideChar(CP_UTF8, 0, text->c_str(), -1, &wstr[0], size_needed);
-
+          
           HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, (wstr.size()) * sizeof(wchar_t));
           if (hMem) {
             wchar_t* pMem = (wchar_t*)GlobalLock(hMem);
@@ -612,7 +352,7 @@ class ClipboardPluginImpl {
             html_format += "<html><body><!--StartFragment-->";
             html_format += *html;
             html_format += "<!--EndFragment--></body></html>";
-
+            
             HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, html_format.size() + 1);
             if (hMem) {
               char* pMem = (char*)GlobalLock(hMem);
@@ -669,7 +409,7 @@ class ClipboardPluginImpl {
       EmptyClipboard();
       bool success = SetClipboardImage(bytes);
       CloseClipboard();
-
+      
       if (success) {
         result->Success(EncodableValue(true));
       } else {
@@ -840,7 +580,7 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
           std::vector<char> str(size_needed);
           WideCharToMultiByte(CP_UTF8, 0, pMem, -1, &str[0], size_needed, NULL, NULL);
           GlobalUnlock(hMem);
-
+          
           EncodableMap result_map;
           result_map[EncodableValue("text")] = EncodableValue(std::string(&str[0]));
           result->Success(EncodableValue(result_map));
@@ -858,7 +598,7 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
 
   void HandlePasteRichText(std::unique_ptr<flutter::MethodResult<EncodableValue>> result) {
     EncodableMap result_map;
-
+    
     if (OpenClipboard(nullptr)) {
       // Get text
       std::string text;
@@ -889,7 +629,7 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
       result_map[EncodableValue("html")] = EncodableValue(html);
 
       result_map[EncodableValue("timestamp")] = EncodableValue(static_cast<int64_t>(GetTickCount64()));
-
+      
       CloseClipboard();
       result->Success(EncodableValue(result_map));
     } else {
@@ -938,7 +678,7 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
               // Close clipboard now that we have a copy
               CloseClipboard();
               clipboardOpened = false;
-
+              
               pBitmap = Bitmap::FromHBITMAP(hBitmapCopy, nullptr);
               DeleteObject(hBitmapCopy);
               if (pBitmap && pBitmap->GetLastStatus() != Ok) {
@@ -967,34 +707,34 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
       } else if (IsClipboardFormatAvailable(CF_DIB)) {
         dibFormat = CF_DIB;
       }
-
+      
       if (dibFormat == CF_DIBV5 || dibFormat == CF_DIB) {
         HGLOBAL hMem = GetClipboardData(dibFormat);
         if (hMem) {
           void* pDib = GlobalLock(hMem);
           if (pDib) {
             BITMAPINFOHEADER* pBih = (BITMAPINFOHEADER*)pDib;
-
+            
             // Validate header
-            if (pBih->biSize >= sizeof(BITMAPINFOHEADER) &&
+            if (pBih->biSize >= sizeof(BITMAPINFOHEADER) && 
                 pBih->biWidth > 0 && pBih->biHeight != 0) {
-
+              
               // Make a complete copy before closing clipboard
               SIZE_T dibSizeT = GlobalSize(hMem);
               DWORD dibSize = (dibSizeT > 0xFFFFFFFF) ? 0xFFFFFFFF : static_cast<DWORD>(dibSizeT);
               std::vector<BYTE> dibData(dibSize);
               memcpy(dibData.data(), pDib, dibSize);
-
+              
               GlobalUnlock(hMem);
               CloseClipboard();
               clipboardOpened = false;
-
+              
               // Now convert DIB to GDI+ Bitmap using CreateDIBSection
               HDC hdc = CreateCompatibleDC(nullptr);
               if (hdc) {
                 BITMAPINFO* pbmi = (BITMAPINFO*)dibData.data();
                 void* pBits = nullptr;
-
+                
                 // Create DIB section - this allocates memory for us
                 HBITMAP hDibSection = CreateDIBSection(hdc, pbmi, DIB_RGB_COLORS, &pBits, nullptr, 0);
                 if (hDibSection && pBits) {
@@ -1004,16 +744,16 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
                     int colorTableSize = static_cast<int>((1ULL << pBih->biBitCount) * sizeof(RGBQUAD));
                     pSourceBits = dibData.data() + pBih->biSize + colorTableSize;
                   }
-
+                  
                   // Copy pixel data using SetDIBits (handles all conversions automatically)
                   int height = abs(pBih->biHeight);
                   SelectObject(hdc, hDibSection);
                   SetDIBits(hdc, hDibSection, 0, height, pSourceBits, pbmi, DIB_RGB_COLORS);
-
+                  
                   // Create GDI+ Bitmap from the DIB section
                   pBitmap = Bitmap::FromHBITMAP(hDibSection, nullptr);
                   DeleteObject(hDibSection);
-
+                  
                   if (pBitmap && pBitmap->GetLastStatus() != Ok) {
                     delete pBitmap;
                     pBitmap = nullptr;
@@ -1039,13 +779,13 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
       if (!clipboardOpened) {
         clipboardOpened = OpenClipboard(nullptr);
       }
-
+      
       if (clipboardOpened && IsClipboardFormatAvailable(CF_HDROP)) {
         HDROP hDrop = (HDROP)GetClipboardData(CF_HDROP);
         if (hDrop) {
           // Get number of files
           UINT fileCount = DragQueryFile(hDrop, 0xFFFFFFFF, nullptr, 0);
-
+          
           // Try each file path
           for (UINT i = 0; i < fileCount && !pBitmap; i++) {
             // Get file path length
@@ -1067,10 +807,10 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
                     for (wchar_t& c : ext) {
                       c = towlower(c);
                     }
-
+                    
                     // Supported image extensions
-                    if (ext != L"jpg" && ext != L"jpeg" && ext != L"png" &&
-                        ext != L"bmp" && ext != L"gif" && ext != L"tiff" &&
+                    if (ext != L"jpg" && ext != L"jpeg" && ext != L"png" && 
+                        ext != L"bmp" && ext != L"gif" && ext != L"tiff" && 
                         ext != L"tif" && ext != L"ico" && ext != L"webp") {
                       delete pBitmap;
                       pBitmap = nullptr;
@@ -1118,7 +858,7 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
           ULONG bytesRead = 0;
           std::vector<uint8_t> pngBytes(stat.cbSize.LowPart);
           HRESULT hr = pStream->Read(pngBytes.data(), stat.cbSize.LowPart, &bytesRead);
-
+          
           if (SUCCEEDED(hr) && bytesRead > 0) {
             // Return the PNG as typed data (-> Dart Uint8List). Previously every
             // byte was boxed into its own EncodableValue(int32); for a large
@@ -1199,191 +939,6 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
           EncodableValue(static_cast<int32_t>(pngBytes.size()));
       out[EncodableValue("hash")] = EncodableValue(Md5Hex(pngBytes));
       shared_result->Success(EncodableValue(out));
-    }).detach();
-  }
-
-  // Reads the current text formats once on a worker, writes raw UTF-8 payload
-  // files, and returns only metadata. In particular, no large string is ever
-  // put into an EncodableValue.
-  void HandleCaptureTextToFiles(
-      const EncodableMap* arguments,
-      std::unique_ptr<flutter::MethodResult<EncodableValue>> result) {
-    if (!arguments) {
-      result->Error("INVALID_ARGUMENT", "Arguments are required");
-      return;
-    }
-
-    auto readStringArgument = [arguments](const char* key) -> std::string {
-      const auto it = arguments->find(EncodableValue(key));
-      if (it == arguments->end()) return std::string();
-      const auto* value = std::get_if<std::string>(&it->second);
-      return value == nullptr ? std::string() : *value;
-    };
-
-    const std::string textPath = readStringArgument("textPath");
-    const std::string htmlPath = readStringArgument("htmlPath");
-    if (textPath.empty() || htmlPath.empty()) {
-      result->Error("INVALID_ARGUMENT", "Text and HTML payload paths are required");
-      return;
-    }
-
-    int previewLimit = 5000;
-    const auto previewIt = arguments->find(EncodableValue("previewLimit"));
-    if (previewIt != arguments->end()) {
-      if (const auto* value = std::get_if<int32_t>(&previewIt->second)) {
-        previewLimit = *value;
-      } else if (const auto* valuex = std::get_if<int64_t>(&previewIt->second)) {
-        previewLimit = static_cast<int>(*valuex);
-      }
-    }
-    previewLimit = std::max(1, std::min(previewLimit, 5000));
-
-    std::shared_ptr<flutter::MethodResult<EncodableValue>> sharedResult(
-        std::move(result));
-    std::thread([sharedResult, textPath, htmlPath, previewLimit]() {
-      const ScopedOleApartment ole;
-      std::wstring textWide;
-      std::string htmlRaw;
-
-      if (!OpenClipboard(nullptr)) {
-        sharedResult->Error("CAPTURE_CLIPBOARD_ERROR", "Failed to open clipboard");
-        return;
-      }
-
-      if (IsClipboardFormatAvailable(CF_UNICODETEXT)) {
-        HGLOBAL memory = GetClipboardData(CF_UNICODETEXT);
-        if (memory != nullptr) {
-          const SIZE_T bytes = GlobalSize(memory);
-          const wchar_t* source = static_cast<const wchar_t*>(GlobalLock(memory));
-          if (source != nullptr) {
-            const size_t maxCharacters = bytes / sizeof(wchar_t);
-            size_t length = 0;
-            while (length < maxCharacters && source[length] != static_cast<wchar_t>(0)) ++length;
-            textWide.assign(source, length);
-            GlobalUnlock(memory);
-          }
-        }
-      }
-
-      const UINT cfHtml = RegisterClipboardFormatA("HTML Format");
-      if (cfHtml != 0 && IsClipboardFormatAvailable(cfHtml)) {
-        HGLOBAL memory = GetClipboardData(cfHtml);
-        if (memory != nullptr) {
-          const SIZE_T bytes = GlobalSize(memory);
-          const char* source = static_cast<const char*>(GlobalLock(memory));
-          if (source != nullptr) {
-            const size_t maxBytes = static_cast<size_t>(bytes);
-            size_t length = 0;
-            while (length < maxBytes && source[length] != static_cast<char>(0)) ++length;
-            htmlRaw.assign(source, length);
-            GlobalUnlock(memory);
-          }
-        }
-      }
-      CloseClipboard();
-
-      const std::string text = WideToUtf8Local(textWide);
-      const std::string html = ExtractHtmlFragmentLocal(htmlRaw);
-      if (text.empty() && html.empty()) {
-        EncodableMap out;
-        out[EncodableValue("captured")] = EncodableValue(false);
-        sharedResult->Success(EncodableValue(out));
-        return;
-      }
-
-      const std::wstring textFilePath = Utf8ToWideLocal(textPath);
-      const std::wstring htmlFilePath = Utf8ToWideLocal(htmlPath);
-      if (!text.empty() && !WriteStringToFileAtomicW(textFilePath, text)) {
-        sharedResult->Error("CAPTURE_WRITE_ERROR", "Failed to write text payload");
-        return;
-      }
-      if (!html.empty() && !WriteStringToFileAtomicW(htmlFilePath, html)) {
-        DeleteFileW(textFilePath.c_str());
-        sharedResult->Error("CAPTURE_WRITE_ERROR", "Failed to write HTML payload");
-        return;
-      }
-
-      EncodableMap out;
-      out[EncodableValue("captured")] = EncodableValue(true);
-      out[EncodableValue("textPreview")] = EncodableValue(
-          WidePrefixToUtf8(textWide, static_cast<size_t>(previewLimit)));
-      out[EncodableValue("htmlPreview")] = EncodableValue(
-          Utf8PreviewLocal(html, static_cast<size_t>(previewLimit)));
-      out[EncodableValue("textLength")] =
-          EncodableValue(static_cast<int64_t>(textWide.size()));
-      const std::wstring htmlWide = Utf8ToWideLocal(html);
-      out[EncodableValue("htmlLength")] = EncodableValue(static_cast<int64_t>(
-          htmlWide.empty() && !html.empty() ? html.size() : htmlWide.size()));
-      out[EncodableValue("byteLength")] = EncodableValue(static_cast<int64_t>(
-          text.size() + html.size()));
-      out[EncodableValue("contentHash")] = EncodableValue(Md5HexTextHtml(text, html));
-      sharedResult->Success(EncodableValue(out));
-    }).detach();
-  }
-
-  // Restores clipboard contents from sidecar files. The files are read and the
-  // clipboard allocation is performed on a worker so a large paste does not
-  // block Flutter's platform thread or the global input hook.
-  void HandleCopyContentFromFiles(
-      const EncodableMap* arguments,
-      std::unique_ptr<flutter::MethodResult<EncodableValue>> result) {
-    if (!arguments) {
-      result->Error("INVALID_ARGUMENT", "Arguments are required");
-      return;
-    }
-
-    auto readStringArgument = [arguments](const char* key) -> std::string {
-      const auto it = arguments->find(EncodableValue(key));
-      if (it == arguments->end()) return std::string();
-      const auto* value = std::get_if<std::string>(&it->second);
-      return value == nullptr ? std::string() : *value;
-    };
-
-    const std::string textPath = readStringArgument("textPath");
-    const std::string htmlPath = readStringArgument("htmlPath");
-    const std::string imagePath = readStringArgument("imagePath");
-    if (textPath.empty() && htmlPath.empty() && imagePath.empty()) {
-      result->Error("INVALID_ARGUMENT", "A payload path is required");
-      return;
-    }
-
-    std::shared_ptr<flutter::MethodResult<EncodableValue>> sharedResult(
-        std::move(result));
-    std::thread([sharedResult, textPath, htmlPath, imagePath]() {
-      const ScopedOleApartment ole;
-      if (!imagePath.empty()) {
-        GdiplusStartupInput gdiplusStartupInput;
-        ULONG_PTR gdiplusToken = 0;
-        const bool gdiStarted =
-            GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, nullptr) == Ok;
-        const std::wstring path = Utf8ToWideLocal(imagePath);
-        const bool copied = gdiStarted && CopyImageToClipboard(path.c_str());
-        if (gdiStarted) GdiplusShutdown(gdiplusToken);
-        if (copied) {
-          sharedResult->Success(EncodableValue(true));
-        } else {
-          sharedResult->Error("COPY_FILE_ERROR", "Failed to copy image payload");
-        }
-        return;
-      }
-
-      std::string text;
-      std::string html;
-      if (!textPath.empty() &&
-          !ReadStringFromFileW(Utf8ToWideLocal(textPath), text)) {
-        sharedResult->Error("COPY_FILE_ERROR", "Failed to read text payload");
-        return;
-      }
-      if (!htmlPath.empty() &&
-          !ReadStringFromFileW(Utf8ToWideLocal(htmlPath), html)) {
-        sharedResult->Error("COPY_FILE_ERROR", "Failed to read HTML payload");
-        return;
-      }
-      if (!WriteRichTextToClipboard(text, html)) {
-        sharedResult->Error("COPY_FILE_ERROR", "Failed to write clipboard payload");
-        return;
-      }
-      sharedResult->Success(EncodableValue(true));
     }).detach();
   }
 

@@ -14,7 +14,6 @@ import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
 import '../../models/screen_utils.dart';
 import '../../models/settings.dart';
-import '../distribution_profile.dart';
 import '../../models/win32/imports.dart';
 import '../../models/win32/mixed.dart';
 import '../../models/win32/win32.dart';
@@ -22,20 +21,12 @@ import '../../models/win32/window.dart';
 import '../../models/window_watcher.dart';
 import '../../widgets/widgets/extracted_icon.dart';
 import '../quick_snap_service.dart';
-import '../../services/native_integration_coordinator.dart';
 import 'windows_quick_snap_service.dart';
 
 Future<void> startQuickSnap() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppStartup.initialize();
   await Boxes.registerBoxes(justLoad: true);
-  NativeIntegrationCoordinator.configure(
-    profile: DistributionProfileConfig.current,
-    consentStore: SaveSettingsNativeIntegrationConsentStore(Boxes.pref),
-  );
-  // Launching the standalone snap surface is itself the user's consent for
-  // this one-shot window movement/overlay operation.
-  await NativeIntegrationCoordinator.instance.setConsent(NativeIntegrationId.quickSnap, true);
   checkThemeChange();
 
   final int vWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
@@ -63,18 +54,7 @@ Future<void> startQuickSnap() async {
   // drag never registers (no live mouse-based zone highlight) and the drop never
   // snaps/resizes the window. Right-click-to-trigger is turned off: this view is
   // driven purely by plain title-bar window drags.
-  final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
-  if (!integrations.canStart(NativeIntegrationId.quickSnap)) {
-    integrations.reportDisabled(
-      NativeIntegrationId.quickSnap,
-      reason: integrations.denialReason(NativeIntegrationId.quickSnap) ??
-          'QuickSnap is unavailable; use the ordinary Tabame window instead.',
-      reducedMode: true,
-    );
-    return;
-  }
   await QuickSnapService.instance.enableStandalone();
-  integrations.reportRunning(NativeIntegrationId.quickSnap);
   runApp(const QuickSnapStandAlone());
 }
 
@@ -242,7 +222,6 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
   void dispose() {
     _timer?.cancel();
     NativeHooks.removeListener(this);
-    unawaited(QuickSnapService.instance.disable());
     super.dispose();
   }
 

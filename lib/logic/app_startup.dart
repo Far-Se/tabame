@@ -8,19 +8,14 @@ import '../platform/windows/windows_bootstrap.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../models/classes/boxes.dart';
-import '../models/clipboard_history.dart';
 import '../models/classes/save_settings.dart';
 import '../models/globals.dart';
 import '../models/settings.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
 import '../platform/app_paths.dart';
-import '../platform/clipboard_service.dart';
-import '../platform/distribution_profile.dart';
 import '../services/browser_bridge_service.dart';
 import '../services/clipboard_history_coordinator.dart';
-import '../services/elevation_service.dart';
-import '../services/native_integration_coordinator.dart';
 import 'error_handler.dart';
 
 class AppStartup {
@@ -56,6 +51,7 @@ class AppStartup {
     List<String> arguments = <String>[...arguments2];
     if (arguments.isNotEmpty) {
       if (arguments[0].endsWith('"') && !arguments[0].startsWith('"')) arguments[0] = '"${arguments[0]}';
+      String argString = arguments.join(" ");
       user.args = <String>[...arguments];
       final int launcherIndex = arguments.indexOf("-launcher");
       if (launcherIndex != -1) {
@@ -63,38 +59,23 @@ class AppStartup {
         Globals.quickMenuPage = QuickMenuPage.launcher;
         user.launcherSearchText = launcherIndex + 1 < arguments.length ? arguments[launcherIndex + 1] : '';
       }
-      final bool interfaceRequested = arguments.any((String argument) => argument.toLowerCase() == "-interface");
-      final bool quickMenuRequested = arguments.any((String argument) => argument.toLowerCase() == "-quickmenu");
-      if (interfaceRequested) {
+      if (argString.contains("interface")) {
         user.page = TPage.interface;
         // This process is the Interface: bump the reload marker on settings writes so the
         // running QuickMenu process live-reloads (see SavedStore + QuickMenu file watcher).
         SavedStore.signalOnWrite = true;
-      } else if (quickMenuRequested) {
-        user.page = TPage.quickmenu;
       }
     }
     Debug.add("Parsed arguments ${user.page}");
   }
 
-  static Future<bool> registerServices() async {
-    final DistributionRuntimeReport distribution = DistributionRuntime.inspect();
-    Debug.add('Distribution profile: ${distribution.profile.value}');
-    if (!distribution.profileMatchesPackageIdentity) {
-      Debug.add('Distribution profile mismatch: ${distribution.diagnostic}');
-    }
-
+  static Future<void> registerServices() async {
     if (Globals.isStandaloneLauncher) {
       await Boxes.registerBoxes(justLoad: true);
-      _configureNativeIntegrations();
       await BrowserBridgeService.instance.initialize(asLauncherClient: true);
       Debug.add("Registered: Standalone launcher settings");
-      return false;
+      return;
     }
-    // Load the persisted settings before starting side-effectful services so a
-    // configured elevation handoff cannot overlap browser bridges or hooks.
-    await Boxes.registerBoxes(justLoad: true);
-    if (await ensureConfiguredElevation()) return true;
     await registerAll();
     if (user.page == TPage.quickmenu) {
       await BrowserBridgeService.instance.initialize();
@@ -104,154 +85,34 @@ class AppStartup {
       Debug.methodDebug(clean: true);
     }
     Debug.add("Registered All");
-    return false;
   }
 
-  /// Replaces the normal process with an elevated one when the user has opted
-  /// into persistent elevation. The replacement keeps the original page and
-  /// receives a one-shot marker so it can close the old process after startup.
-  static Future<bool> ensureConfiguredElevation() async {
-    if (kDebugMode) return false;
-    if (Globals.isStandaloneLauncher ||
-        !user.runAsAdministrator ||
-        user.args.contains(Globals.elevatedStartupArgument) ||
-        user.args.contains(Globals.elevatedQuickMenuArgument)) {
-      return false;
-    }
-
-    final ElevationService elevationService = ElevationService.forCurrentProfile();
-    if (!elevationService.capability.canStartAutomatically) {
-      Debug.add('Configured elevation is unavailable: ${elevationService.capability.message}');
-      return false;
-    }
-
-    // A mismatched package/profile build must fail closed for automatic
-    // elevation. The selected distribution profile remains authoritative for
-    // normal behavior, but a packaged process must never inherit a desktop
-    // profile's startup UAC policy by accident.
-    final DistributionRuntimeReport runtime = DistributionRuntime.inspect();
-    if (runtime.packageIdentityStatus == PackageIdentityStatus.unavailable || !runtime.profileMatchesPackageIdentity) {
-      Debug.add('Configured elevation skipped: ${runtime.diagnostic}');
-      return false;
-    }
-
-    final PrivilegeStatus status = elevationService.readPrivilegeStatus();
-    if (status.isElevated) {
-      Debug.add('Configured elevation is already active.');
-      return false;
-    }
-
-    final String signalToken = DateTime.now().microsecondsSinceEpoch.toString();
-    final File readySignal = _elevatedStartupReadyFile(signalToken);
-    try {
-      if (readySignal.existsSync()) readySignal.deleteSync();
-    } catch (_) {}
-
-    final ElevationRequestResult result = await elevationService.restartCurrentSessionElevated(
-      executable: Platform.resolvedExecutable,
-      arguments: <String>[
-        ...user.args,
-        Globals.elevatedStartupArgument,
-        Globals.elevatedStartupSignalArgument,
-        readySignal.path
-      ],
-    );
-    if (!result.didLaunch) {
-      _deleteElevationReadySignal(readySignal);
-      Debug.add('Configured elevation was not started: ${result.message}');
-      return false;
-    }
-
-    final bool replacementReady = await _waitForElevatedReplacement(readySignal);
-    _deleteElevationReadySignal(readySignal);
-    if (!replacementReady) {
-      Debug.add('Configured elevation replacement did not become ready; keeping this session running normally.');
-      return false;
-    }
-
-    Debug.add('Started configured elevated replacement process.');
-    return true;
-  }
-
-  static File _elevatedStartupReadyFile(String token) {
-    return File(AppPaths.resolvePath('elevated-startup-$token.ready', forWrite: true));
-  }
-
-  static File? _elevatedStartupReadyFileFromArguments() {
-    final int signalIndex = user.args.indexOf(Globals.elevatedStartupSignalArgument);
-    if (signalIndex == -1 || signalIndex + 1 >= user.args.length) return null;
-    final String signalPath = user.args[signalIndex + 1].trim();
-    return signalPath.isEmpty ? null : File(signalPath);
-  }
-
-  static Future<bool> _waitForElevatedReplacement(File readySignal) async {
-    for (int attempt = 0; attempt < 100; attempt++) {
-      if (readySignal.existsSync()) return true;
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
-    return false;
-  }
-
-  static Future<bool> _waitForElevationReadyAcknowledgement(File readySignal) async {
-    for (int attempt = 0; attempt < 50; attempt++) {
-      if (!readySignal.existsSync()) return true;
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
-    return false;
-  }
-
-  static void _deleteElevationReadySignal(File readySignal) {
-    try {
-      if (readySignal.existsSync()) readySignal.deleteSync();
-    } catch (_) {}
-  }
-
-  static bool _signalElevatedStartupReady() {
-    final File? readySignal = _elevatedStartupReadyFileFromArguments();
-    if (readySignal == null) return false;
-    try {
-      readySignal.writeAsStringSync('ready');
+  static Future<bool> checkAdminAndRestart() async {
+    if (Globals.isStandaloneLauncher) return false;
+    if (kReleaseMode &&
+        user.runAsAdministrator &&
+        !WinUtils.isAdministrator() &&
+        !user.args.join(' ').contains('-tryadmin')) {
+      Debug.add("Trying Admin");
+      user.args.add('-tryadmin');
+      WinUtils.closeAllTabameExProcesses();
+      Debug.add("Closed all tabame processed");
+      WinUtils.runAsAdmin(Platform.resolvedExecutable, arguments: '"${user.args.join('" "')}"');
+      Debug.add("Started New");
+      Timer(const Duration(seconds: 1), () {
+        Debug.add("Started Close Current");
+        exit(0);
+      });
       return true;
-    } catch (error) {
-      Debug.add('Could not signal elevated startup readiness: $error');
-      return false;
     }
-  }
-
-  /// Applies the persisted taskbar preference after Explorer and the Flutter
-  /// window are available. Windows login can finish creating the taskbar after
-  /// Tabame starts, so keep retrying for a short, bounded settling period.
-  static Future<void> _applyStartupTaskbarVisibility() async {
-    if (Globals.isStandaloneLauncher || user.page != TPage.quickmenu || !user.hideTaskbarOnStartup) return;
-
-    const int attempts = 20;
-    for (int attempt = 0; attempt < attempts; attempt++) {
-      if (!user.hideTaskbarOnStartup) return;
-      final bool applied = await WinUtils.toggleTaskbar(visible: false);
-      if (applied) {
-        Debug.add('Startup: Taskbar hide applied.');
-        return;
-      }
-      if (attempt + 1 < attempts) {
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-      }
+    if (user.args.contains("-restarted")) {
+      Future<void>.delayed(const Duration(seconds: 2), () => WinUtils.closeAllTabameExProcesses());
     }
-
-    Debug.add('Startup: Taskbar hide failed after retries.');
+    return false;
   }
 
   static void registerHooks() {
-    if (Globals.isStandaloneLauncher || user.page != TPage.quickmenu) return;
-    final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
-    if (!integrations.canStart(NativeIntegrationId.globalHooks)) {
-      integrations.reportDisabled(
-        NativeIntegrationId.globalHooks,
-        reason: integrations.denialReason(NativeIntegrationId.globalHooks) ?? 'Global hooks are disabled.',
-        reducedMode: true,
-      );
-      Debug.add('Global hooks are disabled; visible/manual summon remains available.');
-      return;
-    }
+    if (Globals.isStandaloneLauncher) return;
     if (Globals.debugHooks || kReleaseMode) {
       Debug.add("Registering Hooks");
       if (user.args.contains("-interface") && Boxes.remap.isEmpty) {
@@ -264,15 +125,6 @@ class AppStartup {
 
   static Future<void> setupWindow(List<String> arguments) async {
     late WindowOptions windowOptions;
-    final bool elevatedQuickMenuRequested = user.args.contains(Globals.elevatedQuickMenuArgument);
-    final bool quickMenuRequested = user.args.any((String argument) => argument.toLowerCase() == "-quickmenu");
-    final bool elevatedReplacementRequested =
-        elevatedQuickMenuRequested || user.args.contains(Globals.elevatedStartupArgument);
-    final bool startInInterface = !Globals.isStandaloneLauncher &&
-        !elevatedQuickMenuRequested &&
-        !quickMenuRequested &&
-        (user.page == TPage.interface || !AppPaths.hasSettingsFile || Boxes.remap.isEmpty);
-    Globals.startInInterface = startInInterface;
     if (Globals.isStandaloneLauncher) {
       windowOptions = WindowOptions(
         size: Size(Boxes.launcherSizeWidth, Globals.launcherSize.height),
@@ -284,7 +136,7 @@ class AppStartup {
         alwaysOnTop: false,
         title: "Tabame - Launcher - ${user.launcherSearchText.addDots(9)}",
       );
-    } else if (startInInterface) {
+    } else if (user.args.contains("-interface") || !AppPaths.hasSettingsFile || Boxes.remap.isEmpty) {
       late String title;
       if (user.args.contains("-wizardly")) {
         title = "Wizardly";
@@ -322,68 +174,13 @@ class AppStartup {
       await windowManager.setAsFrameless();
       await windowManager.setHasShadow(false);
       await Win32.fetchMainWindowHandle();
-      if (!Globals.isStandaloneLauncher && user.page == TPage.quickmenu) {
-        final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
-        if (ClipboardHistoryStore.enabled && integrations.canStart(NativeIntegrationId.clipboardHistory)) {
-          final bool started = await ClipboardHistoryCoordinator.instance.start();
-          if (started) {
-            integrations.reportRunning(NativeIntegrationId.clipboardHistory);
-          } else {
-            integrations.reportUnavailable(
-              NativeIntegrationId.clipboardHistory,
-              reason: ClipboardService.instance.unavailableReason,
-            );
-          }
-        } else {
-          integrations.reportDisabled(
-            NativeIntegrationId.clipboardHistory,
-            reason: integrations.denialReason(NativeIntegrationId.clipboardHistory) ??
-                'Clipboard history is paused until you enable it.',
-            reducedMode: true,
-          );
-        }
+      if (!Globals.isStandaloneLauncher) {
+        await ClipboardHistoryCoordinator.instance.start();
         WindowsBootstrap.refreshCapabilities();
-        if (startInInterface) {
-          await WinUtils.toggleTaskbar(visible: true);
-        } else {
-          unawaited(_applyStartupTaskbarVisibility());
-        }
       }
       Globals.fullLoaded.value = true;
-      final bool startupReplacementReady = _signalElevatedStartupReady();
-      if (user.args.contains(Globals.elevatedStartupArgument)) {
-        final File? readySignal = _elevatedStartupReadyFileFromArguments();
-        if (!startupReplacementReady ||
-            readySignal == null ||
-            !await _waitForElevationReadyAcknowledgement(readySignal)) {
-          Debug.add('Elevated replacement handoff was not acknowledged; closing the replacement process.');
-          exit(1);
-        }
-      }
-      if (elevatedReplacementRequested && (elevatedQuickMenuRequested || startupReplacementReady)) {
-        // A persisted replacement should only replace the same role. The
-        // explicit QuickMenu action retains its historical broad cleanup.
-        if (elevatedQuickMenuRequested) {
-          Future<void>.delayed(const Duration(milliseconds: 300), WinUtils.closeAllTabameExProcesses);
-        } else {
-          Future<void>.delayed(
-            const Duration(milliseconds: 300),
-            () => WinUtils.closeAllTabameExProcesses(
-              closeInterface: startInInterface,
-              closeQuickMenu: !startInInterface,
-            ),
-          );
-        }
-      }
       Debug.add("Set windowOptions");
     });
-  }
-
-  static void _configureNativeIntegrations() {
-    NativeIntegrationCoordinator.configure(
-      profile: DistributionProfileConfig.current,
-      consentStore: SaveSettingsNativeIntegrationConsentStore(Boxes.pref),
-    );
   }
 
   static Future<void> finalizeStartup() async {
@@ -393,18 +190,9 @@ class AppStartup {
       Debug.add("Set transparency");
       return;
     }
-    if (user.page == TPage.quickmenu &&
-        user.quickClickEnabled &&
-        NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.globalHooks)) {
+    if (user.quickClickEnabled) {
       await QuickClick.registerQuickClick(user.quickClickConfig);
       await QuickClick.disableQuickClick();
-    } else if (user.page == TPage.quickmenu && user.quickClickEnabled) {
-      NativeIntegrationCoordinator.instance.reportDisabled(
-        NativeIntegrationId.globalHooks,
-        reason: NativeIntegrationCoordinator.instance.denialReason(NativeIntegrationId.globalHooks) ??
-            'QuickClick is disabled with global hooks; use the visible/manual action instead.',
-        reducedMode: true,
-      );
     }
     Debug.add("Set transparency");
   }

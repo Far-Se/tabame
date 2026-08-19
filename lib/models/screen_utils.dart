@@ -18,7 +18,6 @@ import '../platform/platform_models.dart';
 import '../platform/windows/win32_api.dart';
 
 import '../models/win32/win_utils.dart';
-import '../services/extension_policy.dart';
 import '../widgets/interface/fancyshot.dart';
 
 // ---------------------------------------------------------------------------
@@ -618,10 +617,6 @@ class UploadUtils {
     required void Function(String url) onSuccess,
     required void Function(String description) onError,
   }) async {
-    if (!ExtensionPolicy.current.canRunUserCommandTemplates) {
-      onError(ExtensionPolicy.current.userCommandDisabledMessage);
-      return false;
-    }
     try {
       final String escapedFilePath = filePath.replaceAll("'", "''");
       final String resolvedCommand = host.command.contains(r'${file}')

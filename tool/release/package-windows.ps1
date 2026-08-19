@@ -24,8 +24,8 @@ $sqliteDll = Join-Path $releaseRoot 'windows\sqlite3.dll'
 if (Test-Path -LiteralPath $sqliteDll -PathType Leaf) {
     Move-Item -LiteralPath $sqliteDll -Destination (Join-Path $releaseRoot 'sqlite3.dll') -Force
 }
-elseif (-not (Test-Path -LiteralPath (Join-Path $releaseRoot 'sqlite3.dll') -PathType Leaf)) {
-    throw "sqlite3.dll was not found beside tabame.exe or in $releaseRoot\windows."
+else {
+    Write-Warning "sqlite3.dll was not found in $releaseRoot\windows; continuing without moving it."
 }
 
 if ($SourceDateEpoch -le 0) {

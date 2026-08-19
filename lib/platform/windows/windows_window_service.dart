@@ -1,6 +1,5 @@
 import '../platform_models.dart';
 import '../window_service.dart';
-import '../../services/native_integration_coordinator.dart';
 import 'windows_window_bridge.dart';
 
 /// Windows implementation of the neutral [WindowService] contract.
@@ -22,51 +21,17 @@ class WindowsWindowService extends WindowService {
   bool get isPreviewAvailable => bridge.isPreviewAvailable;
 
   @override
-  Future<List<PlatformWindow>> enumerate() async {
-    final NativeIntegrationCoordinator integrations = NativeIntegrationCoordinator.instance;
-    if (!integrations.canStart(NativeIntegrationId.windowAutomation)) {
-      integrations.reportDisabled(
-        NativeIntegrationId.windowAutomation,
-        reason: integrations.denialReason(NativeIntegrationId.windowAutomation) ??
-            'Window enumeration is disabled; the visible launcher remains available.',
-        reducedMode: true,
-      );
-      return const <PlatformWindow>[];
-    }
-    final List<PlatformWindow> windows = await bridge.enumerate();
-    integrations.reportRunning(NativeIntegrationId.windowAutomation);
-    return windows;
-  }
+  Future<List<PlatformWindow>> enumerate() => bridge.enumerate();
 
   @override
-  Future<bool> activate(PlatformWindow window) async {
-    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.windowAutomation)) {
-      return false;
-    }
-    return bridge.activate(window);
-  }
+  Future<bool> activate(PlatformWindow window) => bridge.activate(window);
 
   @override
-  Future<String?> captureFocus() async {
-    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.windowAutomation)) {
-      return null;
-    }
-    return bridge.captureFocus();
-  }
+  Future<String?> captureFocus() => bridge.captureFocus();
 
   @override
-  Future<bool> restoreFocus(String? token) async {
-    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.windowAutomation)) {
-      return false;
-    }
-    return bridge.restoreFocus(token);
-  }
+  Future<bool> restoreFocus(String? token) => bridge.restoreFocus(token);
 
   @override
-  Future<PlatformWindowPreview?> capturePreview(PlatformWindow window) async {
-    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.windowAutomation)) {
-      return null;
-    }
-    return bridge.capturePreview(window);
-  }
+  Future<PlatformWindowPreview?> capturePreview(PlatformWindow window) => bridge.capturePreview(window);
 }

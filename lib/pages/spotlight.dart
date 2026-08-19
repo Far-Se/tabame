@@ -17,7 +17,6 @@ import '../models/classes/screen_draw_hotkeys.dart';
 import '../models/win32/mixed.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
-import '../services/native_integration_coordinator.dart';
 
 // Adjust this import to your project.
 
@@ -31,8 +30,6 @@ Future<void> startSpotlight() async {
   await AppStartup.initialize();
   await windowManager.ensureInitialized();
   await Boxes.registerBoxes(justLoad: true);
-  await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.globalHooks);
-  await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.screenCapture);
 
   const WindowOptions windowOptions = WindowOptions(
     backgroundColor: Colors.transparent,
@@ -83,8 +80,6 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> with TabameListener
   int _targetHwnd = 0;
 
   bool _enabled = true;
-  bool _nativeEnabled = false;
-  bool _captureEnabled = false;
   bool _snapshotInProgress = false;
   bool _resizeInProgress = false;
 
@@ -114,30 +109,21 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> with TabameListener
     _dimOpacity = Boxes.pref.getDouble('spotlightDimOpacity') ?? outsideDimOpacity;
 
     Monitor.fetchMonitors();
-    _nativeEnabled = NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.globalHooks);
-    _captureEnabled = NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.screenCapture);
-    if (_nativeEnabled) {
-      NativeHooks.registerCallHandler();
-      NativeHooks.addListener(this);
-    }
+    NativeHooks.registerCallHandler();
+    NativeHooks.addListener(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await checkResize(forceCapture: _captureEnabled);
+      await checkResize(forceCapture: true);
       _setupOverlayWindow();
       _enableClickThrough();
-      if (_nativeEnabled) await _registerSpotlightHotkeys();
-      if (_captureEnabled) await _captureMonitorSnapshot(force: true);
+      await _registerSpotlightHotkeys();
+      await _captureMonitorSnapshot(force: true);
       _moveToForegroundWindow();
     });
 
     Future<void>.delayed(const Duration(milliseconds: 300)).then((_) => _initializeWindowSize());
     _timer = Timer.periodic(pollInterval, (_) => _tick());
-    _uiTimer = Timer.periodic(
-      const Duration(milliseconds: 600),
-      (_) {
-        if (_captureEnabled) unawaited(_captureMonitorSnapshot(force: true));
-      },
-    );
+    _uiTimer = Timer.periodic(const Duration(milliseconds: 600), (_) => _captureMonitorSnapshot(force: true));
   }
 
   void _initializeWindowSize() {
@@ -148,10 +134,8 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> with TabameListener
   void dispose() {
     _timer?.cancel();
     _uiTimer?.cancel();
-    if (_nativeEnabled) {
-      NativeHooks.removeListener(this);
-      unawaited(NativeHooks.unHook());
-    }
+    NativeHooks.removeListener(this);
+    unawaited(NativeHooks.unHook());
     if (_overlayHwnd != 0) {
       unawaited(includeWindowFromCapture(_overlayHwnd));
     }
@@ -376,7 +360,6 @@ class _SpotlightOverlayState extends State<SpotlightOverlay> with TabameListener
   }
 
   Future<void> _captureMonitorSnapshot({bool force = false}) async {
-    if (!_captureEnabled) return;
     if (_snapshotInProgress) return;
     if (!_enabled && !force) return;
     if (_overlayHwnd == 0) return;

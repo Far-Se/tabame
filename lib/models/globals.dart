@@ -50,24 +50,12 @@ class Globals {
   static Size launcherCurrentSize = Size.zero;
   static bool isLauncherPluginActive = false;
   static bool isStandaloneLauncher = false;
-
-  /// The process role selected during startup. It must not be inferred again
-  /// from lazily-reset settings caches during a live settings reload.
-  static bool startInInterface = false;
-  static const String elevatedQuickMenuArgument = "-elevated-quickmenu";
-
-  /// Marks the replacement process created by the persisted elevation setting.
-  /// It preserves the requested page while allowing the replacement to close
-  /// the non-elevated process after its own window is ready.
-  static const String elevatedStartupArgument = "-elevated-startup";
-  static const String elevatedStartupSignalArgument = "-elevated-startup-signal";
-
   static ({double width, double height}) quickMenuSize = (width: 355, height: 580);
   static ({double width, double height}) launcherSize = (width: 715, height: 630);
   static QuickMenuPage quickMenuPage = QuickMenuPage.quickMenu;
   static bool debugHooks = true;
   static bool debugHotkeys = true;
-  static String version = "v2.0.0";
+  static String version = "v2.0";
   static WinRect? focusedRect;
   static int virtualDesktop = 0;
   static CustomMouseCursor? customCursor;

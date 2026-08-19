@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
-import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../../pages/launcher/plugins/plugin_gallery.dart';
@@ -13,7 +12,6 @@ import '../../../pages/launcher/plugins/plugin_registry.dart';
 import '../../../platform/app_paths.dart';
 import '../../../platform/file_picker_service.dart';
 import '../../../services/browser_bridge_service.dart';
-import '../../../services/extension_policy.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/panel_header.dart';
 import '../../widgets/windows_scroll.dart';
@@ -103,8 +101,6 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   String _pluginDirectoryStatus = '';
   bool _pluginDirectoryStatusError = false;
 
-  ExtensionPolicy get _policy => ExtensionPolicy.current;
-
   @override
   void dispose() {
     _installedSearchController.dispose();
@@ -126,14 +122,8 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
     setState(() => _reloading = false);
   }
 
-  Future<void> _setAutoUpdatePlugins(bool enabled) async {
-    user.autoUpdatePlugins = enabled;
-    if (mounted) setState(() {});
-    await Boxes.updateSettings("autoUpdatePlugins", enabled);
-  }
-
   Future<void> _changePluginDirectory() async {
-    if (!_policy.canEditLocalPluginConfiguration || _pluginDirectoryBusy) return;
+    if (_pluginDirectoryBusy) return;
 
     final Directory currentDirectory = Directory(AppPaths.pluginsDirectory);
     final DirectoryPicker picker = DirectoryPicker()
@@ -159,7 +149,6 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   }
 
   Future<void> _toggle(PluginManifest manifest, bool enabled) async {
-    if (!_policy.canEditLocalPluginConfiguration) return;
     setState(() => _busyId = manifest.id);
     await PluginRegistry.setEnabled(manifest, enabled);
     if (!mounted) return;
@@ -167,7 +156,6 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   }
 
   Future<void> _editKeyword(PluginManifest manifest) async {
-    if (!_policy.canEditLocalPluginConfiguration) return;
     final Set<String> occupiedKeywords = PluginRegistry.manifests
         .where((PluginManifest other) => other.directory != manifest.directory)
         .map((PluginManifest other) => other.keywordLower)
@@ -194,7 +182,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   }
 
   Future<void> _loadGallery({bool force = false}) async {
-    if (!_policy.canFetchPluginGallery || _galleryLoading) return;
+    if (_galleryLoading) return;
     setState(() {
       _galleryLoading = true;
       _galleryError = '';
@@ -217,7 +205,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   }
 
   Future<void> _install(PluginGalleryEntry entry) async {
-    if (!_policy.canInstallRemotePlugins || _installingId != null) return;
+    if (_installingId != null) return;
     setState(() {
       _installingId = entry.id;
       _installStatus = '';
@@ -279,86 +267,34 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   Widget build(BuildContext context) {
     final bool gallery = _mode == _PanelMode.gallery;
     final bool makeYourOwn = _mode == _PanelMode.makeYourOwn;
-    final bool pluginsDisabled = !_policy.canExecutePlugins;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: C.start,
       children: <Widget>[
         PanelHeader(
-          title: pluginsDisabled
-              ? "Launcher Plugins"
-              : (makeYourOwn ? "Make Your Own Plugin" : (gallery ? "Plugin Gallery" : "Launcher Plugins")),
-          icon: pluginsDisabled
-              ? Icons.extension_off_outlined
-              : (makeYourOwn
-                  ? Icons.construction_rounded
-                  : (gallery ? Icons.storefront_rounded : Icons.extension_rounded)),
-          buttonIcon: pluginsDisabled
+          title: makeYourOwn ? "Make Your Own Plugin" : (gallery ? "Plugin Gallery" : "Launcher Plugins"),
+          icon:
+              makeYourOwn ? Icons.construction_rounded : (gallery ? Icons.storefront_rounded : Icons.extension_rounded),
+          buttonIcon: makeYourOwn
               ? null
-              : (makeYourOwn
-                  ? null
-                  : ((gallery ? _galleryLoading : _reloading)
-                      ? Icons.hourglass_bottom_rounded
-                      : Icons.refresh_rounded)),
-          buttonTooltip:
-              pluginsDisabled ? null : (makeYourOwn ? null : (gallery ? "Refresh gallery" : "Reload plugins")),
-          buttonPressed: pluginsDisabled
+              : ((gallery ? _galleryLoading : _reloading) ? Icons.hourglass_bottom_rounded : Icons.refresh_rounded),
+          buttonTooltip: makeYourOwn ? null : (gallery ? "Refresh gallery" : "Reload plugins"),
+          buttonPressed: makeYourOwn
               ? null
-              : (makeYourOwn
-                  ? null
-                  : (gallery
-                      ? (_galleryLoading ? null : () => _loadGallery(force: true))
-                      : (_reloading ? null : _reload))),
+              : (gallery ? (_galleryLoading ? null : () => _loadGallery(force: true)) : (_reloading ? null : _reload)),
         ),
-        if (!pluginsDisabled)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-            child: _buildModeRail(),
-          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+          child: _buildModeRail(),
+        ),
         Flexible(
           child: Material(
             type: MaterialType.transparency,
-            child: pluginsDisabled
-                ? _buildDisabled()
-                : (makeYourOwn ? _buildMakeYourOwn() : (gallery ? _buildGallery() : _buildInstalled())),
+            child: makeYourOwn ? _buildMakeYourOwn() : (gallery ? _buildGallery() : _buildInstalled()),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildDisabled() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(Icons.extension_off_outlined, size: 44, color: Design.text.withAlpha(70)),
-            const SizedBox(height: 14),
-            Text(
-              'Extensions unavailable',
-              style: TextStyle(
-                  fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w700, color: Design.text.withAlpha(190)),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              _policy.pluginDisabledMessage,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(125), height: 1.4),
-            ),
-            if (PluginRegistry.manifests.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 10),
-              Text(
-                '${PluginRegistry.manifests.length} existing plugin manifest(s) were preserved but will not run.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(105)),
-              ),
-            ],
-          ],
-        ),
-      ),
     );
   }
 
@@ -500,14 +436,6 @@ Build a plugin with your favorite AI coding assistant:
           crossAxisAlignment: C.start,
           children: <Widget>[
             _buildSectionLabel(
-              label: "Plugin updates",
-              countText: user.autoUpdatePlugins ? "ON" : "OFF",
-              icon: Icons.system_update_alt_rounded,
-            ),
-            const SizedBox(height: 8),
-            _buildAutoUpdateCard(),
-            const SizedBox(height: 16),
-            _buildSectionLabel(
               label: "Plugin folder",
               countText: "CONFIG",
               icon: Icons.folder_rounded,
@@ -572,62 +500,6 @@ Build a plugin with your favorite AI coding assistant:
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(130)),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAutoUpdateCard() {
-    final bool enabled = user.autoUpdatePlugins;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
-      decoration: BoxDecoration(
-        color: enabled ? Design.accent.withAlpha(10) : Design.text.withAlpha(7),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: enabled ? Design.accent.withAlpha(30) : Design.text.withAlpha(16)),
-      ),
-      child: Row(
-        crossAxisAlignment: C.start,
-        children: <Widget>[
-          Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              color: Design.accent.withAlpha(20),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.system_update_alt_rounded, size: 16, color: Design.accent),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: C.start,
-              children: <Widget>[
-                Text(
-                  'Auto Update plugins',
-                  style: TextStyle(
-                    fontSize: Design.baseFontSize + 1.5,
-                    fontWeight: FontWeight.w700,
-                    color: Design.text.withAlpha(235),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'Check the remote gallery when the launcher opens and install newer plugin versions automatically.',
-                  style: TextStyle(
-                    fontSize: Design.baseFontSize - 0.5,
-                    height: 1.25,
-                    color: Design.text.withAlpha(140),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Switch.adaptive(
-            value: enabled,
-            activeThumbColor: Design.accent,
-            onChanged: _setAutoUpdatePlugins,
           ),
         ],
       ),
@@ -1049,11 +921,6 @@ class _BrowserBridgeCard extends StatelessWidget {
             ),
           BrowserBridgePhase.error => (
               status.error.isEmpty ? 'Could not start the connector' : status.error,
-              const Color(0xFFC86464),
-              Icons.error_outline_rounded,
-            ),
-          BrowserBridgePhase.blocked => (
-              'Browser Bridge Blocked by Privacy ${status.error}',
               const Color(0xFFC86464),
               Icons.error_outline_rounded,
             ),

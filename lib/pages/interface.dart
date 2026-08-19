@@ -27,7 +27,6 @@ import '../widgets/interface/hotkeys_interface.dart';
 import '../widgets/interface/interface_faq.dart';
 import '../widgets/interface/interface_quickmenu.dart';
 import '../widgets/interface/interface_settings.dart';
-import '../widgets/interface/native_integration_diagnostics.dart';
 import '../widgets/interface/theme_setup.dart';
 import '../widgets/interface/trktivity.dart';
 import '../widgets/interface/wizardly.dart';
@@ -99,11 +98,6 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
   final List<PageClass> pages = <PageClass>[
     PageClass(title: 'Home', icon: Icons.home, widget: const Home()),
     PageClass(title: 'Config', icon: Icons.settings, widget: const SettingsPage()),
-    PageClass(
-      title: 'Capabilities',
-      icon: Icons.health_and_safety_outlined,
-      widget: const NativeIntegrationDiagnosticsPage(),
-    ),
     PageClass(title: 'Settings', icon: Icons.apps, widget: const QMSettings()),
     PageClass(title: 'Theme', icon: Icons.theater_comedy, widget: const ThemeSetup()),
     // PageClass(title: 'QuickRun', icon: Icons.drag_handle, widget: const RunSettings()),

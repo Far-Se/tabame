@@ -10,7 +10,6 @@ import '../../../models/clipboard_history.dart';
 import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../../services/browser_bridge_service.dart';
-import '../../../services/extension_policy.dart';
 import '../../../services/notification_coordinator.dart';
 import 'plugin_debug.dart';
 import 'plugin_manifest.dart';
@@ -98,19 +97,6 @@ class LauncherPluginHost {
   /// *different* plugin was previously active. Returns immediately if the same
   /// plugin is already live.
   Future<void> activate(PluginManifest manifest, {required String initialQuery}) async {
-    final ExtensionPolicy policy = ExtensionPolicy.current;
-    if (!policy.canExecutePlugin(
-      id: manifest.id,
-      source: manifest.source,
-      enabled: manifest.enabled,
-      publisher: manifest.publisher,
-      artifactHashVerified: false,
-      signatureVerified: false,
-      consentGranted: false,
-    )) {
-      onFrame(PluginRenderFrame.errorFrame(policy.pluginDisabledMessage));
-      return;
-    }
     if (_active?.id == manifest.id && _process != null) {
       // Already live (e.g. re-entering after a dev reload raced an exit) —
       // just bring the plugin up to date with the current query.
@@ -230,11 +216,6 @@ class LauncherPluginHost {
   /// by runtime: pip for Python, npm/bun for Node. Returns false only when an
   /// install was attempted and failed (an error frame is already shown).
   Future<bool> _ensureDependencies(PluginManifest manifest) async {
-    final ExtensionPolicy policy = ExtensionPolicy.current;
-    if (!policy.canInstallDependenciesFor(manifest.runtime)) {
-      onFrame(PluginRenderFrame.errorFrame(policy.dependencyInstallDisabledMessage));
-      return false;
-    }
     final String runtime = manifest.runtime.toLowerCase();
     if (runtime.contains('py')) return _ensurePythonDeps(manifest);
     if (runtime.contains('node') || runtime.contains('bun')) return _ensureNodeDeps(manifest);
@@ -327,10 +308,6 @@ class LauncherPluginHost {
   }
 
   Future<void> _installDependenciesAndActivate(PluginManifest manifest) async {
-    if (!ExtensionPolicy.current.canInstallDependenciesFor(manifest.runtime)) {
-      onFrame(PluginRenderFrame.errorFrame(ExtensionPolicy.current.dependencyInstallDisabledMessage));
-      return;
-    }
     if (_installingDependencies || _active?.id != manifest.id || _closing) return;
     _installingDependencies = true;
     try {
@@ -349,10 +326,6 @@ class LauncherPluginHost {
   /// `package.json`, or the install signature (the `package.json` contents) is
   /// unchanged since the last install.
   Future<bool> _ensureNodeDeps(PluginManifest manifest) async {
-    if (!ExtensionPolicy.current.canInstallDependenciesFor(manifest.runtime)) {
-      onFrame(PluginRenderFrame.errorFrame(ExtensionPolicy.current.dependencyInstallDisabledMessage));
-      return false;
-    }
     final String sep = Platform.pathSeparator;
     final File packageJson = File('${manifest.directory}${sep}package.json');
     if (!packageJson.existsSync()) return true; // Nothing declared.
@@ -408,10 +381,6 @@ class LauncherPluginHost {
   /// was attempted and failed (an error frame is shown); true otherwise —
   /// including the common "nothing to install" and "non-Python runtime" cases.
   Future<bool> _ensurePythonDeps(PluginManifest manifest) async {
-    if (!ExtensionPolicy.current.canInstallDependenciesFor(manifest.runtime)) {
-      onFrame(PluginRenderFrame.errorFrame(ExtensionPolicy.current.dependencyInstallDisabledMessage));
-      return false;
-    }
     if (!manifest.runtime.toLowerCase().contains('py')) return true;
 
     final File reqFile = File('${manifest.directory}${Platform.pathSeparator}requirements.txt');
@@ -909,7 +878,9 @@ class LauncherPluginHost {
       if (op == 'copy') {
         final Object? rawId = command.data['id'];
         if (rawId is String && rawId.isNotEmpty) {
-          if (await ClipboardHistoryStore.copyById(rawId)) {
+          final ClipboardHistoryEntry? entry = await ClipboardHistoryStore.getFullEntry(rawId);
+          if (entry != null) {
+            await ClipboardHistoryStore.copyEntry(entry);
             onCommand(const PluginCommand(name: 'toast', text: 'Copied to clipboard'));
           }
         }
@@ -918,12 +889,12 @@ class LauncherPluginHost {
 
       if (op == 'entry') {
         final Object? rawId = command.data['id'];
-        final ClipboardHistoryEntry? entry = rawId is String ? await ClipboardHistoryStore.getEntryById(rawId) : null;
+        final ClipboardHistoryEntry? entry = rawId is String ? await ClipboardHistoryStore.getFullEntry(rawId) : null;
         _send(<String, Object?>{
           'type': 'clipboardHistory',
           if (requestId != null) 'requestId': requestId,
           'op': 'entry',
-          'entry': entry == null ? null : _clipboardHistoryEntryMap(entry),
+          'entry': entry == null ? null : _clipboardHistoryEntryMap(entry, previewLimit: 12000),
         });
         return;
       }

@@ -1,11 +1,9 @@
-import '../../../services/extension_policy.dart';
-
 /// Describes a single user-installed launcher plugin, parsed from the
 /// `plugin.json` that lives in each configured plugin folder's `<id>` directory.
 ///
 /// A plugin is an external script (Python / Node / Bun) that Tabame launches as
-/// a long-running child process when the user types the plugin's [keyword] in the
-/// launcher. The manifest only describes *how* to launch it — the live UI is
+/// a long-running child process when the user types the plugin's [keyword] in
+/// the launcher. The manifest only describes *how* to launch it — the live UI is
 /// driven entirely by the JSON render frames the script streams back (see
 /// `plugin_protocol.dart`).
 class PluginManifest {
@@ -24,10 +22,6 @@ class PluginManifest {
     this.version = '',
     this.pip = const <String>[],
     this.env = const <String, String>{},
-    this.source = PluginSource.localUserAuthored,
-    this.publisher = '',
-    this.artifactSha256 = '',
-    this.artifactSignature = '',
   });
 
   /// Stable identifier — defaults to the containing folder name.
@@ -85,16 +79,6 @@ class PluginManifest {
   /// the script reads from `os.environ` / `process.env`.
   final Map<String, String> env;
 
-  /// Provenance is supplied by the installer/registry, not trusted from the
-  /// executable manifest itself. Missing provenance is always local user-authored.
-  final PluginSource source;
-
-  /// Publisher and artifact metadata are descriptive until a distribution
-  /// profile verifies them. They never grant Store execution on their own.
-  final String publisher;
-  final String artifactSha256;
-  final String artifactSignature;
-
   bool get isValid => keyword.trim().isNotEmpty && runtime.trim().isNotEmpty && entry.trim().isNotEmpty;
 
   /// The lowercased keyword used for matching.
@@ -104,10 +88,6 @@ class PluginManifest {
     Map<String, dynamic> json, {
     required String directory,
     required String folderName,
-    PluginSource source = PluginSource.localUserAuthored,
-    String? publisher,
-    String artifactSha256 = '',
-    String artifactSignature = '',
   }) {
     String str(String key, [String fallback = '']) {
       final Object? value = json[key];
@@ -157,10 +137,6 @@ class PluginManifest {
       dev: rawDev == true,
       pip: pip,
       env: env,
-      source: source,
-      publisher: publisher ?? str('publisher', str('author')),
-      artifactSha256: artifactSha256,
-      artifactSignature: artifactSignature,
     );
   }
 }

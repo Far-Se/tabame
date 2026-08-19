@@ -6,7 +6,6 @@ import 'dart:ui' as ui;
 import 'package:path/path.dart' as p;
 
 import '../app_catalog_service.dart';
-import '../../services/native_integration_coordinator.dart';
 import 'tabamewin32_api.dart' as native;
 
 /// Windows adapter for the neutral application catalog.
@@ -29,15 +28,6 @@ class WindowsAppCatalogProvider implements AppCatalogProvider {
       return AppCatalogSnapshot(records: const <AppCatalogRecord>[], complete: false, error: unavailableReason);
     }
 
-    if (!NativeIntegrationCoordinator.instance.canStart(NativeIntegrationId.processActions)) {
-      return AppCatalogSnapshot(
-        records: const <AppCatalogRecord>[],
-        complete: false,
-        error: NativeIntegrationCoordinator.instance.denialReason(NativeIntegrationId.processActions) ??
-            'Installed-app discovery is disabled until the process capability is enabled.',
-      );
-    }
-
     try {
       final List<native.AppInfo> apps = _dedupe(await native.AppEnumeration.getAllApps());
       final List<AppCatalogRecord> records = apps.map(_recordFor).toList(growable: false)
@@ -58,8 +48,6 @@ class WindowsAppCatalogProvider implements AppCatalogProvider {
   @override
   Future<bool> launch(AppCatalogRecord record) async {
     if (!isAvailable || record.launchTarget.trim().isEmpty) return false;
-    if (!await NativeIntegrationCoordinator.instance.authorizeInvocation(NativeIntegrationId.processActions))
-      return false;
     try {
       await Process.start('explorer.exe', <String>[record.launchTarget], mode: ProcessStartMode.detached);
       return true;

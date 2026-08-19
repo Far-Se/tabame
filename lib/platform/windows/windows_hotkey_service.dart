@@ -12,10 +12,12 @@ import 'tabamewin32_api.dart';
 /// keyboard/mouse observation. This class owns the conversion at the boundary;
 /// shared orchestration receives only [PlatformHotkeyEvent] values.
 class WindowsHotkeyService extends HotkeyService implements TabameListener {
-  WindowsHotkeyService();
+  WindowsHotkeyService() {
+    NativeHooks.registerCallHandler();
+    NativeHooks.addListener(this);
+  }
 
   final StreamController<PlatformHotkeyEvent> _events = StreamController<PlatformHotkeyEvent>.broadcast();
-  bool _listenerRegistered = false;
 
   @override
   bool get isAvailable => Platform.isWindows;
@@ -60,37 +62,8 @@ class WindowsHotkeyService extends HotkeyService implements TabameListener {
 
     final List<Map<String, dynamic>> nativeBindings =
         bindings.map(WindowsHotkeyService.toNativeBinding).toList(growable: false);
-    if (nativeBindings.isEmpty) {
-      await unregisterBindings();
-      return const HotkeyRegistrationResult(
-        registered: false,
-        reason: 'No enabled global hotkeys were configured; the native hook remains stopped.',
-      );
-    }
-
-    try {
-      if (!_listenerRegistered) {
-        NativeHooks.registerCallHandler();
-        NativeHooks.addListener(this);
-        _listenerRegistered = true;
-      }
-      await NativeHooks.runHotkeys(nativeBindings);
-      if (!NativeHooks.isRegistered) {
-        return const HotkeyRegistrationResult(
-          registered: false,
-          permissionRequired: true,
-          reason: 'Windows did not register the global hook; use the visible Tabame window instead.',
-        );
-      }
-      return const HotkeyRegistrationResult(registered: true);
-    } catch (error) {
-      await unregisterBindings();
-      return HotkeyRegistrationResult(
-        registered: false,
-        permissionRequired: true,
-        reason: 'Windows rejected the global hook: $error',
-      );
-    }
+    await NativeHooks.runHotkeys(nativeBindings);
+    return const HotkeyRegistrationResult(registered: true);
   }
 
   @override
@@ -101,10 +74,6 @@ class WindowsHotkeyService extends HotkeyService implements TabameListener {
     if (!isAvailable) return;
     if (NativeHooks.isRegistered) await NativeHooks.unHook();
     await NativeHooks.resetHotkeys();
-    if (_listenerRegistered) {
-      NativeHooks.removeListener(this);
-      _listenerRegistered = false;
-    }
   }
 
   @override
