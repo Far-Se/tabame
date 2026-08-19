@@ -69,6 +69,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   bool _galleryLoading = false;
   String _galleryError = '';
   String? _installingId;
+  bool _installingRecommended = false;
   String _installStatus = '';
   final TextEditingController _installedSearchController = TextEditingController();
   final TextEditingController _gallerySearchController = TextEditingController();
@@ -210,6 +211,45 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
       _installStatus = error == null
           ? 'Installed "${entry.name}" — type "${entry.keyword}" in the launcher'
           : 'Install failed: $error';
+    });
+  }
+
+  Future<void> _installAllRecommended() async {
+    if (_installingId != null || _installingRecommended) return;
+    final List<PluginGalleryEntry> pending = (_galleryEntries ?? <PluginGalleryEntry>[])
+        .where(
+          (PluginGalleryEntry entry) =>
+              entry.recommended && entry.installable && _findInstalledPlugin(entry.id) == null,
+        )
+        .toList(growable: false);
+    if (pending.isEmpty) {
+      setState(() => _installStatus = 'All recommended plugins are already installed.');
+      return;
+    }
+
+    setState(() {
+      _installingRecommended = true;
+      _installStatus = '';
+    });
+    int installed = 0;
+    final List<String> failures = <String>[];
+    for (final PluginGalleryEntry entry in pending) {
+      if (!mounted) return;
+      setState(() => _installingId = entry.id);
+      final String? error = await PluginGallery.install(entry);
+      if (error == null) {
+        installed++;
+      } else {
+        failures.add(entry.name);
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _installingId = null;
+      _installingRecommended = false;
+      _installStatus = failures.isEmpty
+          ? 'Installed all $installed recommended plugins.'
+          : 'Installed $installed of ${pending.length} recommended plugins. Failed: ${failures.join(', ')}';
     });
   }
 
@@ -789,6 +829,7 @@ Build a plugin with your favorite AI coding assistant:
             entry.id,
             entry.keyword,
             entry.description,
+            entry.category,
             entry.author,
             entry.runtime,
           ]),
@@ -802,7 +843,10 @@ Build a plugin with your favorite AI coding assistant:
           crossAxisAlignment: C.start,
           children: <Widget>[
             if (_installStatus.isNotEmpty) ...<Widget>[
-              _buildStatusStrip(_installStatus, error: _installStatus.startsWith('Install failed')),
+              _buildStatusStrip(
+                _installStatus,
+                error: _installStatus.startsWith('Install failed') || _installStatus.contains('Failed:'),
+              ),
               const SizedBox(height: 8),
             ],
             _buildSectionLabel(
@@ -816,6 +860,10 @@ Build a plugin with your favorite AI coding assistant:
               hintText: "Search gallery...",
             ),
             const SizedBox(height: 8),
+            if (entries.any((PluginGalleryEntry entry) => entry.recommended)) ...<Widget>[
+              _buildInstallRecommendedStrip(entries),
+              const SizedBox(height: 8),
+            ],
             if (filteredEntries.isEmpty)
               _buildNoSearchResults("No gallery plugins match your search.")
             else
@@ -830,6 +878,56 @@ Build a plugin with your favorite AI coding assistant:
                 const SizedBox(height: 8),
               ],
             _buildSubmitStrip(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInstallRecommendedStrip(List<PluginGalleryEntry> entries) {
+    final int pending = entries
+        .where(
+          (PluginGalleryEntry entry) =>
+              entry.recommended && entry.installable && _findInstalledPlugin(entry.id) == null,
+        )
+        .length;
+    final bool busy = _installingRecommended;
+    return InkWell(
+      onTap: busy || pending == 0 ? null : _installAllRecommended,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          color: Design.accent.withAlpha(pending == 0 ? 7 : 16),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Design.accent.withAlpha(pending == 0 ? 24 : 55)),
+        ),
+        child: Row(
+          children: <Widget>[
+            if (busy)
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Design.accent),
+              )
+            else
+              Icon(Icons.auto_awesome_rounded, size: 16, color: Design.accent),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                'Install all Recommended Plugins',
+                style: TextStyle(
+                  fontSize: Design.baseFontSize + 0.5,
+                  fontWeight: FontWeight.w700,
+                  color: pending == 0 ? Design.text.withAlpha(105) : Design.text.withAlpha(220),
+                ),
+              ),
+            ),
+            _GalleryCard.pill(
+              pending == 0 ? 'INSTALLED' : '$pending PENDING',
+              Design.accent.withAlpha(20),
+              pending == 0 ? Design.text.withAlpha(105) : Design.accent,
+            ),
           ],
         ),
       ),
@@ -1484,6 +1582,19 @@ class _GalleryCard extends StatelessWidget {
                     ),
                   ),
                 ],
+                if (entry.recommended || entry.category.trim().isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 5),
+                  Wrap(
+                    spacing: 5,
+                    runSpacing: 4,
+                    children: <Widget>[
+                      if (entry.recommended)
+                        _pill('RECOMMENDED', accent.withAlpha(25), accent, icon: Icons.auto_awesome_rounded),
+                      if (entry.category.trim().isNotEmpty)
+                        _pill(entry.category, text.withAlpha(12), text.withAlpha(155), icon: Icons.sell_outlined),
+                    ],
+                  ),
+                ],
                 if (entry.author.isNotEmpty || entry.version.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 3),
                   Text(
@@ -1612,22 +1723,34 @@ class _GalleryCard extends StatelessWidget {
     );
   }
 
-  Widget _pill(String label, Color background, Color foreground) {
+  static Widget pill(String label, Color background, Color foreground, {IconData? icon}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: Design.baseFontSize - 1,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.3,
-          color: foreground,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (icon != null) ...<Widget>[
+            Icon(icon, size: 10, color: foreground),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: Design.baseFontSize - 1,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+              color: foreground,
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  Widget _pill(String label, Color background, Color foreground, {IconData? icon}) =>
+      pill(label, background, foreground, icon: icon);
 }

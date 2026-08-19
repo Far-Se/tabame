@@ -833,6 +833,11 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
                             // await WindowManager.instance.focus();
                           },
                           onHover: (PointerHoverEvent event) {
+                            // Hover-to-focus is a QuickMenu convenience only. Applying it
+                            // to the launcher steals focus from native dialogs opened by
+                            // plugins (file/folder pickers in particular) whenever the
+                            // pointer happens to remain over Tabame.
+                            if (Globals.quickMenuPage != QuickMenuPage.quickMenu) return;
                             final int now = DateTime.timestamp().millisecondsSinceEpoch;
                             if (lastCheck == 0) {
                               lastCheck = now;

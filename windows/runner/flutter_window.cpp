@@ -1,9 +1,34 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <shellapi.h>
+#include <string>
 
 #include "flutter/generated_plugin_registrant.h"
 #include <flutter/standard_method_codec.h>
+
+#include "utils.h"
+
+namespace {
+
+constexpr UINT kWmCopyGlobalData = 0x0049;
+
+bool IsCurrentProcessElevated() {
+  HANDLE token = nullptr;
+  if (!::OpenProcessToken(::GetCurrentProcess(), TOKEN_QUERY, &token)) {
+    return false;
+  }
+  TOKEN_ELEVATION elevation = {};
+  DWORD size = 0;
+  const bool elevated =
+      ::GetTokenInformation(token, TokenElevation, &elevation,
+                            sizeof(elevation), &size) != FALSE &&
+      elevation.TokenIsElevated != 0;
+  ::CloseHandle(token);
+  return elevated;
+}
+
+}  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -14,6 +39,22 @@ bool FlutterWindow::OnCreate() {
   if (!Win32Window::OnCreate()) {
     return false;
   }
+
+  // OLE drag/drop is blocked when Explorer runs normally and Tabame runs as
+  // administrator. WM_DROPFILES is the Windows-supported compatibility path.
+  // Keep desktop_drop as the primary implementation on every platform.
+  legacy_file_drop_enabled_ = IsCurrentProcessElevated();
+  if (legacy_file_drop_enabled_) {
+    ::DragAcceptFiles(GetHandle(), TRUE);
+    ::ChangeWindowMessageFilterEx(GetHandle(), WM_DROPFILES, MSGFLT_ALLOW,
+                                  nullptr);
+    ::ChangeWindowMessageFilterEx(GetHandle(), WM_COPYDATA, MSGFLT_ALLOW,
+                                  nullptr);
+    ::ChangeWindowMessageFilterEx(GetHandle(), kWmCopyGlobalData, MSGFLT_ALLOW,
+                                  nullptr);
+  }
+  //TODO: Implement multiplatform fallback if native desktop_drop support is
+  // unavailable on Linux or macOS.
 
   RECT frame = GetClientArea();
 
@@ -27,6 +68,12 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
+  if (legacy_file_drop_enabled_) {
+    // desktop_drop registers an OLE target on the Flutter child window. Lower
+    // integrity Explorer processes cannot enter it, so remove it while the
+    // elevated-only WM_DROPFILES bridge owns file drops.
+    ::RevokeDragDrop(flutter_controller_->view()->GetNativeWindow());
+  }
 
   native_window_channel_ =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
@@ -46,6 +93,11 @@ bool FlutterWindow::OnCreate() {
         }
       });
 
+  legacy_drop_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(), "desktop_drop",
+          &flutter::StandardMethodCodec::GetInstance());
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });
@@ -59,6 +111,10 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  if (legacy_file_drop_enabled_) {
+    ::DragAcceptFiles(GetHandle(), FALSE);
+  }
+  legacy_drop_channel_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -70,6 +126,38 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  if (message == WM_DROPFILES) {
+    const HDROP drop = reinterpret_cast<HDROP>(wparam);
+    POINT point = {};
+    ::DragQueryPoint(drop, &point);
+
+    flutter::EncodableList paths;
+    const UINT count = ::DragQueryFileW(drop, 0xFFFFFFFF, nullptr, 0);
+    paths.reserve(count);
+    for (UINT index = 0; index < count; ++index) {
+      const UINT length = ::DragQueryFileW(drop, index, nullptr, 0);
+      std::wstring path(length + 1, L'\0');
+      if (::DragQueryFileW(drop, index, path.data(), length + 1) == 0) {
+        continue;
+      }
+      path.resize(length);
+      paths.emplace_back(Utf8FromUtf16(path.c_str()));
+    }
+    ::DragFinish(drop);
+
+    if (legacy_drop_channel_ && !paths.empty()) {
+      legacy_drop_channel_->InvokeMethod(
+          "entered", std::make_unique<flutter::EncodableValue>(
+                         flutter::EncodableList{
+                             flutter::EncodableValue(double(point.x)),
+                             flutter::EncodableValue(double(point.y))}));
+      legacy_drop_channel_->InvokeMethod(
+          "performOperation",
+          std::make_unique<flutter::EncodableValue>(std::move(paths)));
+    }
+    return 0;
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =

@@ -4,6 +4,7 @@
     {
       "id": "caniuse",
       "name": "Can I Use",
+      "category": "Developer Tools",
       "keyword": "ciu",
       "description": "Search caniuse.com for web-platform feature browser compatibility.",
       "icon": "globe",
@@ -20,7 +21,9 @@
     {
       "id": "github",
       "name": "GitHub",
+      "category": "Developer Tools",
       "keyword": "gh",
+      "recommended": true,
       "description": "Search and manage GitHub — pull requests, issues, repos, branches, Actions runs, notifications, discussions, projects and repo downloads. Needs a Personal Access Token (asked for on first run).",
       "icon": "code",
       "runtime": "node",
@@ -37,6 +40,7 @@
     {
       "id": "linear",
       "name": "Linear",
+      "category": "Productivity",
       "keyword": "lin",
       "description": "Create, search and manage Linear issues, projects, docs and notifications. Needs an API key in config.json (see config.example.json).",
       "icon": "list",
@@ -54,6 +58,7 @@
     {
       "id": "tailwind",
       "name": "Tailwind CSS",
+      "category": "Developer Tools",
       "keyword": "tw",
       "description": "Search & inspect Tailwind CSS utilities — see the generated CSS, copy the class, and jump to the docs.",
       "icon": "palette",
@@ -69,7 +74,9 @@
     {
       "id": "symbols",
       "name": "Symbols & Characters",
+      "category": "Utilities",
       "keyword": "sym",
+      "recommended": true,
       "description": "Search and copy special characters, math symbols, punctuation, and language characters.",
       "icon": "tag",
       "runtime": "node",
@@ -84,7 +91,9 @@
     {
       "id": "weather",
       "name": "Weather",
+      "category": "Weather",
       "keyword": "weather",
+      "recommended": true,
       "description": "Today's weather and 7-day forecast",
       "icon": "tag",
       "runtime": "node",
@@ -99,6 +108,7 @@
     {
       "id": "font-sniffer",
       "name": "Font Sniffer",
+      "category": "Developer Tools",
       "keyword": "fonts",
       "description": "Load any website in headless Chrome and list every font it actually renders, ranked by usage.",
       "icon": "language",
@@ -114,6 +124,7 @@
     {
       "id": "trakt",
       "name": "Trakt",
+      "category": "Entertainment",
       "keyword": "trakt",
       "description": "Search movies & shows, browse trending/popular, and manage your Trakt watchlist, history & calendar.",
       "icon": "video",
@@ -129,7 +140,9 @@
     {
       "id": "timezone",
       "name": "Timezone Converter",
+      "category": "Utilities",
       "keyword": "tz",
+      "recommended": true,
       "description": "Convert times across the full Windows/IANA timezone catalog",
       "icon": "clock",
       "runtime": "python",
@@ -146,6 +159,7 @@
     {
       "id": "paste-rs",
       "name": "paste.rs",
+      "category": "Utilities",
       "keyword": "paste",
       "description": "Upload text or files to paste.rs, with local link history.",
       "icon": "upload",
@@ -161,6 +175,7 @@
     {
       "id": "mdblist",
       "name": "MDBList",
+      "category": "Entertainment",
       "keyword": "mdb",
       "description": "Search movies & shows, browse lists, and manage your watchlist via mdblist.com",
       "icon": "star",
@@ -176,7 +191,9 @@
     {
       "id": "stock",
       "name": "Stocks",
+      "category": "Finance",
       "keyword": "stock",
+      "recommended": true,
       "description": "Stock [ticker] [period] - e.g. 1d, 2m, 1y - price chart rendered as an image",
       "icon": "chart",
       "runtime": "python",
@@ -195,6 +212,7 @@
     {
       "id": "palette",
       "name": "Color Palette",
+      "category": "Media & Design",
       "keyword": "palette",
       "description": "Save, edit, and copy colors into named palettes for Figma, Photoshop, and more.",
       "icon": "palette",
@@ -210,6 +228,7 @@
     {
       "id": "crates",
       "name": "Crates.io",
+      "category": "Developer Tools",
       "keyword": "crate",
       "description": "Search Rust crates on crates.io",
       "icon": "download",
@@ -225,6 +244,7 @@
     {
       "id": "image-palette",
       "name": "Image Palette",
+      "category": "Media & Design",
       "keyword": "imgpal",
       "description": "Extract dominant colors from an image",
       "icon": "palette",
@@ -240,7 +260,9 @@
     {
       "id": "img-converter",
       "name": "Image Converter",
+      "category": "Media & Design",
       "keyword": "imgcon",
+      "recommended": true,
       "description": "Convert, resize, rotate and batch-process images between PNG, JPEG, WebP, BMP, GIF, TIFF, ICO and PDF",
       "icon": "image",
       "runtime": "python",
@@ -256,6 +278,7 @@
     {
       "id": "ip-domain-lookup",
       "name": "IP & Domain Lookup",
+      "category": "Network Tools",
       "keyword": "ip",
       "description": "Geolocate IP addresses and look up domain WHOIS/DNS info",
       "icon": "globe",
@@ -271,7 +294,9 @@
     {
       "id": "sysmon",
       "name": "System Monitor",
+      "category": "System Tools",
       "keyword": "sys",
+      "recommended": true,
       "description": "Live CPU, RAM, disk, and uptime",
       "icon": "chart",
       "runtime": "python",
@@ -286,7 +311,9 @@
     {
       "id": "todo-reminders",
       "name": "To-Do & Reminders",
+      "category": "Productivity",
       "keyword": "todo",
+      "recommended": true,
       "description": "Quick-add and manage to-dos with due dates, priorities, and tags right from the launcher.",
       "icon": "check",
       "runtime": "python",
@@ -303,7 +330,9 @@
     {
       "id": "crypto",
       "name": "Crypto",
+      "category": "Finance",
       "keyword": "crypto",
+      "recommended": true,
       "description": "Crypto [ticker] [period] — e.g. 1d, 2m, 1y — price chart rendered as an image",
       "icon": "chart",
       "runtime": "python",
@@ -320,6 +349,8 @@
     {
       "id": "sysnet",
       "name": "SysNet",
+      "category": "Network Tools",
+      "recommended": true,
       "keyword": "sysnet",
       "description": "System & network toolbox: ports, processes, WiFi, adapters, ping, public IP, DNS flush.",
       "icon": "server",
@@ -335,6 +366,7 @@
     {
       "id": "cron",
       "name": "Cron",
+      "category": "Developer Tools",
       "keyword": "cron",
       "description": "Parse cron expressions, preview next run times, and generate cron from natural language",
       "icon": "clock",
@@ -350,6 +382,8 @@
     {
       "id": "gmail",
       "name": "Gmail",
+      "category": "Communication",
+      "recommended": true,
       "keyword": "mail",
       "description": "Search, read, compose, reply and triage Gmail",
       "icon": "mail",
@@ -366,6 +400,8 @@
     {
       "id": "gcal",
       "name": "Google Calendar",
+      "category": "Productivity",
+      "recommended": true,
       "keyword": "cal",
       "description": "Search, browse, quick-add and manage Google Calendar events",
       "icon": "calendar",
@@ -382,6 +418,8 @@
     {
       "id": "google_drive",
       "name": "Google Drive",
+      "category": "Productivity",
+      "recommended": true,
       "keyword": "gdrive",
       "description": "Search your Google Drive and open, copy links, or download files",
       "icon": "cloud",
@@ -398,6 +436,8 @@
     {
       "id": "echo",
       "name": "Echo Demo",
+      "category": "Developer Tools",
+      "recommended": true,
       "keyword": "echo",
       "description": "Demonstrates the launcher plugin protocol (list / grid / detail / preview + actions)",
       "icon": "extension",
@@ -413,6 +453,8 @@
     {
       "id": "weatherImage",
       "name": "Weather Image",
+      "category": "Weather",
+      "recommended": true,
       "keyword": "wt",
       "description": "wt [city] [weekly|w] [f] — forecast image; add f for Fahrenheit",
       "icon": "weather",
@@ -433,6 +475,8 @@
     {
       "id": "spell_check",
       "name": "Spell Check",
+      "category": "Language & Writing",
+      "recommended": true,
       "keyword": "spell",
       "description": "Spell-checks what you type and suggests corrections, with a personal custom dictionary",
       "icon": "edit",
@@ -448,6 +492,7 @@
     {
       "id": "bcuninstaller",
       "name": "BC Uninstaller",
+      "category": "System Tools",
       "keyword": "uninstall",
       "description": "Search installed apps, queue several, and batch-uninstall them via BC Uninstaller.",
       "icon": "trash",
@@ -464,6 +509,8 @@
     {
       "id": "notes-plugin",
       "name": "Notes",
+      "category": "Productivity",
+      "recommended": true,
       "keyword": "note",
       "description": "Quick-capture notes with tags, pinning, search, and a full editor",
       "icon": "note",
@@ -479,6 +526,8 @@
     {
       "id": "discord",
       "name": "Discord",
+      "category": "Communication",
+      "recommended": true,
       "keyword": "discord",
       "description": "Browse servers/channels and send messages using your Discord user token",
       "icon": "chat",
@@ -494,6 +543,8 @@
     {
       "id": "windows-folders",
       "name": "Windows Folders",
+      "category": "System Tools",
+      "recommended": true,
       "keyword": "wf",
       "description": "Browse and jump to special Windows folders (AppData, Downloads, Startup, ProgramData, ...)",
       "icon": "folder",
@@ -509,6 +560,8 @@
     {
       "id": "weather-widget",
       "name": "Weather",
+      "category": "Weather",
+      "recommended": true,
       "keyword": "wr",
       "description": "Wide weather + 7-day forecast image, background shifts with the hour",
       "icon": "weather",
@@ -524,6 +577,7 @@
     {
       "id": "shows",
       "name": "TV Shows Tracker",
+      "category": "Entertainment",
       "keyword": "shows",
       "description": "Track TV shows via TMDB — season calendar, next air dates, and episode ratings",
       "icon": "video",
@@ -540,6 +594,8 @@
     {
       "id": "google-translate",
       "name": "Google Translate",
+      "category": "Language & Writing",
+      "recommended": true,
       "keyword": "gt",
       "description": "Translate text with Google Translate (free, no API key)",
       "icon": "translate",
@@ -555,6 +611,8 @@
     {
       "id": "spotify",
       "name": "Spotify",
+      "category": "Entertainment",
+      "recommended": true,
       "keyword": "spo",
       "description": "Search Spotify and control playback — tracks, artists, albums, playlists, queue, devices, history.",
       "icon": "music",
@@ -571,6 +629,8 @@
     {
       "id": "deepl",
       "name": "DeepL Translate",
+      "category": "Language & Writing",
+      "recommended": true,
       "keyword": "deepl",
       "description": "Translate text via DeepL - predefined target languages, plus quick 'to es' / 'from en to es' overrides",
       "icon": "translate",
@@ -586,6 +646,8 @@
     {
       "id": "mail",
       "name": "Mail",
+      "category": "Communication",
+      "recommended": true,
       "keyword": "mail",
       "description": "Read and send email over IMAP/POP3 + SMTP — Gmail, Yahoo, or any custom server.",
       "icon": "mail",
@@ -602,6 +664,8 @@
     {
       "id": "winget",
       "name": "WinGet",
+      "category": "System Tools",
+      "recommended": true,
       "keyword": "winget",
       "description": "Search, install, update and uninstall apps via winget",
       "icon": "download",
@@ -617,6 +681,8 @@
     {
       "id": "rss-read-later",
       "name": "RSS & Read Later",
+      "category": "Productivity",
+      "recommended": true,
       "keyword": "rss",
       "description": "Follow RSS/Atom feeds, browse new articles, organize nested categories, and save stories for later.",
       "icon": "book",
@@ -633,6 +699,8 @@
     {
       "id": "tabame-browser",
       "name": "Browser",
+      "category": "Web & Browser",
+      "recommended": true,
       "keyword": "browser",
       "description": "Control Chromium tabs and run plugin-owned browser tasks through the Tabame Connector",
       "icon": "globe",
@@ -649,6 +717,8 @@
     {
       "id": "browser-window-tabs",
       "name": "Browser Tabs",
+      "category": "Web & Browser",
+      "recommended": true,
       "keyword": "bwt",
       "description": "List and control Chromium tabs through the globally paired Tabame Connector",
       "icon": "window",
@@ -665,6 +735,8 @@
     {
       "id": "clipboard-history",
       "name": "Clipboard History",
+      "category": "Utilities",
+      "recommended": true,
       "keyword": "cb",
       "description": "Browse and copy Tabame clipboard history",
       "icon": "clipboard",
@@ -680,6 +752,7 @@
     {
       "id": "csv",
       "name": "CSV Analyzer",
+      "category": "Developer Tools",
       "keyword": "csv",
       "description": "Paste CSV data to instantly view column stats and filter rows.",
       "icon": "table",
@@ -695,6 +768,7 @@
     {
       "id": "image",
       "name": "Image Converter",
+      "category": "Media & Design",
       "keyword": "img",
       "description": "Convert, resize, compress, and transform images. Supports 20+ formats.",
       "icon": "image",
@@ -710,6 +784,8 @@
     {
       "id": "kaomoji",
       "name": "Kaomoji Search",
+      "category": "Fun & Casual",
+      "recommended": true,
       "keyword": "kao",
       "description": "Search Kaomoji (╯°□°）╯︵ ┻━┻",
       "icon": "emoji",
@@ -725,6 +801,7 @@
     {
       "id": "pricy",
       "name": "Pricy",
+      "category": "Shopping",
       "keyword": "pricy",
       "description": "Compare a product's current prices and 365-day price history",
       "icon": "money",
@@ -741,6 +818,7 @@
     {
       "id": "xprice",
       "name": "xPrice Lookup",
+      "category": "Shopping",
       "keyword": "xprice",
       "description": "Paste a product link to get its xPrice history, image, and cheapest alternatives as a generated price card",
       "icon": "chart",
@@ -757,6 +835,7 @@
     {
       "id": "background-remover",
       "name": "Background Remover",
+      "category": "Media & Design",
       "keyword": "bgremove",
       "description": "Remove image backgrounds locally with BiRefNet or BRIA RMBG 2.0",
       "icon": "image",
@@ -773,6 +852,8 @@
     {
       "id": "browser-scripts",
       "name": "Browser Scripts",
+      "category": "Developer Tools",
+      "recommended": true,
       "keyword": "browser-scripts",
       "description": "AI-friendly examples of plugin-owned JavaScript through Tabame's browser bridge",
       "icon": "code",
@@ -789,6 +870,8 @@
     {
       "id": "qbittorrent",
       "name": "qBittorrent",
+      "category": "Network Tools",
+      "recommended": true,
       "keyword": "qbit",
       "description": "Browse qBittorrent through its direct Web API",
       "icon": "download",
@@ -806,6 +889,8 @@
     {
       "id": "currency",
       "name": "Currency",
+      "category": "Finance",
+      "recommended": true,
       "keyword": "curr",
       "description": "Convert currencies and chart exchange rates (Frankfurter/ECB, no API key)",
       "icon": "currency",
@@ -822,6 +907,8 @@
     {
       "id": "currency-plugin",
       "name": "Currency Converter",
+      "category": "Finance",
+      "recommended": true,
       "keyword": "fx",
       "description": "Convert currencies and view a live rate chart card",
       "icon": "currency",
@@ -837,6 +924,7 @@
     {
       "id": "jsonquery",
       "name": "JSON Query",
+      "category": "Developer Tools",
       "keyword": "json",
       "description": "Load a JSON file/clipboard, filter & project keys, export results",
       "icon": "code",
@@ -853,6 +941,7 @@
     {
       "id": "compare-folder",
       "name": "Compare Folder Files",
+      "category": "Utilities",
       "keyword": "comparefolder",
       "description": "Compare files between two folders (1 level deep) using MD5 to check if they are in sync.",
       "icon": "sync",
@@ -868,6 +957,8 @@
     {
       "id": "fancy-text",
       "name": "Fancy Fonts",
+      "category": "Language & Writing",
+      "recommended": true,
       "keyword": "fancy",
       "description": "Choose a text category, transform your query, then copy the result",
       "icon": "palette",
@@ -883,6 +974,7 @@
     {
       "id": "json-converter",
       "name": "JSON Compress/Decompress",
+      "category": "Developer Tools",
       "keyword": "jsonconv",
       "description": "Minify or pretty‑print JSON from file or clipboard, and save.",
       "icon": "compress",
@@ -898,6 +990,8 @@
     {
       "id": "pc-specs",
       "name": "PC Specs",
+      "category": "System Tools",
+      "recommended": true,
       "keyword": "specs",
       "description": "Live system overview: CPU, GPU, RAM, storage, network, temps, fans, PSU",
       "icon": "server",
@@ -913,6 +1007,8 @@
     {
       "id": "kanban",
       "name": "Kanban Workspace",
+      "category": "Productivity",
+      "recommended": true,
       "keyword": "kanban",
       "description": "Persistent boards with rich cards, WIP limits, activity history, filters, and import/export.",
       "icon": "grid",
@@ -930,6 +1026,8 @@
     {
       "id": "calculator",
       "name": "Calculator",
+      "category": "Utilities",
+      "recommended": true,
       "keyword": "calc",
       "description": "Extended math, currency conversion, and unit conversion — all in one expression",
       "icon": "calculator",
@@ -946,6 +1044,7 @@
     {
       "id": "image-resizer",
       "name": "Image Resizer",
+      "category": "Media & Design",
       "keyword": "imgresize",
       "description": "Resize one image or a whole folder of images to an exact size.",
       "icon": "image",
@@ -961,6 +1060,7 @@
     {
       "id": "xprice2",
       "name": "xPrice Dashboard",
+      "category": "Shopping",
       "keyword": "xprice2",
       "description": "Compare product prices in a native dashboard with history and store alternatives",
       "icon": "chart",
@@ -977,6 +1077,7 @@
     {
       "id": "api-client",
       "name": "API Client",
+      "category": "Developer Tools",
       "keyword": "api",
       "description": "Postman-lite API client — build, send, and save HTTP requests with history and environments",
       "icon": "globe",
@@ -992,6 +1093,7 @@
     {
       "id": "docker",
       "name": "Docker",
+      "category": "Developer Tools",
       "keyword": "docker",
       "description": "Manage Docker containers, images, and volumes",
       "icon": "server",
@@ -1007,6 +1109,7 @@
     {
       "id": "ffmpeg-video-converter",
       "name": "FFmpeg Video Converter",
+      "category": "Media & Design",
       "keyword": "ffmpeg",
       "description": "Compress, convert, resize, and extract audio with FFmpeg.",
       "icon": "video",
@@ -1023,6 +1126,8 @@
     {
       "id": "ask-claude",
       "name": "Ask Claude",
+      "category": "AI Tools",
+      "recommended": true,
       "keyword": "ask",
       "description": "Chat with Claude in your browser without leaving the launcher.",
       "icon": "chat",
@@ -1038,6 +1143,7 @@
     {
       "id": "maestro-dex",
       "name": "Maestro DEX",
+      "category": "Language & Writing",
       "keyword": "mdex",
       "description": "Search Romanian definitions in a local Maestro DEX installation",
       "icon": "book",
@@ -1054,6 +1160,8 @@
     {
       "id": "qalc",
       "name": "Qalculate",
+      "category": "Utilities",
+      "recommended": true,
       "keyword": "qalc",
       "description": "Math, units, currency and date calculations via the qalculate-cli (qalc) engine",
       "icon": "calculator",
@@ -1069,6 +1177,8 @@
     {
       "id": "bookmarks",
       "name": "Bookmarks",
+      "category": "Productivity",
+      "recommended": true,
       "keyword": "bk",
       "description": "Save links, files, and parameterized commands under categories",
       "icon": "bookmark",
@@ -1084,6 +1194,7 @@
     {
       "id": "simkl",
       "name": "Simkl",
+      "category": "Entertainment",
       "keyword": "simkl",
       "description": "Search movies & shows, browse trending/popular, and manage your Simkl watchlist, history & calendar.",
       "icon": "video",

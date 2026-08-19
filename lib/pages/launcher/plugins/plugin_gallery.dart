@@ -22,6 +22,8 @@ class PluginGalleryEntry {
     required this.name,
     required this.keyword,
     required this.description,
+    required this.category,
+    required this.recommended,
     required this.icon,
     required this.runtime,
     required this.author,
@@ -35,6 +37,8 @@ class PluginGalleryEntry {
   final String name;
   final String keyword;
   final String description;
+  final String category;
+  final bool recommended;
   final String icon;
   final String runtime;
   final String author;
@@ -74,6 +78,8 @@ class PluginGalleryEntry {
       name: name,
       keyword: str('keyword'),
       description: str('description'),
+      category: str('category', 'Other'),
+      recommended: json['recommended'] == true,
       icon: str('icon', 'extension'),
       runtime: str('runtime'),
       author: str('author'),

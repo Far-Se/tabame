@@ -36,6 +36,13 @@ class FlutterWindow : public Win32Window {
   // layered surface (see QuickMenuFunctions.toggleQuickMenu in Dart).
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
       native_window_channel_;
+
+  // Windows Explorer cannot enter an elevated OLE drop target from a normal
+  // process. This channel forwards the WM_DROPFILES fallback through the
+  // desktop_drop package's existing Dart event stream.
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
+      legacy_drop_channel_;
+  bool legacy_file_drop_enabled_ = false;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

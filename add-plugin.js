@@ -68,6 +68,7 @@ function validateManifest(manifest, pluginFolder) {
     "name",
     "keyword",
     "description",
+    "category",
     "icon",
     "runtime",
     "entry",
@@ -77,6 +78,10 @@ function validateManifest(manifest, pluginFolder) {
     if (value === undefined || value === null || String(value).trim() === "") {
       fail(`plugin.json must contain a '${field}' value. ${pluginFolder}`);
     }
+  }
+
+  if (typeof manifest.category !== "string") {
+    fail(`plugin.json 'category' must be text. ${pluginFolder}`);
   }
 }
 
@@ -147,6 +152,7 @@ function buildPluginRegistration(pluginFolder) {
     registration: {
       id: pluginId,
       name: manifest.name,
+      category: manifest.category.trim(),
       keyword: manifest.keyword,
       description: manifest.description,
       icon: manifest.icon,
@@ -199,6 +205,12 @@ function addMissingPlugins() {
       console.warn(`Skipping '${entry.name}': no plugin.json found.`);
       continue;
     }
+
+    const localInfo = readLocalPluginInfo(
+      path.join(pluginsPath, entry.name),
+      entry.name,
+    );
+    if (registeredIds.has(String(localInfo.id))) continue;
 
     const { pluginId, registration } = buildPluginRegistration(entry.name);
     if (registeredIds.has(String(pluginId))) continue;
