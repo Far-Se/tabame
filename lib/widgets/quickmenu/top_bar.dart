@@ -35,7 +35,7 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
     for (final String name in Boxes().topBarWidgets) {
       if (name == "Deactivated:") break;
       final QuickAction? action = quickActionsMap[name];
-      if (action != null) showWidgets.add(action.widget());
+      if (action != null && action.isVisible) showWidgets.add(action.widget());
     }
     Globals.heights.topbar = 25;
   }

@@ -277,24 +277,6 @@ class WinUtils {
 
   static const String _uninstallRegistryRoot = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall';
 
-  /// Recursively copies every file and folder under [sourcePath] into
-  /// [destinationPath]. No-op if both paths point to the same folder.
-  static Future<void> copyDirectoryContents(String sourcePath, String destinationPath) async {
-    if (p.normalize(sourcePath).toLowerCase() == p.normalize(destinationPath).toLowerCase()) return;
-    final Directory destinationDir = Directory(destinationPath);
-    if (!destinationDir.existsSync()) destinationDir.createSync(recursive: true);
-    for (final FileSystemEntity entity in Directory(sourcePath).listSync()) {
-      final String newPath = p.join(destinationPath, p.basename(entity.path));
-      if (entity is Directory) {
-        await copyDirectoryContents(entity.path, newPath);
-      } else if (entity is File) {
-        try {
-          await entity.copy(newPath);
-        } catch (_) {}
-      }
-    }
-  }
-
   /// Registers Tabame in Windows' "Apps & Features" / "Programs and Features"
   /// list, with an uninstall command that re-launches the app in uninstall mode.
   static void registerUninstallEntry({String? installLocation}) {

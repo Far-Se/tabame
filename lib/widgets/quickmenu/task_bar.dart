@@ -96,6 +96,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   bool _keepFetching = true;
   Timer? _mainTimer;
   final ScrollController _scrollController = ScrollController();
+  final Map<int, GlobalKey> _windowItemKeys = <int, GlobalKey>{};
 
   // 0 = no bottom shadow (at end / nothing to scroll), 1 = full shadow.
   double _bottomFade = 0.0;
@@ -202,6 +203,8 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
 
       // Update local list
       _windows = List<Window>.from(WindowWatcher.list);
+      final Set<int> windowHandles = _windows.map((Window window) => window.hWnd).toSet();
+      _windowItemKeys.removeWhere((int hWnd, GlobalKey _) => !windowHandles.contains(hWnd));
       widget.onWindowsChanged?.call(List<Window>.unmodifiable(_windows));
 
       await _handleAudio();
@@ -260,37 +263,76 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   void onVerticalArrow(bool up) {
     final List<Window> windows = _visibleWindows;
     if (windows.isEmpty) return;
+    bool wrapped = false;
     if (up) {
       if (QuickMenuFunctions.taskBarSelectedIdx > 0) {
         QuickMenuFunctions.taskBarSelectedIdx--;
       } else {
         QuickMenuFunctions.taskBarSelectedIdx = windows.length - 1;
+        wrapped = true;
       }
     } else {
       if (QuickMenuFunctions.taskBarSelectedIdx < windows.length - 1) {
         QuickMenuFunctions.taskBarSelectedIdx++;
       } else {
         QuickMenuFunctions.taskBarSelectedIdx = 0;
+        wrapped = true;
       }
     }
-    _scrollToSelected();
     setState(() {});
+    _scrollToSelected(wrapped: wrapped);
   }
 
-  void _scrollToSelected() {
-    if (QuickMenuFunctions.taskBarSelectedIdx == -1) return;
-    final double targetOffset = QuickMenuFunctions.taskBarSelectedIdx * kTaskBarItemHeight;
-    // viewportHeight is no longer fixed, using a safe default or checking from context could be better
-    // but for now we'll assume a reasonable visible area.
-    if (_scrollController.hasClients) {
-      final double viewportHeight = _scrollController.position.viewportDimension;
-      if (targetOffset < _scrollController.offset) {
-        _scrollController.animateTo(targetOffset, duration: const Duration(milliseconds: 100), curve: Curves.easeIn);
-      } else if (targetOffset + kTaskBarItemHeight > _scrollController.offset + viewportHeight) {
-        _scrollController.animateTo(targetOffset - viewportHeight + kTaskBarItemHeight + 20,
-            duration: const Duration(milliseconds: 100), curve: Curves.easeIn);
+  void _scrollToSelected({required bool wrapped, bool allowFallback = true}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+
+      final List<Window> windows = _visibleWindows;
+      final int selectedIndex = QuickMenuFunctions.taskBarSelectedIdx;
+      if (selectedIndex < 0 || selectedIndex >= windows.length) return;
+
+      if (wrapped) {
+        final double edgeOffset = selectedIndex == 0
+            ? _scrollController.position.minScrollExtent
+            : _scrollController.position.maxScrollExtent;
+        unawaited(_scrollController
+            .animateTo(
+              edgeOffset,
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.easeOutCubic,
+            )
+            .then((_) => _scrollToSelected(wrapped: false, allowFallback: false)));
+        return;
       }
-    }
+
+      final RenderObject? selectedItem =
+          _windowItemKeys[windows[selectedIndex].hWnd]?.currentContext?.findRenderObject();
+      if (selectedItem == null || !selectedItem.attached) {
+        if (!allowFallback) return;
+
+        // Lazily built rows at the other end of the list do not have a render
+        // object yet. Scroll near their proportional position, then reveal the
+        // real row once ListView has built it.
+        final double fraction = windows.length == 1 ? 0 : selectedIndex / (windows.length - 1);
+        final double fallbackOffset = _scrollController.position.maxScrollExtent * fraction;
+        unawaited(_scrollController
+            .animateTo(
+              fallbackOffset,
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.easeOutCubic,
+            )
+            .then((_) => _scrollToSelected(wrapped: false, allowFallback: false)));
+        return;
+      }
+
+      unawaited(_scrollController.position.ensureVisible(
+        selectedItem,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+      ));
+    });
   }
 
   @override
@@ -396,6 +438,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                       children: <Widget>[
                         _buildMonitorSeparator(context),
                         TaskBarItem(
+                          key: _windowItemKeys.putIfAbsent(window.hWnd, GlobalKey.new),
                           window: window,
                           index: sourceIndex,
                           isSelected: isSelected,
@@ -411,6 +454,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                     return Column(
                       children: <Widget>[
                         TaskBarItem(
+                          key: _windowItemKeys.putIfAbsent(window.hWnd, GlobalKey.new),
                           window: window,
                           index: sourceIndex,
                           isSelected: isSelected,
@@ -423,6 +467,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                   }
 
                   return TaskBarItem(
+                    key: _windowItemKeys.putIfAbsent(window.hWnd, GlobalKey.new),
                     window: window,
                     index: sourceIndex,
                     isSelected: isSelected,
@@ -1338,6 +1383,7 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
     final Color accent = Design.accent;
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
         _ControlBtn(
           icon: Icons.skip_previous_rounded,
@@ -1352,7 +1398,6 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
               icon: isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
               onTap: () => isPlaying ? MusicServerManager.player.pause() : MusicServerManager.player.play(),
               accent: accent,
-              isMain: true,
             );
           },
         ),
@@ -1556,7 +1601,7 @@ class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
         if (widget.session.canSkipPrevious)
           _ControlBtn(
@@ -1574,7 +1619,6 @@ class _TaskBarMediaSessionItemState extends State<TaskBarMediaSessionItem> {
             widget.session.isPlaying ? PlatformMediaCommand.pause : PlatformMediaCommand.play,
           ),
           accent: accent,
-          isMain: true,
         ),
         if (widget.session.canSkipNext)
           _ControlBtn(
@@ -1594,30 +1638,31 @@ class _ControlBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final Color accent;
-  final bool isMain;
 
   const _ControlBtn({
     required this.icon,
     required this.onTap,
     required this.accent,
-    this.isMain = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    // play_arrow_rounded's glyph sits lower in its em-square than pause_rounded's, so nudge it up to align.
-    final double dy = user.expandedTaskbar ? 0 : (isMain ? -2 : 0);
+    // The play glyph is visually weighted to the left, despite being
+    // geometrically centered in its em-square.
+    final double dx = icon == Icons.play_arrow_rounded ? 1 : 0;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(4),
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        child: Transform.translate(
-          offset: Offset(0, dy),
-          child: Icon(
-            icon,
-            size: isMain ? 22 : 18,
-            color: accent.withAlpha(200),
+      child: SizedBox.square(
+        dimension: 28,
+        child: Center(
+          child: Transform.translate(
+            offset: Offset(dx, 0),
+            child: Icon(
+              icon,
+              size: 18,
+              color: accent.withAlpha(200),
+            ),
           ),
         ),
       ),

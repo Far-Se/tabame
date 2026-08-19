@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -55,13 +54,6 @@ class FirstRunState extends State<FirstRun> {
 
   int currentStep = 0;
 
-  // ── Legacy copy-installation implementation (page 0 no longer invokes it) ──
-  String installLocation = AppPaths.root;
-  // ignore: unused_field
-  bool _installing = false;
-  // ignore: unused_field
-  int? _sourceSizeBytes;
-
   // ── Modal State Setter (QuickSnap toggle modal only) ──
   StateSetter? _activeModalState;
 
@@ -73,7 +65,6 @@ class FirstRunState extends State<FirstRun> {
     super.initState();
     _resolveFeatureIndices();
     _syncQuickClickEnabled();
-    _calculateSourceSize();
     WinUtils.fixDrawBug();
     WinUtils.disableClickThrough(Win32.hWnd);
   }
@@ -130,7 +121,7 @@ class FirstRunState extends State<FirstRun> {
             key: "E", modifiers: <String>["WIN", "SHIFT"], name: "EmojiPicker", function: "OpenEmojiPicker");
       case _Feature.colorPicker:
         return _simpleFeature(
-            key: "C", modifiers: <String>["WIN", "SHIFT"], name: "Color Picker", function: "OpenColorPickerInstant");
+            key: "C", modifiers: <String>["WIN", "SHIFT"], name: "Color Picker", function: "OpenColorPicker");
     }
   }
 
@@ -590,52 +581,6 @@ class FirstRunState extends State<FirstRun> {
 
   String _normalizeWindowsPath(String path) =>
       path.replaceAll('/', '\\').replaceFirst(RegExp(r'\\+$'), '').toLowerCase();
-
-  Future<void> _calculateSourceSize() async {
-    final String exeDir = File(Platform.resolvedExecutable).parent.path;
-    final int size = await _directorySize(Directory(exeDir));
-    if (!mounted) return;
-    setState(() => _sourceSizeBytes = size);
-  }
-
-  Future<int> _directorySize(Directory directory) async {
-    int total = 0;
-    try {
-      final List<FileSystemEntity> entities = await directory.list(recursive: true, followLinks: false).toList();
-      for (final FileSystemEntity entity in entities) {
-        if (entity is File) {
-          try {
-            total += await entity.length();
-          } catch (_) {}
-        }
-      }
-    } catch (_) {}
-    return total;
-  }
-
-  // ignore: unused_element
-  String _formatBytes(int bytes) {
-    if (bytes <= 0) return "0 B";
-    const List<String> suffixes = <String>["B", "KB", "MB", "GB", "TB"];
-    final int index = math.min((math.log(bytes) / math.log(1024)).floor(), suffixes.length - 1);
-    final double value = bytes / math.pow(1024, index);
-    return "${value.toStringAsFixed(index == 0 ? 0 : 1)} ${suffixes[index]}";
-  }
-
-  // ignore: unused_element
-  Future<void> _continueInstall() async {
-    // Intentionally retained while the copy-installation implementation is repaired.
-    // The first-run flow now advances directly to hotkey setup instead.
-    setState(() => _installing = true);
-    try {
-      final String exeDir = File(Platform.resolvedExecutable).parent.path;
-      await WinUtils.copyDirectoryContents(exeDir, installLocation);
-      WinUtils.registerUninstallEntry(installLocation: installLocation);
-    } catch (_) {}
-    if (!mounted) return;
-    setState(() => _installing = false);
-    await _goToStep(1);
-  }
 
   // ─────────────────────── PAGE 1: HOTKEYS ─────────────────────────
 

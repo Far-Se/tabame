@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../platform/audio_system_service.dart';
@@ -577,15 +578,26 @@ class QuickActionWidgetState extends State<QuickActionWidget> {
                 ],
               ),
             )
-          : SingleChildScrollView(
-              controller: controller,
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  ...entries.map((QuickActionMenuEntry entry) => entry.builder(context)),
-                ],
+          : ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: <PointerDeviceKind>{
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.stylus,
+                  PointerDeviceKind.unknown,
+                },
+              ),
+              child: SingleChildScrollView(
+                controller: controller,
+                physics: const ClampingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    ...entries.map((QuickActionMenuEntry entry) => entry.builder(context)),
+                  ],
+                ),
               ),
             ),
     );

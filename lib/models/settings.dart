@@ -63,12 +63,14 @@ enum QuickMenuDesigns {
   windows98,
   notion,
   rundown,
+  commandDeck,
   // familyGuy,
   ;
 
   String get displayName => switch (this) {
         QuickMenuDesigns.windowsXp => 'Windows XP',
         QuickMenuDesigns.windows98 => 'Windows 98',
+        QuickMenuDesigns.commandDeck => 'Command Deck',
         _ => name.toUpperCaseFirst(),
       };
 }
@@ -1151,6 +1153,32 @@ class Settings {
           entryFontFamily: 'Barlow Semi Condensed',
           entryFontWeight: 500,
           borderRadius: 5,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.commandDeck.displayName: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFE8E9E2),
+          textColor: const Color(0xFF171A17),
+          accentColor: const Color(0xFF2F6B50),
+          gradientAlpha: 28,
+          uiFontFamily: 'Bahnschrift',
+          uiFontWeight: 500,
+          entryFontFamily: 'Segoe UI Variable Text',
+          entryFontWeight: 600,
+          borderRadius: 4,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF151815),
+          textColor: const Color(0xFFE4E8DE),
+          accentColor: const Color(0xFFC3E56A),
+          gradientAlpha: 36,
+          uiFontFamily: 'Bahnschrift',
+          uiFontWeight: 400,
+          entryFontFamily: 'Segoe UI Variable Text',
+          entryFontWeight: 600,
+          borderRadius: 4,
           baseFontSize: 10,
         ),
       ),

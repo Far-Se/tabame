@@ -302,7 +302,7 @@ class _RundownActionRailState extends State<_RundownActionRail> with QuickMenuTr
     for (final String name in Boxes().topBarWidgets) {
       if (name == 'Deactivated:') break;
       final QuickAction? action = quickActionsMap[name];
-      if (action != null) _actions.add(action.widget());
+      if (action != null && action.isVisible) _actions.add(action.widget());
     }
   }
 
@@ -360,13 +360,23 @@ class _RundownActionRailState extends State<_RundownActionRail> with QuickMenuTr
             Expanded(
               child: Listener(
                 onPointerSignal: _handlePointerSignal,
-                child: ListView.builder(
-                  controller: _scrollController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  itemCount: actions.length,
-                  itemExtent: 27,
-                  itemBuilder: (BuildContext context, int index) => Center(child: actions[index]),
+                child: ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(context).copyWith(
+                    dragDevices: <PointerDeviceKind>{
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.stylus,
+                      PointerDeviceKind.unknown,
+                    },
+                  ),
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    physics: const ClampingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    itemCount: actions.length,
+                    itemExtent: 27,
+                    itemBuilder: (BuildContext context, int index) => Center(child: actions[index]),
+                  ),
                 ),
               ),
             ),

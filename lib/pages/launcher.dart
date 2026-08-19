@@ -187,6 +187,7 @@ class Launcher extends StatefulWidget {
 class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTickerProviderStateMixin {
   static const double _minResultsHeight = 300;
   static const double _maxResultsHeight = 454;
+  static const double _designResultExtent = 52;
   static const String _filePreviewVisiblePreferenceKey = 'launcherFilePreviewVisible';
 
   final LauncherSearchToken _searchToken = LauncherSearchToken();
@@ -2092,6 +2093,40 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     if (nextOffset != null) {
       _moveResultListTo(nextOffset, animated: !_isRepeatingKey.value);
     }
+  }
+
+  void _scrollResultToCenter(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients || index < 0 || index >= _results.length) return;
+      if (_centerRenderedResult(index)) return;
+
+      // ListView.builder may not have built a distant design yet. Design rows
+      // have a fixed extent, so move it into the cache first and refine the
+      // alignment from its RenderBox on the following frame.
+      _moveResultListTo(index * _designResultExtent, animated: false);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_scrollController.hasClients || index < 0 || index >= _results.length) return;
+        _centerRenderedResult(index);
+      });
+    });
+  }
+
+  bool _centerRenderedResult(int index) {
+    final GlobalKey? itemKey = _resultKeys[_resultKeyId(_results[index], index)];
+    final BuildContext? itemContext = itemKey?.currentContext;
+    if (itemContext == null) return false;
+
+    final RenderObject? itemRenderObject = itemContext.findRenderObject();
+    final RenderObject? listRenderObject = _scrollController.position.context.storageContext.findRenderObject();
+    if (itemRenderObject is! RenderBox || listRenderObject is! RenderBox) return false;
+
+    final double itemTop =
+        itemRenderObject.localToGlobal(Offset.zero).dy - listRenderObject.localToGlobal(Offset.zero).dy;
+    final double itemCenter = itemTop + itemRenderObject.size.height / 2;
+    final double targetOffset =
+        _scrollController.offset + itemCenter - _scrollController.position.viewportDimension / 2;
+    _moveResultListTo(targetOffset, animated: true);
+    return true;
   }
 
   void _moveResultListTo(double offset, {required bool animated}) {
@@ -4050,7 +4085,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         _resultsQuery == _controller.text && (!resetSelection || _hasKeyboardNavigatedCurrentQuery);
     _resultsQuery = _controller.text;
 
-    int nextIndex = 0;
+    final int activeDesignIndex = _activeDesignResultIndex(results);
+    int nextIndex = activeDesignIndex < 0 ? 0 : activeDesignIndex;
     if (keepSelection && _results.isNotEmpty && _activeIndexNotifier.value < _results.length) {
       final String activeId = _results[_activeIndexNotifier.value].id;
       final int foundIndex = results.indexWhere((LauncherSearchResultItem r) => r.id == activeId);
@@ -4063,13 +4099,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
     setState(() {
       _results = results;
-      _activeIndexNotifier.value = keepSelection ? nextIndex : 0;
+      _activeIndexNotifier.value = activeDesignIndex >= 0 || keepSelection ? nextIndex : 0;
       if (isSearching != null) {
         _isSearching = isSearching;
       }
     });
 
-    if (!keepSelection && _scrollController.hasClients) {
+    if (activeDesignIndex >= 0) {
+      _scrollResultToCenter(activeDesignIndex);
+    } else if (!keepSelection && _scrollController.hasClients) {
       _scrollController.jumpTo(0);
     }
 
@@ -4079,6 +4117,16 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
     _maybeExecutePendingLauncherQuickAction();
     unawaited(_pruneStaleFileResults(results));
+  }
+
+  int _activeDesignResultIndex(List<LauncherSearchResultItem> results) {
+    if (results.length != LauncherDesign.values.length ||
+        results
+            .any((LauncherSearchResultItem result) => result.quickAction?.id.startsWith('function-design:') != true)) {
+      return -1;
+    }
+    return results
+        .indexWhere((LauncherSearchResultItem result) => result.quickAction?.id == 'function-design:${_design.name}');
   }
 
   /// Checks file/folder results for existence after they are displayed.

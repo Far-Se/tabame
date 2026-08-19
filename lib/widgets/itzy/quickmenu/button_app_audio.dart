@@ -8,6 +8,12 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../widgets/quick_actions_item.dart';
 
+bool isAppAudioControlConfigured(int index) {
+  if (index < 0 || index >= Boxes.appAudioControls.length) return false;
+  final AppAudioControl control = Boxes.appAudioControls[index];
+  return control.exe.trim().isNotEmpty || control.path.trim().isNotEmpty;
+}
+
 class AppAudioButton extends StatefulWidget {
   final int index;
   const AppAudioButton({super.key, required this.index});
@@ -53,7 +59,12 @@ class _AppAudioButtonState extends State<AppAudioButton> {
     if (!QuickMenuFunctions.isQuickMenuVisible) return;
     if (!mounted) return;
     final AppAudioControl? ctl = _control;
-    if (ctl == null || !ctl.showAnimation || !MediaSessionService.instance.isAvailable) return;
+    if (ctl == null ||
+        !isAppAudioControlConfigured(widget.index) ||
+        !ctl.showAnimation ||
+        !MediaSessionService.instance.isAvailable) {
+      return;
+    }
     unawaited(_refreshAppPlaying(ctl));
   }
 
@@ -162,7 +173,7 @@ class _AppAudioButtonState extends State<AppAudioButton> {
   @override
   Widget build(BuildContext context) {
     final AppAudioControl? ctl = _control;
-    if (ctl == null) return const SizedBox.shrink();
+    if (ctl == null || !isAppAudioControlConfigured(widget.index)) return const SizedBox.shrink();
 
     Widget content;
 

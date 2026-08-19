@@ -87,12 +87,16 @@ class QuickAction {
   IconData icon;
   Widget Function() widget;
   VoidCallback? onExecute;
+  bool Function()? visibleWhen;
+
+  bool get isVisible => visibleWhen?.call() ?? true;
 
   QuickAction({
     this.name,
     required this.icon,
     required this.widget,
     this.onExecute,
+    this.visibleWhen,
   });
 }
 
@@ -112,22 +116,27 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "AppAudioControl1": QuickAction(
     icon: Icons.music_video_outlined,
     widget: () => const AppAudioButton(index: 0),
+    visibleWhen: () => isAppAudioControlConfigured(0),
   ),
   "AppAudioControl2": QuickAction(
     icon: Icons.music_video_outlined,
     widget: () => const AppAudioButton(index: 1),
+    visibleWhen: () => isAppAudioControlConfigured(1),
   ),
   "AppAudioControl3": QuickAction(
     icon: Icons.music_video_outlined,
     widget: () => const AppAudioButton(index: 2),
+    visibleWhen: () => isAppAudioControlConfigured(2),
   ),
   "AppAudioControl4": QuickAction(
     icon: Icons.music_video_outlined,
     widget: () => const AppAudioButton(index: 3),
+    visibleWhen: () => isAppAudioControlConfigured(3),
   ),
   "AppAudioControl5": QuickAction(
     icon: Icons.music_video_outlined,
     widget: () => const AppAudioButton(index: 4),
+    visibleWhen: () => isAppAudioControlConfigured(4),
   ),
   "AppsButton": QuickAction(
     icon: Icons.apps,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/classes/boxes/quick_menu_box.dart';
 import '../../models/globals.dart';
+import 'windows_scroll.dart';
 
 class BarWithButtons extends StatefulWidget {
   final List<Widget> children;
@@ -66,16 +67,20 @@ class _BarWithButtonsState extends State<BarWithButtons> with QuickMenuTriggers 
               ).createShader(rect);
             },
             blendMode: BlendMode.dstOut,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              controller: _buttonBarScrollController,
-              child: Listener(
-                onPointerSignal: _handlePointerSignal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: content,
+            child: ScrollConfiguration(
+              behavior: const WindowsScrollBehavior(),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                controller: _buttonBarScrollController,
+                physics: const ClampingScrollPhysics(),
+                child: Listener(
+                  onPointerSignal: _handlePointerSignal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: content,
+                    ),
                   ),
                 ),
               ),

@@ -10,6 +10,7 @@ import 'design_cyber.dart';
 import 'design_aurora.dart';
 import 'design_cassette.dart';
 import 'design_classic.dart';
+import 'design_command_deck.dart';
 import 'design_console.dart';
 // import 'design_family_guy.dart';
 import 'design_fluent.dart';
@@ -66,14 +67,21 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
   }
 
   Future<void> _handleWindowSize() async {
-    final bool isMatrix = QuickMenuDesigns.values[user.quickMenuDesign] == QuickMenuDesigns.matrix;
-    if (isMatrix) {
+    final QuickMenuDesigns design = QuickMenuDesigns.values[user.quickMenuDesign];
+    if (design == QuickMenuDesigns.matrix) {
       final Size size = await windowManager.getSize();
       if (size.width < 340) {
         await windowManager.setMinimumSize(Size(Globals.quickMenuSize.width, Globals.quickMenuSize.height));
         await windowManager.setSize(Size(Globals.quickMenuSize.width, size.height));
       } else {
         await windowManager.setMinimumSize(Size(Globals.quickMenuSize.width, Globals.quickMenuSize.height));
+      }
+    } else if (design == QuickMenuDesigns.commandDeck) {
+      const double commandDeckWidth = 430;
+      final Size size = await windowManager.getSize();
+      await windowManager.setMinimumSize(Size(commandDeckWidth, Globals.quickMenuSize.height));
+      if (size.width < commandDeckWidth) {
+        await windowManager.setSize(Size(commandDeckWidth, size.height));
       }
     } else {
       await windowManager.setMinimumSize(Size(Globals.quickMenuSize.width, Globals.quickMenuSize.height));
@@ -126,6 +134,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.windows98 => MainMenuWindows98Widget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.notion => MainMenuNotionWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.rundown => MainMenuRundownWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.commandDeck => MainMenuCommandDeckWidget(key: ValueKey<int>(_refreshCounter)),
       // QuickMenuDesigns.familyGuy => MainMenuFamilyGuyWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }
