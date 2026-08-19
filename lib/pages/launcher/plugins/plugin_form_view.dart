@@ -1,12 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:desktop_drop/desktop_drop.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../../../platform/file_picker_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../../models/settings.dart';
+import '../../../platform/app_catalog_service.dart';
 import '../../../widgets/widgets/windows_scroll.dart';
 import 'plugin_icons.dart';
 import 'plugin_protocol.dart';
@@ -31,6 +35,7 @@ class PluginFormView extends StatefulWidget {
     required this.onSubmit,
     required this.onCancel,
     this.onChanged,
+    this.onValidate,
     this.onOpenActions,
     this.initialValues = const <String, Object?>{},
     this.onStateChanged,
@@ -47,6 +52,9 @@ class PluginFormView extends StatefulWidget {
 
   /// A `watch: true` field changed.
   final void Function(String fieldId, Map<String, Object?> values)? onChanged;
+
+  /// A field with `validate:true` settled after its debounce window.
+  final void Function(String fieldId, Map<String, Object?> values)? onValidate;
 
   /// Ctrl+K — the launcher opens the frame-level actions palette.
   final VoidCallback? onOpenActions;
@@ -68,8 +76,14 @@ class _PluginFormViewState extends State<PluginFormView> {
   final Map<String, String> _pathValues = <String, String>{};
   final Map<String, String> _dateValues = <String, String>{};
   final Map<String, Set<String>> _tagValues = <String, Set<String>>{};
+  final Map<String, List<String>> _fileListValues = <String, List<String>>{};
+  final Map<String, double> _sliderValues = <String, double>{};
+  final Map<String, String> _colorValues = <String, String>{};
+  final Map<String, String> _appValues = <String, String>{};
+  final Map<String, String> _shortcutValues = <String, String>{};
   final Map<String, FocusNode> _comboboxFocusNodes = <String, FocusNode>{};
   final Map<String, bool> _sectionExpanded = <String, bool>{};
+  final Map<String, Timer> _validationTimers = <String, Timer>{};
 
   /// Host-side validation errors, keyed by field id. Cleared per-field on edit.
   final Map<String, String> _localErrors = <String, String>{};
@@ -100,6 +114,9 @@ class _PluginFormViewState extends State<PluginFormView> {
     for (final FocusNode node in _comboboxFocusNodes.values) {
       node.dispose();
     }
+    for (final Timer timer in _validationTimers.values) {
+      timer.cancel();
+    }
     _firstFieldFocus.dispose();
     super.dispose();
   }
@@ -109,7 +126,8 @@ class _PluginFormViewState extends State<PluginFormView> {
   String _signature(PluginForm form) => form.fields.map((PluginFormField f) => '${f.id}:${f.type}').join('|');
 
   bool _isNumber(PluginFormField field) => field.type == 'number';
-  bool _isPath(PluginFormField field) => field.type == 'filepicker' || field.type == 'folderpicker';
+  bool _isPath(PluginFormField field) =>
+      field.type == 'filepicker' || field.type == 'folderpicker' || field.type == 'dropzone';
 
   PluginFormOption? _optionForValue(PluginFormField field, String value) {
     for (final PluginFormOption option in field.options) {
@@ -140,6 +158,11 @@ class _PluginFormViewState extends State<PluginFormView> {
       _pathValues.clear();
       _dateValues.clear();
       _tagValues.clear();
+      _fileListValues.clear();
+      _sliderValues.clear();
+      _colorValues.clear();
+      _appValues.clear();
+      _shortcutValues.clear();
       for (final FocusNode node in _comboboxFocusNodes.values) {
         node.dispose();
       }
@@ -156,7 +179,7 @@ class _PluginFormViewState extends State<PluginFormView> {
         });
       } else if (field.type == 'checkbox') {
         _checkboxValues.putIfAbsent(field.id, () => _initialValue(field) == true);
-      } else if (field.type == 'dropdown') {
+      } else if (field.type == 'dropdown' || field.type == 'radio') {
         final Object? rawInitial = _initialValue(field);
         final String? initial = rawInitial is String ? rawInitial : null;
         _dropdownValues.putIfAbsent(
@@ -175,15 +198,43 @@ class _PluginFormViewState extends State<PluginFormView> {
         });
       } else if (_isPath(field)) {
         final Object? initial = _initialValue(field);
-        _pathValues.putIfAbsent(field.id, () => initial is String ? initial : '');
-      } else if (field.type == 'date') {
+        if (field.multiple || field.type == 'dropzone') {
+          _fileListValues.putIfAbsent(
+            field.id,
+            () => initial is List ? initial.whereType<String>().toList(growable: true) : <String>[],
+          );
+        } else {
+          _pathValues.putIfAbsent(field.id, () => initial is String ? initial : '');
+        }
+      } else if (field.type == 'date' || field.type == 'time' || field.type == 'datetime') {
         final Object? initial = _initialValue(field);
         _dateValues.putIfAbsent(field.id, () => initial is String ? initial : '');
-      } else if (field.type == 'tags') {
+      } else if (field.type == 'tags' || field.type == 'multiselect') {
         _tagValues.putIfAbsent(field.id, () {
           final Object? value = _initialValue(field);
           return value is List ? value.whereType<String>().toSet() : <String>{};
         });
+      } else if (field.type == 'slider') {
+        final Object? initial = _initialValue(field);
+        final double min = field.min?.toDouble() ?? 0;
+        final double max = field.max?.toDouble() ?? 100;
+        _sliderValues.putIfAbsent(
+          field.id,
+          () => (initial is num ? initial.toDouble() : min).clamp(min, max).toDouble(),
+        );
+      } else if (field.type == 'color') {
+        final Object? initial = _initialValue(field);
+        _colorValues.putIfAbsent(
+            field.id,
+            () => initial is String
+                ? initial
+                : '#${Design.accent.toARGB32().toRadixString(16).substring(2).toUpperCase()}');
+      } else if (field.type == 'apppicker') {
+        final Object? initial = _initialValue(field);
+        _appValues.putIfAbsent(field.id, () => initial is String ? initial : '');
+      } else if (field.type == 'shortcut') {
+        final Object? initial = _initialValue(field);
+        _shortcutValues.putIfAbsent(field.id, () => initial is String ? initial : '');
       }
     }
     for (final PluginFormSection section in widget.form.sections) {
@@ -200,17 +251,27 @@ class _PluginFormViewState extends State<PluginFormView> {
         values[field.id] = num.tryParse(_textControllers[field.id]?.text.trim() ?? '');
       } else if (field.type == 'checkbox') {
         values[field.id] = _checkboxValues[field.id] ?? false;
-      } else if (field.type == 'dropdown') {
+      } else if (field.type == 'dropdown' || field.type == 'radio') {
         values[field.id] = _dropdownValues[field.id];
       } else if (field.type == 'combobox') {
         values[field.id] =
             _comboboxValues[field.id] ?? (field.allowCustom ? _textControllers[field.id]?.text ?? '' : null);
       } else if (_isPath(field)) {
-        values[field.id] = _pathValues[field.id] ?? '';
-      } else if (field.type == 'date') {
+        values[field.id] = field.multiple || field.type == 'dropzone'
+            ? List<String>.of(_fileListValues[field.id] ?? const <String>[])
+            : _pathValues[field.id] ?? '';
+      } else if (field.type == 'date' || field.type == 'time' || field.type == 'datetime') {
         values[field.id] = _dateValues[field.id] ?? '';
-      } else if (field.type == 'tags') {
+      } else if (field.type == 'tags' || field.type == 'multiselect') {
         values[field.id] = (_tagValues[field.id] ?? <String>{}).toList(growable: false);
+      } else if (field.type == 'slider') {
+        values[field.id] = _sliderValues[field.id];
+      } else if (field.type == 'color') {
+        values[field.id] = _colorValues[field.id] ?? '';
+      } else if (field.type == 'apppicker') {
+        values[field.id] = _appValues[field.id] ?? '';
+      } else if (field.type == 'shortcut') {
+        values[field.id] = _shortcutValues[field.id] ?? '';
       }
     }
     return values;
@@ -223,6 +284,13 @@ class _PluginFormViewState extends State<PluginFormView> {
     setState(() {});
     widget.onStateChanged?.call(values);
     if (field.watch) widget.onChanged?.call(field.id, values);
+    if (field.validate && widget.onValidate != null) {
+      _validationTimers.remove(field.id)?.cancel();
+      _validationTimers[field.id] = Timer(Duration(milliseconds: field.validationDebounceMs), () {
+        if (!mounted) return;
+        widget.onValidate!(field.id, _collectValues());
+      });
+    }
   }
 
   /// Host-side validation. Returns true when the form may submit.
@@ -232,6 +300,14 @@ class _PluginFormViewState extends State<PluginFormView> {
     for (final PluginFormField field in widget.form.fields) {
       if (!_isVisible(field, values) || !_isEnabled(field, values)) continue;
       final Object? value = values[field.id];
+      if (field.validating) {
+        _localErrors[field.id] = 'Validation is still in progress';
+        continue;
+      }
+      if (field.error != null || field.valid == false) {
+        _localErrors[field.id] = field.error ?? field.validationMessage ?? 'Invalid value';
+        continue;
+      }
       if (_isNumber(field)) {
         final String raw = _textControllers[field.id]?.text.trim() ?? '';
         if (raw.isNotEmpty && value == null) {
@@ -250,6 +326,14 @@ class _PluginFormViewState extends State<PluginFormView> {
         }
       }
       if (value is String) {
+        if (field.type == 'json' && value.trim().isNotEmpty) {
+          try {
+            jsonDecode(value);
+          } on FormatException catch (error) {
+            _localErrors[field.id] = 'Invalid JSON at character ${error.offset ?? 0}';
+            continue;
+          }
+        }
         if (field.minLength != null && value.length < field.minLength!) {
           _localErrors[field.id] = field.validationMessage ?? 'Must be at least ${field.minLength} characters';
           continue;
@@ -332,6 +416,15 @@ class _PluginFormViewState extends State<PluginFormView> {
         borderRadius: BorderRadius.circular(7),
         borderSide: BorderSide(color: Design.text.withAlpha(16)),
       ),
+      suffixIcon: field.validating
+          ? Padding(
+              padding: const EdgeInsets.all(10),
+              child: SizedBox(
+                  width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5, color: Design.accent)),
+            )
+          : field.valid == true && !hasError
+              ? const Icon(Icons.check_circle_rounded, size: 15, color: Color(0xFF4FB477))
+              : null,
     );
   }
 
@@ -366,6 +459,24 @@ class _PluginFormViewState extends State<PluginFormView> {
   List<Widget> _fieldFooter(PluginFormField field) {
     final String? error = _errorFor(field);
     return <Widget>[
+      if (field.validating)
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 1.4, color: Design.accent)),
+            const SizedBox(width: 5),
+            Text('Checkingâ€¦', style: TextStyle(fontSize: 10, color: Design.text.withAlpha(105))),
+          ]),
+        )
+      else if (field.valid == true && error == null)
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            const Icon(Icons.check_circle_rounded, size: 11, color: Color(0xFF4FB477)),
+            const SizedBox(width: 4),
+            Text('Valid', style: TextStyle(fontSize: 10, color: Design.text.withAlpha(105))),
+          ]),
+        ),
       if (error != null)
         Padding(
           padding: const EdgeInsets.only(top: 3),
@@ -435,6 +546,65 @@ class _PluginFormViewState extends State<PluginFormView> {
     _fieldChanged(field);
   }
 
+  Future<void> _pickTime(PluginFormField field, {required bool includeDate}) async {
+    final DateTime now = DateTime.now();
+    DateTime date = DateTime.tryParse(_dateValues[field.id] ?? '') ?? now;
+    if (includeDate) {
+      final DateTime? pickedDate = await showDatePicker(
+        context: context,
+        initialDate: date,
+        firstDate: DateTime(now.year - 100),
+        lastDate: DateTime(now.year + 100),
+      );
+      if (pickedDate == null) return;
+      date = pickedDate;
+    }
+    if (!mounted) return;
+    final TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: date.hour, minute: date.minute),
+    );
+    if (pickedTime == null) return;
+    final String time = '${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}';
+    final String value = includeDate ? '${date.toIso8601String().substring(0, 10)}T$time' : time;
+    setState(() => _dateValues[field.id] = value);
+    _fieldChanged(field);
+  }
+
+  Color _parseColor(String value) {
+    String hex = value.trim().replaceFirst('#', '');
+    if (hex.length == 3) hex = hex.split('').map((String part) => '$part$part').join();
+    if (hex.length == 6) hex = 'FF$hex';
+    return Color(int.tryParse(hex, radix: 16) ?? Design.accent.toARGB32());
+  }
+
+  Future<void> _pickColor(PluginFormField field) async {
+    Color selected = _parseColor(_colorValues[field.id] ?? '');
+    final Color? result = await showDialog<Color>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text(field.label),
+        content: SingleChildScrollView(
+          child: ColorPicker(
+            pickerColor: selected,
+            enableAlpha: false,
+            displayThumbColor: true,
+            labelTypes: const <ColorLabelType>[ColorLabelType.hex, ColorLabelType.rgb],
+            onColorChanged: (Color value) => selected = value,
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, selected), child: const Text('Use color')),
+        ],
+      ),
+    );
+    if (result == null) return;
+    final String hex = '#${(result.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
+    setState(() => _colorValues[field.id] = hex);
+    _fieldChanged(field);
+  }
+
   // @override
   // void onWindowFocus() {
   //   if (_pathPickerOpen) {
@@ -443,23 +613,80 @@ class _PluginFormViewState extends State<PluginFormView> {
   // }
 
   Future<void> _pickPath(PluginFormField field) async {
-    String? result;
+    List<String>? results;
     try {
       _pathPickerWasAlwaysOnTop = await WindowManager.instance.isAlwaysOnTop();
       await WindowManager.instance.setAlwaysOnTop(false);
       if (field.type == 'folderpicker') {
         final DirectoryPicker picker = DirectoryPicker()..title = field.label;
-        result = picker.getDirectory()?.path;
+        final String? path = picker.getDirectory()?.path;
+        if (path != null) results = <String>[path];
       } else {
         final OpenFilePicker picker = OpenFilePicker()..title = field.label;
-        final File? file = picker.getFile();
-        result = file?.path;
+        if (field.multiple || field.type == 'dropzone') {
+          results = picker.getFiles().map((File file) => file.path).toList(growable: false);
+        } else {
+          final File? file = picker.getFile();
+          if (file != null) results = <String>[file.path];
+        }
       }
     } finally {
       await WindowManager.instance.setAlwaysOnTop(_pathPickerWasAlwaysOnTop);
     }
-    if (result == null) return;
-    setState(() => _pathValues[field.id] = result!);
+    if (results == null || results.isEmpty) return;
+    _acceptPaths(field, results);
+  }
+
+  bool _pathAccepted(PluginFormField field, String path) {
+    if (field.extensions.isEmpty || Directory(path).existsSync()) return true;
+    final String lower = path.toLowerCase();
+    return field.extensions.any((String extension) {
+      final String normalized = extension.startsWith('.') ? extension : '.$extension';
+      return lower.endsWith(normalized);
+    });
+  }
+
+  void _acceptPaths(PluginFormField field, Iterable<String> incoming) {
+    final List<String> accepted = incoming.where((String path) => _pathAccepted(field, path)).toList(growable: false);
+    if (accepted.isEmpty) {
+      setState(() => _localErrors[field.id] = 'No accepted files were dropped');
+      return;
+    }
+    setState(() {
+      if (field.type == 'dropzone' && !field.multiple) {
+        _fileListValues[field.id] = <String>[accepted.first];
+      } else if (field.multiple || field.type == 'dropzone') {
+        _fileListValues[field.id] = <String>{...?_fileListValues[field.id], ...accepted}.toList(growable: true);
+      } else {
+        _pathValues[field.id] = accepted.first;
+      }
+    });
+    _fieldChanged(field);
+  }
+
+  Future<void> _pickApp(PluginFormField field) async {
+    final AppCatalogSnapshot snapshot = await AppCatalogService.instance.discover();
+    if (!mounted) return;
+    if (!snapshot.complete && snapshot.records.isEmpty) {
+      setState(() => _localErrors[field.id] = snapshot.error ?? AppCatalogService.instance.unavailableReason);
+      return;
+    }
+    final AppCatalogRecord? selected = await showDialog<AppCatalogRecord>(
+      context: context,
+      builder: (BuildContext context) => _PluginAppPickerDialog(apps: snapshot.records, title: field.label),
+    );
+    if (selected == null) return;
+    setState(() => _appValues[field.id] = selected.launchTarget);
+    _fieldChanged(field);
+  }
+
+  Future<void> _recordShortcut(PluginFormField field) async {
+    final String? shortcut = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) => _PluginShortcutRecorderDialog(title: field.label),
+    );
+    if (shortcut == null) return;
+    setState(() => _shortcutValues[field.id] = shortcut);
     _fieldChanged(field);
   }
 
@@ -469,20 +696,24 @@ class _PluginFormViewState extends State<PluginFormView> {
 
     Widget input;
     if (field.isTextLike || _isNumber(field)) {
+      final bool codeEditor = field.type == 'code' || field.type == 'json';
       input = TextField(
         controller: _textControllers[field.id],
         focusNode: autofocus ? _firstFieldFocus : null,
         obscureText: field.type == 'password',
         enabled: enabled,
         readOnly: field.readOnly,
-        maxLines: field.type == 'textarea' ? 4 : 1,
+        maxLines: codeEditor ? field.rows : (field.type == 'textarea' ? 4 : 1),
+        minLines: codeEditor ? field.rows.clamp(3, 8).toInt() : null,
         keyboardType: _isNumber(field) ? const TextInputType.numberWithOptions(decimal: true, signed: true) : null,
         inputFormatters:
             _isNumber(field) ? <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'[0-9eE+\-.]'))] : null,
-        style: valueStyle,
+        style: codeEditor
+            ? TextStyle(fontFamily: 'Consolas', fontSize: 11.5, height: 1.35, color: Design.text)
+            : valueStyle,
         decoration: _decoration(field),
         onChanged: interactive ? (_) => _fieldChanged(field) : null,
-        onSubmitted: field.type == 'textarea' || !interactive ? null : (_) => _submit(),
+        onSubmitted: field.type == 'textarea' || codeEditor || !interactive ? null : (_) => _submit(),
       );
     } else if (field.type == 'dropdown') {
       input = DropdownButtonFormField<String>(
@@ -596,14 +827,35 @@ class _PluginFormViewState extends State<PluginFormView> {
         icon: Icons.calendar_month_rounded,
         onPick: interactive ? () => _pickDate(field) : null,
       );
-    } else if (_isPath(field)) {
+    } else if (field.type == 'time' || field.type == 'datetime') {
       input = _pickerShell(
         field,
-        value: _pathValues[field.id] ?? '',
-        icon: field.type == 'folderpicker' ? Icons.folder_open_rounded : Icons.file_open_rounded,
-        onPick: interactive ? () => _pickPath(field) : null,
+        value: _dateValues[field.id] ?? '',
+        icon: field.type == 'datetime' ? Icons.event_rounded : Icons.schedule_rounded,
+        onPick: interactive ? () => _pickTime(field, includeDate: field.type == 'datetime') : null,
       );
-    } else if (field.type == 'tags') {
+    } else if (_isPath(field)) {
+      final List<String> paths = _fileListValues[field.id] ?? const <String>[];
+      final Widget picker = field.multiple || field.type == 'dropzone'
+          ? _PluginFileDropField(
+              field: field,
+              paths: paths,
+              enabled: interactive,
+              onBrowse: () => _pickPath(field),
+              onDropped: (List<String> values) => _acceptPaths(field, values),
+              onRemove: (String path) {
+                setState(() => _fileListValues[field.id]?.remove(path));
+                _fieldChanged(field);
+              },
+            )
+          : _pickerShell(
+              field,
+              value: _pathValues[field.id] ?? '',
+              icon: field.type == 'folderpicker' ? Icons.folder_open_rounded : Icons.file_open_rounded,
+              onPick: interactive ? () => _pickPath(field) : null,
+            );
+      input = picker;
+    } else if (field.type == 'tags' || field.type == 'multiselect') {
       final Set<String> selected = _tagValues[field.id] ?? <String>{};
       input = Wrap(
         spacing: 5,
@@ -624,6 +876,85 @@ class _PluginFormViewState extends State<PluginFormView> {
                   : null,
             ),
         ],
+      );
+    } else if (field.type == 'radio') {
+      final String? selected = _dropdownValues[field.id];
+      input = Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: <Widget>[
+          for (final PluginFormOption option in field.options)
+            ChoiceChip(
+              label: Text(option.label),
+              selected: selected == option.value,
+              onSelected: interactive
+                  ? (_) {
+                      setState(() => _dropdownValues[field.id] = option.value);
+                      _fieldChanged(field);
+                    }
+                  : null,
+            ),
+        ],
+      );
+    } else if (field.type == 'slider') {
+      final double min = field.min?.toDouble() ?? 0;
+      final double max = field.max?.toDouble() ?? 100;
+      final double value = (_sliderValues[field.id] ?? min).clamp(min, max).toDouble();
+      final double step = (field.step?.toDouble() ?? 1).clamp(0.0001, (max - min).abs()).toDouble();
+      input = Row(children: <Widget>[
+        Expanded(
+          child: Slider(
+            value: value,
+            min: min,
+            max: max,
+            divisions: max > min ? ((max - min) / step).round().clamp(1, 1000).toInt() : null,
+            onChanged: interactive
+                ? (double next) {
+                    setState(() => _sliderValues[field.id] = next);
+                    _fieldChanged(field);
+                  }
+                : null,
+          ),
+        ),
+        SizedBox(
+          width: 58,
+          child: Text(value.toStringAsFixed(step < 1 ? 2 : 0), textAlign: TextAlign.right, style: valueStyle),
+        ),
+      ]);
+    } else if (field.type == 'color') {
+      final String value = _colorValues[field.id] ?? '';
+      input = _pickerShell(
+        field,
+        value: value,
+        icon: Icons.palette_rounded,
+        onPick: interactive ? () => _pickColor(field) : null,
+      );
+      input = Row(children: <Widget>[
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: _parseColor(value),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Design.text.withAlpha(35)),
+          ),
+        ),
+        const SizedBox(width: 7),
+        Expanded(child: input),
+      ]);
+    } else if (field.type == 'apppicker') {
+      input = _pickerShell(
+        field,
+        value: _appValues[field.id] ?? '',
+        icon: Icons.apps_rounded,
+        onPick: interactive ? () => _pickApp(field) : null,
+      );
+    } else if (field.type == 'shortcut') {
+      input = _pickerShell(
+        field,
+        value: _shortcutValues[field.id] ?? '',
+        icon: Icons.keyboard_rounded,
+        onPick: interactive ? () => _recordShortcut(field) : null,
       );
     } else {
       // checkbox
@@ -796,6 +1127,213 @@ class _PluginFormViewState extends State<PluginFormView> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PluginFileDropField extends StatefulWidget {
+  const _PluginFileDropField({
+    required this.field,
+    required this.paths,
+    required this.enabled,
+    required this.onBrowse,
+    required this.onDropped,
+    required this.onRemove,
+  });
+
+  final PluginFormField field;
+  final List<String> paths;
+  final bool enabled;
+  final VoidCallback onBrowse;
+  final ValueChanged<List<String>> onDropped;
+  final ValueChanged<String> onRemove;
+
+  @override
+  State<_PluginFileDropField> createState() => _PluginFileDropFieldState();
+}
+
+class _PluginFileDropFieldState extends State<_PluginFileDropField> {
+  bool _dragging = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropTarget(
+      enable: widget.enabled,
+      onDragEntered: (_) => setState(() => _dragging = true),
+      onDragExited: (_) => setState(() => _dragging = false),
+      onDragDone: (DropDoneDetails details) {
+        setState(() => _dragging = false);
+        widget.onDropped(details.files.map((DropItem file) => file.path).toList(growable: false));
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 100),
+        constraints: const BoxConstraints(minHeight: 64),
+        padding: const EdgeInsets.all(9),
+        decoration: BoxDecoration(
+          color: _dragging ? Design.accent.withAlpha(24) : Design.text.withAlpha(8),
+          borderRadius: BorderRadius.circular(7),
+          border: Border.all(color: _dragging ? Design.accent.withAlpha(150) : Design.text.withAlpha(28)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+          Row(children: <Widget>[
+            Icon(Icons.attach_file_rounded, size: 15, color: _dragging ? Design.accent : Design.text.withAlpha(125)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                _dragging
+                    ? 'Release to attach'
+                    : (widget.field.placeholder.isEmpty ? 'Drop files here' : widget.field.placeholder),
+                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Design.text.withAlpha(180)),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: widget.enabled ? widget.onBrowse : null,
+              icon: const Icon(Icons.folder_open_rounded, size: 13),
+              label: const Text('Browse', style: TextStyle(fontSize: 10.5)),
+            ),
+          ]),
+          if (widget.paths.isNotEmpty)
+            Wrap(
+              spacing: 5,
+              runSpacing: 5,
+              children: <Widget>[
+                for (final String path in widget.paths)
+                  InputChip(
+                    visualDensity: VisualDensity.compact,
+                    label: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 220),
+                      child: Text(
+                        path.replaceAll('\\', '/').split('/').last,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    onDeleted: widget.enabled ? () => widget.onRemove(path) : null,
+                  ),
+              ],
+            ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _PluginAppPickerDialog extends StatefulWidget {
+  const _PluginAppPickerDialog({required this.apps, required this.title});
+
+  final List<AppCatalogRecord> apps;
+  final String title;
+
+  @override
+  State<_PluginAppPickerDialog> createState() => _PluginAppPickerDialogState();
+}
+
+class _PluginAppPickerDialogState extends State<_PluginAppPickerDialog> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final String query = _query.trim().toLowerCase();
+    final List<AppCatalogRecord> apps = widget.apps
+        .where((AppCatalogRecord app) => query.isEmpty || '${app.name} ${app.subtitle}'.toLowerCase().contains(query))
+        .take(100)
+        .toList(growable: false);
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SizedBox(
+        width: 460,
+        height: 420,
+        child: Column(children: <Widget>[
+          TextField(
+            autofocus: true,
+            decoration:
+                const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Search applicationsâ€¦'),
+            onChanged: (String value) => setState(() => _query = value),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: ListView.builder(
+              itemCount: apps.length,
+              itemBuilder: (BuildContext context, int index) {
+                final AppCatalogRecord app = apps[index];
+                return ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.apps_rounded, size: 18),
+                  title: Text(app.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  subtitle:
+                      app.subtitle.isEmpty ? null : Text(app.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  onTap: () => Navigator.pop(context, app),
+                );
+              },
+            ),
+          ),
+        ]),
+      ),
+      actions: <Widget>[TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel'))],
+    );
+  }
+}
+
+class _PluginShortcutRecorderDialog extends StatelessWidget {
+  const _PluginShortcutRecorderDialog({required this.title});
+
+  final String title;
+
+  bool _isModifier(LogicalKeyboardKey key) => <LogicalKeyboardKey>{
+        LogicalKeyboardKey.control,
+        LogicalKeyboardKey.controlLeft,
+        LogicalKeyboardKey.controlRight,
+        LogicalKeyboardKey.shift,
+        LogicalKeyboardKey.shiftLeft,
+        LogicalKeyboardKey.shiftRight,
+        LogicalKeyboardKey.alt,
+        LogicalKeyboardKey.altLeft,
+        LogicalKeyboardKey.altRight,
+        LogicalKeyboardKey.meta,
+        LogicalKeyboardKey.metaLeft,
+        LogicalKeyboardKey.metaRight,
+      }.contains(key);
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(title),
+      content: Focus(
+        autofocus: true,
+        onKeyEvent: (_, KeyEvent event) {
+          if (event is! KeyDownEvent || _isModifier(event.logicalKey)) return KeyEventResult.handled;
+          if (event.logicalKey == LogicalKeyboardKey.escape) {
+            Navigator.pop(context);
+            return KeyEventResult.handled;
+          }
+          final HardwareKeyboard keyboard = HardwareKeyboard.instance;
+          final List<String> parts = <String>[
+            if (keyboard.isControlPressed) 'Ctrl',
+            if (keyboard.isAltPressed) 'Alt',
+            if (keyboard.isShiftPressed) 'Shift',
+            if (keyboard.isMetaPressed) 'Win',
+            event.logicalKey.keyLabel.isEmpty ? event.logicalKey.debugName ?? 'Key' : event.logicalKey.keyLabel,
+          ];
+          Navigator.pop(context, parts.join('+'));
+          return KeyEventResult.handled;
+        },
+        child: Container(
+          width: 360,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+          decoration: BoxDecoration(
+            color: Design.text.withAlpha(8),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Design.accent.withAlpha(70)),
+          ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            Icon(Icons.keyboard_rounded, size: 28, color: Design.accent),
+            const SizedBox(height: 10),
+            Text('Press the shortcut now',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Design.text)),
+            const SizedBox(height: 4),
+            Text('Escape cancels', style: TextStyle(fontSize: 10.5, color: Design.text.withAlpha(100))),
+          ]),
         ),
       ),
     );

@@ -6,5 +6,5 @@
   "entry": "main.py",
   "icon": "download",
   "description": "Search, install, update and uninstall apps via winget",
-  "dev": true
+  "dev": false
 }

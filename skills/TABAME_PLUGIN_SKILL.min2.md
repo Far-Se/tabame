@@ -74,16 +74,22 @@ All are JSON objects with `type`:
 
 | Type               | Important fields / meaning                                                                                                 |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `init`             | `query`, `protocol` (currently 11), `theme:{accent,text,background,dark}`, `locale`                                        |
+| `init`             | `query`, `protocol` (currently 13), `theme:{accent,text,background,dark}`, `locale`                                        |
 | `query`            | `text`, `rev`; each keystroke unless `inputMode:"submit"`                                                                  |
 | `submitQuery`      | `text`, `rev`; Enter in submit mode                                                                                        |
 | `select`           | `id`, `rev`                                                                                                                |
 | `action`           | `id` (`""` for frame/empty action), `action` (`"default"` for Enter), optional `ids` bulk selection, optional `parameters` |
 | `toggle`           | tree `id`, `expanded`, `rev`                                                                                               |
 | `chartSelect`      | `seriesId`, `index`, `value`, `rev`                                                                                        |
+| `chartRangeSelect` | `startIndex`, `endIndex`, `rev`, scope                                                                                     |
+| `toolbarChange`    | `id`, optional `value`/`values`/`direction`, `rev`, scope                                                                  |
+| `tableSort`        | `columnId`, `direction`, `rev`, scope                                                                                      |
+| `edit`             | item `id`, `field`, `value`, `rev`, scope                                                                                 |
+| `drop`             | drop-zone `id`, absolute `paths`, `rev`, scope                                                                            |
 | `cancel`           | operation `id`, `rev`                                                                                                      |
 | `submit`           | form `values:{fieldId:value}`, optional `button`                                                                           |
 | `change`           | watched form field `id`, all current `values`                                                                              |
+| `validate`         | async-validation field `id`, all current `values`, `rev`, scope                                                            |
 | `loadMore`         | `rev`; return the full accumulated list                                                                                    |
 | `tab`              | highlighted `id` or `""`, `rev`; usually respond with `setQuery`                                                           |
 | `back`             | `rev`, optional `fromPageId`, `toPageId`; render previous destination                                                      |
@@ -468,7 +474,7 @@ Use list/grid preview only for cheap adjacent-item comparison; use a real detail
 }
 ```
 
-Field types: `text,password,textarea,dropdown,combobox,checkbox,number,date,filepicker,folderpicker,tags`; unknown falls back to text. Submitted values are strings (dates use `yyyy-mm-dd`), booleans, numbers/null, or string arrays (`tags`). `required`, number bounds, and text `minLength/maxLength/pattern` are host-validated. Conditions support `{field,equals?,notEquals?,in?,truthy?}`. `watch:true` emits `change`; async comboboxes re-render options with `optionsLoading`. Re-rendering the same field IDs preserves typed values; changing the field set resets them. Multiple buttons put their ID in `submit.button`.
+Field types: `text,password,textarea,dropdown,combobox,checkbox,number,date,time,datetime,filepicker,folderpicker,dropzone,tags,multiselect,radio,slider,color,apppicker,shortcut,code,json`; unknown falls back to text. Submitted values are strings, booleans, numbers/null, or string arrays. File fields support `multiple`/`extensions`; code/JSON use `rows`; sliders use `min/max/step`. `required`, bounds, patterns, and JSON syntax are host-validated. Conditions support `{field,equals?,notEquals?,in?,truthy?}`. `watch:true` emits `change`; `validate:true` debounces then emits `validate`, answered with `validating`/`valid`/`error`. Re-rendering the same field IDs preserves typed values.
 
 ## 10. Async, persistence, background, errors
 

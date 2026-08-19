@@ -6,8 +6,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:desktop_drop/desktop_drop.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image/image.dart' as image;
+import 'package:just_audio/just_audio.dart';
 import 'package:markdown_widget/markdown_widget.dart';
 import '../../../platform/clipboard_service.dart';
 import '../../../platform/platform_models.dart';
@@ -38,6 +41,7 @@ class PluginView extends StatefulWidget {
     required this.onFormSubmit,
     required this.onFormCancel,
     required this.onFormChange,
+    required this.onFormValidate,
     required this.onLoadMore,
     required this.onEmptyAction,
     required this.onMetadataAction,
@@ -46,6 +50,11 @@ class PluginView extends StatefulWidget {
     required this.onToggleSelection,
     required this.onToggleTree,
     required this.onChartSelect,
+    required this.onChartRangeSelect,
+    required this.onToolbarChange,
+    required this.onTableSort,
+    required this.onInlineEdit,
+    required this.onDropFiles,
     required this.onCancelOperation,
     required this.onNavigate,
     required this.onNavigateBack,
@@ -80,6 +89,7 @@ class PluginView extends StatefulWidget {
 
   /// Form view: a `watch: true` field changed.
   final void Function(PluginEventScope scope, String fieldId, Map<String, Object?> values) onFormChange;
+  final void Function(PluginEventScope scope, String fieldId, Map<String, Object?> values) onFormValidate;
 
   /// The user scrolled near the end of a `hasMore` list/grid.
   final void Function(PluginEventScope scope) onLoadMore;
@@ -97,6 +107,17 @@ class PluginView extends StatefulWidget {
   final void Function(PluginEventScope scope, String id) onToggleSelection;
   final void Function(PluginEventScope scope, String id, bool expanded) onToggleTree;
   final void Function(PluginEventScope scope, String seriesId, int index, double value) onChartSelect;
+  final void Function(PluginEventScope scope, int startIndex, int endIndex) onChartRangeSelect;
+  final void Function(
+    PluginEventScope scope,
+    String id, {
+    String? value,
+    List<String>? values,
+    String? direction,
+  }) onToolbarChange;
+  final void Function(PluginEventScope scope, String columnId, String direction) onTableSort;
+  final void Function(PluginEventScope scope, String itemId, String field, Object? value) onInlineEdit;
+  final void Function(PluginEventScope scope, String dropZoneId, List<String> paths) onDropFiles;
   final void Function(PluginEventScope scope, String operationId) onCancelOperation;
   final void Function(String targetPageId) onNavigate;
   final VoidCallback onNavigateBack;
@@ -127,6 +148,23 @@ class _PluginViewState extends State<PluginView> {
   final Map<String, double> _pageScrollOffsets = <String, double>{};
   final Map<String, double> _pageDetailOffsets = <String, double>{};
   final Map<String, Map<String, Object?>> _formStateByPage = <String, Map<String, Object?>>{};
+  final Map<String, double> _previewWidths = <String, double>{};
+  final Map<String, Map<String, double>> _tableWidths = <String, Map<String, double>>{};
+  final Map<String, Set<String>> _hiddenTableColumns = <String, Set<String>>{};
+  final Map<String, (String, String)> _tableSortState = <String, (String, String)>{};
+  final Set<String> _dismissedBanners = <String>{};
+  final AudioPlayer _mediaPlayer = AudioPlayer();
+  final List<StreamSubscription<dynamic>> _mediaSubscriptions = <StreamSubscription<dynamic>>[];
+
+  String? _activeMediaItemId;
+  Duration _mediaPosition = Duration.zero;
+  Duration? _mediaDuration;
+  bool _mediaPlaying = false;
+  bool _mediaLoading = false;
+  String? _mediaError;
+  bool _pageDropActive = false;
+  (PluginRenderFrame, String, String)? _editingCell;
+  TextEditingController? _editingController;
 
   PluginRenderFrame? _dashboardActiveFrame;
   int _dashboardActiveIndex = -1;
@@ -147,12 +185,41 @@ class _PluginViewState extends State<PluginView> {
   double? _chatLoadMorePreviousMaxExtent;
 
   @override
+  void initState() {
+    super.initState();
+    _mediaSubscriptions.addAll(<StreamSubscription<dynamic>>[
+      _mediaPlayer.positionStream.listen((Duration value) {
+        if (mounted) setState(() => _mediaPosition = value);
+      }),
+      _mediaPlayer.durationStream.listen((Duration? value) {
+        if (mounted) setState(() => _mediaDuration = value);
+      }),
+      _mediaPlayer.playerStateStream.listen((PlayerState value) {
+        if (!mounted) return;
+        setState(() {
+          _mediaPlaying = value.playing;
+          _mediaLoading =
+              value.processingState == ProcessingState.loading || value.processingState == ProcessingState.buffering;
+        });
+      }),
+      _mediaPlayer.errorStream.listen((PlayerException value) {
+        if (mounted) setState(() => _mediaError = value.message);
+      }),
+    ]);
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
     _dashboardScrollController.dispose();
     for (final ScrollController controller in _dashboardPanelScrollControllers.values) {
       controller.dispose();
     }
+    for (final StreamSubscription<dynamic> subscription in _mediaSubscriptions) {
+      subscription.cancel();
+    }
+    unawaited(_mediaPlayer.dispose());
+    _editingController?.dispose();
     super.dispose();
   }
 
@@ -398,6 +465,12 @@ class _PluginViewState extends State<PluginView> {
     return null;
   }
 
+  String _surfaceKey(PluginRenderFrame frame) => <String>[
+        widget.frame.page?.id ?? frame.page?.id ?? '__legacy__',
+        _panelIdFor(frame) ?? '',
+        frame.elementId ?? '',
+      ].join(':');
+
   PluginEventScope _scopeFor(PluginRenderFrame frame) => PluginEventScope(
         pageId: widget.frame.page?.id ?? frame.page?.id,
         panelId: identical(frame, widget.frame) ? null : _panelIdFor(frame),
@@ -418,7 +491,7 @@ class _PluginViewState extends State<PluginView> {
                 onCancel: () => widget.onCancelOperation(_scopeFor(frame), frame.operation!.id),
               ),
             ]);
-      return _withFloatingActions(_withPageChrome(operation, frame), frame, _scopeFor(frame));
+      return _decorateFrame(operation, frame, _scopeFor(frame), includeOperation: false);
     }
 
     Widget body;
@@ -435,6 +508,8 @@ class _PluginViewState extends State<PluginView> {
                   widget.onFormSubmit(scope, values, button: button),
               onCancel: () => widget.onFormCancel(scope),
               onChanged: (String fieldId, Map<String, Object?> values) => widget.onFormChange(scope, fieldId, values),
+              onValidate: (String fieldId, Map<String, Object?> values) =>
+                  widget.onFormValidate(scope, fieldId, values),
               onOpenActions: widget.onOpenActions,
             );
     } else if (frame.view == PluginViewType.dashboard) {
@@ -469,18 +544,63 @@ class _PluginViewState extends State<PluginView> {
         body = itemsPane;
       } else {
         final int idx = widget.activeIndex.clamp(0, frame.items.length - 1);
-        body = Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Expanded(flex: 5, child: itemsPane),
-            Container(width: 1, color: Design.accent.withAlpha(30)),
-            Expanded(flex: 4, child: _buildPreviewPane(frame.items[idx], scope: _scopeFor(frame))),
-          ],
-        );
+        body = _buildSplitPreview(frame, itemsPane, frame.items[idx]);
       }
     }
     final PluginEventScope scope = _scopeFor(frame);
-    return _withFloatingActions(_withPageChrome(_withOperation(body, frame.operation, scope), frame), frame, scope);
+    return _decorateFrame(body, frame, scope);
+  }
+
+  Widget _decorateFrame(
+    Widget child,
+    PluginRenderFrame frame,
+    PluginEventScope scope, {
+    bool includeOperation = true,
+  }) {
+    Widget result = child;
+    if (frame.dropZone != null) result = _withPageDropZone(result, frame, scope);
+    if (frame.toolbarControls.isNotEmpty) result = _withToolbar(result, frame, scope);
+    if (frame.banners.isNotEmpty) result = _withBanners(result, frame, scope);
+    if (includeOperation) result = _withOperation(result, frame.operation, scope);
+    result = _withPageChrome(result, frame);
+    return _withFloatingActions(result, frame, scope);
+  }
+
+  Widget _buildSplitPreview(PluginRenderFrame frame, Widget itemsPane, PluginItem item) {
+    final String key = _pageKey(frame);
+    if (!frame.previewResizable) {
+      return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+        Expanded(flex: 5, child: itemsPane),
+        Container(width: 1, color: Design.accent.withAlpha(30)),
+        Expanded(flex: 4, child: _buildPreviewPane(item, scope: _scopeFor(frame))),
+      ]);
+    }
+    return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
+      final double fallback = frame.previewInitialWidth ?? constraints.maxWidth * 0.44;
+      final double availableMax =
+          (constraints.maxWidth - 180).clamp(160, frame.previewMaxWidth).toDouble();
+      final double minWidth = frame.previewMinWidth.clamp(160, availableMax).toDouble();
+      final double maxWidth = frame.previewMaxWidth.clamp(minWidth, availableMax).toDouble();
+      final double width = (_previewWidths[key] ?? fallback).clamp(minWidth, maxWidth).toDouble();
+      return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+        Expanded(child: itemsPane),
+        MouseRegion(
+          cursor: SystemMouseCursors.resizeLeftRight,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onHorizontalDragUpdate: (DragUpdateDetails details) {
+              setState(() =>
+                  _previewWidths[key] = (width - details.delta.dx).clamp(minWidth, maxWidth).toDouble());
+            },
+            child: SizedBox(
+              width: 7,
+              child: Center(child: Container(width: 1, color: Design.accent.withAlpha(45))),
+            ),
+          ),
+        ),
+        SizedBox(width: width, child: _buildPreviewPane(item, scope: _scopeFor(frame))),
+      ]);
+    });
   }
 
   Widget _withFloatingActions(Widget child, PluginRenderFrame frame, PluginEventScope scope) {
@@ -522,6 +642,136 @@ class _PluginViewState extends State<PluginView> {
       _PluginOperationBar(operation: operation, onCancel: () => widget.onCancelOperation(scope, operation.id)),
       Expanded(child: child),
     ]);
+  }
+
+  Widget _withToolbar(Widget child, PluginRenderFrame frame, PluginEventScope scope) {
+    return Column(children: <Widget>[
+      Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: Design.text.withAlpha(5),
+          border: Border(bottom: BorderSide(color: Design.text.withAlpha(18))),
+        ),
+        child: Row(children: <Widget>[
+          for (final PluginToolbarControl control in frame.toolbarControls) ...<Widget>[
+            if (control.type == 'view')
+              _PluginViewToggle(
+                control: control,
+                onSelected: (String value) => widget.onToolbarChange(scope, control.id, value: value),
+              )
+            else
+              _PluginToolbarMenu(
+                control: control,
+                onSelected: (String value) {
+                  if (control.multiple) {
+                    final Set<String> next = control.values.toSet();
+                    next.contains(value) ? next.remove(value) : next.add(value);
+                    widget.onToolbarChange(scope, control.id, values: next.toList(growable: false));
+                  } else {
+                    widget.onToolbarChange(
+                      scope,
+                      control.id,
+                      value: value,
+                      direction: control.type == 'sort' ? control.direction : null,
+                    );
+                  }
+                },
+              ),
+            if (control.type == 'sort')
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+                tooltip: control.direction == 'desc' ? 'Descending' : 'Ascending',
+                icon: Icon(control.direction == 'desc' ? Icons.south_rounded : Icons.north_rounded, size: 14),
+                onPressed: () => widget.onToolbarChange(
+                  scope,
+                  control.id,
+                  value: control.value,
+                  direction: control.direction == 'desc' ? 'asc' : 'desc',
+                ),
+              ),
+            const SizedBox(width: 6),
+          ],
+          const Spacer(),
+        ]),
+      ),
+      Expanded(child: child),
+    ]);
+  }
+
+  Widget _withBanners(Widget child, PluginRenderFrame frame, PluginEventScope scope) {
+    final List<PluginBanner> visible = frame.banners
+        .where((PluginBanner banner) => !_dismissedBanners.contains('${_surfaceKey(frame)}:${banner.id}'))
+        .toList(growable: false);
+    if (visible.isEmpty) return child;
+    return Column(children: <Widget>[
+      for (final PluginBanner banner in visible)
+        _PluginBannerView(
+          banner: banner,
+          onAction: (PluginAction action) => widget.onMetadataAction(scope, '', action),
+          onDismiss: banner.dismissible
+              ? () => setState(() => _dismissedBanners.add('${_surfaceKey(frame)}:${banner.id}'))
+              : null,
+        ),
+      Expanded(child: child),
+    ]);
+  }
+
+  Widget _withPageDropZone(Widget child, PluginRenderFrame frame, PluginEventScope scope) {
+    final PluginDropZone zone = frame.dropZone!;
+    bool accepted(String path) {
+      if (zone.extensions.isEmpty || Directory(path).existsSync()) return true;
+      final String lower = path.toLowerCase();
+      return zone.extensions
+          .any((String extension) => lower.endsWith(extension.startsWith('.') ? extension : '.$extension'));
+    }
+
+    return DropTarget(
+      onDragEntered: (_) => setState(() => _pageDropActive = true),
+      onDragExited: (_) => setState(() => _pageDropActive = false),
+      onDragDone: (DropDoneDetails details) {
+        setState(() => _pageDropActive = false);
+        List<String> paths =
+            details.files.map((DropItem file) => file.path).where(accepted).take(zone.maxFiles).toList();
+        if (!zone.multiple && paths.isNotEmpty) paths = <String>[paths.first];
+        if (paths.isNotEmpty) widget.onDropFiles(scope, zone.id, paths);
+      },
+      child: Column(children: <Widget>[
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 100),
+          height: _pageDropActive ? 54 : 38,
+          margin: const EdgeInsets.fromLTRB(8, 7, 8, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 11),
+          decoration: BoxDecoration(
+            color: _pageDropActive ? Design.accent.withAlpha(24) : Design.text.withAlpha(6),
+            borderRadius: BorderRadius.circular(7),
+            border: Border.all(color: _pageDropActive ? Design.accent.withAlpha(145) : Design.text.withAlpha(22)),
+          ),
+          child: Row(children: <Widget>[
+            Icon(Icons.file_download_outlined,
+                size: 16, color: _pageDropActive ? Design.accent : Design.text.withAlpha(120)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(_pageDropActive ? 'Release to attach' : zone.label,
+                        style:
+                            TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Design.text.withAlpha(190))),
+                    if (zone.hint.isNotEmpty)
+                      Text(zone.hint,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 9.5, color: Design.text.withAlpha(90))),
+                  ]),
+            ),
+          ]),
+        ),
+        Expanded(child: child),
+      ]),
+    );
   }
 
   Widget _withPageChrome(Widget child, PluginRenderFrame frame) {
@@ -654,6 +904,8 @@ class _PluginViewState extends State<PluginView> {
                     onCancel: () => widget.onFormCancel(scope),
                     onChanged: (String fieldId, Map<String, Object?> values) =>
                         widget.onFormChange(scope, fieldId, values),
+                    onValidate: (String fieldId, Map<String, Object?> values) =>
+                        widget.onFormValidate(scope, fieldId, values),
                     onOpenActions: widget.onOpenActions,
                   ),
             PluginViewType.table => _buildTable(frame, controller: scrollController),
@@ -669,6 +921,11 @@ class _PluginViewState extends State<PluginView> {
             PluginViewType.grid => _buildGrid(frame, controller: scrollController),
             _ => _buildList(frame, controller: scrollController),
           };
+    Widget panelBody = body;
+    if (frame.dropZone != null) panelBody = _withPageDropZone(panelBody, frame, scope);
+    if (frame.toolbarControls.isNotEmpty) panelBody = _withToolbar(panelBody, frame, scope);
+    if (frame.banners.isNotEmpty) panelBody = _withBanners(panelBody, frame, scope);
+    panelBody = _withOperation(panelBody, frame.operation, scope);
     final double height = panel.height ?? (frame.view == PluginViewType.operation ? 64 : 240);
     final Widget card = Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -704,7 +961,7 @@ class _PluginViewState extends State<PluginView> {
               ],
             ),
           ),
-          Expanded(child: _withFloatingActions(body, frame, scope)),
+          Expanded(child: _withFloatingActions(panelBody, frame, scope)),
         ]),
       ),
     );
@@ -713,6 +970,9 @@ class _PluginViewState extends State<PluginView> {
 
   Widget _buildEmptyOrLoading(PluginRenderFrame frame) {
     if (frame.loading) {
+      if (frame.loadingStyle == 'skeleton') {
+        return _PluginSkeleton(view: frame.view, count: frame.skeletonCount);
+      }
       final String? caption = frame.loadingText;
       return Center(
         child: Column(
@@ -830,20 +1090,7 @@ class _PluginViewState extends State<PluginView> {
                 key: _keyFor(frame, i),
                 child: Column(
                   children: <Widget>[
-                    LauncherResultRow(
-                      isSelected: _isSelected(frame, i),
-                      isRepeating: widget.isRepeating,
-                      accent: Design.accent,
-                      onSurface: Design.text,
-                      onTap: () => _tapItem(frame, i),
-                      onHover: () => _hoverSelect(frame, i),
-                      icon: _PluginIcon(name: frame.items[i].icon, accent: Design.accent),
-                      title: frame.items[i].title,
-                      subtitle: frame.items[i].subtitle,
-                      badge: _accessoryBadge(frame, frame.items[i], multiSelect: frame.multiSelect),
-                      inlineMarkup: true,
-                      subtitleMaxLines: frame.items[i].subtitleLines,
-                    ),
+                    _buildListItemRow(frame, i),
                     if (frame.items[i].progress != null)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(18, 0, 18, 4),
@@ -1051,66 +1298,316 @@ class _PluginViewState extends State<PluginView> {
   }
 
   Widget _buildTable(PluginRenderFrame frame, {ScrollController? controller}) {
-    final List<PluginTableColumn> columns = frame.columns.isEmpty
+    final List<PluginTableColumn> declaredColumns = frame.columns.isEmpty
         ? const <PluginTableColumn>[
             PluginTableColumn(id: 'title', label: 'Name'),
             PluginTableColumn(id: 'subtitle', label: 'Details')
           ]
         : frame.columns;
-    Widget cell(PluginItem item, PluginTableColumn column) {
-      final String value = column.id == 'title'
-          ? item.title
-          : column.id == 'subtitle'
-              ? item.subtitle
-              : (item.cells[column.id] ?? '');
-      return SizedBox(
-        width: column.width,
-        child: Text(value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: column.align == 'end' ? TextAlign.right : TextAlign.left,
-            style: TextStyle(fontSize: 11.5, color: Design.text.withAlpha(200))),
+    final String pageKey = _surfaceKey(frame);
+    final Set<String> hidden = _hiddenTableColumns.putIfAbsent(
+      pageKey,
+      () => declaredColumns
+          .where((PluginTableColumn column) => !column.visible)
+          .map((PluginTableColumn column) => column.id)
+          .toSet(),
+    );
+    final List<PluginTableColumn> columns =
+        declaredColumns.where((PluginTableColumn column) => !hidden.contains(column.id)).toList(growable: false);
+    final Map<String, double> widths = _tableWidths.putIfAbsent(pageKey, () => <String, double>{});
+    for (final PluginTableColumn column in declaredColumns) {
+      widths.putIfAbsent(
+        column.id,
+        () => (column.width ?? 150).clamp(column.minWidth, column.maxWidth).toDouble(),
       );
     }
+    if (frame.tableSortColumn != null) {
+      _tableSortState[pageKey] = (frame.tableSortColumn!, frame.tableSortDirection);
+    }
+    final (String, String)? sort = _tableSortState[pageKey];
 
-    return WindowsScrollView(
-      controller: controller ?? _scrollController,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            color: Design.text.withAlpha(10),
-            child: Row(
-              children: <Widget>[
-                for (final PluginTableColumn column in columns)
+    Widget headerCell(PluginTableColumn column) {
+      final bool active = sort?.$1 == column.id;
+      return SizedBox(
+        width: widths[column.id]!,
+        child: Row(children: <Widget>[
+          Expanded(
+            child: InkWell(
+              onTap: column.sortable
+                  ? () {
+                      final String direction = active && sort?.$2 == 'asc' ? 'desc' : 'asc';
+                      setState(() => _tableSortState[pageKey] = (column.id, direction));
+                      widget.onTableSort(_scopeFor(frame), column.id, direction);
+                    }
+                  : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                child: Row(children: <Widget>[
                   Expanded(
                     child: Text(
                       column.label.toUpperCase(),
-                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Design.text.withAlpha(120)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: active ? Design.accent : Design.text.withAlpha(120),
+                      ),
                     ),
                   ),
-              ],
+                  if (active)
+                    Icon(sort!.$2 == 'desc' ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                        size: 11, color: Design.accent),
+                ]),
+              ),
             ),
           ),
+          if (frame.tableResizable)
+            MouseRegion(
+              cursor: SystemMouseCursors.resizeLeftRight,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onHorizontalDragUpdate: (DragUpdateDetails details) {
+                  setState(() {
+                    widths[column.id] =
+                        (widths[column.id]! + details.delta.dx).clamp(column.minWidth, column.maxWidth).toDouble();
+                  });
+                },
+                child: SizedBox(
+                    width: 7, child: Center(child: Container(width: 1, height: 18, color: Design.text.withAlpha(28)))),
+              ),
+            ),
+        ]),
+      );
+    }
+
+    Widget dataCell(PluginItem item, PluginTableColumn column) {
+      final String value = _tableValue(item, column.id);
+      final bool editable = column.editable || item.editableFields.contains(column.id);
+      final bool editing = _editingCell?.$1 == frame && _editingCell?.$2 == item.id && _editingCell?.$3 == column.id;
+      return SizedBox(
+        width: widths[column.id]!,
+        child: editing
+            ? TextField(
+                controller: _editingController,
+                autofocus: true,
+                style: TextStyle(fontSize: 11.5, color: Design.text),
+                decoration: const InputDecoration(
+                    isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 5)),
+                onSubmitted: (_) => _commitInlineEdit(frame, item.id, column.id),
+                onEditingComplete: () => _commitInlineEdit(frame, item.id, column.id),
+              )
+            : GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onDoubleTap: editable ? () => _beginInlineEdit(frame, item.id, column.id, value) : null,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: column.align == 'end'
+                        ? TextAlign.right
+                        : column.align == 'center'
+                            ? TextAlign.center
+                            : TextAlign.left,
+                    style: TextStyle(fontSize: 11.5, color: Design.text.withAlpha(200)),
+                  ),
+                ),
+              ),
+      );
+    }
+
+    return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
+      final double contentWidth = columns
+          .fold<double>(0, (double total, PluginTableColumn column) => total + widths[column.id]!)
+          .clamp(constraints.maxWidth - (frame.tableColumnVisibility ? 38 : 16), double.infinity)
+          .toDouble();
+      final Widget header = Container(
+        height: 32,
+        color: Design.text.withAlpha(10),
+        child: Row(children: <Widget>[for (final PluginTableColumn column in columns) headerCell(column)]),
+      );
+      final Widget rows = WindowsScrollView(
+        controller: controller ?? _scrollController,
+        child: Column(children: <Widget>[
+          if (!frame.tableStickyHeader) header,
           for (int i = 0; i < frame.items.length; i++)
             KeyedSubtree(
-                key: _keyFor(frame, i),
-                child: _PluginStructuredRow(
-                  selected: _isSelected(frame, i),
-                  marked: _selectedIds(frame).contains(frame.items[i].id),
-                  multiSelect: frame.multiSelect,
-                  onTap: () => _tapItem(frame, i),
-                  onHover: () => _hoverSelect(frame, i),
-                  onToggle: () => widget.onToggleSelection(_scopeFor(frame), frame.items[i].id),
-                  child: Row(children: <Widget>[
-                    for (final PluginTableColumn column in columns) Expanded(child: cell(frame.items[i], column))
-                  ]),
-                )),
+              key: _keyFor(frame, i),
+              child: _PluginStructuredRow(
+                selected: _isSelected(frame, i),
+                marked: _selectedIds(frame).contains(frame.items[i].id),
+                multiSelect: frame.multiSelect,
+                onTap: () => _tapItem(frame, i),
+                onHover: () => _hoverSelect(frame, i),
+                onToggle: () => widget.onToggleSelection(_scopeFor(frame), frame.items[i].id),
+                child: Row(children: <Widget>[
+                  for (final PluginTableColumn column in columns) dataCell(frame.items[i], column),
+                ]),
+              ),
+            ),
           if (frame.hasMore) _loadMoreFooter(),
         ]),
+      );
+      return Padding(
+        padding: const EdgeInsets.all(8),
+        child: Row(children: <Widget>[
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: contentWidth,
+                height: constraints.maxHeight - 16,
+                child: Column(children: <Widget>[
+                  if (frame.tableStickyHeader) header,
+                  Expanded(child: rows),
+                ]),
+              ),
+            ),
+          ),
+          if (frame.tableColumnVisibility)
+            Align(
+              alignment: Alignment.topCenter,
+              child: PopupMenuButton<String>(
+                tooltip: 'Columns',
+                icon: Icon(Icons.view_column_outlined, size: 16, color: Design.text.withAlpha(140)),
+                onSelected: (String id) => setState(() {
+                  if (hidden.contains(id)) {
+                    hidden.remove(id);
+                  } else if (columns.length > 1) {
+                    hidden.add(id);
+                  }
+                }),
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  for (final PluginTableColumn column in declaredColumns)
+                    CheckedPopupMenuItem<String>(
+                      value: column.id,
+                      checked: !hidden.contains(column.id),
+                      child: Text(column.label),
+                    ),
+                ],
+              ),
+            ),
+        ]),
+      );
+    });
+  }
+
+  Widget _buildListItemRow(PluginRenderFrame frame, int index) {
+    final PluginItem item = frame.items[index];
+    final String? editableField = item.editableFields.contains('title')
+        ? 'title'
+        : item.editableFields.contains('subtitle')
+            ? 'subtitle'
+            : null;
+    final bool editing = _editingCell?.$1 == frame && _editingCell?.$2 == item.id && _editingCell?.$3 == editableField;
+    if (editing && editableField != null) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        decoration: BoxDecoration(
+          color: Design.accent.withAlpha(26),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Design.accent.withAlpha(80)),
+        ),
+        child: Row(children: <Widget>[
+          _PluginIcon(name: item.icon, accent: Design.accent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _editingController,
+              autofocus: true,
+              style: TextStyle(fontSize: 12, color: Design.text),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: editableField == 'title' ? 'Title' : 'Subtitle',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              ),
+              onSubmitted: (_) => _commitInlineEdit(frame, item.id, editableField),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Save',
+            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+            padding: EdgeInsets.zero,
+            icon: const Icon(Icons.check_rounded, size: 15),
+            onPressed: () => _commitInlineEdit(frame, item.id, editableField),
+          ),
+        ]),
+      );
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onDoubleTap: editableField == null
+          ? null
+          : () => _beginInlineEdit(frame, item.id, editableField, _tableValue(item, editableField)),
+      child: LauncherResultRow(
+        isSelected: _isSelected(frame, index),
+        isRepeating: widget.isRepeating,
+        accent: Design.accent,
+        onSurface: Design.text,
+        onTap: () => _tapItem(frame, index),
+        onHover: () => _hoverSelect(frame, index),
+        icon: _PluginIcon(name: item.icon, accent: Design.accent),
+        title: item.title,
+        subtitle: item.subtitle,
+        badge: _listBadge(frame, item),
+        inlineMarkup: true,
+        subtitleMaxLines: item.subtitleLines,
       ),
     );
+  }
+
+  Widget? _listBadge(PluginRenderFrame frame, PluginItem item) {
+    final Widget? accessories = _accessoryBadge(frame, item, multiSelect: frame.multiSelect);
+    final List<String> editable = <String>[
+      if (item.editableFields.contains('title')) 'title',
+      if (item.editableFields.contains('subtitle')) 'subtitle',
+    ];
+    if (editable.length < 2) return accessories;
+    return Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+      if (accessories != null) accessories,
+      PopupMenuButton<String>(
+        tooltip: 'Edit field',
+        iconSize: 15,
+        padding: EdgeInsets.zero,
+        onSelected: (String field) =>
+            _beginInlineEdit(frame, item.id, field, _tableValue(item, field)),
+        itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+          for (final String field in editable)
+            PopupMenuItem<String>(
+              value: field,
+              child: Text('Edit ${field == 'title' ? 'title' : 'subtitle'}'),
+            ),
+        ],
+      ),
+    ]);
+  }
+
+  String _tableValue(PluginItem item, String field) => field == 'title'
+      ? item.title
+      : field == 'subtitle'
+          ? item.subtitle
+          : item.cells[field] ?? '';
+
+  void _beginInlineEdit(PluginRenderFrame frame, String itemId, String field, String value) {
+    _editingController?.dispose();
+    setState(() {
+      _editingCell = (frame, itemId, field);
+      _editingController = TextEditingController(text: value);
+    });
+  }
+
+  void _commitInlineEdit(PluginRenderFrame frame, String itemId, String field) {
+    if (_editingCell?.$1 != frame || _editingCell?.$2 != itemId || _editingCell?.$3 != field) return;
+    final String value = _editingController?.text ?? '';
+    widget.onInlineEdit(_scopeFor(frame), itemId, field, value);
+    _editingController?.dispose();
+    setState(() {
+      _editingCell = null;
+      _editingController = null;
+    });
   }
 
   Widget _buildTree(PluginRenderFrame frame, {ScrollController? controller}) => WindowsScrollView(
@@ -1176,8 +1673,11 @@ class _PluginViewState extends State<PluginView> {
   Widget _buildChart(PluginRenderFrame frame) => _PluginChart(
         title: frame.chartTitle,
         series: frame.chartSeries,
+        options: frame.chartOptions,
         onSelect: (String seriesId, int index, double value) =>
             widget.onChartSelect(_scopeFor(frame), seriesId, index, value),
+        onRangeSelect: (int startIndex, int endIndex) =>
+            widget.onChartRangeSelect(_scopeFor(frame), startIndex, endIndex),
       );
 
   Widget _buildKanban(PluginRenderFrame frame, {ScrollController? controller}) {
@@ -1542,6 +2042,19 @@ class _PluginViewState extends State<PluginView> {
                   onToggle: frame.multiSelect
                       ? () => widget.onToggleSelection(_scopeFor(frame), frame.items[index].id)
                       : null,
+                  mediaActive: _activeMediaItemId == frame.items[index].id,
+                  mediaPlaying: _activeMediaItemId == frame.items[index].id && _mediaPlaying,
+                  mediaLoading: _activeMediaItemId == frame.items[index].id && _mediaLoading,
+                  mediaProgress: _activeMediaItemId == frame.items[index].id &&
+                          _mediaDuration != null &&
+                          _mediaDuration! > Duration.zero
+                      ? (_mediaPosition.inMilliseconds / _mediaDuration!.inMilliseconds).clamp(0.0, 1.0)
+                      : 0,
+                  mediaError: _activeMediaItemId == frame.items[index].id ? _mediaError : null,
+                  onPlayPause: frame.items[index].media?.type == 'audio' || frame.items[index].media?.type == 'video'
+                      ? () => _toggleMedia(frame.items[index])
+                      : null,
+                  onSeek: (double progress) => _seekMedia(progress),
                 ),
               ),
             ),
@@ -1550,6 +2063,47 @@ class _PluginViewState extends State<PluginView> {
         ),
       ),
     );
+  }
+
+  Future<void> _toggleMedia(PluginItem item) async {
+    final PluginMediaInfo? media = item.media;
+    if (media == null || (media.type != 'audio' && media.type != 'video')) return;
+    if (_activeMediaItemId == item.id) {
+      if (_mediaPlaying) {
+        await _mediaPlayer.pause();
+      } else {
+        await _mediaPlayer.play();
+      }
+      return;
+    }
+    setState(() {
+      _activeMediaItemId = item.id;
+      _mediaPosition = Duration.zero;
+      _mediaDuration = null;
+      _mediaError = null;
+      _mediaLoading = true;
+    });
+    try {
+      final Uri uri = Uri.parse(media.url);
+      if (uri.scheme == 'file') {
+        await _mediaPlayer.setFilePath(uri.toFilePath(windows: Platform.isWindows));
+      } else {
+        await _mediaPlayer.setUrl(media.url);
+      }
+      await _mediaPlayer.play();
+    } on PlayerException catch (error) {
+      if (mounted) setState(() => _mediaError = error.message);
+    } catch (error) {
+      if (mounted) setState(() => _mediaError = error.toString());
+    } finally {
+      if (mounted) setState(() => _mediaLoading = false);
+    }
+  }
+
+  void _seekMedia(double progress) {
+    final Duration? duration = _mediaDuration;
+    if (duration == null) return;
+    unawaited(_mediaPlayer.seek(Duration(milliseconds: (duration.inMilliseconds * progress).round())));
   }
 
   Widget _buildDetail(String markdown, List<PluginMetadataEntry> metadata,
@@ -2966,6 +3520,255 @@ class _PluginAgendaEventRow extends StatelessWidget {
   }
 }
 
+class _PluginToolbarMenu extends StatelessWidget {
+  const _PluginToolbarMenu({required this.control, required this.onSelected});
+
+  final PluginToolbarControl control;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final PluginToolbarOption selected = control.options.firstWhere(
+      (PluginToolbarOption option) => option.value == control.value,
+      orElse: () => control.options.first,
+    );
+    final int activeCount = control.multiple ? control.values.length : (control.value == null ? 0 : 1);
+    return PopupMenuButton<String>(
+      tooltip: control.label.isEmpty ? control.type : control.label,
+      onSelected: onSelected,
+      itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+        for (final PluginToolbarOption option in control.options)
+          CheckedPopupMenuItem<String>(
+            value: option.value,
+            checked: control.multiple ? control.values.contains(option.value) : option.value == control.value,
+            child: Row(children: <Widget>[
+              if (option.icon != null) ...<Widget>[
+                Icon(PluginIcons.resolve(option.icon), size: 14),
+                const SizedBox(width: 7),
+              ],
+              Text(option.label),
+            ]),
+          ),
+      ],
+      child: Container(
+        height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: Design.text.withAlpha(8),
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(color: Design.text.withAlpha(24)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          Icon(
+            switch (control.type) {
+              'scope' => Icons.adjust_rounded,
+              'sort' => Icons.sort_rounded,
+              _ => Icons.filter_alt_outlined,
+            },
+            size: 13,
+            color: activeCount > 0 ? Design.accent : Design.text.withAlpha(120),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            control.multiple && activeCount > 0
+                ? '${control.label.isEmpty ? 'Filter' : control.label} ($activeCount)'
+                : selected.label,
+            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Design.text.withAlpha(185)),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.expand_more_rounded, size: 13, color: Design.text.withAlpha(90)),
+        ]),
+      ),
+    );
+  }
+}
+
+class _PluginViewToggle extends StatelessWidget {
+  const _PluginViewToggle({required this.control, required this.onSelected});
+
+  final PluginToolbarControl control;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 28,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: Design.text.withAlpha(9),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Design.text.withAlpha(22)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          for (final PluginToolbarOption option in control.options)
+            Tooltip(
+              message: option.label,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(4),
+                onTap: () => onSelected(option.value),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 100),
+                  width: 25,
+                  height: 23,
+                  decoration: BoxDecoration(
+                    color: option.value == control.value ? Design.accent.withAlpha(42) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Icon(
+                    PluginIcons.resolve(option.icon ?? option.value),
+                    size: 14,
+                    color: option.value == control.value ? Design.accent : Design.text.withAlpha(110),
+                  ),
+                ),
+              ),
+            ),
+        ]),
+      );
+}
+
+class _PluginBannerView extends StatelessWidget {
+  const _PluginBannerView({required this.banner, required this.onAction, this.onDismiss});
+
+  final PluginBanner banner;
+  final ValueChanged<PluginAction> onAction;
+  final VoidCallback? onDismiss;
+
+  Color get _color => switch (banner.style) {
+        'success' => const Color(0xFF4FB477),
+        'warning' => const Color(0xFFD49A3A),
+        'error' => const Color(0xFFE5534B),
+        _ => Design.accent,
+      };
+
+  IconData get _icon => switch (banner.style) {
+        'success' => Icons.check_circle_outline_rounded,
+        'warning' => Icons.warning_amber_rounded,
+        'error' => Icons.error_outline_rounded,
+        _ => Icons.info_outline_rounded,
+      };
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.fromLTRB(8, 7, 8, 0),
+        padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
+        decoration: BoxDecoration(
+          color: _color.withAlpha(18),
+          borderRadius: BorderRadius.circular(7),
+          border: Border(
+              left: BorderSide(color: _color, width: 3),
+              top: BorderSide(color: _color.withAlpha(45)),
+              right: BorderSide(color: _color.withAlpha(45)),
+              bottom: BorderSide(color: _color.withAlpha(45))),
+        ),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+          Icon(banner.icon == null ? _icon : PluginIcons.resolve(banner.icon), size: 16, color: _color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+              if (banner.title.isNotEmpty)
+                Text(banner.title,
+                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(220))),
+              if (banner.message.isNotEmpty)
+                Text(banner.message, style: TextStyle(fontSize: 10.5, height: 1.3, color: Design.text.withAlpha(145))),
+              if (banner.actions.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 5),
+                  child: Wrap(
+                    spacing: 6,
+                    children: <Widget>[
+                      for (final PluginAction action in banner.actions)
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            minimumSize: const Size(0, 26),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            foregroundColor: action.destructive ? const Color(0xFFE5534B) : _color,
+                          ),
+                          onPressed: () => onAction(action),
+                          child:
+                              Text(action.title, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700)),
+                        ),
+                    ],
+                  ),
+                ),
+            ]),
+          ),
+          if (onDismiss != null)
+            IconButton(
+              tooltip: 'Dismiss',
+              constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+              padding: EdgeInsets.zero,
+              onPressed: onDismiss,
+              icon: Icon(Icons.close_rounded, size: 14, color: Design.text.withAlpha(100)),
+            ),
+        ]),
+      );
+}
+
+class _PluginSkeleton extends StatefulWidget {
+  const _PluginSkeleton({required this.view, required this.count});
+
+  final PluginViewType view;
+  final int count;
+
+  @override
+  State<_PluginSkeleton> createState() => _PluginSkeletonState();
+}
+
+class _PluginSkeletonState extends State<_PluginSkeleton> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Widget _block({double? width, required double height, double radius = 4}) => Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(color: Design.text.withAlpha(18), borderRadius: BorderRadius.circular(radius)),
+      );
+
+  Widget _row(int index) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        child: Row(children: <Widget>[
+          _block(width: 30, height: 30, radius: 7),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+              FractionallySizedBox(widthFactor: index.isEven ? 0.54 : 0.7, child: _block(height: 9)),
+              const SizedBox(height: 7),
+              FractionallySizedBox(widthFactor: index.isEven ? 0.78 : 0.46, child: _block(height: 7)),
+            ]),
+          ),
+        ]),
+      );
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _controller,
+        builder: (BuildContext context, Widget? child) => Opacity(
+          opacity: 0.42 + _controller.value * 0.34,
+          child: child,
+        ),
+        child: widget.view == PluginViewType.grid || widget.view == PluginViewType.gallery
+            ? GridView.count(
+                padding: const EdgeInsets.all(10),
+                crossAxisCount: 3,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                children: <Widget>[
+                  for (int index = 0; index < widget.count; index++) _block(height: 80, radius: 7),
+                ],
+              )
+            : ListView(children: <Widget>[
+                for (int index = 0; index < widget.count; index++) _row(index),
+              ]),
+      );
+}
+
 Widget _pluginGalleryVisual(PluginItem item, BoxFit fit) {
   final PluginMediaInfo? media = item.media;
   final Widget fallback = Container(
@@ -3013,7 +3816,14 @@ class _PluginGalleryTile extends StatelessWidget {
     required this.fit,
     required this.onTap,
     required this.onHover,
+    required this.mediaActive,
+    required this.mediaPlaying,
+    required this.mediaLoading,
+    required this.mediaProgress,
+    required this.mediaError,
+    required this.onSeek,
     this.onToggle,
+    this.onPlayPause,
   });
 
   final PluginItem item;
@@ -3024,6 +3834,13 @@ class _PluginGalleryTile extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onHover;
   final VoidCallback? onToggle;
+  final bool mediaActive;
+  final bool mediaPlaying;
+  final bool mediaLoading;
+  final double mediaProgress;
+  final String? mediaError;
+  final ValueChanged<double> onSeek;
+  final VoidCallback? onPlayPause;
 
   IconData get _typeIcon => switch (item.media?.type) {
         'video' => Icons.play_arrow_rounded,
@@ -3082,6 +3899,71 @@ class _PluginGalleryTile extends StatelessWidget {
                             BoxDecoration(color: Colors.black.withAlpha(165), borderRadius: BorderRadius.circular(3)),
                         child: Text(media!.duration,
                             style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ),
+                    ),
+                  if (onPlayPause != null)
+                    Center(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onPlayPause,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 120),
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withAlpha(mediaActive ? 190 : 145),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white.withAlpha(80)),
+                          ),
+                          child: mediaLoading
+                              ? const Padding(
+                                  padding: EdgeInsets.all(11),
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : Icon(
+                                  mediaPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                  size: 23,
+                                  color: Colors.white,
+                                ),
+                        ),
+                      ),
+                    ),
+                  if (mediaActive)
+                    Positioned(
+                      left: 5,
+                      right: 5,
+                      bottom: 4,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTapDown: (TapDownDetails details) {
+                          final RenderBox box = context.findRenderObject()! as RenderBox;
+                          onSeek((details.localPosition.dx / box.size.width).clamp(0.0, 1.0));
+                        },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            minHeight: 4,
+                            value: mediaProgress,
+                            color: Design.accent,
+                            backgroundColor: Colors.black.withAlpha(150),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (mediaActive && mediaError != null)
+                    Positioned(
+                      left: 5,
+                      right: 5,
+                      bottom: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        color: const Color(0xFFD94B45).withAlpha(220),
+                        child: Text(
+                          mediaError!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 8.5, color: Colors.white),
+                        ),
                       ),
                     ),
                   if (onToggle != null)
@@ -3443,78 +4325,276 @@ class _PluginTimelineRow extends StatelessWidget {
       );
 }
 
-class _PluginChart extends StatelessWidget {
-  const _PluginChart({required this.title, required this.series, required this.onSelect});
+class _PluginChart extends StatefulWidget {
+  const _PluginChart({
+    required this.title,
+    required this.series,
+    required this.options,
+    required this.onSelect,
+    required this.onRangeSelect,
+  });
+
   final String? title;
   final List<PluginChartSeries> series;
+  final PluginChartOptions options;
   final void Function(String seriesId, int index, double value) onSelect;
+  final void Function(int startIndex, int endIndex) onRangeSelect;
+
+  @override
+  State<_PluginChart> createState() => _PluginChartState();
+}
+
+class _PluginChartState extends State<_PluginChart> {
+  int? _rangeStart;
+  int? _rangeEnd;
+
+  int get _pointCount => widget.series.isEmpty
+      ? 0
+      : widget.series.map((PluginChartSeries series) => series.values.length).reduce((int a, int b) => a > b ? a : b);
+
+  Color _seriesColor(int index) =>
+      widget.series[index].color ??
+      (index == 0 ? Design.accent : Design.text.withAlpha(100 + (index * 30).clamp(0, 100)));
+
+  String _xLabel(int index) =>
+      index >= 0 && index < widget.options.xLabels.length ? widget.options.xLabels[index] : index.toString();
+
+  FlTitlesData _titles() {
+    final bool show = widget.options.showAxes;
+    return FlTitlesData(
+      show: show,
+      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      leftTitles: AxisTitles(
+        axisNameWidget: widget.options.yTitle == null
+            ? null
+            : Text(widget.options.yTitle!, style: TextStyle(fontSize: 9, color: Design.text.withAlpha(100))),
+        sideTitles: SideTitles(
+          showTitles: show,
+          reservedSize: 42,
+          getTitlesWidget: (double value, TitleMeta meta) => Text(
+            value.abs() >= 1000 ? value.toStringAsFixed(0) : value.toStringAsFixed(value.abs() < 10 ? 1 : 0),
+            style: TextStyle(fontSize: 9, color: Design.text.withAlpha(95)),
+          ),
+        ),
+      ),
+      bottomTitles: AxisTitles(
+        axisNameWidget: widget.options.xTitle == null
+            ? null
+            : Text(widget.options.xTitle!, style: TextStyle(fontSize: 9, color: Design.text.withAlpha(100))),
+        sideTitles: SideTitles(
+          showTitles: show,
+          reservedSize: 28,
+          interval: (_pointCount / 6).ceil().clamp(1, 999).toDouble(),
+          getTitlesWidget: (double value, TitleMeta meta) {
+            final int index = value.round();
+            if (index < 0 || index >= _pointCount) return const SizedBox.shrink();
+            return SideTitleWidget(
+              meta: meta,
+              space: 7,
+              child: Text(
+                _xLabel(index),
+                maxLines: 1,
+                style: TextStyle(fontSize: 9, color: Design.text.withAlpha(95)),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  FlGridData _grid() => FlGridData(
+        show: widget.options.showGrid,
+        drawVerticalLine: true,
+        getDrawingHorizontalLine: (_) => FlLine(color: Design.text.withAlpha(16), strokeWidth: 1),
+        getDrawingVerticalLine: (_) => FlLine(color: Design.text.withAlpha(9), strokeWidth: 1),
+      );
+
+  (double, double) _yBounds() {
+    final List<double> values = widget.series.expand((PluginChartSeries series) => series.values).toList();
+    final double rawMin = values.reduce((double a, double b) => a < b ? a : b);
+    final double rawMax = values.reduce((double a, double b) => a > b ? a : b);
+    final double padding =
+        rawMax == rawMin ? (rawMax.abs() * 0.08).clamp(1, double.infinity).toDouble() : (rawMax - rawMin) * 0.08;
+    return (widget.options.minY ?? rawMin - padding, widget.options.maxY ?? rawMax + padding);
+  }
+
+  Widget _lineChart() {
+    final (double, double) bounds = _yBounds();
+    return LineChart(
+      LineChartData(
+        minX: 0,
+        maxX: (_pointCount - 1).toDouble(),
+        minY: bounds.$1,
+        maxY: bounds.$2,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        titlesData: _titles(),
+        lineTouchData: LineTouchData(
+          enabled: widget.options.tooltips,
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipItems: (List<LineBarSpot> spots) => spots
+                .map((LineBarSpot spot) => LineTooltipItem(
+                      '${widget.series[spot.barIndex].label}\n${_xLabel(spot.x.round())}: ${spot.y}',
+                      TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _seriesColor(spot.barIndex)),
+                    ))
+                .toList(growable: false),
+          ),
+        ),
+        lineBarsData: <LineChartBarData>[
+          for (int seriesIndex = 0; seriesIndex < widget.series.length; seriesIndex++)
+            LineChartBarData(
+              spots: <FlSpot>[
+                for (int index = 0; index < widget.series[seriesIndex].values.length; index++)
+                  FlSpot(index.toDouble(), widget.series[seriesIndex].values[index]),
+              ],
+              isCurved: widget.options.type == 'area',
+              curveSmoothness: 0.2,
+              color: _seriesColor(seriesIndex),
+              barWidth: 2,
+              dotData: FlDotData(show: widget.series[seriesIndex].values.length <= 16),
+              belowBarData: BarAreaData(
+                show: widget.options.type == 'area',
+                color: _seriesColor(seriesIndex).withAlpha(28),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _barChart() {
+    final (double, double) bounds = _yBounds();
+    return BarChart(
+      BarChartData(
+        minY: bounds.$1 > 0 ? 0 : bounds.$1,
+        maxY: bounds.$2,
+        borderData: FlBorderData(show: false),
+        gridData: _grid(),
+        titlesData: _titles(),
+        alignment: BarChartAlignment.spaceAround,
+        barTouchData: BarTouchData(
+          enabled: widget.options.tooltips,
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipItem: (BarChartGroupData group, int groupIndex, BarChartRodData rod, int rodIndex) {
+              if (rodIndex >= widget.series.length) return null;
+              return BarTooltipItem(
+                '${widget.series[rodIndex].label}\n${_xLabel(group.x)}: ${rod.toY}',
+                TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _seriesColor(rodIndex)),
+              );
+            },
+          ),
+        ),
+        barGroups: <BarChartGroupData>[
+          for (int index = 0; index < _pointCount; index++)
+            BarChartGroupData(
+              x: index,
+              barsSpace: 2,
+              barRods: <BarChartRodData>[
+                for (int seriesIndex = 0; seriesIndex < widget.series.length; seriesIndex++)
+                  if (index < widget.series[seriesIndex].values.length)
+                    BarChartRodData(
+                      toY: widget.series[seriesIndex].values[index],
+                      width: (22 / widget.series.length).clamp(3, 12).toDouble(),
+                      color: _seriesColor(seriesIndex),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
+                    ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  int _indexAt(double x, double width) => (x / width * (_pointCount - 1)).round().clamp(0, _pointCount - 1).toInt();
 
   @override
   Widget build(BuildContext context) {
-    if (series.isEmpty)
+    if (widget.series.isEmpty) {
       return Center(child: Text('No chart data', style: TextStyle(color: Design.text.withAlpha(120))));
+    }
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
-        if (title != null)
+        if (widget.title != null)
           Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Text(title!, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Design.text))),
+              child:
+                  Text(widget.title!, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Design.text))),
         Expanded(
-            child: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) => GestureDetector(
-                      onTapUp: (TapUpDetails details) {
-                        final PluginChartSeries selected = series.first;
-                        final int index =
-                            (details.localPosition.dx / constraints.maxWidth * (selected.values.length - 1))
-                                .round()
-                                .clamp(0, selected.values.length - 1);
-                        onSelect(selected.id, index, selected.values[index]);
-                      },
-                      child: CustomPaint(painter: _PluginChartPainter(series: series), child: const SizedBox.expand()),
-                    ))),
-        const SizedBox(height: 8),
-        Wrap(spacing: 12, children: <Widget>[
-          for (int i = 0; i < series.length; i++)
-            Text(series[i].label, style: TextStyle(fontSize: 10.5, color: series[i].color ?? Design.accent))
-        ]),
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) => GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTapUp: (TapUpDetails details) {
+                final PluginChartSeries selected = widget.series.first;
+                final int index = _indexAt(details.localPosition.dx, constraints.maxWidth)
+                    .clamp(0, selected.values.length - 1)
+                    .toInt();
+                widget.onSelect(selected.id, index, selected.values[index]);
+              },
+              onHorizontalDragStart: widget.options.selectableRange
+                  ? (DragStartDetails details) {
+                      final int index = _indexAt(details.localPosition.dx, constraints.maxWidth);
+                      setState(() {
+                        _rangeStart = index;
+                        _rangeEnd = index;
+                      });
+                    }
+                  : null,
+              onHorizontalDragUpdate: widget.options.selectableRange
+                  ? (DragUpdateDetails details) =>
+                      setState(() => _rangeEnd = _indexAt(details.localPosition.dx, constraints.maxWidth))
+                  : null,
+              onHorizontalDragEnd: widget.options.selectableRange
+                  ? (_) {
+                      if (_rangeStart == null || _rangeEnd == null) return;
+                      widget.onRangeSelect(
+                        _rangeStart! < _rangeEnd! ? _rangeStart! : _rangeEnd!,
+                        _rangeStart! > _rangeEnd! ? _rangeStart! : _rangeEnd!,
+                      );
+                    }
+                  : null,
+              child: Stack(children: <Widget>[
+                Positioned.fill(child: widget.options.type == 'bar' ? _barChart() : _lineChart()),
+                if (_rangeStart != null && _rangeEnd != null)
+                  Positioned(
+                    left: ((_rangeStart! < _rangeEnd! ? _rangeStart! : _rangeEnd!) /
+                            (_pointCount - 1) *
+                            constraints.maxWidth)
+                        .clamp(0, constraints.maxWidth),
+                    width: (((_rangeStart! - _rangeEnd!).abs() + 1) / _pointCount * constraints.maxWidth)
+                        .clamp(3, constraints.maxWidth),
+                    top: 0,
+                    bottom: 0,
+                    child: IgnorePointer(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Design.accent.withAlpha(20),
+                          border: Border.symmetric(vertical: BorderSide(color: Design.accent.withAlpha(100))),
+                        ),
+                      ),
+                    ),
+                  ),
+              ]),
+            ),
+          ),
+        ),
+        if (widget.options.showLegend) ...<Widget>[
+          const SizedBox(height: 8),
+          Wrap(spacing: 14, runSpacing: 5, children: <Widget>[
+            for (int index = 0; index < widget.series.length; index++)
+              Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                Container(
+                    width: 8, height: 8, decoration: BoxDecoration(color: _seriesColor(index), shape: BoxShape.circle)),
+                const SizedBox(width: 5),
+                Text(widget.series[index].label, style: TextStyle(fontSize: 10.5, color: Design.text.withAlpha(145))),
+              ]),
+          ]),
+        ],
       ]),
     );
   }
-}
-
-class _PluginChartPainter extends CustomPainter {
-  const _PluginChartPainter({required this.series});
-  final List<PluginChartSeries> series;
-  @override
-  void paint(Canvas canvas, Size size) {
-    final List<double> values = series.expand((PluginChartSeries s) => s.values).toList();
-    final double min = values.reduce((double a, double b) => a < b ? a : b),
-        max = values.reduce((double a, double b) => a > b ? a : b);
-    for (int s = 0; s < series.length; s++) {
-      final PluginChartSeries seriesItem = series[s];
-      final Path path = Path();
-      for (int i = 0; i < seriesItem.values.length; i++) {
-        final double x = size.width * i / (seriesItem.values.length - 1);
-        final double y = size.height - ((seriesItem.values[i] - min) / (max - min == 0 ? 1 : max - min) * size.height);
-        if (i == 0) {
-          path.moveTo(x, y);
-        } else {
-          path.lineTo(x, y);
-        }
-      }
-      canvas.drawPath(
-          path,
-          Paint()
-            ..color = seriesItem.color ?? (s == 0 ? Design.accent : Design.text.withAlpha(150))
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2
-            ..strokeJoin = StrokeJoin.round);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _PluginChartPainter oldDelegate) => !identical(series, oldDelegate.series);
 }
 
 class _PluginProgressBar extends StatelessWidget {

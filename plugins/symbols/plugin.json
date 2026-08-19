@@ -6,5 +6,5 @@
   "entry": "main.js",
   "icon": "tag",
   "description": "Search and copy special characters, math symbols, punctuation, and language characters.",
-  "dev": true
+  "dev": false
 }

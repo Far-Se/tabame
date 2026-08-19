@@ -21,18 +21,19 @@ Try these queries after typing the `echo ` keyword in the launcher:
     echo hello              -> a plain list (sections, colored badges, progress)
     echo grid               -> a grid of color-swatch tiles (tileColor)
     echo detail             -> a full-width markdown view + metadata rows
-    echo preview something   -> a list with a live preview pane (metadata + sparkline)
-    echo form               -> rich v9 form sections, conditions, async combobox
+    echo preview something   -> a list with a resizable preview pane
+    echo toolbar            -> filters, scope, sort, list/grid, and inline edits
+    echo form               -> rich v13 inputs, async validation, and drop zone
     echo form legacy        -> original flat form for comparison
     echo empty              -> a custom empty state (with a call-to-action)
     echo chat               -> submit-mode input + streaming detail.append
     echo more               -> a paginated list (hasMore / loadMore)
     echo storage            -> persistent storage + background finish + notify
     echo bulk               -> multi-select + batch action IDs
-    echo table              -> structured table cells
+    echo table              -> sortable/editable table with resizable columns
     echo tree               -> expandable tree + toggle events
     echo timeline           -> timestamped timeline rows
-    echo chart              -> clickable multi-series chart
+    echo chart [line|area|bar] -> axes, tooltips, legends, and range selection
     echo operation          -> cancellable long-running operation
     echo params             -> action parameter form + confirmation gate
     echo oauth              -> host-owned OAuth callback + secret-storage pattern
@@ -44,17 +45,25 @@ Try these queries after typing the `echo ` keyword in the launcher:
     echo log                -> structured log levels, append action, wrapping
     echo calendar           -> month calendar; switch to the agenda in its header
     echo calendar agenda    -> agenda mode with date navigation
-    echo gallery            -> image, video, audio, and file media tiles
+    echo gallery            -> image, video, audio, file, and playback controls
     echo gallery contain    -> media browser with contain-fit thumbnails
+    echo drop               -> page-level operating-system file drop target
+    echo banners            -> actionable and dismissible callouts
+    echo loading            -> replayable skeleton loading state
     Tab on a list item       -> autocompletes the query via a setQuery command
     Ctrl+K                   -> item actions + frame actions (shortcuts, confirm)
 """
 
 import datetime
 import json
+import math
+from pathlib import Path
+import struct
 import sys
+import tempfile
 import threading
 import time
+import wave
 from urllib.parse import quote
 
 
@@ -87,6 +96,44 @@ STATE = {
     "page_topic": None,
     "form_values": {},
     "form_request": 0,
+    "form_validation_request": 0,
+    "form_validation": {"value": "", "validating": False, "valid": None, "error": None},
+    "toolbar": {
+        "statuses": ["active", "paused"],
+        "scope": "all",
+        "sort": "updated",
+        "direction": "desc",
+        "view": "list",
+    },
+    "toolbar_items": [
+        {"id": "alpha", "title": "Alpha workspace", "subtitle": "Design system", "status": "active", "scope": "mine", "updated": 6, "color": "#0EA5E9"},
+        {"id": "beacon", "title": "Beacon API", "subtitle": "Public gateway", "status": "paused", "scope": "team", "updated": 2, "color": "#8250DF"},
+        {"id": "canvas", "title": "Canvas web", "subtitle": "Customer portal", "status": "active", "scope": "team", "updated": 5, "color": "#10B981"},
+        {"id": "delta", "title": "Delta worker", "subtitle": "Queue processor", "status": "archived", "scope": "mine", "updated": 1, "color": "#F59E0B"},
+        {"id": "ember", "title": "Ember mobile", "subtitle": "Companion app", "status": "paused", "scope": "mine", "updated": 4, "color": "#DB2777"},
+        {"id": "forge", "title": "Forge CLI", "subtitle": "Developer tooling", "status": "archived", "scope": "team", "updated": 3, "color": "#64748B"},
+    ],
+    "table_rows": [
+        {"id": "build", "title": "Build API", "status": "Passing", "owner": "Runtime", "updated": 2},
+        {"id": "deploy", "title": "Deploy worker", "status": "Running", "owner": "Platform", "updated": 0},
+        {"id": "docs", "title": "Publish docs", "status": "Queued", "owner": "Docs", "updated": 5},
+        {"id": "audit", "title": "Security audit", "status": "Blocked", "owner": "Security", "updated": 18},
+        {"id": "release", "title": "Create release", "status": "Passing", "owner": "Platform", "updated": 7},
+        {"id": "integration", "title": "Integration suite", "status": "Running", "owner": "QA", "updated": 1},
+        {"id": "package", "title": "Package desktop", "status": "Queued", "owner": "Desktop", "updated": 9},
+        {"id": "notify", "title": "Notify channels", "status": "Passing", "owner": "Runtime", "updated": 11},
+        {"id": "cleanup", "title": "Cleanup artifacts", "status": "Blocked", "owner": "Platform", "updated": 24},
+        {"id": "analytics", "title": "Upload analytics", "status": "Passing", "owner": "Data", "updated": 13},
+        {"id": "backup", "title": "Snapshot backup", "status": "Running", "owner": "Security", "updated": 3},
+        {"id": "lint", "title": "Lint packages", "status": "Queued", "owner": "QA", "updated": 15},
+    ],
+    "table_sort": {"column": "updated", "direction": "asc"},
+    "dropped_files": [],
+    "drop_banner": None,
+    "loading_request": 0,
+    "loading_ready": False,
+    "chart_type": "area",
+    "chart_range": None,
     "kanban_cards": [
         {"id": "card:spec", "title": "Write protocol spec", "column": "done", "owner": "Docs"},
         {"id": "card:form", "title": "Polish rich forms", "column": "review", "owner": "UI"},
@@ -96,7 +143,7 @@ STATE = {
     ],
     "log_wrap": False,
     "log_lines": [
-        {"id": "log:1", "timestamp": "09:41:02", "level": "info", "source": "echo", "text": "Protocol v10 demo initialized"},
+        {"id": "log:1", "timestamp": "09:41:02", "level": "info", "source": "echo", "text": "Protocol v13 demo initialized"},
         {"id": "log:2", "timestamp": "09:41:03", "level": "debug", "source": "router", "text": "Registered page and scoped-event demos"},
         {"id": "log:3", "timestamp": "09:41:04", "level": "warn", "source": "worker", "text": "This warning is intentional and demonstrates level tinting"},
         {"id": "log:4", "timestamp": "09:41:05", "level": "success", "source": "render", "text": "Kanban, diff, and log frames are ready"},
@@ -105,6 +152,7 @@ STATE = {
     "calendar_mode": "month",
 }
 BG_THREAD = None
+DEMO_TONE_URI = None
 
 # Frame-level actions (v3): available from Ctrl+K on any view, with direct
 # keyboard shortcuts and a confirm-gated destructive entry.
@@ -160,6 +208,7 @@ def render_list(text, rev, with_preview):
         "grid",
         "detail",
         "preview",
+        "toolbar",
         "form",
         "empty",
         "chat",
@@ -181,6 +230,9 @@ def render_list(text, rev, with_preview):
         "log",
         "calendar",
         "gallery",
+        "drop",
+        "banners",
+        "loading",
     ]
     items = []
     for i, word in enumerate(words):
@@ -234,9 +286,308 @@ def render_list(text, rev, with_preview):
             },
             "elementId": "echo-results",
             "emptyText": "Nothing to echo yet",
-            "placeholder": "Try pages / form / dashboard / kanban / diff / log",
-            "preview": {"enabled": with_preview},
+            "placeholder": "Try toolbar / table / form / chart / drop / gallery",
+            "preview": {
+                "enabled": with_preview,
+                "resizable": with_preview,
+                "initialWidth": 380,
+                "minWidth": 260,
+                "maxWidth": 620,
+            },
             "actions": FRAME_ACTIONS,
+            "items": items,
+        }
+    )
+
+
+def render_toolbar(rev):
+    toolbar = STATE["toolbar"]
+    selected_statuses = set(toolbar["statuses"])
+    rows = [
+        row
+        for row in STATE["toolbar_items"]
+        if (not selected_statuses or row["status"] in selected_statuses)
+        and (toolbar["scope"] == "all" or row["scope"] == toolbar["scope"])
+    ]
+    sort_key = toolbar["sort"]
+    rows.sort(
+        key=lambda row: row[sort_key].lower()
+        if isinstance(row[sort_key], str)
+        else row[sort_key],
+        reverse=toolbar["direction"] == "desc",
+    )
+    items = []
+    for row in rows:
+        item_id = f"toolbar:{row['id']}"
+        LAST_ITEMS[item_id] = row["title"]
+        items.append(
+            {
+                "id": item_id,
+                "title": row["title"],
+                "subtitle": row["subtitle"],
+                "icon": row["color"],
+                "tileColor": row["color"],
+                "editable": ["title", "subtitle"],
+                "accessories": [
+                    {"text": row["status"], "color": row["color"]},
+                    {"text": f"{row['updated']}m", "icon": "clock"},
+                ],
+                "actions": [
+                    {"id": "default", "title": "Inspect", "icon": "open"},
+                    {"id": "copy", "title": "Copy title", "icon": "copy"},
+                ],
+                "preview": {
+                    "markdown": f"## {row['title']}\n\n{row['subtitle']}",
+                    "metadata": [
+                        {"label": "Status", "text": row["status"], "color": row["color"]},
+                        {"label": "Scope", "text": row["scope"], "icon": "people"},
+                        {"label": "Updated", "text": f"{row['updated']} minutes ago", "icon": "clock"},
+                    ],
+                },
+            }
+        )
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": toolbar["view"],
+            "page": {
+                "id": "v13:toolbar",
+                "title": "Toolbar primitives",
+                "history": "replace",
+                "preserveState": True,
+            },
+            "elementId": "toolbar-results",
+            "canGoBack": True,
+            "placeholder": "Use the toolbar controls above the results",
+            "empty": {
+                "icon": "search",
+                "title": "No projects match",
+                "hint": "Clear a filter or broaden the scope.",
+            },
+            "toolbar": {
+                "filters": [
+                    {
+                        "id": "status",
+                        "label": "Status",
+                        "multiple": True,
+                        "values": toolbar["statuses"],
+                        "options": [
+                            {"value": "active", "label": "Active", "icon": "check"},
+                            {"value": "paused", "label": "Paused", "icon": "timer"},
+                            {"value": "archived", "label": "Archived", "icon": "folder"},
+                        ],
+                    }
+                ],
+                "scope": {
+                    "id": "scope",
+                    "label": "Scope",
+                    "value": toolbar["scope"],
+                    "options": [
+                        {"value": "all", "label": "All projects", "icon": "world"},
+                        {"value": "mine", "label": "My projects", "icon": "person"},
+                        {"value": "team", "label": "Team projects", "icon": "people"},
+                    ],
+                },
+                "sort": {
+                    "id": "sort",
+                    "label": "Sort",
+                    "value": toolbar["sort"],
+                    "direction": toolbar["direction"],
+                    "options": [
+                        {"value": "updated", "label": "Recently updated", "icon": "clock"},
+                        {"value": "title", "label": "Name", "icon": "tag"},
+                        {"value": "status", "label": "Status", "icon": "list"},
+                    ],
+                },
+                "view": {
+                    "id": "view",
+                    "value": toolbar["view"],
+                    "options": [
+                        {"value": "list", "label": "List", "icon": "list"},
+                        {"value": "grid", "label": "Grid", "icon": "grid"},
+                    ],
+                },
+            },
+            "banners": [
+                {
+                    "id": "toolbar-edit-hint",
+                    "style": "info",
+                    "title": "Everything is live",
+                    "message": "Change a control or double-click a list title/subtitle to edit it.",
+                    "dismissible": True,
+                }
+            ],
+            "grid": {"columns": 3, "aspectRatio": 1.35},
+            "preview": {
+                "enabled": toolbar["view"] == "list",
+                "resizable": True,
+                "initialWidth": 340,
+                "minWidth": 240,
+                "maxWidth": 560,
+            },
+            "items": items,
+        }
+    )
+
+
+def render_banners(rev):
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "list",
+            "page": {"id": "v13:banners", "title": "Banners", "history": "replace"},
+            "elementId": "banner-showcase",
+            "canGoBack": True,
+            "banners": [
+                {
+                    "id": "banner-info",
+                    "style": "info",
+                    "title": "A new release is ready",
+                    "message": "Protocol v13 primitives are available to every launcher plugin.",
+                    "icon": "info",
+                    "dismissible": True,
+                    "actions": [{"id": "banner:details", "title": "View details", "icon": "open"}],
+                },
+                {
+                    "id": "banner-success",
+                    "style": "success",
+                    "title": "Sync complete",
+                    "message": "All demo data is current.",
+                    "icon": "check",
+                },
+                {
+                    "id": "banner-warning",
+                    "style": "warning",
+                    "title": "Limited connectivity",
+                    "message": "Some results may be served from cache.",
+                    "icon": "warning",
+                    "dismissible": True,
+                    "actions": [{"id": "banner:retry", "title": "Retry", "icon": "refresh"}],
+                },
+                {
+                    "id": "banner-error",
+                    "style": "error",
+                    "title": "One check needs attention",
+                    "message": "This is a non-destructive error callout preview.",
+                    "icon": "error",
+                    "actions": [{"id": "banner:ack", "title": "Acknowledge", "icon": "check"}],
+                },
+            ],
+            "items": [
+                {
+                    "id": "banner:guide",
+                    "title": "Banner behavior",
+                    "subtitle": "Dismissals are host-owned; actions return normal action events.",
+                    "icon": "info",
+                }
+            ],
+        }
+    )
+
+
+def render_drop(rev):
+    items = []
+    for index, path in enumerate(STATE["dropped_files"]):
+        file_path = Path(path)
+        item_id = f"drop:{index}"
+        LAST_ITEMS[item_id] = file_path.name or path
+        items.append(
+            {
+                "id": item_id,
+                "title": file_path.name or path,
+                "subtitle": path,
+                "icon": "file",
+                "actions": [{"id": "drop:copy-path", "title": "Copy path", "icon": "copy"}],
+            }
+        )
+    frame = {
+        "type": "render",
+        "rev": rev,
+        "view": "list",
+        "page": {"id": "v13:drop", "title": "File drop", "history": "replace", "preserveState": True},
+        "elementId": "page-drop-zone",
+        "canGoBack": True,
+        "dropZone": {
+            "id": "echo-files",
+            "label": "Drop files here",
+            "hint": "Accepts up to 8 text, image, JSON, or Markdown files",
+            "extensions": ["txt", "md", "json", "png", "jpg", "jpeg", "webp"],
+            "multiple": True,
+            "maxFiles": 8,
+        },
+        "empty": {
+            "icon": "upload",
+            "title": "Drop something into the launcher",
+            "hint": "The plugin receives accepted absolute paths without reading the files.",
+        },
+        "items": items,
+    }
+    if STATE["drop_banner"]:
+        frame["banners"] = [STATE["drop_banner"]]
+    send(frame)
+
+
+def render_loading(rev, restart=True):
+    if restart:
+        STATE["loading_request"] += 1
+        request = STATE["loading_request"]
+        STATE["loading_ready"] = False
+        send(
+            {
+                "type": "render",
+                "rev": rev,
+                "view": "list",
+                "page": {"id": "v13:loading", "title": "Skeleton loading", "history": "replace"},
+                "elementId": "skeleton-results",
+                "canGoBack": True,
+                "loading": {"style": "skeleton", "count": 6},
+                "loadingText": "Preparing protocol-v13 results…",
+                "items": [],
+            }
+        )
+
+        def finish():
+            time.sleep(0.8)
+            if STATE["screen"] != "loading" or STATE["loading_request"] != request:
+                return
+            STATE["loading_ready"] = True
+            render_loading(0, restart=False)
+
+        threading.Thread(target=finish, daemon=True).start()
+        return
+
+    items = []
+    for index, title in enumerate(["Launcher", "Plugin host", "Renderer", "Actions", "Forms", "Charts"]):
+        item_id = f"loading:{index}"
+        LAST_ITEMS[item_id] = title
+        items.append(
+            {
+                "id": item_id,
+                "title": title,
+                "subtitle": "Loaded from the skeleton state",
+                "icon": "check",
+                "accessories": [{"text": "Ready", "color": "#10B981"}],
+            }
+        )
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "list",
+            "page": {"id": "v13:loading", "title": "Skeleton loading", "history": "none"},
+            "elementId": "skeleton-results",
+            "canGoBack": True,
+            "banners": [
+                {
+                    "id": "loading-complete",
+                    "style": "success",
+                    "title": "Content loaded",
+                    "message": "Replay the transition to inspect the skeleton placeholders again.",
+                    "actions": [{"id": "loading:replay", "title": "Replay", "icon": "refresh"}],
+                }
+            ],
             "items": items,
         }
     )
@@ -315,6 +666,7 @@ def render_detail(text, rev):
 
 
 PAGE_TOPICS = [
+    ("primitives", "Protocol v13 primitives", "Toolbars, banners, drops, editing, loading, and resizable panes", "extension"),
     ("navigation", "Page identity", "Stable IDs preserve selection and scroll position", "home"),
     ("breadcrumbs", "Breadcrumb navigation", "Click the Demos crumb to return here", "link"),
     ("scope", "Scoped events", "Events identify their page, panel, and element", "extension"),
@@ -326,7 +678,7 @@ PAGE_TOPICS = [
     ("dashboard", "Connected panels", "Nested controls and data emit scoped events", "chart"),
     ("history", "Host history", "Escape follows the page stack before leaving", "clock"),
     ("elements", "Element identity", "Independent widgets can reuse item IDs safely", "extension"),
-    ("compat", "Additive protocol", "Older plugins can ignore all v9 scope fields", "check"),
+    ("compat", "Additive protocol", "Older plugins can ignore all v13 fields", "check"),
     ("calendar", "Calendar and agenda", "Month grid, chronological agenda, and date navigation", "calendar"),
     ("gallery", "Gallery and media", "Image, video, audio, and file browser tiles", "image"),
 ]
@@ -356,7 +708,7 @@ def render_pages(rev):
             "view": "list",
             "page": {
                 "id": "pages:home",
-                "title": "Protocol v9 pages",
+                "title": "Protocol v13 pages",
                 "history": "push",
                 "preserveState": True,
             },
@@ -482,6 +834,8 @@ def render_rich_form(rev, message_error=None, options_loading=False, recipient_o
             {"value": "margaret", "label": "Margaret Hamilton"},
             {"value": "alan", "label": "Alan Turing"},
         ]
+    validation = STATE["form_validation"]
+    async_error = message_error or validation.get("error")
     send(
         {
             "type": "render",
@@ -498,7 +852,7 @@ def render_rich_form(rev, message_error=None, options_loading=False, recipient_o
             "canGoBack": True,
             "actions": FRAME_ACTIONS,
             "form": {
-                "title": "Compose a protocol-v9 echo",
+                "title": "Compose a protocol-v13 echo",
                 **(
                     {"error": "The server rejected one value. Your other fields were preserved."}
                     if message_error
@@ -522,6 +876,18 @@ def render_rich_form(rev, message_error=None, options_loading=False, recipient_o
                         "description": "Async recipient search and scheduling",
                         "collapsible": True,
                     },
+                    {
+                        "id": "inputs",
+                        "title": "Additional inputs",
+                        "description": "Time, color, range, choice, app, and shortcut controls",
+                        "collapsible": True,
+                    },
+                    {
+                        "id": "developer",
+                        "title": "Developer inputs",
+                        "description": "Code, validated JSON, and attachment drop zones",
+                        "collapsible": True,
+                    },
                 ],
                 "buttons": [
                     {"id": "echo", "label": "Echo it"},
@@ -537,10 +903,14 @@ def render_rich_form(rev, message_error=None, options_loading=False, recipient_o
                         "section": "content",
                         "minLength": 3,
                         "maxLength": 60,
+                        "validate": True,
+                        "validationDebounceMs": 350,
+                        **({"validating": True} if validation.get("validating") else {}),
+                        **({"valid": validation["valid"]} if isinstance(validation.get("valid"), bool) else {}),
                         "pattern": r".*\S.*",
                         "validationMessage": "Use 3–60 non-blank characters",
-                        "description": "Try 'bad' to see server validation preserve state.",
-                        **({"error": message_error} if message_error else {}),
+                        "description": "Async validation rejects values containing 'bad'.",
+                        **({"error": async_error} if async_error else {}),
                     },
                     {
                         "id": "include_notes",
@@ -626,18 +996,107 @@ def render_rich_form(rev, message_error=None, options_loading=False, recipient_o
                         "section": "delivery",
                     },
                     {
+                        "id": "delivery_time",
+                        "type": "time",
+                        "label": "Delivery time",
+                        "value": "09:30",
+                        "section": "inputs",
+                    },
+                    {
+                        "id": "publish_at",
+                        "type": "datetime",
+                        "label": "Publish at",
+                        "value": "2026-08-20T10:30",
+                        "section": "inputs",
+                    },
+                    {
+                        "id": "accent",
+                        "type": "color",
+                        "label": "Accent color",
+                        "value": "#0EA5E9",
+                        "section": "inputs",
+                    },
+                    {
+                        "id": "intensity",
+                        "type": "slider",
+                        "label": "Echo intensity",
+                        "value": 65,
+                        "min": 0,
+                        "max": 100,
+                        "step": 5,
+                        "section": "inputs",
+                    },
+                    {
+                        "id": "delivery_mode",
+                        "type": "radio",
+                        "label": "Delivery mode",
+                        "value": "balanced",
+                        "options": [
+                            {"value": "fast", "label": "Fast"},
+                            {"value": "balanced", "label": "Balanced"},
+                            {"value": "safe", "label": "Safe"},
+                        ],
+                        "section": "inputs",
+                    },
+                    {
+                        "id": "targets",
+                        "type": "multiselect",
+                        "label": "Targets",
+                        "value": ["launcher", "desktop"],
+                        "options": ["launcher", "desktop", "clipboard", "notification"],
+                        "section": "inputs",
+                    },
+                    {
+                        "id": "application",
+                        "type": "apppicker",
+                        "label": "Open with application",
+                        "section": "inputs",
+                    },
+                    {
+                        "id": "shortcut",
+                        "type": "shortcut",
+                        "label": "Global shortcut",
+                        "value": "ctrl+shift+e",
+                        "section": "inputs",
+                    },
+                    {
+                        "id": "transform",
+                        "type": "code",
+                        "label": "Transform code",
+                        "value": "def transform(value):\n    return value.upper()",
+                        "rows": 6,
+                        "section": "developer",
+                    },
+                    {
+                        "id": "configuration",
+                        "type": "json",
+                        "label": "Configuration",
+                        "value": '{\n  "format": "markdown",\n  "notify": true\n}',
+                        "rows": 7,
+                        "description": "Invalid JSON is rejected locally before submit.",
+                        "section": "developer",
+                    },
+                    {
+                        "id": "attachments",
+                        "type": "dropzone",
+                        "label": "Attachment drop zone",
+                        "multiple": True,
+                        "extensions": ["txt", "md", "json", "png"],
+                        "section": "developer",
+                    },
+                    {
                         "id": "protocol",
                         "type": "text",
                         "label": "Protocol",
-                        "value": "v9 · scoped + stateful",
-                        "section": "delivery",
+                        "value": "v13 · primitives + scoped events",
+                        "section": "developer",
                         "readOnly": True,
                     },
                     {
                         "id": "copy",
                         "type": "checkbox",
                         "label": "Copy result to clipboard",
-                        "section": "delivery",
+                        "section": "developer",
                     },
                 ],
             },
@@ -670,6 +1129,41 @@ def refresh_recipient_options(values):
             if not query or query in value or query in label.lower()
         ]
         render_rich_form(0, recipient_options=options)
+
+    threading.Thread(target=finish, daemon=True).start()
+
+
+def validate_message(values, rev=0):
+    if not isinstance(values, dict):
+        values = {}
+    STATE["form_values"] = values
+    STATE["form_validation_request"] += 1
+    request = STATE["form_validation_request"]
+    value = str(values.get("message") or "")
+    STATE["form_validation"] = {
+        "value": value,
+        "validating": True,
+        "valid": None,
+        "error": None,
+    }
+    render_rich_form(rev)
+
+    def finish():
+        time.sleep(0.45)
+        if STATE["screen"] != "form" or STATE["form_validation_request"] != request:
+            return
+        error = (
+            "The Echo demo reserves messages containing 'bad'."
+            if "bad" in value.strip().lower()
+            else None
+        )
+        STATE["form_validation"] = {
+            "value": value,
+            "validating": False,
+            "valid": error is None,
+            "error": error,
+        }
+        render_rich_form(0)
 
     threading.Thread(target=finish, daemon=True).start()
 
@@ -868,7 +1362,8 @@ def handle_submit(values, button, msg=None):
         handle_query("", 0)
         return
     message = values.get("message") or ""
-    if message.strip().lower() == "bad":
+    STATE["form_values"] = values
+    if "bad" in message.strip().lower():
         # Plugin-side validation demo: reject and show an inline field error.
         render_rich_form(0, message_error='"bad" is not echo-worthy — try anything else')
         return
@@ -969,21 +1464,33 @@ def render_bulk(rev):
 
 
 def render_table(rev):
-    rows = [
-        ("Build API", "Passing", "2m ago"),
-        ("Deploy worker", "Running", "now"),
-        ("Publish docs", "Queued", "5m ago"),
-    ]
+    sort_column = STATE["table_sort"]["column"]
+    direction = STATE["table_sort"]["direction"]
+    rows = list(STATE["table_rows"])
+    rows.sort(
+        key=lambda row: row[sort_column].lower()
+        if isinstance(row[sort_column], str)
+        else row[sort_column],
+        reverse=direction == "desc",
+    )
     items = []
-    for i, (name, status, when) in enumerate(rows):
-        LAST_ITEMS[f"table:{i}"] = name
+    for row in rows:
+        item_id = f"table:{row['id']}"
+        LAST_ITEMS[item_id] = row["title"]
+        updated = "now" if row["updated"] == 0 else f"{row['updated']}m ago"
         items.append(
             {
-                "id": f"table:{i}",
-                "title": name,
-                "subtitle": status,
+                "id": item_id,
+                "title": row["title"],
+                "subtitle": row["status"],
                 "icon": "list",
-                "cells": {"status": status, "updated": when},
+                "cells": {
+                    "status": row["status"],
+                    "owner": row["owner"],
+                    "updated": updated,
+                    "run": f"run-{row['id']}-13",
+                },
+                "editable": ["title", "status", "owner"],
                 "actions": [{"id": "default", "title": "Inspect", "icon": "open"}],
             }
         )
@@ -992,12 +1499,32 @@ def render_table(rev):
             "type": "render",
             "rev": rev,
             "view": "table",
+            "page": {"id": "v13:table", "title": "Advanced table", "history": "replace", "preserveState": True},
+            "elementId": "job-table",
             "canGoBack": True,
-            "columns": [
-                {"id": "title", "label": "Job"},
-                {"id": "status", "label": "Status"},
-                {"id": "updated", "label": "Updated", "align": "end"},
+            "banners": [
+                {
+                    "id": "table-hint",
+                    "style": "info",
+                    "title": "Interactive columns",
+                    "message": "Sort headers, drag dividers, hide columns, or double-click editable cells.",
+                    "dismissible": True,
+                }
             ],
+            "columns": [
+                {"id": "title", "label": "Job", "width": 210, "minWidth": 130, "maxWidth": 360, "sortable": True, "editable": True},
+                {"id": "status", "label": "Status", "width": 120, "minWidth": 90, "maxWidth": 180, "sortable": True, "editable": True},
+                {"id": "owner", "label": "Owner", "width": 130, "minWidth": 90, "maxWidth": 210, "sortable": True, "editable": True},
+                {"id": "updated", "label": "Updated", "width": 100, "minWidth": 80, "maxWidth": 150, "align": "end", "sortable": True},
+                {"id": "run", "label": "Run ID", "width": 150, "minWidth": 110, "maxWidth": 240, "visible": False},
+            ],
+            "table": {
+                "resizable": True,
+                "stickyHeader": True,
+                "columnVisibility": True,
+                "sortColumn": sort_column,
+                "sortDirection": direction,
+            },
             "items": items,
         }
     )
@@ -1082,31 +1609,60 @@ def render_timeline(rev):
 
 
 def render_chart(rev):
-    send(
-        {
-            "type": "render",
-            "rev": rev,
-            "view": "chart",
-            "canGoBack": True,
-            "chart": {
-                "title": "API latency (ms) — click a point",
-                "series": [
-                    {
-                        "id": "p50",
-                        "label": "p50",
-                        "color": "#0EA5E9",
-                        "values": [34, 29, 37, 31, 28, 33, 30],
-                    },
-                    {
-                        "id": "p95",
-                        "label": "p95",
-                        "color": "#F59E0B",
-                        "values": [92, 88, 115, 104, 81, 98, 89],
-                    },
-                ],
-            },
-        }
-    )
+    chart_type = STATE["chart_type"]
+    frame = {
+        "type": "render",
+        "rev": rev,
+        "view": "chart",
+        "page": {"id": "v13:chart", "title": "Advanced chart", "history": "replace", "preserveState": True},
+        "elementId": "latency-chart",
+        "canGoBack": True,
+        "actions": [
+            {"id": "chart:type:line", "title": "Line chart", "icon": "chart"},
+            {"id": "chart:type:area", "title": "Area chart", "icon": "graph"},
+            {"id": "chart:type:bar", "title": "Bar chart", "icon": "grid"},
+        ],
+        "chart": {
+            "title": f"API latency - {chart_type} (click or drag a range)",
+            "type": chart_type,
+            "showAxes": True,
+            "showGrid": True,
+            "showLegend": True,
+            "tooltips": True,
+            "selectableRange": True,
+            "xLabels": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+            "xTitle": "Day",
+            "yTitle": "Latency (ms)",
+            "minY": 0,
+            "maxY": 140,
+            "series": [
+                {
+                    "id": "p50",
+                    "label": "p50",
+                    "color": "#0EA5E9",
+                    "values": [34, 29, 37, 31, 28, 33, 30],
+                },
+                {
+                    "id": "p95",
+                    "label": "p95",
+                    "color": "#F59E0B",
+                    "values": [92, 88, 115, 104, 81, 98, 89],
+                },
+            ],
+        },
+    }
+    if STATE["chart_range"]:
+        start, end = STATE["chart_range"]
+        frame["banners"] = [
+            {
+                "id": "chart-range",
+                "style": "info",
+                "title": "Range selected",
+                "message": f"Indices {start} through {end} were returned to the plugin.",
+                "dismissible": True,
+            }
+        ]
+    send(frame)
 
 
 def render_kanban(rev):
@@ -1210,8 +1766,8 @@ def render_diff(rev, split=False):
             ],
             "diff": {
                 "mode": "split" if split else "unified",
-                "oldLabel": "Protocol v9",
-                "newLabel": "Protocol v10",
+                "oldLabel": "Protocol v12",
+                "newLabel": "Protocol v13",
                 "lines": lines,
             },
         }
@@ -1278,6 +1834,34 @@ def media_svg(label, color, detail="ECHO MEDIA"):
     return "data:image/svg+xml," + quote(svg)
 
 
+def demo_tone_uri():
+    """Create a tiny dependency-free WAV outside the plugin directory."""
+    global DEMO_TONE_URI
+    if DEMO_TONE_URI:
+        return DEMO_TONE_URI
+    path = Path(tempfile.gettempdir()) / "tabame-echo-v13-tone.wav"
+    try:
+        if not path.exists() or path.stat().st_size < 1000:
+            sample_rate = 22050
+            duration = 2.0
+            frames = bytearray()
+            for index in range(int(sample_rate * duration)):
+                position = index / sample_rate
+                fade = min(1.0, position * 8, (duration - position) * 8)
+                value = int(32767 * 0.16 * fade * math.sin(2 * math.pi * 523.25 * position))
+                frames.extend(struct.pack("<h", value))
+            with wave.open(str(path), "wb") as output:
+                output.setnchannels(1)
+                output.setsampwidth(2)
+                output.setframerate(sample_rate)
+                output.writeframes(frames)
+        DEMO_TONE_URI = path.resolve().as_uri()
+    except (OSError, wave.Error) as error:
+        print(f"could not create gallery demo tone: {error}", file=sys.stderr, flush=True)
+        DEMO_TONE_URI = ""
+    return DEMO_TONE_URI
+
+
 def calendar_anchor(value):
     try:
         return datetime.date.fromisoformat(str(value))
@@ -1295,7 +1879,7 @@ def render_calendar(rev, mode=None, date_value=None):
     event_specs = [
         (1, "Release planning", "09:30", "10:15", "#8B5CF6", "Studio A", False),
         (3, "Design critique", "14:00", "15:00", "#EC4899", "Workshop", False),
-        (5, "Ship protocol v10", None, None, "#10B981", None, True),
+        (5, "Ship protocol v13", None, None, "#10B981", None, True),
         (8, "Partner sync", "11:00", "11:45", "#3B82F6", "Video room", False),
         (12, "Media review", "16:30", "17:15", "#F59E0B", "Edit suite", False),
         (17, "Focus day", None, None, "#06B6D4", None, True),
@@ -1359,11 +1943,12 @@ def render_gallery(rev, contain=False):
         ("field", "Field recording", "audio", "#059669", "96 kHz audio", "12:36", 105000000),
         ("archive", "Source archive", "file", "#DC2626", "ZIP bundle", None, 426000000),
     ]
+    playback_source = demo_tone_uri()
     items = []
     for key, title, media_type, color, subtitle, duration, size in specs:
         artwork = media_svg(title, color, media_type.upper())
         media = {
-            "url": artwork,
+            "url": playback_source if media_type in {"audio", "video"} and playback_source else artwork,
             "type": media_type,
             "thumbnail": artwork,
             "size": size,
@@ -1400,6 +1985,15 @@ def render_gallery(rev, contain=False):
             },
             "elementId": "media-library",
             "canGoBack": True,
+            "banners": [
+                {
+                    "id": "gallery-playback",
+                    "style": "info",
+                    "title": "Playback controls are live",
+                    "message": "Audio and video tiles share a short offline demo tone for play, pause, seek, loading, and error states.",
+                    "dismissible": True,
+                }
+            ],
             "multiSelect": True,
             "batchActions": [{"id": "gallery:add", "title": "Add selected to collection", "icon": "add"}],
             "gallery": {
@@ -1414,7 +2008,7 @@ def render_gallery(rev, contain=False):
 
 
 def render_dashboard(rev, tabs=False):
-    """Protocol v9 composite result with independently scoped panel events."""
+    """Protocol v13 composite result with independently scoped panel events."""
     LAST_ITEMS["dash:build"] = "Build"
     LAST_ITEMS["dash:test"] = "Tests"
     panels = [
@@ -1427,7 +2021,7 @@ def render_dashboard(rev, tabs=False):
             "detail": {
                 "markdown": "# Release health\n\n**All checks are green.** This markdown panel lives beside structured data.",
                 "metadata": [
-                    {"label": "Version", "text": "v9 demo", "color": "#10B981"},
+                    {"label": "Version", "text": "v13 demo", "color": "#10B981"},
                     {"label": "Owner", "text": "Echo"},
                 ],
             },
@@ -1698,10 +2292,15 @@ def handle_query(text, rev):
         render_grid(text, rev)
     elif stripped.startswith("detail"):
         render_detail(text, rev)
+    elif stripped.startswith("toolbar"):
+        STATE["screen"] = "toolbar"
+        render_toolbar(rev)
     elif stripped.startswith("form"):
         STATE["screen"] = "form"
         STATE["form_values"] = {}
         STATE["form_request"] += 1
+        STATE["form_validation_request"] += 1
+        STATE["form_validation"] = {"value": "", "validating": False, "valid": None, "error": None}
         if "legacy" in stripped:
             render_legacy_form(rev)
         else:
@@ -1733,6 +2332,11 @@ def handle_query(text, rev):
         render_timeline(rev)
     elif stripped.startswith("chart"):
         STATE["screen"] = "chart"
+        STATE["chart_type"] = next(
+            (value for value in ("line", "area", "bar") if value in stripped.split()),
+            "area",
+        )
+        STATE["chart_range"] = None
         render_chart(rev)
     elif stripped.startswith("operation"):
         STATE["screen"] = "operation"
@@ -1768,6 +2372,15 @@ def handle_query(text, rev):
     elif stripped.startswith("gallery"):
         STATE["screen"] = "gallery"
         render_gallery(rev, contain="contain" in stripped)
+    elif stripped.startswith("drop"):
+        STATE["screen"] = "drop"
+        render_drop(rev)
+    elif stripped.startswith("banners"):
+        STATE["screen"] = "banners"
+        render_banners(rev)
+    elif stripped.startswith("loading"):
+        STATE["screen"] = "loading"
+        render_loading(rev)
     elif stripped.startswith("preview"):
         render_list(text[len("preview") :].strip(), rev, with_preview=True)
     else:
@@ -1819,6 +2432,45 @@ def handle_action(msg, last_items):
     # opens the same table view as `echo table`).
     if STATE["screen"] == "root" and action == "default":
         handle_query(title.strip("*`"), 0)
+        return
+
+    if action.startswith("banner:"):
+        labels = {
+            "banner:details": "Opened protocol-v13 banner details",
+            "banner:retry": "Connectivity check restarted",
+            "banner:ack": "Banner acknowledged",
+        }
+        send(
+            {
+                "type": "command",
+                "command": "toast",
+                "text": labels.get(action, "Banner action received"),
+                "style": "success" if action != "banner:details" else "info",
+            }
+        )
+        return
+    if action.startswith("chart:type:"):
+        chart_type = action.rsplit(":", 1)[-1]
+        if chart_type in {"line", "area", "bar"}:
+            STATE["chart_type"] = chart_type
+            STATE["chart_range"] = None
+            render_chart(0)
+        return
+    if action == "loading:replay":
+        STATE["screen"] = "loading"
+        render_loading(0)
+        return
+    if action == "drop:clear":
+        STATE["dropped_files"] = []
+        STATE["drop_banner"] = None
+        render_drop(0)
+        return
+    if action == "drop:copy-path" and item_id.startswith("drop:"):
+        try:
+            path = STATE["dropped_files"][int(item_id.split(":", 1)[1])]
+        except (IndexError, ValueError):
+            path = title
+        send({"type": "command", "command": "copy", "text": path})
         return
 
     if STATE["screen"] == "pages" and action == "default" and item_id.startswith("page:"):
@@ -2037,6 +2689,82 @@ def handle_action(msg, last_items):
     )
 
 
+def handle_toolbar_change(msg):
+    toolbar = STATE["toolbar"]
+    control_id = msg.get("id")
+    if control_id == "status":
+        values = msg.get("values")
+        if isinstance(values, list):
+            toolbar["statuses"] = [
+                value for value in values if value in {"active", "paused", "archived"}
+            ]
+    elif control_id == "scope" and msg.get("value") in {"all", "mine", "team"}:
+        toolbar["scope"] = msg["value"]
+    elif control_id == "sort":
+        if msg.get("value") in {"updated", "title", "status"}:
+            toolbar["sort"] = msg["value"]
+        if msg.get("direction") in {"asc", "desc"}:
+            toolbar["direction"] = msg["direction"]
+    elif control_id == "view" and msg.get("value") in {"list", "grid"}:
+        toolbar["view"] = msg["value"]
+    render_toolbar(msg.get("rev", 0))
+
+
+def handle_table_sort(msg):
+    column = msg.get("columnId")
+    direction = msg.get("direction")
+    if column in {"title", "status", "owner", "updated"} and direction in {"asc", "desc"}:
+        STATE["table_sort"] = {"column": column, "direction": direction}
+    render_table(msg.get("rev", 0))
+
+
+def handle_edit(msg):
+    item_id = str(msg.get("id") or "")
+    field = str(msg.get("field") or "")
+    value = str(msg.get("value") or "").strip()
+    if not value:
+        send(
+            {
+                "type": "command",
+                "command": "toast",
+                "text": "Editable values cannot be blank",
+                "style": "error",
+            }
+        )
+        return
+    if item_id.startswith("toolbar:") and field in {"title", "subtitle"}:
+        key = item_id.split(":", 1)[1]
+        row = next((entry for entry in STATE["toolbar_items"] if entry["id"] == key), None)
+        if row:
+            row[field] = value
+            render_toolbar(msg.get("rev", 0))
+        return
+    if item_id.startswith("table:") and field in {"title", "status", "owner"}:
+        key = item_id.split(":", 1)[1]
+        row = next((entry for entry in STATE["table_rows"] if entry["id"] == key), None)
+        if row:
+            row[field] = value
+            render_table(msg.get("rev", 0))
+
+
+def handle_drop(msg):
+    if STATE["screen"] != "drop" or msg.get("id") != "echo-files":
+        return
+    raw_paths = msg.get("paths")
+    paths = [path for path in raw_paths if isinstance(path, str)][:8] if isinstance(raw_paths, list) else []
+    STATE["dropped_files"] = paths
+    count = len(paths)
+    STATE["drop_banner"] = {
+        "id": "drop-received",
+        "style": "success" if count else "warning",
+        "title": f"Received {count} path{'s' if count != 1 else ''}",
+        "message": "Echo lists the paths without opening or modifying the dropped files.",
+        "dismissible": True,
+        "actions": [{"id": "drop:clear", "title": "Clear", "icon": "delete"}],
+    }
+    render_drop(msg.get("rev", 0))
+
+
 def main():
     for line in sys.stdin:
         line = line.strip()
@@ -2068,6 +2796,17 @@ def main():
             handle_query(msg.get("text", msg.get("query", "")), msg.get("rev", 0))
         elif kind == "action":
             handle_action(msg, LAST_ITEMS)
+        elif kind == "toolbarChange" and STATE["screen"] == "toolbar":
+            handle_toolbar_change(msg)
+        elif kind == "tableSort" and STATE["screen"] == "table":
+            handle_table_sort(msg)
+        elif kind == "edit":
+            handle_edit(msg)
+        elif kind == "drop":
+            handle_drop(msg)
+        elif kind == "validate" and STATE["screen"] == "form":
+            if msg.get("id") == "message":
+                validate_message(msg.get("values", {}), msg.get("rev", 0))
         elif kind == "submit":
             handle_submit(msg.get("values", {}), msg.get("button"), msg)
         elif kind == "submitQuery":
@@ -2096,6 +2835,14 @@ def main():
                     "style": "info",
                 }
             )
+        elif kind == "chartRangeSelect" and STATE["screen"] == "chart":
+            try:
+                start = max(0, int(msg.get("startIndex", 0)))
+                end = max(start, int(msg.get("endIndex", start)))
+            except (TypeError, ValueError):
+                continue
+            STATE["chart_range"] = (start, end)
+            render_chart(msg.get("rev", 0))
         elif kind == "kanbanMove":
             if STATE["screen"] == "kanban":
                 move_kanban_card(

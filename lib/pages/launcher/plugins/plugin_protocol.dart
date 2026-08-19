@@ -21,7 +21,10 @@ import 'dart:ui' show Color;
 /// 10 = calendar/agenda and gallery/media-browser views.
 /// 11 = bottom-right `floatingAction` buttons.
 /// 12 = chat typing/status text and chat history affordances.
-const int pluginProtocolVersion = 12;
+/// 13 = toolbars, configurable tables, resizable previews, file drops,
+///      inline editing, banners, skeletons, media controls, async form
+///      validation, richer form inputs, and production chart controls.
+const int pluginProtocolVersion = 13;
 
 /// The layout a plugin render frame requests.
 enum PluginViewType {
@@ -414,29 +417,277 @@ class PluginAction {
 
 /// One column in a `table` frame. An item supplies its values via `cells`.
 class PluginTableColumn {
-  const PluginTableColumn({required this.id, required this.label, this.width, this.align = 'start'});
+  const PluginTableColumn({
+    required this.id,
+    required this.label,
+    this.width,
+    this.minWidth = 72,
+    this.maxWidth = 420,
+    this.align = 'start',
+    this.sortable = false,
+    this.editable = false,
+    this.visible = true,
+  });
 
   final String id;
   final String label;
   final double? width;
+  final double minWidth;
+  final double maxWidth;
   final String align;
+  final bool sortable;
+  final bool editable;
+  final bool visible;
 
   static PluginTableColumn? fromJson(Object? json) {
     if (json is! Map || json['id'] is! String) return null;
     final String id = json['id'] as String;
     if (id.trim().isEmpty) return null;
     final Object? align = json['align'];
+    final double minWidth = json['minWidth'] is num ? (json['minWidth'] as num).toDouble().clamp(48, 360) : 72;
+    final double maxWidth = json['maxWidth'] is num ? (json['maxWidth'] as num).toDouble().clamp(minWidth, 720) : 420;
     return PluginTableColumn(
       id: id,
       label: json['label'] is String ? json['label'] as String : id,
-      width: json['width'] is num ? (json['width'] as num).toDouble().clamp(64, 420) : null,
+      width: json['width'] is num ? (json['width'] as num).toDouble().clamp(minWidth, maxWidth) : null,
+      minWidth: minWidth,
+      maxWidth: maxWidth,
       align: align == 'end' || align == 'center' ? align as String : 'start',
+      sortable: json['sortable'] == true,
+      editable: json['editable'] == true,
+      visible: json['visible'] != false,
     );
   }
 
   static List<PluginTableColumn> listFromJson(Object? json) => json is List
       ? json.map(PluginTableColumn.fromJson).whereType<PluginTableColumn>().toList(growable: false)
       : const <PluginTableColumn>[];
+}
+
+/// A compact choice used by toolbar filters, scope, sorting, and view toggles.
+class PluginToolbarOption {
+  const PluginToolbarOption({required this.value, required this.label, this.icon});
+
+  final String value;
+  final String label;
+  final String? icon;
+
+  static PluginToolbarOption? fromJson(Object? json) {
+    if (json is String) return PluginToolbarOption(value: json, label: json);
+    if (json is! Map || json['value'] is! String) return null;
+    final String value = json['value'] as String;
+    return PluginToolbarOption(
+      value: value,
+      label: json['label'] is String ? json['label'] as String : value,
+      icon: json['icon'] is String ? json['icon'] as String : null,
+    );
+  }
+
+  static List<PluginToolbarOption> listFromJson(Object? json) => json is List
+      ? json.map(fromJson).whereType<PluginToolbarOption>().toList(growable: false)
+      : const <PluginToolbarOption>[];
+}
+
+/// One host-rendered toolbar control. The plugin remains the source of truth;
+/// changing a control sends `toolbarChange` and the next frame supplies state.
+class PluginToolbarControl {
+  const PluginToolbarControl({
+    required this.id,
+    required this.type,
+    required this.label,
+    required this.options,
+    this.value,
+    this.values = const <String>[],
+    this.multiple = false,
+    this.direction = 'asc',
+  });
+
+  final String id;
+  final String type;
+  final String label;
+  final List<PluginToolbarOption> options;
+  final String? value;
+  final List<String> values;
+  final bool multiple;
+  final String direction;
+
+  static PluginToolbarControl? fromJson(Object? json, String type, {String? fallbackId}) {
+    if (json is! Map) return null;
+    final Object? rawId = json['id'];
+    final String id = rawId is String && rawId.trim().isNotEmpty ? rawId.trim() : (fallbackId ?? type);
+    final List<PluginToolbarOption> options = PluginToolbarOption.listFromJson(json['options']);
+    if (options.isEmpty) return null;
+    final Object? rawValues = json['values'];
+    return PluginToolbarControl(
+      id: id,
+      type: type,
+      label: json['label'] is String ? json['label'] as String : '',
+      options: options,
+      value: json['value'] is String ? json['value'] as String : null,
+      values: rawValues is List ? rawValues.whereType<String>().toList(growable: false) : const <String>[],
+      multiple: json['multiple'] == true,
+      direction: json['direction'] == 'desc' ? 'desc' : 'asc',
+    );
+  }
+
+  static List<PluginToolbarControl> fromToolbarJson(Object? json) {
+    if (json is! Map) return const <PluginToolbarControl>[];
+    final List<PluginToolbarControl> controls = <PluginToolbarControl>[];
+    final Object? filters = json['filters'];
+    if (filters is List) {
+      for (final Object? filter in filters) {
+        final PluginToolbarControl? parsed = fromJson(filter, 'filter');
+        if (parsed != null) controls.add(parsed);
+      }
+    }
+    for (final (String, String) entry in <(String, String)>[
+      ('scope', 'scope'),
+      ('sort', 'sort'),
+      ('view', 'view'),
+    ]) {
+      final PluginToolbarControl? parsed = fromJson(json[entry.$1], entry.$2, fallbackId: entry.$1);
+      if (parsed != null) controls.add(parsed);
+    }
+    return controls;
+  }
+}
+
+/// An in-context notice rendered above a plugin page.
+class PluginBanner {
+  const PluginBanner({
+    required this.id,
+    required this.style,
+    required this.title,
+    required this.message,
+    required this.actions,
+    this.icon,
+    this.dismissible = false,
+  });
+
+  final String id;
+  final String style;
+  final String title;
+  final String message;
+  final String? icon;
+  final bool dismissible;
+  final List<PluginAction> actions;
+
+  static PluginBanner? fromJson(Object? json, int index) {
+    if (json is! Map) return null;
+    final String title = json['title'] is String ? json['title'] as String : '';
+    final String message = json['message'] is String ? json['message'] as String : '';
+    if (title.isEmpty && message.isEmpty) return null;
+    final Object? rawStyle = json['style'];
+    final String style =
+        const <String>{'info', 'success', 'warning', 'error'}.contains(rawStyle) ? rawStyle as String : 'info';
+    return PluginBanner(
+      id: json['id'] is String && (json['id'] as String).trim().isNotEmpty
+          ? (json['id'] as String).trim()
+          : 'banner-$index',
+      style: style,
+      title: title,
+      message: message,
+      icon: json['icon'] is String ? json['icon'] as String : null,
+      dismissible: json['dismissible'] == true,
+      actions: PluginAction.listFromJson(json['actions']),
+    );
+  }
+
+  static List<PluginBanner> listFromJson(Object? json) {
+    if (json is Map) {
+      final PluginBanner? banner = fromJson(json, 0);
+      return banner == null ? const <PluginBanner>[] : <PluginBanner>[banner];
+    }
+    if (json is! List) return const <PluginBanner>[];
+    return <PluginBanner>[
+      for (int index = 0; index < json.length; index++)
+        if (fromJson(json[index], index) case final PluginBanner banner) banner,
+    ];
+  }
+}
+
+/// A page-level operating-system file drop target.
+class PluginDropZone {
+  const PluginDropZone({
+    required this.id,
+    required this.label,
+    required this.hint,
+    required this.extensions,
+    this.multiple = true,
+    this.maxFiles = 20,
+  });
+
+  final String id;
+  final String label;
+  final String hint;
+  final List<String> extensions;
+  final bool multiple;
+  final int maxFiles;
+
+  static PluginDropZone? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final Object? rawExtensions = json['extensions'];
+    return PluginDropZone(
+      id: json['id'] is String && (json['id'] as String).trim().isNotEmpty ? (json['id'] as String).trim() : 'drop',
+      label: json['label'] is String ? json['label'] as String : 'Drop files here',
+      hint: json['hint'] is String ? json['hint'] as String : '',
+      extensions: rawExtensions is List
+          ? rawExtensions.whereType<String>().map((String value) => value.toLowerCase()).toList(growable: false)
+          : const <String>[],
+      multiple: json['multiple'] != false,
+      maxFiles: json['maxFiles'] is num ? (json['maxFiles'] as num).toInt().clamp(1, 200) : 20,
+    );
+  }
+}
+
+/// Visual and interaction options for a chart frame.
+class PluginChartOptions {
+  const PluginChartOptions({
+    this.type = 'line',
+    this.showAxes = true,
+    this.showGrid = true,
+    this.showLegend = true,
+    this.tooltips = true,
+    this.selectableRange = false,
+    this.xLabels = const <String>[],
+    this.xTitle,
+    this.yTitle,
+    this.minY,
+    this.maxY,
+  });
+
+  final String type;
+  final bool showAxes;
+  final bool showGrid;
+  final bool showLegend;
+  final bool tooltips;
+  final bool selectableRange;
+  final List<String> xLabels;
+  final String? xTitle;
+  final String? yTitle;
+  final double? minY;
+  final double? maxY;
+
+  static PluginChartOptions fromJson(Object? json) {
+    if (json is! Map) return const PluginChartOptions();
+    final Object? rawType = json['type'];
+    final Object? rawLabels = json['xLabels'];
+    return PluginChartOptions(
+      type: const <String>{'line', 'area', 'bar'}.contains(rawType) ? rawType as String : 'line',
+      showAxes: json['showAxes'] != false,
+      showGrid: json['showGrid'] != false,
+      showLegend: json['showLegend'] != false,
+      tooltips: json['tooltips'] != false,
+      selectableRange: json['selectableRange'] == true,
+      xLabels: rawLabels is List
+          ? rawLabels.map((Object? value) => value?.toString() ?? '').toList(growable: false)
+          : const <String>[],
+      xTitle: json['xTitle'] is String ? json['xTitle'] as String : null,
+      yTitle: json['yTitle'] is String ? json['yTitle'] as String : null,
+      minY: json['minY'] is num ? (json['minY'] as num).toDouble() : null,
+      maxY: json['maxY'] is num ? (json['maxY'] as num).toDouble() : null,
+    );
+  }
 }
 
 /// A selectable point series for the `chart` view.
@@ -728,6 +979,7 @@ class PluginItem {
     this.calendar,
     this.media,
     this.reply,
+    this.editableFields = const <String>{},
   });
 
   final String id;
@@ -788,6 +1040,10 @@ class PluginItem {
   /// Optional quoted message preview shown above a chat message.
   final PluginReplyPreview? reply;
 
+  /// Fields that may be edited in place. Supported today: `title`, `subtitle`,
+  /// and table cell ids. A bare `true` enables title/subtitle and all cells.
+  final Set<String> editableFields;
+
   static PluginItem fromJson(Map<String, dynamic> json, int index) {
     final Object? rawId = json['id'];
     final Object? rawAccessories = json['accessories'];
@@ -798,6 +1054,7 @@ class PluginItem {
     final Object? rawLines = json['lines'];
     final Object? rawImages = json['images'];
     final Object? rawCells = json['cells'];
+    final Object? rawEditable = json['editable'];
     final PluginReplyPreview? reply = PluginReplyPreview.fromJson(json['reply']);
 
     String? previewMarkdown;
@@ -863,6 +1120,15 @@ class PluginItem {
       calendar: PluginCalendarItem.fromJson(json['calendar'] is Map ? json['calendar'] : json),
       media: PluginMediaInfo.fromJson(json['media']),
       reply: reply,
+      editableFields: rawEditable == true
+          ? <String>{
+              'title',
+              'subtitle',
+              if (rawCells is Map) ...rawCells.keys.map((Object? key) => key.toString()),
+            }
+          : rawEditable is List
+              ? rawEditable.whereType<String>().toSet()
+              : const <String>{},
     );
   }
 }
@@ -948,8 +1214,8 @@ class PluginFormSection {
 }
 
 /// One input in a `form` view: `text`, `password`, `textarea`, `dropdown`,
-/// `combobox`, `checkbox`, `number`, `date`, `filepicker`, `folderpicker`, or
-/// `tags`.
+/// `combobox`, `checkbox`, `number`, date/time pickers, file/folder/drop
+/// pickers, choice controls, app/shortcut pickers, sliders, or code editors.
 class PluginFormField {
   const PluginFormField({
     required this.id,
@@ -974,6 +1240,15 @@ class PluginFormField {
     this.validationMessage,
     this.optionsLoading = false,
     this.allowCustom = false,
+    this.multiple = false,
+    this.extensions = const <String>[],
+    this.step,
+    this.rows = 6,
+    this.language,
+    this.validate = false,
+    this.validationDebounceMs = 400,
+    this.validating = false,
+    this.valid,
   });
 
   final String id;
@@ -1021,12 +1296,30 @@ class PluginFormField {
   /// `combobox`: permit values that are not present in [options].
   final bool allowCustom;
 
+  /// File/drop fields may accept several paths and restrict extensions.
+  final bool multiple;
+  final List<String> extensions;
+
+  /// Slider increment, code editor height, and optional language hint.
+  final num? step;
+  final int rows;
+  final String? language;
+
+  /// Async validation contract. `validate:true` schedules a debounced
+  /// `validate` event. Plugins re-render with `validating`, `valid`, or `error`.
+  final bool validate;
+  final int validationDebounceMs;
+  final bool validating;
+  final bool? valid;
+
   static const Set<String> knownTypes = <String>{
     'text', 'password', 'textarea', 'dropdown', 'combobox', 'checkbox', //
-    'number', 'date', 'filepicker', 'folderpicker', 'tags',
+    'number', 'date', 'time', 'datetime', 'filepicker', 'folderpicker', 'dropzone',
+    'tags', 'color', 'slider', 'radio', 'multiselect', 'apppicker',
+    'shortcut', 'code', 'json',
   };
 
-  bool get isTextLike => type == 'text' || type == 'password' || type == 'textarea';
+  bool get isTextLike => type == 'text' || type == 'password' || type == 'textarea' || type == 'code' || type == 'json';
 
   static PluginFormField? fromJson(Object? json) {
     if (json is! Map) return null;
@@ -1074,6 +1367,24 @@ class PluginFormField {
       validationMessage: json['validationMessage'] is String ? json['validationMessage'] as String : null,
       optionsLoading: json['optionsLoading'] == true,
       allowCustom: json['allowCustom'] == true,
+      multiple: json['multiple'] == true,
+      extensions: json['extensions'] is List
+          ? (json['extensions'] as List)
+              .whereType<String>()
+              .map((String value) => value.toLowerCase())
+              .toList(growable: false)
+          : const <String>[],
+      step: json['step'] is num ? json['step'] as num : null,
+      rows: json['rows'] is num ? (json['rows'] as num).toInt().clamp(3, 24) : 6,
+      language: json['language'] is String ? json['language'] as String : null,
+      validate: json['validate'] == true,
+      validationDebounceMs: json['validationDebounceMs'] is num
+          ? (json['validationDebounceMs'] as num).toInt().clamp(100, 3000)
+          : json['validationDebounce'] is num
+              ? (json['validationDebounce'] as num).toInt().clamp(100, 3000)
+              : 400,
+      validating: json['validating'] == true,
+      valid: json['valid'] is bool ? json['valid'] as bool : null,
     );
   }
 }
@@ -1265,6 +1576,10 @@ class PluginRenderFrame {
     this.wide = false,
     required this.previewEnabled,
     this.previewWide = true,
+    this.previewResizable = false,
+    this.previewInitialWidth,
+    this.previewMinWidth = 240,
+    this.previewMaxWidth = 720,
     required this.loading,
     required this.emptyText,
     required this.rev,
@@ -1287,6 +1602,17 @@ class PluginRenderFrame {
     this.columns = const <PluginTableColumn>[],
     this.chartSeries = const <PluginChartSeries>[],
     this.chartTitle,
+    this.chartOptions = const PluginChartOptions(),
+    this.toolbarControls = const <PluginToolbarControl>[],
+    this.banners = const <PluginBanner>[],
+    this.dropZone,
+    this.loadingStyle = 'spinner',
+    this.skeletonCount = 6,
+    this.tableResizable = false,
+    this.tableStickyHeader = true,
+    this.tableColumnVisibility = false,
+    this.tableSortColumn,
+    this.tableSortDirection = 'asc',
     this.operation,
     this.dashboardLayout = 'stack',
     this.dashboardPanels = const <PluginDashboardPanel>[],
@@ -1352,6 +1678,17 @@ class PluginRenderFrame {
   final List<PluginTableColumn> columns;
   final List<PluginChartSeries> chartSeries;
   final String? chartTitle;
+  final PluginChartOptions chartOptions;
+  final List<PluginToolbarControl> toolbarControls;
+  final List<PluginBanner> banners;
+  final PluginDropZone? dropZone;
+  final String loadingStyle;
+  final int skeletonCount;
+  final bool tableResizable;
+  final bool tableStickyHeader;
+  final bool tableColumnVisibility;
+  final String? tableSortColumn;
+  final String tableSortDirection;
   final PluginOperation? operation;
 
   /// `dashboard` composition: either vertically stacked panels or tabs.
@@ -1401,6 +1738,10 @@ class PluginRenderFrame {
   /// `preview.wide` (default true). When false, the preview pane still renders
   /// but the window keeps its normal size. Ignored unless [previewEnabled].
   final bool previewWide;
+  final bool previewResizable;
+  final double? previewInitialWidth;
+  final double previewMinWidth;
+  final double previewMaxWidth;
 
   final bool loading;
   final String emptyText;
@@ -1454,6 +1795,10 @@ class PluginRenderFrame {
       wide: wide,
       previewEnabled: previewEnabled,
       previewWide: previewWide,
+      previewResizable: previewResizable,
+      previewInitialWidth: previewInitialWidth,
+      previewMinWidth: previewMinWidth,
+      previewMaxWidth: previewMaxWidth,
       loading: loading,
       emptyText: emptyText,
       rev: rev,
@@ -1476,6 +1821,17 @@ class PluginRenderFrame {
       columns: columns,
       chartSeries: chartSeries,
       chartTitle: chartTitle,
+      chartOptions: chartOptions,
+      toolbarControls: toolbarControls,
+      banners: banners,
+      dropZone: dropZone,
+      loadingStyle: loadingStyle,
+      skeletonCount: skeletonCount,
+      tableResizable: tableResizable,
+      tableStickyHeader: tableStickyHeader,
+      tableColumnVisibility: tableColumnVisibility,
+      tableSortColumn: tableSortColumn,
+      tableSortDirection: tableSortDirection,
       operation: operation,
       dashboardLayout: dashboardLayout,
       dashboardPanels: dashboardPanels,
@@ -1560,6 +1916,8 @@ class PluginRenderFrame {
     final Object? preview = json['preview'];
     final Object? selection = json['selection'];
     final Object? chart = json['chart'];
+    final Object? toolbar = json['toolbar'];
+    final Object? table = json['table'];
     final Object? dashboard = json['dashboard'];
     final Object? kanban = json['kanban'];
     final Object? diff = json['diff'];
@@ -1593,11 +1951,22 @@ class PluginRenderFrame {
 
     bool previewEnabled = false;
     bool previewWide = true;
+    bool previewResizable = false;
+    double? previewInitialWidth;
+    double previewMinWidth = 240;
+    double previewMaxWidth = 720;
     if (preview is Map) {
       previewEnabled = preview['enabled'] == true;
       // Opt out of the widened window with `"wide": false`; anything else
       // (absent, true) keeps the historical widen-on-preview behavior.
       previewWide = preview['wide'] != false;
+      previewResizable = preview['resizable'] == true;
+      previewMinWidth = preview['minWidth'] is num ? (preview['minWidth'] as num).toDouble().clamp(160, 560) : 240;
+      previewMaxWidth =
+          preview['maxWidth'] is num ? (preview['maxWidth'] as num).toDouble().clamp(previewMinWidth, 960) : 720;
+      previewInitialWidth = preview['initialWidth'] is num
+          ? (preview['initialWidth'] as num).toDouble().clamp(previewMinWidth, previewMaxWidth)
+          : null;
     } else if (preview is bool) {
       previewEnabled = preview;
     }
@@ -1632,10 +2001,14 @@ class PluginRenderFrame {
     final Object? rawLoading = json['loading'];
     bool loading = rawLoading == true;
     double? loadingProgress;
+    String loadingStyle = 'spinner';
+    int skeletonCount = 6;
     if (rawLoading is Map) {
       loading = true;
       final Object? progress = rawLoading['progress'];
       if (progress is num) loadingProgress = progress.toDouble().clamp(0.0, 1.0);
+      loadingStyle = rawLoading['style'] == 'skeleton' ? 'skeleton' : 'spinner';
+      skeletonCount = rawLoading['count'] is num ? (rawLoading['count'] as num).toInt().clamp(1, 24) : 6;
     }
 
     return PluginRenderFrame(
@@ -1649,8 +2022,14 @@ class PluginRenderFrame {
       wide: json['wide'] == true,
       previewEnabled: previewEnabled,
       previewWide: previewWide,
+      previewResizable: previewResizable,
+      previewInitialWidth: previewInitialWidth,
+      previewMinWidth: previewMinWidth,
+      previewMaxWidth: previewMaxWidth,
       loading: loading,
       loadingProgress: loadingProgress,
+      loadingStyle: loadingStyle,
+      skeletonCount: skeletonCount,
       loadingText: loadingText is String && loadingText.trim().isNotEmpty ? loadingText : null,
       emptyText: emptyText is String ? emptyText : 'No results',
       rev: rev is num ? rev.toInt() : 0,
@@ -1672,6 +2051,15 @@ class PluginRenderFrame {
       columns: PluginTableColumn.listFromJson(json['columns']),
       chartSeries: chartSeries,
       chartTitle: chart is Map && chart['title'] is String ? chart['title'] as String : null,
+      chartOptions: PluginChartOptions.fromJson(chart),
+      toolbarControls: PluginToolbarControl.fromToolbarJson(toolbar),
+      banners: PluginBanner.listFromJson(json['banners'] ?? json['banner']),
+      dropZone: PluginDropZone.fromJson(json['dropZone']),
+      tableResizable: table is Map && table['resizable'] == true,
+      tableStickyHeader: table is! Map || table['stickyHeader'] != false,
+      tableColumnVisibility: table is Map && table['columnVisibility'] == true,
+      tableSortColumn: table is Map && table['sortColumn'] is String ? table['sortColumn'] as String : null,
+      tableSortDirection: table is Map && table['sortDirection'] == 'desc' ? 'desc' : 'asc',
       operation: PluginOperation.fromJson(json['operation']),
       dashboardLayout: dashboard is Map && dashboard['layout'] == 'tabs' ? 'tabs' : 'stack',
       dashboardPanels: PluginDashboardPanel.listFromJson(dashboard is Map ? dashboard['panels'] : json['panels']),

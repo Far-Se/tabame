@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   audiotags
+  desktop_drop
   local_notifier
   screen_retriever_linux
   url_launcher_linux

@@ -2,10 +2,10 @@
   "id": "echo",
   "name": "Echo Demo",
   "keyword": "echo",
-  "description": "Protocol v10 showcase: pages, forms, Kanban, diff, logs, calendar, gallery, and integrations",
+  "description": "Protocol v13 showcase: toolbars, rich forms, editable tables, charts, media, and integrations",
   "icon": "extension",
   "runtime": "python",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "entry": "main.py",
   "args": []
 }

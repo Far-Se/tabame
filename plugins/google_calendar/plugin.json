@@ -7,10 +7,6 @@
   "runtime": "python",
   "version": "2.0.0",
   "entry": "main.py",
-  "pip": [
-    "google-auth",
-    "google-auth-oauthlib",
-    "google-api-python-client"
-  ],
+  "pip": ["google-auth", "google-auth-oauthlib", "google-api-python-client"],
   "dev": false
 }

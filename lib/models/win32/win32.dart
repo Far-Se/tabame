@@ -22,6 +22,10 @@ import 'win_utils.dart';
 class Win32 {
   Win32._();
   static int hWnd = 0;
+  static final Map<int, int> _alwaysOnTopWindows = <int, int>{};
+  static Timer? _alwaysOnTopWatcher;
+
+  static const Duration _alwaysOnTopWatchInterval = Duration(milliseconds: 500);
 
   // Window handles and metadata
   static int getMainHandle() {
@@ -479,12 +483,65 @@ class Win32 {
   }
 
   static void setAlwaysOnTop(int hWnd, {bool? alwaysOnTop}) {
-    int topmostHandle = alwaysOnTop == true ? HWND_TOPMOST : HWND_NOTOPMOST;
-    if (alwaysOnTop == null) {
-      final int extendedStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
-      topmostHandle = (extendedStyle & WS_EX_TOPMOST) != 0 ? HWND_NOTOPMOST : HWND_TOPMOST;
+    if (hWnd == 0 || IsWindow(hWnd) == 0) {
+      _alwaysOnTopWindows.remove(hWnd);
+      _stopAlwaysOnTopWatcherIfIdle();
+      return;
     }
+
+    final bool enableAlwaysOnTop = alwaysOnTop ??
+        (!_alwaysOnTopWindows.containsKey(hWnd) && (GetWindowLong(hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST) == 0);
+    final int topmostHandle = enableAlwaysOnTop ? HWND_TOPMOST : HWND_NOTOPMOST;
+
     SetWindowPos(hWnd, topmostHandle, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+
+    if (enableAlwaysOnTop) {
+      _alwaysOnTopWindows[hWnd] = _getWindowProcessId(hWnd);
+      _startAlwaysOnTopWatcher();
+    } else {
+      _alwaysOnTopWindows.remove(hWnd);
+      _stopAlwaysOnTopWatcherIfIdle();
+    }
+  }
+
+  static int _getWindowProcessId(int hWnd) {
+    final Pointer<Uint32> processId = calloc<Uint32>();
+    try {
+      GetWindowThreadProcessId(hWnd, processId);
+      return processId.value;
+    } finally {
+      free(processId);
+    }
+  }
+
+  static void _startAlwaysOnTopWatcher() {
+    _alwaysOnTopWatcher ??= Timer.periodic(
+      _alwaysOnTopWatchInterval,
+      (_) => _restoreAlwaysOnTopWindows(),
+    );
+  }
+
+  static void _restoreAlwaysOnTopWindows() {
+    for (final MapEntry<int, int> window in _alwaysOnTopWindows.entries.toList()) {
+      final int hWnd = window.key;
+      if (IsWindow(hWnd) == 0 || _getWindowProcessId(hWnd) != window.value) {
+        _alwaysOnTopWindows.remove(hWnd);
+        continue;
+      }
+
+      final int extendedStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+      if ((extendedStyle & WS_EX_TOPMOST) == 0) {
+        SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+      }
+    }
+
+    _stopAlwaysOnTopWatcherIfIdle();
+  }
+
+  static void _stopAlwaysOnTopWatcherIfIdle() {
+    if (_alwaysOnTopWindows.isNotEmpty) return;
+    _alwaysOnTopWatcher?.cancel();
+    _alwaysOnTopWatcher = null;
   }
 
   static void restoreIfMaximized(int hWnd) {

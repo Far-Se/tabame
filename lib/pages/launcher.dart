@@ -1381,6 +1381,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                 onFormSubmit: _onPluginFormSubmit,
                 onFormCancel: _onPluginFormCancel,
                 onFormChange: _onPluginFormChange,
+                onFormValidate: (PluginEventScope scope, String fieldId, Map<String, Object?> values) =>
+                    _pluginHost.sendFormValidate(fieldId, values, scope: scope),
                 onLoadMore: (PluginEventScope scope) => _pluginHost.sendLoadMore(scope: scope),
                 onEmptyAction: (PluginEventScope scope, PluginAction action) => _firePluginAction(scope, '', action),
                 onMetadataAction: _firePluginAction,
@@ -1391,6 +1393,28 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                     _pluginHost.sendToggle(id, expanded, scope: scope),
                 onChartSelect: (PluginEventScope scope, String seriesId, int index, double value) =>
                     _pluginHost.sendChartSelect(seriesId, index, value, scope: scope),
+                onChartRangeSelect: (PluginEventScope scope, int startIndex, int endIndex) =>
+                    _pluginHost.sendChartRangeSelect(startIndex, endIndex, scope: scope),
+                onToolbarChange: (
+                  PluginEventScope scope,
+                  String id, {
+                  String? value,
+                  List<String>? values,
+                  String? direction,
+                }) =>
+                    _pluginHost.sendToolbarChange(
+                  id,
+                  value: value,
+                  values: values,
+                  direction: direction,
+                  scope: scope,
+                ),
+                onTableSort: (PluginEventScope scope, String columnId, String direction) =>
+                    _pluginHost.sendTableSort(columnId, direction, scope: scope),
+                onInlineEdit: (PluginEventScope scope, String itemId, String field, Object? value) =>
+                    _pluginHost.sendEdit(itemId, field, value, scope: scope),
+                onDropFiles: (PluginEventScope scope, String dropZoneId, List<String> paths) =>
+                    _pluginHost.sendDrop(dropZoneId, paths, scope: scope),
                 onCancelOperation: (PluginEventScope scope, String id) => _pluginHost.sendCancel(id, scope: scope),
                 onNavigate: (String targetPageId) => _pluginHost.sendNavigate(targetPageId, scope: frame.scope()),
                 onNavigateBack: _sendPluginBack,

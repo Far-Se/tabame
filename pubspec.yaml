@@ -15,6 +15,7 @@ dependencies:
   collection: any
   crypto: ^3.0.7
   cupertino_icons: ^1.0.2
+  desktop_drop: 0.7.0
   dropdown_button2: ^2.3.9
   encrypt: ^5.0.3
   equatable: ^2.0.3

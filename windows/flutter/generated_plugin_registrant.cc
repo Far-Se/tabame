@@ -7,6 +7,7 @@
 #include "generated_plugin_registrant.h"
 
 #include <audiotags/audiotags_plugin_c_api.h>
+#include <desktop_drop/desktop_drop_plugin.h>
 #include <just_audio_windows/just_audio_windows_plugin.h>
 #include <local_notifier/local_notifier_plugin.h>
 #include <screen_retriever_windows/screen_retriever_windows_plugin_c_api.h>
@@ -17,6 +18,8 @@
 void RegisterPlugins(flutter::PluginRegistry* registry) {
   AudiotagsPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("AudiotagsPluginCApi"));
+  DesktopDropPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("DesktopDropPlugin"));
   JustAudioWindowsPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("JustAudioWindowsPlugin"));
   LocalNotifierPluginRegisterWithRegistrar(

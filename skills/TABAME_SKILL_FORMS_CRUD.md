@@ -109,7 +109,7 @@ console. Disable it before sharing.
 ### Query and lifecycle
 
 ```json
-{"type":"init","query":"","protocol":11,"theme":{"accent":"#63A0EA","text":"#E8E8E8","background":"#1B1D23","dark":true},"locale":"en-US"}
+{"type":"init","query":"","protocol":13,"theme":{"accent":"#63A0EA","text":"#E8E8E8","background":"#1B1D23","dark":true},"locale":"en-US"}
 {"type":"query","text":"urgent","rev":4}
 {"type":"close"}
 ```

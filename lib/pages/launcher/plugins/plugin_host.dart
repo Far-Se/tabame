@@ -529,6 +529,60 @@ class LauncherPluginHost {
         ...scope.fields,
       });
 
+  void sendChartRangeSelect(int startIndex, int endIndex, {PluginEventScope scope = const PluginEventScope()}) =>
+      _send(<String, Object?>{
+        'type': 'chartRangeSelect',
+        'startIndex': startIndex,
+        'endIndex': endIndex,
+        'rev': _rev,
+        ...scope.fields,
+      });
+
+  void sendToolbarChange(
+    String id, {
+    String? value,
+    List<String>? values,
+    String? direction,
+    PluginEventScope scope = const PluginEventScope(),
+  }) =>
+      _send(<String, Object?>{
+        'type': 'toolbarChange',
+        'id': id,
+        if (value != null) 'value': value,
+        if (values != null) 'values': values,
+        if (direction != null) 'direction': direction,
+        'rev': _rev,
+        ...scope.fields,
+      });
+
+  void sendTableSort(String columnId, String direction, {PluginEventScope scope = const PluginEventScope()}) =>
+      _send(<String, Object?>{
+        'type': 'tableSort',
+        'columnId': columnId,
+        'direction': direction,
+        'rev': _rev,
+        ...scope.fields,
+      });
+
+  void sendEdit(String id, String field, Object? value, {PluginEventScope scope = const PluginEventScope()}) =>
+      _send(<String, Object?>{
+        'type': 'edit',
+        'id': id,
+        'field': field,
+        'value': value,
+        'rev': _rev,
+        ...scope.fields,
+      });
+
+  void sendDrop(String id, List<String> paths, {PluginEventScope scope = const PluginEventScope()}) =>
+      _send(<String, Object?>{
+        'type': 'drop',
+        'id': id,
+        'paths': paths,
+        'rev': _rev,
+        ...scope.fields,
+      });
+
   void sendCancel(String operationId, {PluginEventScope scope = const PluginEventScope()}) =>
       _send(<String, Object?>{'type': 'cancel', 'id': operationId, 'rev': _rev, ...scope.fields});
 
@@ -549,6 +603,11 @@ class LauncherPluginHost {
   void sendFormChange(String fieldId, Map<String, Object?> values,
       {PluginEventScope scope = const PluginEventScope()}) {
     _send(<String, Object?>{'type': 'change', 'id': fieldId, 'values': values, ...scope.fields});
+  }
+
+  void sendFormValidate(String fieldId, Map<String, Object?> values,
+      {PluginEventScope scope = const PluginEventScope()}) {
+    _send(<String, Object?>{'type': 'validate', 'id': fieldId, 'values': values, 'rev': _rev, ...scope.fields});
   }
 
   /// The user scrolled near the end of a `hasMore` list — the plugin should

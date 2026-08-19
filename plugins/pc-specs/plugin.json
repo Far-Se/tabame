@@ -7,5 +7,5 @@
   "icon": "server",
   "description": "Live system overview: CPU, GPU, RAM, storage, network, temps, fans, PSU",
   "pip": ["psutil", "wmi", "pywin32"],
-  "dev": true
+  "dev": false
 }

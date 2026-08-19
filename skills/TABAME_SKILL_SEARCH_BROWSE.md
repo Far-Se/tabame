@@ -146,7 +146,7 @@ Sent once after process start:
 {
   "type": "init",
   "query": "initial text",
-  "protocol": 11,
+  "protocol": 13,
   "theme": {
     "accent": "#63A0EA",
     "text": "#E8E8E8",
