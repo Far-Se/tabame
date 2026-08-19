@@ -1,0 +1,11 @@
+{
+  "id": "simkl",
+  "name": "Simkl",
+  "keyword": "simkl",
+  "description": "Search movies & shows, browse trending/popular, and manage your Simkl watchlist, history & calendar.",
+  "icon": "video",
+  "runtime": "node",
+  "version": "1.0.0",
+  "entry": "main.js",
+  "args": []
+}

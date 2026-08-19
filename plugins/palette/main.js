@@ -691,7 +691,7 @@ function handleAction(id, action) {
       state.currentPaletteId = id;
       state.query = "";
       render(0, undefined, "");
-      cmd("setQuery", { text: "" });
+      cmd("setQuery", { text: " " });
     } else if (action === "rename") {
       pushAndGo("form:renamePalette");
       state.currentPaletteId = id;
@@ -854,7 +854,7 @@ function handleBack(rev) {
   popToPrevious();
   render(rev, undefined, state.screen === "root" ? "" : undefined);
   if (state.screen === "root") {
-    cmd("setQuery", { text: "" });
+    cmd("setQuery", { text: " " });
   }
 }
 

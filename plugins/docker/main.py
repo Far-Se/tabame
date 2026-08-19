@@ -933,7 +933,7 @@ def render_volume_inspect(rev, name):
 # --------------------------------------------------------------------------
 
 def clear_query():
-    send({"type": "command", "command": "setQuery", "text": ""})
+    send({"type": "command", "command": "setQuery", "text": " "})
 
 
 def goto_home(rev):

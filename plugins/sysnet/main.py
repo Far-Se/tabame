@@ -49,7 +49,7 @@ STATE = {
 def goto(screen, clear_bar=True):
     STATE["screen"] = screen
     if clear_bar:
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
 
 
 # ---------------------------------------------------------------- root -----

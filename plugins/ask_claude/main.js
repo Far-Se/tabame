@@ -634,7 +634,7 @@ function enterSnippetForm(mode = "create", id = null) {
   state.screen = "snippet_form";
   state.snippetFormMode = mode;
   state.editingSnippetId = id;
-  command("setQuery", { text: "" });
+  command("setQuery", { text: " " });
   renderSnippetForm(0);
 }
 
@@ -650,7 +650,7 @@ async function enterSnippets() {
     loadingText: "Loading snippets…",
     items: [],
   });
-  command("setQuery", { text: "" });
+  command("setQuery", { text: " " });
   await ensureSnippetsLoaded();
   if (!shuttingDown && state.screen === "snippets") renderSnippets(0);
 }
@@ -660,7 +660,7 @@ function leaveSnippets() {
   state.screen = returnScreen;
   state.snippetQuery = "";
   state.editingSnippetId = null;
-  command("setQuery", { text: "" });
+  command("setQuery", { text: " " });
   renderCurrent(0);
 }
 
@@ -1308,7 +1308,7 @@ async function handleSubmit(rev, text) {
   state.busy = true;
   state.thinkingStartedAt = Date.now();
   renderChat(rev);
-  command("setQuery", { text: "" });
+  command("setQuery", { text: " " });
 
   try {
     await ensureTabOpen();

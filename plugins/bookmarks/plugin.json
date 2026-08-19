@@ -1,0 +1,10 @@
+{
+  "id": "bookmarks",
+  "name": "Bookmarks",
+  "keyword": "bk",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "icon": "bookmark",
+  "description": "Save links, files, and parameterized commands under categories"
+}

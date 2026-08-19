@@ -836,7 +836,7 @@ function enterScreen(screen) {
   state.screen = screen;
   state.query = "";
   if (needsQueryReset) {
-    command("setQuery", { text: "" });
+    command("setQuery", { text: " " });
   } else {
     renderCurrent(0, "");
   }
@@ -929,7 +929,7 @@ function handleBack() {
   const needsQueryReset = state.query.length > 0;
   state.screen = "root";
   state.query = "";
-  if (needsQueryReset) command("setQuery", { text: "" });
+  if (needsQueryReset) command("setQuery", { text: " " });
   renderRoot(0, "");
 }
 

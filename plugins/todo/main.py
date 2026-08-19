@@ -654,7 +654,7 @@ def handle_action(item_id, action):
             return
         state["tasks"].append(new_task(title, "", due_dt, has_time, priority, tags))
         save_tasks()
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         send(
             {
                 "type": "command",

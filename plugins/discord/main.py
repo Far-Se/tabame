@@ -2428,13 +2428,13 @@ def handle_action(msg):
         stop_message_refresh()
         state["opened_from_saved_channel"] = False
         load_guilds_async(0)
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         return
 
     if action == "channels" and item_id == "" and state["guild_id"]:
         stop_message_refresh()
         load_channels_async(0, state["guild_id"], state["guild_name"])
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         return
 
     if action == "refresh" and item_id == "":
@@ -2450,7 +2450,7 @@ def handle_action(msg):
         gid = item_id.split(":", 1)[1]
         guild = next((g for g in state["guilds"] if g["id"] == gid), None)
         load_channels_async(0, gid, guild.get("name", "server") if guild else "server")
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         return
 
     if state["screen"] == "channels" and item_id.startswith("channel:"):
@@ -2476,7 +2476,7 @@ def handle_action(msg):
             }
         )
         load_messages_async(0, cid, channel_name, channel_topic)
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         return
 
 
@@ -2489,7 +2489,7 @@ def handle_navigate(msg):
             render_guilds(0)
         else:
             load_guilds_async(0)
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         return
 
     prefix = "discord:guild:"
@@ -2500,7 +2500,7 @@ def handle_navigate(msg):
         if guild:
             stop_message_refresh()
             load_channels_async(0, guild_id, guild.get("name", "server"))
-            send({"type": "command", "command": "setQuery", "text": ""})
+            send({"type": "command", "command": "setQuery", "text": " "})
 
 
 def handle_back(msg):
@@ -2714,16 +2714,16 @@ def handle_action(msg):
         stop_message_refresh()
         state["opened_from_saved_channel"] = False
         load_guilds_async(0)
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         return
     if action in ("dms",) and item_id == "":
         load_dms_async(0)
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         return
     if action == "channels" and item_id == "" and state.get("guild_id"):
         stop_message_refresh()
         load_channels_async(0, state["guild_id"], state["guild_name"])
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         return
     if action == "refresh" and item_id == "":
         if state["screen"] == "guilds":
@@ -2774,13 +2774,13 @@ def handle_action(msg):
 
     if state["screen"] == "guilds" and item_id == "dms":
         load_dms_async(0)
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         return
     if state["screen"] == "guilds" and item_id.startswith("guild:"):
         gid = item_id.split(":", 1)[1]
         guild = next((g for g in state["guilds"] if g.get("id") == gid), None)
         load_channels_async(0, gid, guild.get("name", "server") if guild else "server")
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         return
     if state["screen"] == "dms" and item_id.startswith("dm:"):
         cid = item_id.split(":", 1)[1]
@@ -2791,7 +2791,7 @@ def handle_action(msg):
         remember_last_channel(cid, name, kind="dm", channel_type=(channel or {}).get("type", 1))
         state["opened_from_saved_channel"] = False
         load_messages_async(0, cid, name, channel_kind="dm", channel_type=(channel or {}).get("type", 1))
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         return
     if state["screen"] == "channels" and item_id.startswith("channel:"):
         cid = item_id.split(":", 1)[1]
@@ -2804,7 +2804,7 @@ def handle_action(msg):
         remember_last_channel(cid, channel_name, channel.get("topic", ""), channel_type=channel_type, parent_id=channel.get("parent_id"))
         state["opened_from_saved_channel"] = False
         load_messages_async(0, cid, channel_name, channel.get("topic", ""), channel_type=channel_type, parent_id=channel.get("parent_id"))
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         return
     if state["screen"] == "forum_posts" and item_id.startswith("thread:"):
         tid = item_id.split(":", 1)[1]
@@ -2813,7 +2813,7 @@ def handle_action(msg):
         remember_last_channel(tid, name, kind="guild", channel_type=thread.get("type", 11), parent_id=state["forum_channel_id"])
         state["opened_from_saved_channel"] = False
         load_messages_async(0, tid, name, channel_kind="guild", channel_type=thread.get("type", 11), parent_id=state["forum_channel_id"])
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
 
 
 def handle_load_more(msg):
@@ -2876,7 +2876,7 @@ def handle_navigate(msg):
             render_guilds(0)
         else:
             load_guilds_async(0)
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         return
     if target == "discord:dms":
         load_dms_async(0)

@@ -432,7 +432,13 @@ function renderConnection(rev) {
             ]
           : []),
         ...(bridge.startError
-          ? [{ label: "Bridge error", text: bridge.startError, color: "#C86464" }]
+          ? [
+              {
+                label: "Bridge error",
+                text: bridge.startError,
+                color: "#C86464",
+              },
+            ]
           : []),
       ],
     },
@@ -637,7 +643,11 @@ async function renderActivePage(rev) {
         ].join("\n"),
         metadata: [
           { label: "URL", text: url || "Unavailable", url: url || undefined },
-          { label: "Readable text", text: `${bodyLength} characters`, icon: "document" },
+          {
+            label: "Readable text",
+            text: `${bodyLength} characters`,
+            icon: "document",
+          },
         ],
       },
       actions: [
@@ -670,7 +680,7 @@ function enterScreen(screen) {
   state.screen = screen;
   state.query = "";
   if (needsQueryReset) {
-    command("setQuery", { text: "" });
+    command("setQuery", { text: " " });
   } else {
     void renderCurrent(0, "");
   }
@@ -754,7 +764,7 @@ function handleBack() {
   state.screen = "root";
   state.query = "";
   if (needsQueryReset) {
-    command("setQuery", { text: "" });
+    command("setQuery", { text: " " });
   } else {
     renderRoot(0, "");
   }

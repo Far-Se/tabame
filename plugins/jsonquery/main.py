@@ -1086,7 +1086,7 @@ def go_back():
             state["nav_stack"].pop()
             render_select_key("")
         else:
-            send({"type": "command", "command": "setQuery", "text": ""})
+            send({"type": "command", "command": "setQuery", "text": " "})
             render_root("")
         return
 
@@ -1103,7 +1103,7 @@ def go_back():
         return
 
     if scr == "export_only_form":
-        send({"type": "command", "command": "setQuery", "text": ""})
+        send({"type": "command", "command": "setQuery", "text": " "})
         render_export_only_select(0, "")
         return
 
@@ -1117,12 +1117,12 @@ def go_back():
         if state.get("used_select_key") and state["nav_stack"]:
             render_select_key("")
         else:
-            send({"type": "command", "command": "setQuery", "text": ""})
+            send({"type": "command", "command": "setQuery", "text": " "})
             render_root("")
         return
 
     # form_file, form_paste -> root
-    send({"type": "command", "command": "setQuery", "text": ""})
+    send({"type": "command", "command": "setQuery", "text": " "})
     render_root("")
 
 
@@ -1137,7 +1137,7 @@ def open_export_only():
     state["export_only_item_paths"] = {}
     state["export_only_query"] = ""
     state["export_only_return_query"] = state.get("last_query", "")
-    send({"type": "command", "command": "setQuery", "text": ""})
+    send({"type": "command", "command": "setQuery", "text": " "})
     render_export_only_select(0, "")
 
 

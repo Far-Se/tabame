@@ -1052,7 +1052,7 @@ def go_root(rev=0):
     state["screen"] = "root"
     state["show_id"] = None
     state["peek_show"] = None
-    send({"type": "command", "command": "setQuery", "text": ""})
+    send({"type": "command", "command": "setQuery", "text": " "})
     render_root(rev, "")
 
 
@@ -1133,26 +1133,26 @@ def handle_action(item_id, action):
     if screen == "root":
         if item_id == "" and action == "add":
             state["screen"] = "search"
-            send({"type": "command", "command": "setQuery", "text": ""})
+            send({"type": "command", "command": "setQuery", "text": " "})
             render_search(0, "")
         elif item_id == "" and action in ("settings", "omdb_settings"):
             state["screen"] = "setup"
-            send({"type": "command", "command": "setQuery", "text": ""})
+            send({"type": "command", "command": "setQuery", "text": " "})
             render_setup_form(0, can_go_back=True)
         elif item_id == "search_show" and action == "default":
             state["screen"] = "search"
-            send({"type": "command", "command": "setQuery", "text": ""})
+            send({"type": "command", "command": "setQuery", "text": " "})
             render_search(0, "")
         elif item_id == "calendar" and action == "default":
             state["screen"] = "calendar"
-            send({"type": "command", "command": "setQuery", "text": ""})
+            send({"type": "command", "command": "setQuery", "text": " "})
             render_calendar(0)
         elif item_id.startswith("show:"):
             sid = item_id.split(":", 1)[1]
             if action == "default":
                 state["screen"] = "show"
                 state["show_id"] = sid
-                send({"type": "command", "command": "setQuery", "text": ""})
+                send({"type": "command", "command": "setQuery", "text": " "})
                 render_show(0, sid)
             elif action == "refresh":
                 refresh_show(sid, lambda: render_root(0, state["query_root"]))
@@ -1240,7 +1240,7 @@ def handle_action(item_id, action):
         elif item_id == "all_seasons" and action == "default":
             state["screen"] = "all_seasons"
             state["all_seasons_from"] = "peek"
-            send({"type": "command", "command": "setQuery", "text": ""})
+            send({"type": "command", "command": "setQuery", "text": " "})
             render_all_seasons(0, show, persist=False)
         elif item_id.startswith("ep:") and action == "open_tmdb":
             num = item_id.split(":", 1)[1]
@@ -1274,7 +1274,7 @@ def handle_action(item_id, action):
             if show:
                 state["screen"] = "all_seasons"
                 state["all_seasons_from"] = "show"
-                send({"type": "command", "command": "setQuery", "text": ""})
+                send({"type": "command", "command": "setQuery", "text": " "})
                 render_all_seasons(0, show, persist=True)
         elif item_id.startswith("ep:") and action == "open_tmdb":
             data = load_data()

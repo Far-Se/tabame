@@ -640,7 +640,7 @@ def open_inbox(acc):
     STATE["messages"] = []
     STATE["inbox_loading"] = True
     render_inbox(0)
-    send({"type": "command", "command": "setQuery", "text": ""})
+    send({"type": "command", "command": "setQuery", "text": " "})
     request_password(acc["id"], lambda pwd: threading.Thread(
         target=do_fetch_inbox, args=(acc, pwd), daemon=True).start())
 
@@ -856,7 +856,7 @@ def handle_account_submit(values):
     STATE["screen"] = "root"
     STATE["query"] = ""
     render_root(0)
-    send({"type": "command", "command": "setQuery", "text": ""})
+    send({"type": "command", "command": "setQuery", "text": " "})
     toast(f"Added {account['name']}")
     threading.Thread(target=do_test_connection, args=(account, password), daemon=True).start()
 

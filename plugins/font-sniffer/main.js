@@ -409,7 +409,8 @@ function fontPreview(font, pct, specimenPath, loading = false) {
       ? "_Custom web font, loaded via `@font-face`._"
       : "_System / locally-installed font (a fallback or an OS font)._",
   ].join("\n");
-  if (specimenPath) md += `\n\n![specimen](${pathToFileURL(specimenPath).href})`;
+  if (specimenPath)
+    md += `\n\n![specimen](${pathToFileURL(specimenPath).href})`;
 
   const metadata = [
     {
@@ -839,7 +840,10 @@ function fileItem(url) {
 // only that item's specimen for the built-in preview pane; the token check keeps
 // a slow render from updating the pane after the user has moved elsewhere.
 function prepareSelectedPreview(id, rev) {
-  if (screen !== "results" || (!id.startsWith("font:") && !id.startsWith("file:")))
+  if (
+    screen !== "results" ||
+    (!id.startsWith("font:") && !id.startsWith("file:"))
+  )
     return;
 
   const token = ++selectionToken;
@@ -879,7 +883,11 @@ function prepareSelectedPreview(id, rev) {
       log("inline preview failed:", error && error.stack ? error.stack : error);
     } finally {
       inlinePreviewLoading.delete(id);
-      if (token === selectionToken && screen === "results" && selectedItemId === id)
+      if (
+        token === selectionToken &&
+        screen === "results" &&
+        selectedItemId === id
+      )
         renderResults(0, resultsFilter);
     }
   }, 160);
@@ -954,7 +962,7 @@ async function doScan() {
   try {
     if (!cache.has(url)) cache.set(url, await scan(url));
     // Clear the URL out of the box so typing now filters the font list.
-    send({ type: "command", command: "setQuery", text: "" });
+    send({ type: "command", command: "setQuery", text: " " });
     renderResults(0, "");
   } catch (error) {
     log("scan failed:", error && error.stack ? error.stack : error);

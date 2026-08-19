@@ -333,7 +333,7 @@ function mediaPreview(it, actions) {
   if (tu) meta.push({ label: "TMDB", text: String(it.ids.tmdb), url: tu });
   if (actions.length) {
     meta.push({ separator: true });
-    meta.push({ label: "Actions", text: "", actions });
+    meta.push({ label: "Actions", text: " ", actions });
   }
 
   const poster = posterUrl(it.poster);

@@ -1043,7 +1043,7 @@ function enterConfig() {
   const hadQuery = state.query.length > 0;
   state.screen = "config";
   state.query = "";
-  if (hadQuery) command("setQuery", { text: "" });
+  if (hadQuery) command("setQuery", { text: " " });
   else renderConfig(0);
 }
 
@@ -1053,7 +1053,7 @@ function enterRoot() {
   state.screen = "root";
   state.query = "";
   state.loadGeneration++;
-  if (hadQuery) command("setQuery", { text: "" });
+  if (hadQuery) command("setQuery", { text: " " });
   else renderRoot(0, "");
 }
 
@@ -1062,7 +1062,7 @@ function enterTorrents(filter) {
   state.filter = filter || "all";
   const hadQuery = state.query.length > 0;
   state.query = "";
-  if (hadQuery) command("setQuery", { text: "" });
+  if (hadQuery) command("setQuery", { text: " " });
   else void loadTorrents(0, "");
 }
 

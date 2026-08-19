@@ -1,0 +1,13 @@
+{
+  "id": "maestro-dex",
+  "name": "Maestro DEX",
+  "keyword": "mdex",
+  "description": "Search Romanian definitions in a local Maestro DEX installation",
+  "icon": "book",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "args": [],
+  "enabled": true,
+  "dev": false
+}

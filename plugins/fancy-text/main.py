@@ -524,7 +524,7 @@ def handle_action(message: dict[str, Any]) -> None:
             STATE["screen"] = "results"
             STATE["category"] = category
             STATE["query"] = ""
-            send({"type": "command", "command": "setQuery", "text": ""})
+            send({"type": "command", "command": "setQuery", "text": " "})
             render_results(0, "")
         return
 
@@ -553,7 +553,7 @@ def handle_back() -> None:
     STATE["category"] = None
     STATE["query"] = ""
     LAST_RESULTS.clear()
-    send({"type": "command", "command": "setQuery", "text": ""})
+    send({"type": "command", "command": "setQuery", "text": " "})
     render_categories(0, "")
 
 

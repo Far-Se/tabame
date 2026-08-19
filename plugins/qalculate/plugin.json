@@ -1,0 +1,11 @@
+{
+  "id": "qalc",
+  "name": "Qalculate",
+  "keyword": "qalc",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "description": "Math, units, currency and date calculations via the qalculate-cli (qalc) engine",
+  "icon": "calculator",
+  "dev": false
+}

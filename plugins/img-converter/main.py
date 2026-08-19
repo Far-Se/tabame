@@ -697,7 +697,7 @@ def reset_to_root():
     state["folderPath"] = None
     state["targetFormat"] = None
     state["batch"] = False
-    send({"type": "command", "command": "setQuery", "text": ""})
+    send({"type": "command", "command": "setQuery", "text": " "})
     render_root("", 0)
 
 # --------------------------------------------------------------------- io --

@@ -1034,6 +1034,67 @@
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/ask_claude/plugin.json",
         "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/ask_claude/main.js"
       }
+    },
+    {
+      "id": "maestro-dex",
+      "name": "Maestro DEX",
+      "keyword": "mdex",
+      "description": "Search Romanian definitions in a local Maestro DEX installation",
+      "icon": "book",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/maestro-dex",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/maestro-dex/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/maestro-dex/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/maestro-dex/README.md"
+      }
+    },
+    {
+      "id": "qalc",
+      "name": "Qalculate",
+      "keyword": "qalc",
+      "description": "Math, units, currency and date calculations via the qalculate-cli (qalc) engine",
+      "icon": "calculator",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/qalculate",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/qalculate/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/qalculate/main.py"
+      }
+    },
+    {
+      "id": "bookmarks",
+      "name": "Bookmarks",
+      "keyword": "bk",
+      "description": "Save links, files, and parameterized commands under categories",
+      "icon": "bookmark",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/bookmarks",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/bookmarks/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/bookmarks/main.py"
+      }
+    },
+    {
+      "id": "simkl",
+      "name": "Simkl",
+      "keyword": "simkl",
+      "description": "Search movies & shows, browse trending/popular, and manage your Simkl watchlist, history & calendar.",
+      "icon": "video",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/simkl",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/simkl/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/simkl/main.js"
+      }
     }
   ]
 }

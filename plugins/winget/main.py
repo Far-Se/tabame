@@ -867,7 +867,7 @@ def do_update_selected(selected_ids):
         state["update_lines"] = []
         state["update_run_id"] += 1
 
-    send({"type": "command", "command": "setQuery", "text": ""})
+    send({"type": "command", "command": "setQuery", "text": " "})
     _update_log_line("info", f"Queued {len(packages)} app(s) for update")
 
     def work():
@@ -969,16 +969,16 @@ def handle_action(item_id, action, selected_ids=None):
     if screen == "root":
         if item_id in ("stat-installed", "qa:installed"):
             state["screen"] = "installed"
-            send({"type": "command", "command": "setQuery", "text": ""})
+            send({"type": "command", "command": "setQuery", "text": " "})
             render_installed(0)
             return
         if item_id in ("stat-updates", "qa:updates"):
             state["screen"] = "updates"
-            send({"type": "command", "command": "setQuery", "text": ""})
+            send({"type": "command", "command": "setQuery", "text": " "})
             render_updates(0)
             return
         if item_id == "qa:search":
-            send({"type": "command", "command": "setQuery", "text": ""})
+            send({"type": "command", "command": "setQuery", "text": " "})
             send(
                 {
                     "type": "command",
@@ -1048,7 +1048,7 @@ def handle_action(item_id, action, selected_ids=None):
 
 def show_updates():
     state["screen"] = "updates"
-    send({"type": "command", "command": "setQuery", "text": ""})
+    send({"type": "command", "command": "setQuery", "text": " "})
     with state_lock:
         updates = state["updates"]
     if updates is None:
@@ -1061,7 +1061,7 @@ def handle_back():
         show_updates()
         return
     state["screen"] = "root"
-    send({"type": "command", "command": "setQuery", "text": ""})
+    send({"type": "command", "command": "setQuery", "text": " "})
     render_dashboard(0)
 
 
