@@ -15,6 +15,7 @@ import '../../../platform/app_paths.dart';
 import '../../../platform/file_picker_service.dart';
 import '../../../services/browser_bridge_service.dart';
 import '../../widgets/modal_button.dart';
+import '../../widgets/modern_dropdown.dart';
 import '../../widgets/panel_header.dart';
 import '../../widgets/windows_scroll.dart';
 
@@ -73,6 +74,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   String _installStatus = '';
   final TextEditingController _installedSearchController = TextEditingController();
   final TextEditingController _gallerySearchController = TextEditingController();
+  String _galleryCategory = '';
   bool _pluginDirectoryBusy = false;
   String _pluginDirectoryStatus = '';
   bool _pluginDirectoryStatusError = false;
@@ -822,7 +824,20 @@ Build a plugin with your favorite AI coding assistant:
     }
 
     final String query = _gallerySearchController.text.trim().toLowerCase();
-    final List<PluginGalleryEntry> filteredEntries = entries
+    final List<String> categories = entries
+        .map((PluginGalleryEntry entry) => entry.category.trim().isEmpty ? 'Other' : entry.category.trim())
+        .toSet()
+        .toList()
+      ..sort((String a, String b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final String selectedCategory = categories.contains(_galleryCategory) ? _galleryCategory : '';
+    final List<PluginGalleryEntry> categoryEntries = entries
+        .where(
+          (PluginGalleryEntry entry) =>
+              selectedCategory.isEmpty ||
+              (entry.category.trim().isEmpty ? 'Other' : entry.category.trim()) == selectedCategory,
+        )
+        .toList(growable: false);
+    final List<PluginGalleryEntry> filteredEntries = categoryEntries
         .where(
           (PluginGalleryEntry entry) => _matchesSearch(query, <String>[
             entry.name,
@@ -851,21 +866,60 @@ Build a plugin with your favorite AI coding assistant:
             ],
             _buildSectionLabel(
               label: "Community Plugins",
-              countText: query.isEmpty ? "${entries.length}" : "${filteredEntries.length}/${entries.length}",
+              countText: query.isEmpty && selectedCategory.isEmpty
+                  ? "${entries.length}"
+                  : "${filteredEntries.length}/${entries.length}",
               icon: Icons.storefront_rounded,
             ),
             const SizedBox(height: 8),
-            _buildSearchField(
-              controller: _gallerySearchController,
-              hintText: "Search gallery...",
+            Row(
+              crossAxisAlignment: C.start,
+              children: <Widget>[
+                Expanded(
+                  child: _buildSearchField(
+                    controller: _gallerySearchController,
+                    hintText: "Search gallery...",
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 190,
+                  child: ModernDropdown<String>(
+                    value: selectedCategory,
+                    height: 40,
+                    itemHeight: 36,
+                    prefixIcon: Icon(Icons.category_outlined, size: 16, color: Design.accent),
+                    decoration: BoxDecoration(
+                      color: Design.accent.withAlpha(12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    dropdownMenuEntriesShape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: BorderSide(color: Design.text.withAlpha(24)),
+                    ),
+                    items: <ModernDropdownItem<String>>[
+                      const ModernDropdownItem<String>(value: '', label: 'All categories'),
+                      for (final String category in categories)
+                        ModernDropdownItem<String>(value: category, label: category),
+                    ],
+                    onChanged: (String? category) => setState(() => _galleryCategory = category ?? ''),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
-            if (entries.any((PluginGalleryEntry entry) => entry.recommended)) ...<Widget>[
-              _buildInstallRecommendedStrip(entries),
+            if (categoryEntries.any((PluginGalleryEntry entry) => entry.recommended)) ...<Widget>[
+              _buildInstallRecommendedStrip(categoryEntries),
               const SizedBox(height: 8),
             ],
             if (filteredEntries.isEmpty)
-              _buildNoSearchResults("No gallery plugins match your search.")
+              _buildNoSearchResults(
+                query.isNotEmpty
+                    ? selectedCategory.isEmpty
+                        ? "No gallery plugins match your search."
+                        : 'No plugins in "$selectedCategory" match your search.'
+                    : 'No gallery plugins are available in "$selectedCategory".',
+              )
             else
               for (final PluginGalleryEntry entry in filteredEntries) ...<Widget>[
                 _GalleryCard(

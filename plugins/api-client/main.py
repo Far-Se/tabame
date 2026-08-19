@@ -81,13 +81,22 @@ STATE = {
     "activeEnv": "Default",
     "headerPresets": {},  # {name: {header: value}}
 }
-ROUTE = {"page_id": "api:home", "expanded": set()}
+ROUTE = {
+    "page_id": "api:home",
+    "expanded": set(),
+    "home_query": "",
+    "history_query": "",
+    "history_methods": [],
+    "history_outcomes": [],
+    "history_sort": "newest",
+}
 EDIT_CTX = {"id": None, "parentId": None}
 CUR_REQ = {"last": None}
 LAST_RESPONSE_ID = {"id": None}
 JSON_EXPANDED = set()
 PENDING_REQ = {"req": None}
 BOOT_LOADED = False
+HOST = {"accent": "#63A0EA", "dark": True}
 
 PARENT = {
     "api:home": None,
@@ -98,6 +107,7 @@ PARENT = {
     "api:collections": "api:home",
     "api:runlog": "api:collections",
     "api:diff": "api:history",
+    "api:error": "api:home",
     "api:environments": "api:home",
     "api:headers": "api:home",
 }
@@ -108,6 +118,17 @@ def save_state():
         cmd(command="storage", op="set", key="data", value=json.dumps(STATE))
     except Exception as e:
         log("save_state failed:", e)
+
+
+def begin_page(page_id, history="push"):
+    """Enter a route without adding duplicate history entries on re-render."""
+    same_page = ROUTE.get("page_id") == page_id
+    ROUTE["page_id"] = page_id
+    return "none" if same_page else history
+
+
+def clear_query():
+    cmd(command="setQuery", text="")
 
 
 # --------------------------------------------------------------------------
@@ -153,6 +174,17 @@ def method_color(m):
         "HEAD": "#6B7280",
         "OPTIONS": "#6B7280",
     }.get((m or "").upper(), "#6B7280")
+
+
+def response_outcome(result):
+    if not result.get("ok"):
+        return "Network Error", "#EF4444"
+    status = result.get("status", 0)
+    if status < 400:
+        return "Success", "#22C55E"
+    if status < 500:
+        return "Client Error", "#F59E0B"
+    return "Server Error", "#EF4444"
 
 
 def human_size(n):
@@ -794,7 +826,7 @@ def json_to_tree_items(data):
                     "id": node_path,
                     "title": str(key),
                     "subtitle": f"{{{len(value)}}}",
-                    "icon": "braces",
+                    "icon": "code",
                     "depth": depth,
                     "expanded": node_path in JSON_EXPANDED,
                 }
@@ -808,7 +840,7 @@ def json_to_tree_items(data):
                     "id": node_path,
                     "title": str(key),
                     "subtitle": f"[{len(value)}]",
-                    "icon": "brackets",
+                    "icon": "list",
                     "depth": depth,
                     "expanded": node_path in JSON_EXPANDED,
                 }
@@ -1090,25 +1122,27 @@ def run_batch(nodes, title="Batch Run"):
     if not nodes:
         cmd(command="toast", text="Nothing to run")
         return
-    ROUTE["page_id"] = "api:runlog"
+    page_history = begin_page("api:runlog")
     lines = []
 
     def flush():
+        nonlocal page_history
         send(
             {
                 "type": "render",
                 "rev": 0,
                 "view": "log",
-                "canGoBack": True,
                 "page": {
                     "id": "api:runlog",
                     "title": title,
-                    "history": "push",
+                    "history": page_history,
+                    "preserveState": True,
                     "breadcrumbs": [{"id": "api:home", "label": "API Client"}],
                 },
                 "log": {"lines": list(lines), "wrap": True},
             }
         )
+        page_history = "none"
 
     flush()
     ok_count = 0
@@ -1293,36 +1327,50 @@ def do_resend(entry):
 
 
 def render_confirm_send(req):
-    ROUTE["page_id"] = "api:confirm"
+    page_history = begin_page("api:confirm")
     name = STATE["activeEnv"]
     send(
         {
             "type": "render",
             "rev": 0,
             "view": "detail",
-            "canGoBack": True,
             "page": {
                 "id": "api:confirm",
                 "title": "Confirm Send",
-                "history": "push",
+                "history": page_history,
+                "preserveState": True,
                 "breadcrumbs": [{"id": "api:home", "label": "API Client"}],
             },
             "detail": {
-                "markdown": f"### ⚠️ Send **{req['method']}** to `{req['url']}`?\n\n"
-                f"The active environment looks like production.",
+                "markdown": "### Production environment\n\n"
+                "Review this request before it is sent.",
                 "metadata": [
                     {"label": "Environment", "text": name, "color": env_color(name)},
-                    {"label": "Method", "text": req["method"]},
+                    {
+                        "label": "Method",
+                        "text": req["method"],
+                        "color": method_color(req["method"]),
+                    },
+                    {"label": "URL", "text": req["url"]},
                 ],
             },
+            "banners": [
+                {
+                    "id": "production-warning",
+                    "style": "warning",
+                    "title": f"Send {req['method']} to {name}?",
+                    "message": "This environment is marked as production or live.",
+                    "icon": "warning",
+                }
+            ],
             "floatingAction": [
                 {
                     "id": "sendAnyway",
-                    "title": "Send Anyway",
+                    "title": "Send Request",
                     "icon": "warning",
                     "destructive": True,
                 },
-                {"id": "cancel", "title": "Cancel", "icon": "close"},
+                {"id": "cancel", "title": "Keep Editing", "icon": "edit"},
             ],
         }
     )
@@ -1333,74 +1381,234 @@ def render_confirm_send(req):
 # --------------------------------------------------------------------------
 
 
-def render_home(rev, filter_text=""):
-    ROUTE["page_id"] = "api:home"
+def render_home(rev, filter_text=None):
+    page_history = begin_page("api:home", history="none")
+    if filter_text is not None:
+        ROUTE["home_query"] = filter_text
+    query = ROUTE.get("home_query", "")
+    ft = query.strip().lower()
+
     history = STATE["history"]
-    recent = history[:5]
+    recent = [
+        h
+        for h in history
+        if not ft or ft in f"{h.get('method', '')} {h.get('url', '')}".lower()
+    ][:5]
+    completed = [h for h in history if h.get("result", {}).get("ok")]
+    successful = [
+        h for h in completed if h.get("result", {}).get("status", 0) < 400
+    ]
+    success_rate = round((len(successful) / len(history)) * 100) if history else 0
+    success_color = (
+        "#22C55E" if success_rate >= 90 else "#F59E0B" if history else "#6B7280"
+    )
+    saved_requests = len(
+        [n for n in STATE["collections"] if n.get("type") == "request"]
+    )
     durations = [
         h.get("result", {}).get("elapsed", 0)
         for h in history[:10]
         if h.get("result", {}).get("ok")
     ]
-    panels = []
+    duration_labels = [
+        h.get("timestamp", "")
+        for h in history[:10]
+        if h.get("result", {}).get("ok")
+    ]
+
+    overview_meta = [
+        {
+            "label": "Active Environment",
+            "text": STATE["activeEnv"],
+            "color": env_color(),
+        },
+        {
+            "label": "Request Success",
+            "text": f"{success_rate}%" if history else "No data yet",
+            "color": success_color,
+        },
+        {"label": "History", "text": f"{len(history)} requests", "icon": "clock"},
+        {
+            "label": "Saved Requests",
+            "text": str(saved_requests),
+            "icon": "folder",
+        },
+        {
+            "label": "Header Presets",
+            "text": str(len(STATE.get("headerPresets", {}))),
+            "icon": "list",
+        },
+    ]
+    panels = [
+        {
+            "id": "overview",
+            "title": "Workspace Status",
+            "view": "detail",
+            "height": 205,
+            "detail": {"markdown": "", "metadata": overview_meta},
+        },
+        {
+            "id": "workspace",
+            "title": "Workspace",
+            "view": "grid",
+            "height": 250,
+            "grid": {"columns": 2, "aspectRatio": 3.0},
+            "items": [
+                {
+                    "id": "nav:history",
+                    "title": "History",
+                    "subtitle": f"{len(history)} recorded requests",
+                    "icon": "clock",
+                    "actions": [
+                        {"id": "default", "title": "Open History", "icon": "open"}
+                    ],
+                },
+                {
+                    "id": "nav:collections",
+                    "title": "Collections",
+                    "subtitle": f"{saved_requests} saved requests",
+                    "icon": "folder",
+                    "actions": [
+                        {
+                            "id": "default",
+                            "title": "Open Collections",
+                            "icon": "open",
+                        }
+                    ],
+                },
+                {
+                    "id": "nav:environments",
+                    "title": "Environments",
+                    "subtitle": f"{STATE['activeEnv']} is active",
+                    "icon": "settings",
+                    "actions": [
+                        {
+                            "id": "default",
+                            "title": "Open Environments",
+                            "icon": "open",
+                        }
+                    ],
+                },
+                {
+                    "id": "nav:headers",
+                    "title": "Header Presets",
+                    "subtitle": f"{len(STATE.get('headerPresets', {}))} reusable presets",
+                    "icon": "list",
+                    "actions": [
+                        {
+                            "id": "default",
+                            "title": "Open Header Presets",
+                            "icon": "open",
+                        }
+                    ],
+                },
+            ],
+        },
+    ]
     if durations:
         panels.append(
             {
-                "id": "stats",
-                "title": "Latency (ms, last 10)",
+                "id": "latency",
+                "title": "Latency — Last 10 Completed Requests",
                 "view": "chart",
-                "height": 180,
+                "height": 185,
                 "chart": {
+                    "type": "area",
+                    "showAxes": True,
+                    "showGrid": True,
+                    "tooltips": True,
+                    "xLabels": list(reversed(duration_labels)),
+                    "xTitle": "Request time",
+                    "yTitle": "Milliseconds",
                     "series": [
                         {
                             "id": "latency",
-                            "label": "ms",
+                            "label": "Latency",
                             "values": list(reversed(durations)),
-                            "color": "#63A0EA",
+                            "color": HOST["accent"],
                         }
-                    ]
+                    ],
                 },
             }
         )
-    else:
-        panels.append(
-            {
-                "id": "stats",
-                "title": "Latency",
-                "view": "detail",
-                "height": 120,
-                "detail": {
-                    "markdown": "_No requests sent yet — hit **New Request** to get started._"
-                },
-            }
-        )
+
     panels.append(
         {
             "id": "recent",
             "title": "Recent History",
             "view": "list",
-            "height": 240,
-            "emptyText": "No requests yet",
+            "height": 230,
+            "empty": {
+                "icon": "clock",
+                "title": "No matching requests" if ft else "No requests yet",
+                "hint": (
+                    "Try another search."
+                    if ft
+                    else "Send your first request to start building history."
+                ),
+            },
             "items": [history_item(h) for h in recent],
         }
     )
-    root_items = [n for n in STATE["collections"] if n.get("parentId") is None][:6]
+
+    if ft:
+        collection_nodes = [
+            n
+            for n in STATE["collections"]
+            if ft in n.get("name", "").lower()
+            or ft in (n.get("url") or "").lower()
+        ][:6]
+        collection_items = [tree_item(n, 0, flat=True) for n in collection_nodes]
+    else:
+        collection_nodes = [
+            n for n in STATE["collections"] if n.get("parentId") is None
+        ][:6]
+        collection_items = [collection_root_item(n) for n in collection_nodes]
     panels.append(
         {
             "id": "collections",
-            "title": "Collections",
+            "title": "Saved Requests",
             "view": "list",
-            "height": 200,
-            "emptyText": "No saved requests",
-            "items": [collection_root_item(n) for n in root_items],
+            "height": 220,
+            "empty": {
+                "icon": "folder",
+                "title": "No matching saved requests" if ft else "No saved requests",
+                "hint": (
+                    "Try another search."
+                    if ft
+                    else "Save a request to make it reusable."
+                ),
+            },
+            "items": collection_items,
         }
     )
+
+    banners = []
+    if "prod" in STATE["activeEnv"].lower() or "live" in STATE["activeEnv"].lower():
+        banners.append(
+            {
+                "id": "active-production-environment",
+                "style": "warning",
+                "title": f"{STATE['activeEnv']} is active",
+                "message": "Mutating requests require confirmation before they are sent.",
+                "icon": "warning",
+                "dismissible": True,
+            }
+        )
+
     send(
         {
             "type": "render",
             "rev": rev,
             "view": "dashboard",
-            "page": {"id": "api:home", "title": "API Client", "history": "none"},
+            "page": {
+                "id": "api:home",
+                "title": "API Client",
+                "history": page_history,
+                "preserveState": True,
+            },
+            "placeholder": "Filter recent and saved requests…",
+            "banners": banners,
             "dashboard": {"layout": "stack", "panels": panels},
             "floatingAction": {
                 "id": "newRequest",
@@ -1408,10 +1616,18 @@ def render_home(rev, filter_text=""):
                 "icon": "add",
             },
             "actions": [
-                {"id": "history", "title": "History", "icon": "clock"},
-                {"id": "collections", "title": "Collections", "icon": "folder"},
-                {"id": "environments", "title": "Environments", "icon": "settings"},
-                {"id": "headers", "title": "Header Presets", "icon": "list"},
+                {"id": "history", "title": "Open History", "icon": "clock"},
+                {
+                    "id": "collections",
+                    "title": "Open Collections",
+                    "icon": "folder",
+                },
+                {
+                    "id": "environments",
+                    "title": "Manage Environments",
+                    "icon": "settings",
+                },
+                {"id": "headers", "title": "Manage Header Presets", "icon": "list"},
             ],
         }
     )
@@ -1422,9 +1638,11 @@ def render_home(rev, filter_text=""):
 # --------------------------------------------------------------------------
 
 
-def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
+def render_new_form(
+    rev, values=None, edit_id=None, parent_id=None, error=None, history="push"
+):
     global EDIT_CTX
-    ROUTE["page_id"] = "api:new"
+    page_history = begin_page("api:new", history=history)
     EDIT_CTX = {"id": edit_id, "parentId": parent_id}
     v = values or {}
     env_names = list(STATE["environments"].keys()) or ["Default"]
@@ -1432,19 +1650,12 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
     title = "Edit Request" if edit_id else "New Request"
     fields = [
         {
-            "id": "importText",
-            "type": "textarea",
-            "label": "Paste curl or fetch(...) to autofill",
-            "placeholder": "curl https://api.example.com -H 'Authorization: Bearer …' -d '{\"a\":1}'",
-            "value": v.get("importText", ""),
-            "watch": True,
-        },
-        {
             "id": "method",
             "type": "dropdown",
             "label": "Method",
             "value": v.get("method", "GET"),
             "options": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+            "section": "request",
         },
         {
             "id": "url",
@@ -1453,6 +1664,7 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
             "required": True,
             "placeholder": "https://api.example.com/path?x={{VAR}}",
             "value": v.get("url", ""),
+            "section": "request",
         },
         {
             "id": "environment",
@@ -1460,6 +1672,7 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
             "label": "Environment",
             "value": v.get("environment", STATE["activeEnv"]),
             "options": env_names,
+            "section": "request",
         },
         {
             "id": "params",
@@ -1467,6 +1680,7 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
             "label": "Query Params",
             "description": "key=value",
             "value": v.get("params", []),
+            "section": "parameters",
         },
         {
             "id": "headers",
@@ -1474,6 +1688,7 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
             "label": "Headers",
             "description": "Key: Value",
             "value": v.get("headers", []),
+            "section": "parameters",
         },
         {
             "id": "headerPreset",
@@ -1482,6 +1697,7 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
             "value": v.get("headerPreset", "None"),
             "options": preset_names,
             "watch": True,
+            "section": "parameters",
         },
         {
             "id": "bodyType",
@@ -1489,13 +1705,15 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
             "label": "Body",
             "value": v.get("bodyType", "none"),
             "options": ["none", "json", "text", "form"],
+            "section": "payload",
         },
         {
             "id": "body",
-            "type": "textarea",
-            "label": "Body content",
+            "type": "code",
+            "label": "Body Content",
             "value": v.get("body", ""),
             "visibleWhen": {"field": "bodyType", "in": ["json", "text"]},
+            "section": "payload",
         },
         {
             "id": "bodyForm",
@@ -1504,6 +1722,7 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
             "description": "key=value",
             "value": v.get("bodyForm", []),
             "visibleWhen": {"field": "bodyType", "equals": "form"},
+            "section": "payload",
         },
         {
             "id": "authType",
@@ -1511,6 +1730,7 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
             "label": "Auth",
             "value": v.get("authType", "none"),
             "options": ["none", "bearer", "basic"],
+            "section": "auth",
         },
         {
             "id": "authToken",
@@ -1518,6 +1738,7 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
             "label": "Bearer Token",
             "value": v.get("authToken", ""),
             "visibleWhen": {"field": "authType", "equals": "bearer"},
+            "section": "auth",
         },
         {
             "id": "authUser",
@@ -1525,6 +1746,7 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
             "label": "Username",
             "value": v.get("authUser", ""),
             "visibleWhen": {"field": "authType", "equals": "basic"},
+            "section": "auth",
         },
         {
             "id": "authPass",
@@ -1532,12 +1754,14 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
             "label": "Password",
             "value": v.get("authPass", ""),
             "visibleWhen": {"field": "authType", "equals": "basic"},
+            "section": "auth",
         },
         {
             "id": "saveAs",
             "type": "checkbox",
             "label": "Save to Collection",
             "value": v.get("saveAs", bool(edit_id)),
+            "section": "save",
         },
         {
             "id": "saveName",
@@ -1545,9 +1769,55 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
             "label": "Save as",
             "value": v.get("saveName", ""),
             "visibleWhen": {"field": "saveAs", "truthy": True},
+            "section": "save",
+        },
+        {
+            "id": "importText",
+            "type": "code",
+            "label": "cURL or fetch(...) Command",
+            "placeholder": "curl https://api.example.com -H 'Authorization: Bearer …' -d '{\"a\":1}'",
+            "description": "Paste a command to replace the request fields above.",
+            "value": v.get("importText", ""),
+            "watch": True,
+            "section": "import",
         },
     ]
-    form_obj = {"title": title, "submitLabel": "Send", "fields": fields}
+    form_obj = {
+        "title": title,
+        "submitLabel": "Send Request",
+        "sections": [
+            {
+                "id": "request",
+                "title": "Request",
+                "description": "Choose the method, endpoint, and active environment.",
+            },
+            {
+                "id": "parameters",
+                "title": "Parameters & Headers",
+                "description": "Add query values and reusable request headers.",
+            },
+            {"id": "payload", "title": "Body"},
+            {
+                "id": "auth",
+                "title": "Authentication",
+                "description": "Credentials are applied only to this request.",
+                "collapsible": True,
+            },
+            {
+                "id": "save",
+                "title": "Save Request",
+                "description": "Keep this request available in Collections.",
+                "collapsible": True,
+            },
+            {
+                "id": "import",
+                "title": "Import Command",
+                "description": "Start from an existing cURL or fetch command.",
+                "collapsible": True,
+            },
+        ],
+        "fields": fields,
+    }
     if error:
         form_obj["error"] = error
     send(
@@ -1555,13 +1825,28 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
             "type": "render",
             "rev": rev,
             "view": "form",
-            "canGoBack": True,
             "page": {
                 "id": "api:new",
                 "title": title,
-                "history": "push",
+                "history": page_history,
+                "preserveState": True,
                 "breadcrumbs": [{"id": "api:home", "label": "API Client"}],
             },
+            "banners": (
+                [
+                    {
+                        "id": "composer-production-environment",
+                        "style": "warning",
+                        "title": f"{STATE['activeEnv']} is active",
+                        "message": "Mutating requests will require confirmation.",
+                        "icon": "warning",
+                        "dismissible": True,
+                    }
+                ]
+                if "prod" in STATE["activeEnv"].lower()
+                or "live" in STATE["activeEnv"].lower()
+                else []
+            ),
             "form": form_obj,
         }
     )
@@ -1569,13 +1854,13 @@ def render_new_form(rev, values=None, edit_id=None, parent_id=None, error=None):
 
 def on_submit_new(values):
     url = (values.get("url") or "").strip()
-    if not url:
+    if not re.match(r"^(https?://|\{\{[^}]+\}\})", url, re.IGNORECASE):
         render_new_form(
             0,
             values=values,
             edit_id=EDIT_CTX["id"],
             parent_id=EDIT_CTX["parentId"],
-            error="A URL is required.",
+            error="Enter a full http(s) URL or begin with an environment variable such as {{BASE_URL}}.",
         )
         return
     method = values.get("method", "GET")
@@ -1627,62 +1912,56 @@ def on_submit_new(values):
 
 
 def render_response(entry, rev=0, push=True):
-    ROUTE["page_id"] = "api:response"
+    page_history = begin_page(
+        "api:response", history="push" if push else "replace"
+    )
     CUR_REQ["last"] = entry
     if entry.get("id") != LAST_RESPONSE_ID["id"]:
         JSON_EXPANDED.clear()
         LAST_RESPONSE_ID["id"] = entry.get("id")
 
     result = entry.get("result", {}) or {}
-    if result.get("ok"):
-        code = result.get("status", 0)
-        color = "#22C55E" if code < 300 else "#F59E0B" if code < 500 else "#EF4444"
-        status_text = f"{code} {result.get('reason', '')}".strip()
-    else:
-        color = "#EF4444"
-        status_text = "Request failed"
+    _outcome, color = response_outcome(result)
+    code = result.get("status", 0) if result.get("ok") else 0
+    status_text = (
+        f"{code} {result.get('reason', '')}".strip()
+        if result.get("ok")
+        else "Request failed"
+    )
     meta = [
         {"label": "Status", "text": status_text, "color": color},
-        {"label": "Method", "text": entry.get("method", "")},
+        {
+            "label": "Method",
+            "text": entry.get("method", ""),
+            "color": method_color(entry.get("method", "")),
+        },
         {"label": "Environment", "text": STATE["activeEnv"], "color": env_color()},
-        {"label": "URL", "text": entry.get("url", "")},
+        {
+            "label": "URL",
+            "text": entry.get("url", ""),
+            **(
+                {"url": entry.get("url", "")}
+                if entry.get("url", "").startswith(("http://", "https://"))
+                else {}
+            ),
+        },
+        {"separator": True},
     ]
     if result.get("ok"):
         meta += [
-            {"label": "Time", "text": f"{result.get('elapsed', 0)} ms"},
-            {"label": "Size", "text": human_size(result.get("size"))},
+            {
+                "label": "Time",
+                "text": f"{result.get('elapsed', 0)} ms",
+                "icon": "clock",
+            },
+            {
+                "label": "Size",
+                "text": human_size(result.get("size")),
+                "icon": "document",
+            },
         ]
     else:
         meta.append({"label": "Error", "text": result.get("error", "Unknown error")})
-    panels = [
-        {
-            "id": "status",
-            "title": "Result",
-            "view": "detail",
-            "height": 210,
-            "detail": {
-                "markdown": f"**{entry.get('method', '')}** `{entry.get('url', '')}`",
-                "metadata": meta,
-            },
-        }
-    ]
-    if result.get("ok") and result.get("headers"):
-        panels.append(
-            {
-                "id": "headers",
-                "title": "Response Headers",
-                "view": "table",
-                "height": 190,
-                "columns": [
-                    {"id": "title", "label": "Header"},
-                    {"id": "value", "label": "Value"},
-                ],
-                "items": [
-                    {"id": k, "title": k, "cells": {"value": v}}
-                    for k, v in result["headers"].items()
-                ],
-            }
-        )
 
     parsed_json = None
     if result.get("ok"):
@@ -1690,32 +1969,74 @@ def render_response(entry, rev=0, push=True):
             parsed_json = json.loads(result.get("body", ""))
         except Exception:
             parsed_json = None
-    if isinstance(parsed_json, (dict, list)) and parsed_json:
-        panels.append(
-            {
-                "id": "jsonBody",
-                "title": "Body (JSON)",
-                "view": "tree",
-                "height": 320,
-                "emptyText": "Empty",
-                "items": json_to_tree_items(parsed_json),
-            }
-        )
+    if isinstance(parsed_json, (dict, list)):
+        body_panel = {
+            "id": "body",
+            "title": "JSON Body",
+            "view": "tree",
+            "height": 470,
+            "elementId": "response-body",
+            "empty": {
+                "icon": "code",
+                "title": "Empty JSON response",
+                "hint": "The endpoint returned an empty object or array.",
+            },
+            "items": json_to_tree_items(parsed_json),
+        }
     else:
         body_md = (
             format_body_markdown(result)
             if result.get("ok")
             else f"```\n{result.get('error', '')}\n```"
         )
-        panels.append(
-            {
-                "id": "body",
-                "title": "Body",
-                "view": "detail",
-                "height": 320,
-                "detail": {"markdown": body_md},
-            }
-        )
+        body_panel = {
+            "id": "body",
+            "title": "Response Body",
+            "view": "detail",
+            "height": 470,
+            "elementId": "response-body",
+            "detail": {"markdown": body_md},
+        }
+
+    header_items = [
+        {
+            "id": f"header:{index}",
+            "title": key,
+            "cells": {"value": value},
+        }
+        for index, (key, value) in enumerate((result.get("headers") or {}).items())
+    ]
+    headers_panel = {
+        "id": "headers",
+        "title": "Headers",
+        "view": "table",
+        "height": 470,
+        "elementId": "response-headers",
+        "columns": [
+            {"id": "title", "label": "Header", "width": 220},
+            {"id": "value", "label": "Value", "minWidth": 280},
+        ],
+        "table": {
+            "resizable": True,
+            "stickyHeader": True,
+            "columnVisibility": False,
+        },
+        "empty": {
+            "icon": "list",
+            "title": "No response headers",
+            "hint": "The endpoint did not return any headers.",
+        },
+        "items": header_items,
+    }
+    overview_panel = {
+        "id": "overview",
+        "title": "Overview",
+        "view": "detail",
+        "height": 470,
+        "elementId": "response-overview",
+        "detail": {"markdown": "", "metadata": meta},
+    }
+    panels = [body_panel, headers_panel, overview_panel]
 
     resend_action = {"id": "resend", "title": "Resend", "icon": "refresh"}
     if is_risky(entry.get("method", "GET")):
@@ -1725,70 +2046,104 @@ def render_response(entry, rev=0, push=True):
             "confirmLabel": "Resend",
         }
 
+    save_action = {
+        "id": "save",
+        "title": "Save Request",
+        "icon": "folder",
+        "parameters": [
+            {
+                "id": "name",
+                "type": "text",
+                "label": "Request Name",
+                "required": True,
+                "value": entry.get("name") or entry.get("url", ""),
+            }
+        ],
+    }
+    secondary_actions = [
+        {"id": "edit", "title": "Edit & Resend", "icon": "edit"},
+        {
+            "id": "copyAs",
+            "title": "Copy Request As…",
+            "icon": "copy",
+            "parameters": [
+                {
+                    "id": "format",
+                    "type": "dropdown",
+                    "label": "Format",
+                    "options": ["cURL", "fetch"],
+                    "value": "cURL",
+                }
+            ],
+        },
+    ]
+    if isinstance(parsed_json, (dict, list)):
+        secondary_actions.append(
+            {
+                "id": "extract",
+                "title": "Extract Environment Variable",
+                "icon": "key",
+                "parameters": [
+                    {
+                        "id": "path",
+                        "type": "text",
+                        "label": "JSON Path",
+                        "placeholder": "data.token",
+                        "required": True,
+                    },
+                    {
+                        "id": "name",
+                        "type": "text",
+                        "label": "Variable Name",
+                        "placeholder": "ACCESS_TOKEN",
+                        "required": True,
+                    },
+                ],
+            }
+        )
+
+    if not result.get("ok"):
+        banner_style = "error"
+        banner_message = (
+            "We couldn't reach the endpoint. Check the URL, network, and active environment."
+        )
+    elif code < 400:
+        banner_style = "success"
+        banner_message = (
+            f"Completed in {result.get('elapsed', 0)} ms · "
+            f"{human_size(result.get('size'))} received."
+        )
+    elif code < 500:
+        banner_style = "warning"
+        banner_message = "The server rejected the request. Inspect the response body for details."
+    else:
+        banner_style = "error"
+        banner_message = "The server failed to complete the request. Inspect the response body and retry."
+
     send(
         {
             "type": "render",
             "rev": rev,
             "view": "dashboard",
-            "canGoBack": True,
             "page": {
                 "id": "api:response",
                 "title": f"{entry.get('method', '')} {short_url(entry.get('url', ''))}",
-                "history": "push" if push else "replace",
+                "history": page_history,
+                "preserveState": True,
                 "breadcrumbs": [{"id": "api:home", "label": "API Client"}],
             },
-            "dashboard": {"layout": "stack", "panels": panels},
-            "floatingAction": [
-                resend_action,
+            "banners": [
                 {
-                    "id": "save",
-                    "title": "Save",
-                    "icon": "folder",
-                    "parameters": [
-                        {
-                            "id": "name",
-                            "type": "text",
-                            "label": "Name",
-                            "required": True,
-                            "value": entry.get("name") or entry.get("url", ""),
-                        }
-                    ],
-                },
-                {
-                    "id": "copyAs",
-                    "title": "Copy As",
-                    "icon": "copy",
-                    "parameters": [
-                        {
-                            "id": "format",
-                            "type": "dropdown",
-                            "label": "Format",
-                            "options": ["cURL", "fetch"],
-                            "value": "cURL",
-                        }
-                    ],
-                },
-                {
-                    "id": "extract",
-                    "title": "Extract Variable",
-                    "icon": "key",
-                    "parameters": [
-                        {
-                            "id": "path",
-                            "type": "text",
-                            "label": "JSON Path (e.g. data.token)",
-                            "required": True,
-                        },
-                        {
-                            "id": "name",
-                            "type": "text",
-                            "label": "Save as Variable",
-                            "required": True,
-                        },
-                    ],
-                },
-                {"id": "edit", "title": "Edit", "icon": "edit"},
+                    "id": "response-status",
+                    "style": banner_style,
+                    "title": status_text,
+                    "message": banner_message,
+                    "icon": "check" if banner_style == "success" else "warning",
+                }
             ],
+            "dashboard": {"layout": "tabs", "panels": panels},
+            "floatingAction": [resend_action, save_action],
+            "actions": secondary_actions,
         }
     )
 
@@ -1809,17 +2164,17 @@ def render_diff(rev, entry_a, entry_b):
     )
     if not diff_text.strip():
         diff_text = "(no differences)"
-    ROUTE["page_id"] = "api:diff"
+    page_history = begin_page("api:diff")
     send(
         {
             "type": "render",
             "rev": rev,
             "view": "diff",
-            "canGoBack": True,
             "page": {
                 "id": "api:diff",
                 "title": "Compare Responses",
-                "history": "push",
+                "history": page_history,
+                "preserveState": True,
                 "breadcrumbs": [
                     {"id": "api:home", "label": "API Client"},
                     {"id": "api:history", "label": "History"},
@@ -1840,35 +2195,62 @@ def render_diff(rev, entry_a, entry_b):
 # --------------------------------------------------------------------------
 
 
-def render_history(rev, filter_text=""):
-    ROUTE["page_id"] = "api:history"
-    ft = filter_text.lower()
+def render_history(rev, filter_text=None):
+    page_history = begin_page("api:history")
+    if filter_text is not None:
+        ROUTE["history_query"] = filter_text
+    ft = ROUTE.get("history_query", "").strip().lower()
+    selected_methods = set(ROUTE.get("history_methods", []))
+    selected_outcomes = set(ROUTE.get("history_outcomes", []))
+    history = list(STATE["history"])
+    if ROUTE.get("history_sort") == "oldest":
+        history.reverse()
     items = []
-    for h in STATE["history"]:
+    for h in history:
         haystack = f"{h.get('method', '')} {h.get('url', '')}".lower()
         if ft and ft not in haystack:
             continue
+        method = h.get("method", "GET")
         result = h.get("result", {}) or {}
+        outcome, outcome_color = response_outcome(result)
+        if selected_methods and method not in selected_methods:
+            continue
+        if selected_outcomes and outcome not in selected_outcomes:
+            continue
         if result.get("ok"):
             code = result.get("status", 0)
-            subtitle = f"{code} {result.get('reason', '')} · {result.get('elapsed', 0)} ms".strip()
+            subtitle = (
+                f"{code} {result.get('reason', '')} · "
+                f"{result.get('elapsed', 0)} ms · {human_size(result.get('size'))}"
+            ).strip()
+            status_chip = str(code)
         else:
             subtitle = f"Failed · {result.get('error', '')}"[:90]
+            status_chip = "Failed"
         items.append(
             {
                 "id": h["id"],
-                "title": f"{h.get('method', '')} {short_url(h.get('url', ''))}",
+                "title": f"{method} {short_url(h.get('url', ''))}",
                 "subtitle": subtitle,
                 "timestamp": h.get("timestamp", ""),
                 "icon": "globe",
                 "accessories": [
                     {
-                        "text": h.get("method", ""),
-                        "color": method_color(h.get("method")),
+                        "text": method,
+                        "color": method_color(method),
+                    },
+                    {"text": status_chip, "color": outcome_color},
+                ],
+                "actions": [
+                    {
+                        "id": "default",
+                        "title": "Inspect Response",
+                        "icon": "open",
                     }
                 ],
             }
         )
+    has_filters = bool(ft or selected_methods or selected_outcomes)
     send(
         {
             "type": "render",
@@ -1877,19 +2259,101 @@ def render_history(rev, filter_text=""):
             "page": {
                 "id": "api:history",
                 "title": "History",
-                "history": "push",
+                "history": page_history,
+                "preserveState": True,
                 "breadcrumbs": [{"id": "api:home", "label": "API Client"}],
             },
-            "placeholder": "Filter history…",
+            "placeholder": "Search method or URL…",
+            "toolbar": {
+                "filters": [
+                    {
+                        "id": "historyMethod",
+                        "label": "Method",
+                        "multiple": True,
+                        "values": ROUTE.get("history_methods", []),
+                        "options": [
+                            {
+                                "value": method,
+                                "label": method,
+                                "icon": "globe",
+                            }
+                            for method in [
+                                "GET",
+                                "POST",
+                                "PUT",
+                                "PATCH",
+                                "DELETE",
+                                "HEAD",
+                                "OPTIONS",
+                            ]
+                        ],
+                    },
+                    {
+                        "id": "historyOutcome",
+                        "label": "Outcome",
+                        "multiple": True,
+                        "values": ROUTE.get("history_outcomes", []),
+                        "options": [
+                            {"value": "Success", "label": "Success", "icon": "check"},
+                            {
+                                "value": "Client Error",
+                                "label": "Client Error",
+                                "icon": "warning",
+                            },
+                            {
+                                "value": "Server Error",
+                                "label": "Server Error",
+                                "icon": "error",
+                            },
+                            {
+                                "value": "Network Error",
+                                "label": "Network Error",
+                                "icon": "wifi",
+                            },
+                        ],
+                    },
+                ],
+                "sort": {
+                    "id": "historySort",
+                    "label": "Order",
+                    "value": ROUTE.get("history_sort", "newest"),
+                    "direction": (
+                        "desc" if ROUTE.get("history_sort") == "newest" else "asc"
+                    ),
+                    "options": [
+                        {"value": "newest", "label": "Newest First", "icon": "clock"},
+                        {"value": "oldest", "label": "Oldest First", "icon": "clock"},
+                    ],
+                },
+            },
             "selection": {"max": 2},
             "empty": {
-                "icon": "clock",
-                "title": "No requests yet",
-                "hint": "Send a request to see it here",
-                "action": {"id": "newRequest", "title": "New Request", "icon": "add"},
+                "icon": "search" if has_filters else "clock",
+                "title": "No matching requests" if has_filters else "No requests yet",
+                "hint": (
+                    "Clear a filter or try another search."
+                    if has_filters
+                    else "Send your first request to start building history."
+                ),
+                **(
+                    {}
+                    if has_filters
+                    else {
+                        "action": {
+                            "id": "newRequest",
+                            "title": "New Request",
+                            "icon": "add",
+                        }
+                    }
+                ),
+            },
+            "floatingAction": {
+                "id": "newRequest",
+                "title": "New Request",
+                "icon": "add",
             },
             "actions": [
-                {"id": "compare", "title": "Compare Selected", "icon": "diff"},
+                {"id": "compare", "title": "Compare Selected", "icon": "code"},
                 {
                     "id": "clear",
                     "title": "Clear History",
@@ -1913,7 +2377,7 @@ def render_history(rev, filter_text=""):
 
 
 def render_collections(rev, filter_text=""):
-    ROUTE["page_id"] = "api:collections"
+    page_history = begin_page("api:collections")
     if filter_text:
         ft = filter_text.lower()
         matched = [
@@ -1942,10 +2406,26 @@ def render_collections(rev, filter_text=""):
             "page": {
                 "id": "api:collections",
                 "title": "Collections",
-                "history": "push",
+                "history": page_history,
+                "preserveState": True,
                 "breadcrumbs": [{"id": "api:home", "label": "API Client"}],
             },
             "placeholder": "Filter collections…",
+            "banners": [
+                {
+                    "id": "collections-environment",
+                    "style": (
+                        "warning"
+                        if "prod" in STATE["activeEnv"].lower()
+                        or "live" in STATE["activeEnv"].lower()
+                        else "info"
+                    ),
+                    "title": f"Running against {STATE['activeEnv']}",
+                    "message": "Collection runs use the active environment's variables.",
+                    "icon": "settings",
+                    "dismissible": True,
+                }
+            ],
             "selection": True,
             "empty": {
                 "icon": "folder",
@@ -1954,8 +2434,22 @@ def render_collections(rev, filter_text=""):
                 "action": {"id": "newRequest", "title": "New Request", "icon": "add"},
             },
             "floatingAction": [
-                {"id": "newFolder", "title": "New Folder", "icon": "folder"},
                 {"id": "newRequest", "title": "New Request", "icon": "add"},
+                {
+                    "id": "newFolder",
+                    "title": "New Folder",
+                    "icon": "folder",
+                    "parameters": [
+                        {
+                            "id": "name",
+                            "type": "text",
+                            "label": "Folder Name",
+                            "required": True,
+                        }
+                    ],
+                },
+            ],
+            "actions": [
                 run_selected,
                 {
                     "id": "import",
@@ -1983,38 +2477,42 @@ def render_collections(rev, filter_text=""):
 
 
 def render_environments(rev, filter_text=""):
-    ROUTE["page_id"] = "api:environments"
+    page_history = begin_page("api:environments")
     ft = filter_text.lower()
     items = []
     for name, edata in STATE["environments"].items():
         if ft and ft not in name.lower():
             continue
         variables = edata.get("vars", {})
-        accessories = [{"text": "●", "color": edata.get("color", "#6B7280")}]
+        accessories = []
         if name == STATE["activeEnv"]:
-            accessories.append({"text": "Active", "color": "#22C55E"})
+            accessories.append({"text": "Active", "color": "#22C55E", "icon": "check"})
+        actions = [{"id": "default", "title": "Edit Environment", "icon": "edit"}]
+        if name != STATE["activeEnv"]:
+            actions.append({"id": "activate", "title": "Set Active", "icon": "check"})
+        if len(STATE["environments"]) > 1:
+            actions.append(
+                {
+                    "id": "delete",
+                    "title": "Delete Environment",
+                    "icon": "trash",
+                    "destructive": True,
+                    "confirm": {
+                        "title": f"Delete '{name}'?",
+                        "message": "Requests using its variables may stop working.",
+                        "confirmLabel": "Delete Environment",
+                    },
+                }
+            )
         items.append(
             {
                 "id": name,
                 "title": name,
                 "subtitle": f"{len(variables)} variable"
                 + ("" if len(variables) == 1 else "s"),
-                "icon": "settings",
+                "icon": edata.get("color", "#6B7280"),
                 "accessories": accessories,
-                "actions": [
-                    {"id": "activate", "title": "Set Active", "icon": "check"},
-                    {
-                        "id": "delete",
-                        "title": "Delete",
-                        "icon": "trash",
-                        "destructive": True,
-                        "confirm": {
-                            "title": f"Delete '{name}'?",
-                            "message": "This cannot be undone.",
-                            "confirmLabel": "Delete",
-                        },
-                    },
-                ],
+                "actions": actions,
             }
         )
     send(
@@ -2025,15 +2523,42 @@ def render_environments(rev, filter_text=""):
             "page": {
                 "id": "api:environments",
                 "title": "Environments",
-                "history": "push",
+                "history": page_history,
+                "preserveState": True,
                 "breadcrumbs": [{"id": "api:home", "label": "API Client"}],
             },
             "placeholder": "Filter environments…",
-            "emptyText": "No environments",
+            "banners": [
+                {
+                    "id": "active-environment",
+                    "style": (
+                        "warning"
+                        if "prod" in STATE["activeEnv"].lower()
+                        or "live" in STATE["activeEnv"].lower()
+                        else "success"
+                    ),
+                    "title": f"{STATE['activeEnv']} is active",
+                    "message": "Its variables will be interpolated into outgoing requests.",
+                    "icon": "settings",
+                }
+            ],
+            "empty": {
+                "icon": "settings",
+                "title": "No matching environments",
+                "hint": "Try another search or create an environment.",
+            },
             "floatingAction": {
                 "id": "newEnv",
                 "title": "New Environment",
                 "icon": "add",
+                "parameters": [
+                    {
+                        "id": "name",
+                        "type": "text",
+                        "label": "Environment Name",
+                        "required": True,
+                    }
+                ],
             },
             "items": items,
         }
@@ -2041,7 +2566,8 @@ def render_environments(rev, filter_text=""):
 
 
 def render_env_editor(rev, name):
-    ROUTE["page_id"] = f"api:environment:{name}"
+    page_id = f"api:environment:{name}"
+    page_history = begin_page(page_id)
     edata = STATE["environments"].get(name, {"vars": {}, "color": "#6B7280"})
     tags = [f"{k}={v}" for k, v in edata.get("vars", {}).items()]
     color_name = COLOR_NAME_BY_HEX.get(edata.get("color", "#6B7280"), "Gray")
@@ -2050,11 +2576,11 @@ def render_env_editor(rev, name):
             "type": "render",
             "rev": rev,
             "view": "form",
-            "canGoBack": True,
             "page": {
-                "id": f"api:environment:{name}",
+                "id": page_id,
                 "title": name,
-                "history": "push",
+                "history": page_history,
+                "preserveState": True,
                 "breadcrumbs": [
                     {"id": "api:home", "label": "API Client"},
                     {"id": "api:environments", "label": "Environments"},
@@ -2062,7 +2588,15 @@ def render_env_editor(rev, name):
             },
             "form": {
                 "title": f"Edit {name}",
-                "submitLabel": "Save",
+                "submitLabel": "Save Environment",
+                "sections": [
+                    {"id": "details", "title": "Environment"},
+                    {
+                        "id": "variables",
+                        "title": "Variables",
+                        "description": "Use variables in requests as {{VARIABLE_NAME}}.",
+                    },
+                ],
                 "fields": [
                     {
                         "id": "name",
@@ -2070,6 +2604,7 @@ def render_env_editor(rev, name):
                         "label": "Name",
                         "value": name,
                         "required": True,
+                        "section": "details",
                     },
                     {
                         "id": "color",
@@ -2077,6 +2612,7 @@ def render_env_editor(rev, name):
                         "label": "Color",
                         "value": color_name,
                         "options": list(COLOR_PALETTE.keys()),
+                        "section": "details",
                     },
                     {
                         "id": "vars",
@@ -2084,6 +2620,7 @@ def render_env_editor(rev, name):
                         "label": "Variables",
                         "description": "One per tag, as KEY=VALUE",
                         "value": tags,
+                        "section": "variables",
                     },
                 ],
             },
@@ -2115,7 +2652,7 @@ def on_submit_env(old_name, values):
 
 
 def render_header_presets(rev, filter_text=""):
-    ROUTE["page_id"] = "api:headers"
+    page_history = begin_page("api:headers")
     ft = filter_text.lower()
     items = []
     for name, hdrs in STATE.get("headerPresets", {}).items():
@@ -2129,14 +2666,19 @@ def render_header_presets(rev, filter_text=""):
                 "subtitle": f"{len(hdrs)} header" + ("" if len(hdrs) == 1 else "s"),
                 "actions": [
                     {
+                        "id": "default",
+                        "title": "Edit Header Preset",
+                        "icon": "edit",
+                    },
+                    {
                         "id": "delete",
-                        "title": "Delete",
+                        "title": "Delete Header Preset",
                         "icon": "trash",
                         "destructive": True,
                         "confirm": {
                             "title": f"Delete '{name}'?",
                             "message": "This cannot be undone.",
-                            "confirmLabel": "Delete",
+                            "confirmLabel": "Delete Header Preset",
                         },
                     }
                 ],
@@ -2150,19 +2692,37 @@ def render_header_presets(rev, filter_text=""):
             "page": {
                 "id": "api:headers",
                 "title": "Header Presets",
-                "history": "push",
+                "history": page_history,
+                "preserveState": True,
                 "breadcrumbs": [{"id": "api:home", "label": "API Client"}],
             },
             "placeholder": "Filter presets…",
-            "emptyText": "No header presets",
-            "floatingAction": {"id": "newPreset", "title": "New Preset", "icon": "add"},
+            "empty": {
+                "icon": "list",
+                "title": "No header presets",
+                "hint": "Create a preset to reuse common headers across requests.",
+            },
+            "floatingAction": {
+                "id": "newPreset",
+                "title": "New Header Preset",
+                "icon": "add",
+                "parameters": [
+                    {
+                        "id": "name",
+                        "type": "text",
+                        "label": "Preset Name",
+                        "required": True,
+                    }
+                ],
+            },
             "items": items,
         }
     )
 
 
 def render_header_preset_editor(rev, name):
-    ROUTE["page_id"] = f"api:headerpreset:{name}"
+    page_id = f"api:headerpreset:{name}"
+    page_history = begin_page(page_id)
     hdrs = STATE.get("headerPresets", {}).get(name, {})
     tags = [f"{k}: {v}" for k, v in hdrs.items()]
     send(
@@ -2170,11 +2730,11 @@ def render_header_preset_editor(rev, name):
             "type": "render",
             "rev": rev,
             "view": "form",
-            "canGoBack": True,
             "page": {
-                "id": f"api:headerpreset:{name}",
+                "id": page_id,
                 "title": name,
-                "history": "push",
+                "history": page_history,
+                "preserveState": True,
                 "breadcrumbs": [
                     {"id": "api:home", "label": "API Client"},
                     {"id": "api:headers", "label": "Header Presets"},
@@ -2182,7 +2742,7 @@ def render_header_preset_editor(rev, name):
             },
             "form": {
                 "title": f"Edit {name}",
-                "submitLabel": "Save",
+                "submitLabel": "Save Header Preset",
                 "fields": [
                     {
                         "id": "name",
@@ -2225,9 +2785,11 @@ def on_submit_header_preset(old_name, values):
 
 def render_for_page(page_id, rev=0):
     if page_id.startswith("api:environment:"):
+        ROUTE["page_id"] = page_id
         render_env_editor(rev, page_id.split(":", 2)[2])
         return
     if page_id.startswith("api:headerpreset:"):
+        ROUTE["page_id"] = page_id
         render_header_preset_editor(rev, page_id.split(":", 2)[2])
         return
     mapping = {
@@ -2243,7 +2805,10 @@ def render_for_page(page_id, rev=0):
         "api:environments": render_environments,
         "api:headers": render_header_presets,
     }
-    mapping.get(page_id, render_home)(rev)
+    if page_id not in mapping:
+        page_id = "api:home"
+    ROUTE["page_id"] = page_id
+    mapping[page_id](rev)
 
 
 def handle_back(msg):
@@ -2256,18 +2821,31 @@ def handle_back(msg):
             target = "api:headers"
         else:
             target = PARENT.get(pid, "api:home")
+    if target == "api:history":
+        cmd(command="setQuery", text=ROUTE.get("history_query", ""))
+    elif target == "api:home":
+        cmd(command="setQuery", text=ROUTE.get("home_query", ""))
+    else:
+        clear_query()
     render_for_page(target, 0)
 
 
 def handle_navigate(msg):
-    render_for_page(msg.get("targetPageId", "api:home"), 0)
+    target = msg.get("targetPageId", "api:home")
+    if target == "api:history":
+        cmd(command="setQuery", text=ROUTE.get("history_query", ""))
+    elif target == "api:home":
+        cmd(command="setQuery", text=ROUTE.get("home_query", ""))
+    else:
+        clear_query()
+    render_for_page(target, 0)
 
 
 def handle_toggle(msg):
     node_id = msg.get("id")
     panel_id = msg.get("panelId")
     expanded = msg.get("expanded")
-    if panel_id == "jsonBody":
+    if panel_id == "body" and ROUTE["page_id"] == "api:response":
         if expanded:
             JSON_EXPANDED.add(node_id)
         else:
@@ -2328,6 +2906,31 @@ def handle_change(msg):
         cmd(command="toast", text=f"Applied '{preset_name}' headers")
 
 
+def handle_toolbar_change(msg):
+    if ROUTE["page_id"] != "api:history":
+        return
+    control_id = msg.get("id")
+    if control_id == "historyMethod":
+        values = msg.get("values")
+        if isinstance(values, list):
+            allowed = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
+            ROUTE["history_methods"] = [value for value in values if value in allowed]
+    elif control_id == "historyOutcome":
+        values = msg.get("values")
+        if isinstance(values, list):
+            allowed = {"Success", "Client Error", "Server Error", "Network Error"}
+            ROUTE["history_outcomes"] = [value for value in values if value in allowed]
+    elif control_id == "historySort":
+        value = msg.get("value")
+        if value in {"newest", "oldest"}:
+            ROUTE["history_sort"] = value
+        elif msg.get("direction") in {"asc", "desc"}:
+            ROUTE["history_sort"] = (
+                "oldest" if msg.get("direction") == "asc" else "newest"
+            )
+    render_history(msg.get("rev", 0))
+
+
 def handle_submit(msg):
     page_id = ROUTE["page_id"]
     values = msg.get("values", {})
@@ -2347,22 +2950,61 @@ def handle_action(msg):
     ids = msg.get("ids") or []
     page_id = ROUTE["page_id"]
 
+    if item_id == "" and action == "goHome":
+        clear_query()
+        render_home(0, filter_text="")
+        return
+
+    if panel_id == "workspace":
+        destination = {
+            "nav:history": render_history,
+            "nav:collections": render_collections,
+            "nav:environments": render_environments,
+            "nav:headers": render_header_presets,
+        }.get(item_id)
+        if destination:
+            ROUTE["home_query"] = ""
+            if item_id == "nav:history":
+                ROUTE["history_query"] = ""
+            cmd(command="setQuery", text="")
+            destination(0)
+        return
     if panel_id == "recent":
         entry = find_history(item_id)
         if entry:
+            ROUTE["home_query"] = ""
+            clear_query()
             render_response(entry)
         return
     if panel_id == "collections":
         node = find_collection(item_id)
         if node:
-            run_collection_node(node)
+            if node["type"] == "folder":
+                ROUTE["expanded"].add(node["id"])
+                ROUTE["home_query"] = ""
+                cmd(command="setQuery", text="")
+                render_collections(0)
+            else:
+                ROUTE["home_query"] = ""
+                clear_query()
+                run_collection_node(node)
         return
 
     if page_id == "api:home":
         if item_id == "":
+            if action in {
+                "newRequest",
+                "history",
+                "collections",
+                "environments",
+                "headers",
+            }:
+                ROUTE["home_query"] = ""
+                cmd(command="setQuery", text="")
             if action == "newRequest":
                 render_new_form(0)
             elif action == "history":
+                ROUTE["history_query"] = ""
                 render_history(0)
             elif action == "collections":
                 render_collections(0)
@@ -2375,13 +3017,18 @@ def handle_action(msg):
     if page_id == "api:confirm":
         if item_id == "":
             if action == "sendAnyway" and PENDING_REQ.get("req"):
-                execute_and_show(PENDING_REQ["req"], warn_if_risky=False)
+                req = PENDING_REQ["req"]
+                PENDING_REQ["req"] = None
+                execute_and_show(req, warn_if_risky=False)
             elif action == "cancel" and PENDING_REQ.get("req"):
+                req = PENDING_REQ["req"]
+                PENDING_REQ["req"] = None
                 render_new_form(
                     0,
-                    values=to_form_values(PENDING_REQ["req"]),
+                    values=to_form_values(req),
                     edit_id=EDIT_CTX["id"],
                     parent_id=EDIT_CTX["parentId"],
+                    history="replace",
                 )
         return
 
@@ -2392,6 +3039,8 @@ def handle_action(msg):
                 save_state()
                 render_history(0)
             elif action == "newRequest":
+                ROUTE["history_query"] = ""
+                clear_query()
                 render_new_form(0)
             elif action == "compare":
                 if len(ids) != 2:
@@ -2404,31 +3053,39 @@ def handle_action(msg):
                     find_history(ids_sorted[1]),
                 )
                 if entry_a and entry_b:
+                    clear_query()
                     render_diff(0, entry_a, entry_b)
             return
         entry = find_history(item_id)
         if entry:
+            clear_query()
             render_response(entry)
         return
 
     if page_id == "api:collections":
         if item_id == "":
             if action == "newFolder":
+                name = (params.get("name") or "").strip()
+                if not name:
+                    cmd(command="toast", text="Enter a folder name.", style="error")
+                    return
                 STATE["collections"].append(
                     {
                         "id": new_id("fld"),
                         "type": "folder",
-                        "name": "New Folder",
+                        "name": name,
                         "parentId": None,
                     }
                 )
                 save_state()
                 render_collections(0)
             elif action == "newRequest":
+                clear_query()
                 render_new_form(0)
             elif action == "runSelected":
                 nodes = [find_collection(i) for i in ids]
                 nodes = [n for n in nodes if n and n["type"] == "request"]
+                clear_query()
                 run_batch(nodes, title="Selected Requests")
             elif action == "import":
                 count, fmt = do_import_collection(params.get("json", ""))
@@ -2467,12 +3124,16 @@ def handle_action(msg):
                     ROUTE["expanded"].add(node["id"])
                 render_collections(0)
             else:
+                clear_query()
                 run_collection_node(node)
         elif action == "run":
+            clear_query()
             run_collection_node(node)
         elif action == "runAll":
+            clear_query()
             run_batch(gather_requests(node["id"]), title=f"Running {node['name']}")
         elif action == "edit":
+            clear_query()
             render_new_form(
                 0,
                 values=to_form_values(node),
@@ -2493,6 +3154,7 @@ def handle_action(msg):
                 save_state()
             render_collections(0)
         elif action == "newHere":
+            clear_query()
             render_new_form(0, parent_id=node["id"])
         elif action == "delete":
             delete_collection_node(node["id"])
@@ -2506,13 +3168,27 @@ def handle_action(msg):
             if name and name not in STATE["environments"]:
                 STATE["environments"][name] = {"vars": {}, "color": "#6B7280"}
                 save_state()
+                clear_query()
                 render_env_editor(0, name)
             else:
+                cmd(
+                    command="toast",
+                    text=(
+                        f"An environment named '{name}' already exists."
+                        if name
+                        else "Enter an environment name."
+                    ),
+                    style="error",
+                )
                 render_environments(0)
             return
-        if action == "activate":
+        if action == "default":
+            clear_query()
+            render_env_editor(0, item_id)
+        elif action == "activate":
             STATE["activeEnv"] = item_id
             save_state()
+            cmd(command="toast", text=f"{item_id} is now active")
             render_environments(0)
         elif action == "delete":
             if len(STATE["environments"]) > 1:
@@ -2534,9 +3210,13 @@ def handle_action(msg):
                 i += 1
             presets[n] = {}
             save_state()
+            clear_query()
             render_header_preset_editor(0, n)
             return
-        if action == "delete":
+        if action == "default":
+            clear_query()
+            render_header_preset_editor(0, item_id)
+        elif action == "delete":
             STATE.get("headerPresets", {}).pop(item_id, None)
             save_state()
             render_header_presets(0)
@@ -2596,8 +3276,8 @@ def loading_frame(rev):
         "type": "render",
         "rev": rev,
         "view": "dashboard",
-        "loading": True,
-        "loadingText": "Loading your workspace…",
+        "loading": {"style": "skeleton", "count": 5},
+        "loadingText": "Restoring your API workspace…",
         "page": {"id": "api:home", "title": "API Client", "history": "none"},
         "dashboard": {"layout": "stack", "panels": []},
     }
@@ -2643,6 +3323,9 @@ def main():
             if t == "close":
                 break
             elif t == "init":
+                theme = msg.get("theme") or {}
+                HOST["accent"] = theme.get("accent") or HOST["accent"]
+                HOST["dark"] = bool(theme.get("dark", HOST["dark"]))
                 cmd(command="storage", op="get", key="data", requestId="boot")
                 send(loading_frame(0))
             elif t == "query":
@@ -2652,7 +3335,9 @@ def main():
                 else:
                     text = msg.get("text", "")
                     pid = ROUTE["page_id"]
-                    if pid == "api:history":
+                    if pid == "api:home":
+                        render_home(rev, filter_text=text)
+                    elif pid == "api:history":
                         render_history(rev, filter_text=text)
                     elif pid == "api:collections":
                         render_collections(rev, filter_text=text)
@@ -2687,15 +3372,40 @@ def main():
                 handle_navigate(msg)
             elif t == "change":
                 handle_change(msg)
+            elif t == "toolbarChange":
+                handle_toolbar_change(msg)
             # select / cancel / kanbanMove / calendarNavigate: unused by this plugin
         except Exception as e:
             log("ERROR handling", t, ":", repr(e))
+            ROUTE["page_id"] = "api:error"
             send(
                 {
                     "type": "render",
                     "rev": 0,
                     "view": "detail",
-                    "detail": {"markdown": f"# Something went wrong\n\n```\n{e}\n```"},
+                    "page": {
+                        "id": "api:error",
+                        "title": "API Client Error",
+                        "history": "replace",
+                        "breadcrumbs": [{"id": "api:home", "label": "API Client"}],
+                    },
+                    "banners": [
+                        {
+                            "id": "plugin-error",
+                            "style": "error",
+                            "title": "This page could not be updated",
+                            "message": "Return home and try the action again.",
+                            "icon": "error",
+                        }
+                    ],
+                    "detail": {
+                        "markdown": f"### Error details\n\n```\n{e}\n```"
+                    },
+                    "floatingAction": {
+                        "id": "goHome",
+                        "title": "Return Home",
+                        "icon": "home",
+                    },
                 }
             )
 

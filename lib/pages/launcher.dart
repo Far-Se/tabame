@@ -188,6 +188,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   static const double _minResultsHeight = 300;
   static const double _maxResultsHeight = 454;
   static const double _designResultExtent = 52;
+  static const double _minPreviewAppWidth = 500;
   static const String _filePreviewVisiblePreferenceKey = 'launcherFilePreviewVisible';
 
   final LauncherSearchToken _searchToken = LauncherSearchToken();
@@ -4879,7 +4880,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                             final PlatformWindow? previewWindow = previewResult?.window;
                             return LayoutBuilder(
                               builder: (BuildContext context, BoxConstraints constraints) {
-                                final bool showPreview = _isFilePreviewVisible && previewResult != null;
+                                final bool showPreview = _isFilePreviewVisible &&
+                                    previewResult != null &&
+                                    MediaQuery.sizeOf(context).width >= _minPreviewAppWidth;
                                 final double previewWidth = constraints.maxWidth * 0.40;
                                 return Stack(
                                   children: <Widget>[
