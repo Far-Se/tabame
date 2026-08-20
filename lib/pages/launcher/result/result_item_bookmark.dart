@@ -105,7 +105,7 @@ class BookmarkSearchListItem extends StatelessWidget {
       case BookmarkResultKind.bookmark:
         if (!result.bookmark!.preferInputIcon) {
           final String emoji = result.bookmark!.emoji.isNotEmpty ? result.bookmark!.emoji : "❖";
-          if (user.launcherDesign == LauncherDesign.terminal) {
+          if (user.launcherDesign == LauncherDesign.terminal || user.launcherDesign == LauncherDesign.terminal2) {
             return Transform.translate(
                 offset: const Offset(-2, -6), child: Text(emoji, style: const TextStyle(fontSize: 14)));
           }

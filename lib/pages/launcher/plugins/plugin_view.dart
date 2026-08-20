@@ -571,13 +571,6 @@ class _PluginViewState extends State<PluginView> {
   }
 
   Widget _buildSplitPreview(PluginRenderFrame frame, Widget itemsPane, PluginItem item) {
-    if (!frame.previewResizable) {
-      return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
-        Expanded(flex: 5, child: itemsPane),
-        Container(width: 1, color: Design.accent.withAlpha(30)),
-        Expanded(flex: 4, child: _buildPreviewPane(item, scope: _scopeFor(frame))),
-      ]);
-    }
     return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
       final double fallback = frame.previewInitialWidth ?? constraints.maxWidth * 0.44;
       final double appWidth =
@@ -600,7 +593,7 @@ class _PluginViewState extends State<PluginView> {
             onHorizontalDragEnd: (_) => _persistPreviewWidthPercent(),
             onHorizontalDragCancel: _persistPreviewWidthPercent,
             child: SizedBox(
-              width: 7,
+              width: 12,
               child: Center(child: Container(width: 1, color: Design.accent.withAlpha(45))),
             ),
           ),
@@ -1802,25 +1795,39 @@ class _PluginViewState extends State<PluginView> {
 
   Widget _buildDiff(PluginRenderFrame frame, {ScrollController? controller}) {
     if (frame.diffLines.isEmpty) return _buildEmptyOrLoading(frame);
-    final bool split = frame.diffMode == 'split';
     return WindowsScrollView(
       controller: controller ?? _scrollController,
       child: SelectionArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
-            if (split)
-              Row(children: <Widget>[
-                Expanded(child: _diffHeader(frame.diffOldLabel)),
-                const SizedBox(width: 1),
-                Expanded(child: _diffHeader(frame.diffNewLabel)),
-              ]),
-            for (final PluginDiffLine line in frame.diffLines)
-              split ? _PluginSplitDiffRow(line: line) : _PluginUnifiedDiffRow(line: line),
-          ]),
+          child: _buildDiffContent(
+            frame.diffLines,
+            mode: frame.diffMode,
+            oldLabel: frame.diffOldLabel,
+            newLabel: frame.diffNewLabel,
+          ),
         ),
       ),
     );
+  }
+
+  Widget _buildDiffContent(
+    List<PluginDiffLine> lines, {
+    required String mode,
+    required String oldLabel,
+    required String newLabel,
+  }) {
+    final bool split = mode == 'split';
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+      if (split)
+        Row(children: <Widget>[
+          Expanded(child: _diffHeader(oldLabel)),
+          const SizedBox(width: 1),
+          Expanded(child: _diffHeader(newLabel)),
+        ]),
+      for (final PluginDiffLine line in lines)
+        split ? _PluginSplitDiffRow(line: line) : _PluginUnifiedDiffRow(line: line),
+    ]);
   }
 
   Widget _diffHeader(String label) => Container(
@@ -2158,16 +2165,28 @@ class _PluginViewState extends State<PluginView> {
   Widget _buildPreviewPane(PluginItem item, {required PluginEventScope scope}) {
     final String markdown = item.previewMarkdown ?? '';
     final bool hasMarkdown = markdown.trim().isNotEmpty;
+    final bool hasDiff = item.previewDiffLines.isNotEmpty;
     final String renderedMarkdown = _normalizeLocalMarkdownImageUris(markdown);
     return WindowsScrollView(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        child: !hasMarkdown && item.previewImageUrl == null && item.previewMetadata.isEmpty
+        child: !hasMarkdown && !hasDiff && item.previewImageUrl == null && item.previewMetadata.isEmpty
             ? Text('No preview', style: TextStyle(fontSize: 12, color: Design.text.withAlpha(90)))
             : _selectableContent(
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
+                    if (hasDiff)
+                      SizedBox(
+                        width: double.infinity,
+                        child: _buildDiffContent(
+                          item.previewDiffLines,
+                          mode: item.previewDiffMode,
+                          oldLabel: item.previewDiffOldLabel,
+                          newLabel: item.previewDiffNewLabel,
+                        ),
+                      ),
+                    if (hasDiff && (hasMarkdown || item.previewImageUrl != null)) const SizedBox(height: 10),
                     if (hasMarkdown || item.previewImageUrl != null)
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2190,7 +2209,7 @@ class _PluginViewState extends State<PluginView> {
                     if (item.previewMetadata.isNotEmpty)
                       _PluginMetadataPane(
                         entries: item.previewMetadata,
-                        topGap: hasMarkdown || item.previewImageUrl != null,
+                        topGap: hasDiff || hasMarkdown || item.previewImageUrl != null,
                         onAction: (PluginAction action) => widget.onMetadataAction(scope, item.id, action),
                       ),
                   ],

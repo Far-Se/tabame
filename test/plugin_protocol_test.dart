@@ -52,12 +52,18 @@ void main() {
       expect(item.subtitleLines, 2);
     });
 
-    test('parses preview metadata with images, widths, and actions', () {
+    test('parses preview metadata, images, actions, and diff content', () {
       final PluginItem item = PluginItem.fromJson(<String, dynamic>{
         'id': 'x',
         'preview': <String, Object?>{
           'markdown': '# hi',
           'image': <String, Object?>{'url': 'https://example.com/cover.jpg', 'width': 180},
+          'diff': <String, Object?>{
+            'mode': 'split',
+            'oldLabel': 'Source',
+            'newLabel': 'Target',
+            'text': ' unchanged\n+added\n-removed',
+          },
           'metadata': <Object?>[
             <String, Object?>{'label': 'Status', 'text': 'Open', 'color': '#00FF00'},
             <String, Object?>{'separator': true},
@@ -88,6 +94,10 @@ void main() {
       expect(item.previewMarkdown, '# hi');
       expect(item.previewImageUrl, 'https://example.com/cover.jpg');
       expect(item.previewImageWidth, 180);
+      expect(item.previewDiffMode, 'split');
+      expect(item.previewDiffOldLabel, 'Source');
+      expect(item.previewDiffNewLabel, 'Target');
+      expect(item.previewDiffLines.map((PluginDiffLine line) => line.type), <String>['context', 'add', 'remove']);
       // Bad entries (no text, sparkline < 2 points) are dropped.
       expect(item.previewMetadata, hasLength(6));
       expect(item.previewMetadata[1].separator, isTrue);

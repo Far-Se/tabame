@@ -560,7 +560,10 @@ class _ActionTile extends StatelessWidget {
     final bool hasSubtitle = action.subtitle != null && action.subtitle!.isNotEmpty;
     final Color titleColor = destructive
         ? Colors.redAccent
-        : isActive && (tokens.design == LauncherDesign.terminal || tokens.design == LauncherDesign.orbit)
+        : isActive &&
+                (tokens.design == LauncherDesign.terminal ||
+                    tokens.design == LauncherDesign.terminal2 ||
+                    tokens.design == LauncherDesign.orbit)
             ? tokens.accent
             : isActive
                 ? tokens.onSurface

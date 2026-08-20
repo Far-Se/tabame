@@ -303,6 +303,13 @@ class QuickMenuModalFrame extends StatelessWidget {
             border: Border.all(color: accent.withAlpha(80)),
           ),
         ),
+      QuickMenuDesigns.terminal2 => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            color: bg.withValues(alpha: 0.95),
+            border: Border.all(color: accent.withAlpha(80)),
+          ),
+        ),
       QuickMenuDesigns.cassette => _FrameSpec(
           decoration: BoxDecoration(
             borderRadius: radius,

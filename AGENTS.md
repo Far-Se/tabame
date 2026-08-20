@@ -1,7 +1,5 @@
 ## Dart validation
 
-Before first validation in a session, confirm `dart` resolves to `dart.exe`, not Flutter's `dart.bat` wrapper (`Get-Command dart`). If it's `dart.bat`, stop and ask the user to fix PATH first — the wrapper can block on Flutter's SDK lock.
-
 After editing Dart files, from the project root, using `dart` as resolved from PATH:
 
 ```

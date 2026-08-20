@@ -666,7 +666,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `media`       | object/string      | Gallery media. Object: `{url,type?,thumbnail?,duration?,size?,width?,height?}`; type is image/video/audio/file. Audio/video tiles expose host playback, seek, buffering, and error controls. Sources support HTTP(S), `file://`, and `data:image/...` up to 2 MB.                                      |
 | `accessories` | array              | Trailing badges. Each is a bare string or `{"text", "color"?, "icon"?}` — `color` tints the chip, `icon` is a §11 name.                                                                                                                                                                              |
 | `actions`     | array              | Entries for the item's **Ctrl+K** menu. Each: `{id, title, icon?, shortcut?, destructive?, confirm?}` — see §9 for the last three.                                                                                                                                                                   |
-| `preview`     | object/string/null | Shown in the preview pane while this item is selected: `{"markdown"?, "image": {"url", "width"?}, "metadata"?}` or a plain markdown string. `image` is an HTTP(S) raster displayed to the right of markdown; `width` is 48–280 px (default 160). Only visible when the frame sets `preview.enabled`. |
+| `preview`     | object/string/null | Shown in the preview pane while this item is selected: `{"markdown"?, "image": {"url", "width"?}, "metadata"?, "diff"?}` or a plain markdown string. `diff` accepts the same `{text|lines, mode?, oldLabel?, newLabel?}` payload as the `diff` view. `image` is an HTTP(S) raster displayed to the right of markdown; `width` is 48–280 px (default 160). Only visible when the frame sets `preview.enabled`. |
 
 ### 7.1 Metadata entries (`preview.metadata` / `detail.metadata`)
 
@@ -1034,7 +1034,7 @@ Enter or a visible action should open it as a full page in its native view.
 
 Set `"preview": {"enabled": true}` on a `list` or `grid` frame. The launcher
 shows the items on the left and, on the right, the **selected item's**
-`preview.markdown` and/or `preview.metadata` (§7.1). As the user arrows through
+`preview.markdown`, `preview.metadata` (§7.1), and/or `preview.diff`. As the user arrows through
 items, the pane updates from each item's `preview`. The window widens to fit and
 restores when the plugin exits. Set `"preview": {"enabled": true, "wide": false}`
 on the **frame** to keep the normal launcher width. A `wide` field inside an
@@ -1054,6 +1054,8 @@ the complete board after applying the move.
 Selectable source comparison in `unified` or `split` mode. `diff.text` accepts
 a unified-diff string. For precise line numbers use
 `diff.lines:[{type:"add"|"remove"|"context"|"header",text,oldLine?,newLine?}]`.
+The same payload may be nested under `item.preview.diff` to render the built-in
+diff widget in a list or grid preview pane.
 
 ### log
 

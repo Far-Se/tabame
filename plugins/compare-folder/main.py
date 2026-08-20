@@ -90,7 +90,40 @@ state = {
 }
 
 
-def render_form():
+def render_form(error=None):
+    source_field = {
+        "id": "folder1",
+        "type": "folderpicker",
+        "label": "Source Folder (1st)",
+        "required": True,
+        "watch": True,
+        "value": state.get("folder1", ""),
+        "description": "The folder to scan for files (1 level deep).",
+    }
+    target_field = {
+        "id": "folder2",
+        "type": "folderpicker",
+        "label": "Target Folder (2nd)",
+        "required": True,
+        "watch": True,
+        "value": state.get("folder2", ""),
+        "description": "The folder to compare files against.",
+    }
+
+    if error:
+        if state.get("folder1") and not os.path.isdir(state["folder1"]):
+            source_field["error"] = "Folder does not exist or is inaccessible."
+        if state.get("folder2") and not os.path.isdir(state["folder2"]):
+            target_field["error"] = "Folder does not exist or is inaccessible."
+
+    form = {
+        "title": "Folder Settings",
+        "submitLabel": "Check Sync",
+        "fields": [source_field, target_field],
+    }
+    if error:
+        form["error"] = error
+
     send(
         {
             "type": "render",
@@ -98,28 +131,7 @@ def render_form():
             "view": "form",
             "canGoBack": state["screen"] == "results",
             "placeholder": "Fill the form below...",
-            "form": {
-                "title": "Check Folder Sync",
-                "submitLabel": "Check Sync",
-                "fields": [
-                    {
-                        "id": "folder1",
-                        "type": "folderpicker",
-                        "label": "Source Folder (1st)",
-                        "required": True,
-                        "value": state.get("folder1", ""),
-                        "description": "The folder to scan for files (1 level deep).",
-                    },
-                    {
-                        "id": "folder2",
-                        "type": "folderpicker",
-                        "label": "Target Folder (2nd)",
-                        "required": True,
-                        "value": state.get("folder2", ""),
-                        "description": "The folder to compare files against.",
-                    },
-                ],
-            },
+            "form": form,
         }
     )
 
@@ -171,7 +183,14 @@ def compute_diff_async(item_id):
                         "markdown": "**Synced**\n\nFiles are identical (ignoring whitespace/metadata)."
                     }
                 else:
-                    item["preview"] = {"markdown": f"```diff\n{diff_text}\n```"}
+                    item["preview"] = {
+                        "diff": {
+                            "mode": "unified",
+                            "text": diff_text,
+                            "oldLabel": "Source",
+                            "newLabel": "Target",
+                        }
+                    }
                 break
 
         render_results(0, state.get("current_query", ""))
@@ -223,17 +242,10 @@ def process_sync(f1, f2):
     )
 
     if not os.path.isdir(f1) or not os.path.isdir(f2):
-        state["screen"] = "error"
-        send(
-            {
-                "type": "render",
-                "rev": 0,
-                "view": "detail",
-                "canGoBack": True,
-                "detail": {
-                    "markdown": "# Error\n\nOne or both folders do not exist or are inaccessible.\n\nPress Escape to go back."
-                },
-            }
+        state["screen"] = "form"
+        render_form(
+            "One or both folders do not exist or are inaccessible. "
+            "Select a different directory."
         )
         return
 
@@ -387,6 +399,26 @@ def main():
             if state["screen"] == "results":
                 render_results(msg.get("rev", 0), state["current_query"])
 
+        elif t == "change" and state["screen"] == "form":
+            vals = msg.get("values", {})
+            state["folder1"] = vals.get("folder1", "").strip()
+            state["folder2"] = vals.get("folder2", "").strip()
+
+            if (
+                state["folder1"]
+                and state["folder2"]
+                and (
+                    not os.path.isdir(state["folder1"])
+                    or not os.path.isdir(state["folder2"])
+                )
+            ):
+                render_form(
+                    "One or both folders do not exist or are inaccessible. "
+                    "Select a different directory."
+                )
+            else:
+                render_form()
+
         elif t == "select":
             # Lazy load the full diff when a file is highlighted
             item_id = msg.get("id", "")
@@ -435,7 +467,7 @@ def main():
 
         elif t == "back":
             if (
-                state["screen"] in ("form", "error")
+                state["screen"] == "form"
                 and state["folder1"]
                 and state["folder2"]
             ):

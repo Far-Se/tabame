@@ -964,8 +964,12 @@ class PluginItem {
     required this.actions,
     required this.previewMarkdown,
     required this.previewMetadata,
+    required this.previewDiffLines,
     this.previewImageUrl,
     this.previewImageWidth,
+    this.previewDiffMode = 'unified',
+    this.previewDiffOldLabel = 'Before',
+    this.previewDiffNewLabel = 'After',
     this.chatImageUrls = const <String>[],
     this.tileColor,
     this.section,
@@ -994,6 +998,13 @@ class PluginItem {
 
   /// Structured key-value rows shown under the preview markdown.
   final List<PluginMetadataEntry> previewMetadata;
+
+  /// Semantic lines rendered with the built-in diff widget in the preview.
+  final List<PluginDiffLine> previewDiffLines;
+
+  final String previewDiffMode;
+  final String previewDiffOldLabel;
+  final String previewDiffNewLabel;
 
   /// Optional remote raster image shown to the right of preview markdown.
   final String? previewImageUrl;
@@ -1059,12 +1070,21 @@ class PluginItem {
 
     String? previewMarkdown;
     List<PluginMetadataEntry> previewMetadata = const <PluginMetadataEntry>[];
+    List<PluginDiffLine> previewDiffLines = const <PluginDiffLine>[];
+    String previewDiffMode = 'unified';
+    String previewDiffOldLabel = 'Before';
+    String previewDiffNewLabel = 'After';
     String? previewImageUrl;
     double? previewImageWidth;
     if (rawPreview is Map) {
       final Object? md = rawPreview['markdown'];
       if (md is String) previewMarkdown = md;
       previewMetadata = PluginMetadataEntry.listFromJson(rawPreview['metadata']);
+      final Object? rawDiff = rawPreview['diff'];
+      previewDiffLines = PluginDiffLine.listFromJson(rawDiff is Map ? (rawDiff['lines'] ?? rawDiff['text']) : rawDiff);
+      previewDiffMode = rawDiff is Map && rawDiff['mode'] == 'split' ? 'split' : 'unified';
+      previewDiffOldLabel = rawDiff is Map && rawDiff['oldLabel'] is String ? rawDiff['oldLabel'] as String : 'Before';
+      previewDiffNewLabel = rawDiff is Map && rawDiff['newLabel'] is String ? rawDiff['newLabel'] as String : 'After';
       final Object? rawImage = rawPreview['image'];
       if (rawImage is Map) {
         final Object? url = rawImage['url'];
@@ -1098,8 +1118,12 @@ class PluginItem {
           : const <PluginAction>[],
       previewMarkdown: previewMarkdown,
       previewMetadata: previewMetadata,
+      previewDiffLines: previewDiffLines,
       previewImageUrl: previewImageUrl,
       previewImageWidth: previewImageWidth,
+      previewDiffMode: previewDiffMode,
+      previewDiffOldLabel: previewDiffOldLabel,
+      previewDiffNewLabel: previewDiffNewLabel,
       chatImageUrls: chatImageUrls,
       tileColor: parsePluginColor(json['tileColor']),
       section: rawSection is String && rawSection.trim().isNotEmpty ? rawSection.trim() : null,

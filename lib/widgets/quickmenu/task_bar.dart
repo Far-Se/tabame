@@ -540,6 +540,8 @@ class _TaskBarItemState extends State<TaskBarItem> {
   bool _isHovered = false;
   double _dragMovement = 0.0;
 
+  bool get _terminalStyle => user.quickMenuDesign == QuickMenuDesigns.terminal2.index;
+
   // bool get _isDark => userSettings.themeTypeMode == ThemeType.dark;
 
   @override
@@ -566,18 +568,24 @@ class _TaskBarItemState extends State<TaskBarItem> {
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOutCubic,
         height: height,
-        margin: EdgeInsets.symmetric(horizontal: 4, vertical: expanded ? 2 : 1),
+        margin: _terminalStyle ? EdgeInsets.zero : EdgeInsets.symmetric(horizontal: 4, vertical: expanded ? 2 : 1),
         decoration: BoxDecoration(
           color: isSelected
-              ? accent.withAlpha(expanded ? 60 : 45)
+              ? accent.withAlpha(_terminalStyle ? 58 : (expanded ? 60 : 45))
               : isHovered
-                  ? accent.withAlpha(expanded ? 40 : 20)
+                  ? accent.withAlpha(_terminalStyle ? 24 : (expanded ? 40 : 20))
                   : Colors.transparent,
-          borderRadius: BorderRadius.circular(expanded ? 8 : 9),
-          border: Border.all(
-            color: (isSelected && !expanded) ? accent.withAlpha(100) : Colors.transparent,
-            width: 1,
-          ),
+          borderRadius: _terminalStyle ? BorderRadius.zero : BorderRadius.circular(expanded ? 8 : 9),
+          border: _terminalStyle
+              ? Border(
+                  bottom: BorderSide(
+                    color: isSelected ? accent.withAlpha(110) : Design.text.withAlpha(20),
+                  ),
+                )
+              : Border.all(
+                  color: (isSelected && !expanded) ? accent.withAlpha(100) : Colors.transparent,
+                  width: 1,
+                ),
         ),
         child: expanded ? _buildExpandedContent() : _buildMainContent(),
       ),
@@ -603,7 +611,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
         child: Row(
           children: <Widget>[
-            if (user.taskbarHoverSlide)
+            if (user.taskbarHoverSlide && !_terminalStyle)
               AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 width: highlighted ? 2.5 : 0,
@@ -614,35 +622,38 @@ class _TaskBarItemState extends State<TaskBarItem> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            SizedBox(
-              width: 25,
-              height: 24,
-              child: Stack(
-                alignment: Alignment.centerLeft,
-                children: <Widget>[
-                  _buildIcon(),
-                  Positioned(
-                    left: 18,
-                    top: 3,
-                    child: _buildHelpBadge(),
-                  ),
-                  if (widget.window.isPinned)
+            if (_terminalStyle)
+              _buildTerminalPid()
+            else
+              SizedBox(
+                width: 25,
+                height: 24,
+                child: Stack(
+                  alignment: Alignment.centerLeft,
+                  children: <Widget>[
+                    _buildIcon(),
                     Positioned(
                       left: 18,
                       top: 3,
-                      child: Icon(Icons.push_pin_rounded, size: 8, color: accent.withAlpha(140)),
+                      child: _buildHelpBadge(),
                     ),
-                  if (Caches.audioMixer.contains(widget.window.process.pId) ||
-                      Caches.audioMixer.contains(widget.window.process.mainPID) ||
-                      Caches.audioMixerExes.contains(widget.window.process.exe))
-                    Positioned(
-                      left: 18,
-                      bottom: 3,
-                      child: _buildMuteButton(),
-                    ),
-                ],
+                    if (widget.window.isPinned)
+                      Positioned(
+                        left: 18,
+                        top: 3,
+                        child: Icon(Icons.push_pin_rounded, size: 8, color: accent.withAlpha(140)),
+                      ),
+                    if (Caches.audioMixer.contains(widget.window.process.pId) ||
+                        Caches.audioMixer.contains(widget.window.process.mainPID) ||
+                        Caches.audioMixerExes.contains(widget.window.process.exe))
+                      Positioned(
+                        left: 18,
+                        bottom: 3,
+                        child: _buildMuteButton(),
+                      ),
+                  ],
+                ),
               ),
-            ),
             const SizedBox(width: 8),
             Expanded(child: _buildExpandedTitle()),
             if (_isHovered) ...<Widget>[
@@ -671,18 +682,26 @@ class _TaskBarItemState extends State<TaskBarItem> {
           widget.window.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.getFont(
-            Design.entryFontFamily,
-            fontSize: Design.baseFontSize + 2,
-            color: highlighted ? onSurface : onSurface.withAlpha(200),
-            // letterSpacing: 1.1,
-            fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
-            fontWeight: widget.isSelected
-                ? FontWeight.w600
-                : FontWeight(
-                    Design.entryFontWeight,
-                  ),
-          ),
+          style: _terminalStyle
+              ? TextStyle(
+                  fontFamily: 'Cascadia Mono',
+                  fontFamilyFallback: const <String>['Consolas', 'Courier New'],
+                  fontSize: Design.baseFontSize + 1,
+                  color: highlighted ? onSurface : onSurface.withAlpha(200),
+                  fontWeight: widget.isSelected ? FontWeight.w700 : FontWeight.w500,
+                  letterSpacing: 0.1,
+                )
+              : GoogleFonts.getFont(
+                  Design.entryFontFamily,
+                  fontSize: Design.baseFontSize + 2,
+                  color: highlighted ? onSurface : onSurface.withAlpha(200),
+                  fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+                  fontWeight: widget.isSelected
+                      ? FontWeight.w600
+                      : FontWeight(
+                          Design.entryFontWeight,
+                        ),
+                ),
         ),
         const SizedBox(height: 1),
         Text(
@@ -690,6 +709,8 @@ class _TaskBarItemState extends State<TaskBarItem> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
+            fontFamily: _terminalStyle ? 'Cascadia Mono' : null,
+            fontFamilyFallback: _terminalStyle ? const <String>['Consolas', 'Courier New'] : null,
             fontSize: Design.baseFontSize,
             color: highlighted ? onSurface.withAlpha(170) : onSurface.withAlpha(130),
           ),
@@ -715,35 +736,38 @@ class _TaskBarItemState extends State<TaskBarItem> {
         padding: const EdgeInsets.only(left: 8.0),
         child: Row(
           children: <Widget>[
-            SizedBox(
-              width: 25,
-              height: kTaskBarItemHeight,
-              child: Stack(
-                alignment: Alignment.centerLeft,
-                children: <Widget>[
-                  _buildIcon(),
-                  Positioned(
-                    left: 18,
-                    top: 3,
-                    child: _buildHelpBadge(),
-                  ),
-                  if (widget.window.isPinned)
+            if (_terminalStyle)
+              _buildTerminalPid()
+            else
+              SizedBox(
+                width: 25,
+                height: kTaskBarItemHeight,
+                child: Stack(
+                  alignment: Alignment.centerLeft,
+                  children: <Widget>[
+                    _buildIcon(),
                     Positioned(
                       left: 18,
                       top: 3,
-                      child: Icon(Icons.push_pin_rounded, size: 8, color: Design.accent.withAlpha(140)),
+                      child: _buildHelpBadge(),
                     ),
-                  if (Caches.audioMixer.contains(widget.window.process.pId) ||
-                      Caches.audioMixer.contains(widget.window.process.mainPID) ||
-                      Caches.audioMixerExes.contains(widget.window.process.exe))
-                    Positioned(
-                      left: 18,
-                      bottom: 3,
-                      child: _buildMuteButton(),
-                    ),
-                ],
+                    if (widget.window.isPinned)
+                      Positioned(
+                        left: 18,
+                        top: 3,
+                        child: Icon(Icons.push_pin_rounded, size: 8, color: Design.accent.withAlpha(140)),
+                      ),
+                    if (Caches.audioMixer.contains(widget.window.process.pId) ||
+                        Caches.audioMixer.contains(widget.window.process.mainPID) ||
+                        Caches.audioMixerExes.contains(widget.window.process.exe))
+                      Positioned(
+                        left: 18,
+                        bottom: 3,
+                        child: _buildMuteButton(),
+                      ),
+                  ],
+                ),
               ),
-            ),
             const SizedBox(width: 4),
             Expanded(child: _buildTitle()),
             if (_isHovered) ...<Widget>[
@@ -761,7 +785,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
     final Color accent = Design.accent;
     return InkWell(
       hoverColor: accent.withAlpha(40),
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: _terminalStyle ? BorderRadius.zero : BorderRadius.circular(6),
       onTap: () => _muteWindow(),
       child: SizedBox(
         width: kMediaButtonWidth,
@@ -775,7 +799,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
     final Color accent = Design.accent;
     return InkWell(
       hoverColor: accent.withAlpha(40),
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: _terminalStyle ? BorderRadius.zero : BorderRadius.circular(6),
       onTap: () => WindowWatcher.mediaControl(widget.index),
       child: GestureDetector(
         onSecondaryTap: () => WindowWatcher.mediaControl(widget.index, button: AppCommand.mediaNexttrack),
@@ -795,7 +819,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
       padding: EdgeInsets.only(right: !user.expandedTaskbar && WindowWatcher.list.length > 10 ? 5.0 : 0),
       child: InkWell(
         hoverColor: Colors.red.withAlpha(40),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: _terminalStyle ? BorderRadius.zero : BorderRadius.circular(6),
         onTap: () => widget.onClose(widget.index, widget.window),
         onLongPress: () => Win32.closeWindow(widget.window.hWnd, forced: true),
         child: SizedBox(
@@ -899,16 +923,43 @@ class _TaskBarItemState extends State<TaskBarItem> {
       overflow: TextOverflow.ellipsis,
       maxLines: 1,
       softWrap: false,
-      style: GoogleFonts.getFont(
-        Design.entryFontFamily,
-        fontSize: 13,
-        letterSpacing: 0.3,
-        fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
-        fontWeight: widget.isSelected
-            ? FontWeight.w600
-            : FontWeight(
-                Design.entryFontWeight,
-              ),
+      style: _terminalStyle
+          ? TextStyle(
+              fontFamily: 'Cascadia Mono',
+              fontFamilyFallback: const <String>['Consolas', 'Courier New'],
+              fontSize: Design.baseFontSize + 1,
+              letterSpacing: 0.1,
+              fontWeight: widget.isSelected ? FontWeight.w700 : FontWeight.w500,
+            )
+          : GoogleFonts.getFont(
+              Design.entryFontFamily,
+              fontSize: 13,
+              letterSpacing: 0.3,
+              fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
+              fontWeight: widget.isSelected
+                  ? FontWeight.w600
+                  : FontWeight(
+                      Design.entryFontWeight,
+                    ),
+            ),
+    );
+  }
+
+  Widget _buildTerminalPid() {
+    final String pid = widget.window.process.pId.toString().padLeft(4, '0');
+    return SizedBox(
+      width: 34,
+      child: Text(
+        pid.length > 4 ? pid.substring(pid.length - 4) : pid,
+        maxLines: 1,
+        style: TextStyle(
+          color: widget.isSelected ? Design.accent : Design.text.withAlpha(150),
+          fontFamily: 'Cascadia Mono',
+          fontFamilyFallback: const <String>['Consolas', 'Courier New'],
+          fontSize: Design.baseFontSize - 1,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+        ),
       ),
     );
   }

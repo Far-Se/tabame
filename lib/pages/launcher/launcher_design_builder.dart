@@ -17,6 +17,7 @@ part 'launcher_designs/classic_launcher_design.dart';
 part 'launcher_designs/serene_launcher_design.dart';
 part 'launcher_designs/command_launcher_design.dart';
 part 'launcher_designs/terminal_launcher_design.dart';
+part 'launcher_designs/terminal2_launcher_design.dart';
 part 'launcher_designs/zen_launcher_design.dart';
 part 'launcher_designs/glass_launcher_design.dart';
 part 'launcher_designs/blueprint_launcher_design.dart';
@@ -35,6 +36,7 @@ part 'launcher_designs/windows_xp_launcher_design.dart';
 part 'launcher_designs/windows_98_launcher_design.dart';
 part 'launcher_designs/notion_launcher_design.dart';
 part 'launcher_designs/switchboard_launcher_design.dart';
+part 'launcher_designs/relay_launcher_design.dart';
 
 // ---------------------------------------------------------------------------
 // Extension: per-design widget factories used by LauncherState
@@ -284,6 +286,35 @@ extension LauncherDesignBuilder on LauncherDesign {
         return notionLauncherOuterDecoration(surface);
       case LauncherDesign.switchboard:
         return switchboardLauncherOuterDecoration(surface, accent);
+      case LauncherDesign.relay:
+        return BoxDecoration(
+          borderRadius: BorderRadius.circular(Design.borderRadius),
+          color: surface,
+          border: Border.all(color: RelayTokens.border(surface.computeLuminance() < 0.5, accent)),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: Colors.black.withAlpha(82),
+              blurRadius: 24,
+              spreadRadius: -7,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        );
+      case LauncherDesign.terminal2:
+        final bool isTerminalDark = surface.computeLuminance() < 0.5;
+        return BoxDecoration(
+          borderRadius: BorderRadius.circular(2),
+          color: surface,
+          border: Border.all(color: Terminal2Tokens.dim(isTerminalDark).withAlpha(120)),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: Colors.black.withAlpha(isTerminalDark ? 105 : 48),
+              blurRadius: 18,
+              spreadRadius: -5,
+              offset: const Offset(0, 9),
+            ),
+          ],
+        );
     }
   }
 
@@ -491,6 +522,22 @@ extension LauncherDesignBuilder on LauncherDesign {
         return SwitchboardLauncherSearchBar(
           accent: accent,
           onSurface: onSurface,
+          dragHandle: dragHandle,
+          textField: textField,
+          trailingBadge: trailingBadge,
+          isSearching: isSearching,
+        );
+      case LauncherDesign.relay:
+        return _RelaySearchBar(
+          accent: accent,
+          dragHandle: dragHandle,
+          textField: textField,
+          trailingBadge: trailingBadge,
+          isSearching: isSearching,
+        );
+      case LauncherDesign.terminal2:
+        return _Terminal2SearchBar(
+          accent: accent,
           dragHandle: dragHandle,
           textField: textField,
           trailingBadge: trailingBadge,
@@ -788,6 +835,10 @@ extension LauncherDesignBuilder on LauncherDesign {
         return NotionLauncherHeader(label: label);
       case LauncherDesign.switchboard:
         return SwitchboardLauncherHeader(label: label, accent: accent);
+      case LauncherDesign.relay:
+        return RelayLauncherHeader(label: label, accent: accent);
+      case LauncherDesign.terminal2:
+        return Terminal2LauncherHeader(label: label, accent: accent);
     }
   }
 }

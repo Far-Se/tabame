@@ -40,6 +40,7 @@ enum QuickMenuDesigns {
   interface,
   aurora,
   terminal,
+  terminal2,
   cassette,
   fluent,
   gazette,
@@ -64,6 +65,7 @@ enum QuickMenuDesigns {
   notion,
   rundown,
   commandDeck,
+  // Persisted by index: new designs must remain append-only.
   // familyGuy,
   ;
 
@@ -80,6 +82,10 @@ enum LauncherDesign {
   serene,
   command,
   terminal,
+
+  /// Contemporary TUI operator shell. Append-only to preserve persisted
+  /// launcher preferences.
+  terminal2,
   zen,
   glass,
   blueprint,
@@ -118,7 +124,11 @@ enum LauncherDesign {
 
   /// Three-region command workstation with source lenses and an always-visible
   /// inspector. Append-only to preserve persisted launcher preferences.
-  switchboard;
+  switchboard,
+
+  /// Communications backplane launcher with routed signal paths and compact
+  /// connection ports. Append-only to preserve persisted preferences.
+  relay;
 
   String get displayName => switch (this) {
         LauncherDesign.windowsXp => 'Windows XP',
@@ -535,6 +545,32 @@ class Settings {
         ),
       ),
       QuickMenuDesigns.terminal.displayName: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFF1E1E1E),
+          textColor: const Color(0xFFD4D4D4),
+          accentColor: const Color(0xFF00C7FF),
+          gradientAlpha: 0,
+          uiFontFamily: 'JetBrains Mono',
+          uiFontWeight: 500,
+          entryFontFamily: 'JetBrains Mono',
+          entryFontWeight: 600,
+          borderRadius: 4,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF0C0C0C),
+          textColor: const Color(0xFFCCCCCC),
+          accentColor: const Color(0xFF39D353),
+          gradientAlpha: 0,
+          uiFontFamily: 'JetBrains Mono',
+          uiFontWeight: 500,
+          entryFontFamily: 'JetBrains Mono',
+          entryFontWeight: 600,
+          borderRadius: 4,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.terminal2.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xFF1E1E1E),
           textColor: const Color(0xFFD4D4D4),

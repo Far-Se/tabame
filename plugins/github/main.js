@@ -24,6 +24,7 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const { spawn } = require("child_process");
 
 const API = "https://api.github.com";
 
@@ -352,6 +353,7 @@ const state = {
   lastRev: 0,
   lastText: "",
   downloading: null, // {label, progress, detail} while a download runs
+  activeProcess: null,
 };
 
 function top() {
@@ -483,6 +485,13 @@ const COMMANDS = [
     title: "Download Repository",
     subtitle: "Download a repo ZIP or a single directory",
     icon: "download",
+  },
+  {
+    id: "download_folder",
+    section: "Repositories",
+    title: "Download One Folder",
+    subtitle: "Paste a GitHub folder link and choose a destination",
+    icon: "folder",
   },
   {
     id: "runs",
@@ -1551,6 +1560,226 @@ function uniquePath(p) {
   return `${base}-${Date.now()}${ext}`;
 }
 
+function uniqueDirectoryPath(p) {
+  if (!fs.existsSync(p)) return p;
+  for (let i = 1; i < 100; i++) {
+    const candidate = `${p} (${i})`;
+    if (!fs.existsSync(candidate)) return candidate;
+  }
+  return `${p}-${Date.now()}`;
+}
+
+function parseGitHubFolderUrl(value) {
+  let url;
+  try {
+    url = new URL(String(value || "").trim());
+  } catch (_) {
+    throw new Error("Paste a valid GitHub folder URL.");
+  }
+  if (
+    url.protocol !== "https:" ||
+    !["github.com", "www.github.com"].includes(url.hostname.toLowerCase())
+  ) {
+    throw new Error("The link must be an https://github.com folder URL.");
+  }
+  let segments;
+  try {
+    segments = url.pathname
+      .split("/")
+      .filter(Boolean)
+      .map((segment) => decodeURIComponent(segment));
+  } catch (_) {
+    throw new Error("The GitHub folder URL contains invalid escaping.");
+  }
+  if (segments.length < 5 || segments[2] !== "tree") {
+    throw new Error(
+      "Use a folder link shaped like github.com/user/project/tree/main/path/to/folder.",
+    );
+  }
+  const [owner, rawRepo] = segments;
+  const repo = rawRepo.replace(/\.git$/i, "");
+  const tail = segments.slice(3);
+  if (
+    !/^[A-Za-z0-9-]+$/.test(owner) ||
+    !/^[A-Za-z0-9._-]+$/.test(repo) ||
+    tail.length < 2 ||
+    segments.some(
+      (segment) =>
+        !segment ||
+        segment === "." ||
+        segment === ".." ||
+        segment.includes("\\") ||
+        segment.includes("\0"),
+    )
+  ) {
+    throw new Error("The link must point to a folder inside a repository.");
+  }
+  return {
+    owner,
+    repo,
+    fullName: `${owner}/${repo}`,
+    cloneUrl: `https://github.com/${owner}/${repo}.git`,
+    tail,
+  };
+}
+
+function gitEnvironment() {
+  const env = { ...process.env, GIT_TERMINAL_PROMPT: "0" };
+  if (config.token) {
+    env.GIT_CONFIG_COUNT = "1";
+    env.GIT_CONFIG_KEY_0 = "http.extraHeader";
+    const basic = Buffer.from(`x-access-token:${config.token}`).toString(
+      "base64",
+    );
+    env.GIT_CONFIG_VALUE_0 = `Authorization: Basic ${basic}`;
+  }
+  return env;
+}
+
+function runGit(args, cwd, detail, progressRange) {
+  throttledProgress(
+    progressRange ? progressRange[0] : null,
+    detail || "Running Git…",
+  );
+  return new Promise((resolve, reject) => {
+    const child = spawn("git", args, {
+      cwd,
+      env: gitEnvironment(),
+      windowsHide: true,
+    });
+    state.activeProcess = child;
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    const finish = (err, value) => {
+      if (settled) return;
+      settled = true;
+      if (state.activeProcess === child) state.activeProcess = null;
+      if (err) reject(err);
+      else resolve(value);
+    };
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      const text = chunk.toString();
+      stderr += text;
+      const lines = text.split(/[\r\n]+/).filter(Boolean);
+      const latest = lines[lines.length - 1];
+      if (!latest) return;
+      const percent = latest.match(/(\d{1,3})%/);
+      const progress =
+        progressRange && percent
+          ? progressRange[0] +
+            (Math.min(100, Number(percent[1])) / 100) *
+              (progressRange[1] - progressRange[0])
+          : progressRange
+            ? progressRange[0]
+            : null;
+      throttledProgress(progress, latest.trim());
+    });
+    child.on("error", (err) => {
+      finish(
+        new Error(
+          err.code === "ENOENT"
+            ? "Git is not installed or is not available on PATH."
+            : `Could not start Git: ${err.message}`,
+        ),
+      );
+    });
+    child.on("close", (code) => {
+      if (code === 0) return finish(null, stdout);
+      const message = stderr.trim().split(/[\r\n]+/).slice(-4).join("\n");
+      finish(new Error(message || `Git exited with code ${code}.`));
+    });
+  });
+}
+
+async function resolveFolderRef(parsed) {
+  if (/^[0-9a-f]{40}$/i.test(parsed.tail[0])) {
+    return { ref: parsed.tail[0], folder: parsed.tail.slice(1).join("/") };
+  }
+  const output = await runGit(
+    ["ls-remote", "--heads", "--tags", parsed.cloneUrl],
+    undefined,
+    "Resolving branch or tag…",
+    [0, 0.05],
+  );
+  const refs = new Set();
+  for (const line of output.split(/\r?\n/)) {
+    const match = line.match(/\srefs\/(?:heads|tags)\/(.+?)(?:\^\{\})?$/);
+    if (match) refs.add(match[1]);
+  }
+  for (let count = parsed.tail.length - 1; count >= 1; count--) {
+    const candidate = parsed.tail.slice(0, count).join("/");
+    if (refs.has(candidate)) {
+      return {
+        ref: candidate,
+        folder: parsed.tail.slice(count).join("/"),
+      };
+    }
+  }
+  return { ref: parsed.tail[0], folder: parsed.tail.slice(1).join("/") };
+}
+
+async function jobSparseFolder(parsed, destination) {
+  const resolvedDestination = path.resolve(destination);
+  const repoRoot = uniqueDirectoryPath(
+    path.join(resolvedDestination, parsed.repo),
+  );
+  try {
+    const { ref, folder } = await resolveFolderRef(parsed);
+    await runGit(
+      [
+        "clone",
+        "--filter=blob:none",
+        "--no-checkout",
+        "--progress",
+        parsed.cloneUrl,
+        repoRoot,
+      ],
+      resolvedDestination,
+      `Cloning ${parsed.fullName}…`,
+      [0.05, 0.7],
+    );
+    await runGit(
+      ["-C", repoRoot, "sparse-checkout", "init", "--cone"],
+      undefined,
+      "Initializing sparse checkout…",
+      [0.7, 0.75],
+    );
+    await runGit(
+      ["-C", repoRoot, "sparse-checkout", "set", "--", folder],
+      undefined,
+      `Selecting ${folder}…`,
+      [0.75, 0.8],
+    );
+    await runGit(
+      ["-C", repoRoot, "checkout", "--progress", ref],
+      undefined,
+      `Checking out ${ref}…`,
+      [0.8, 1],
+    );
+    const downloadedFolder = path.resolve(repoRoot, ...folder.split("/"));
+    if (!downloadedFolder.startsWith(repoRoot + path.sep)) {
+      throw new Error("The requested folder resolves outside the repository.");
+    }
+    if (!fs.existsSync(downloadedFolder)) {
+      throw new Error(`Git checked out the ref, but ${folder} was not found.`);
+    }
+    return downloadedFolder;
+  } catch (err) {
+    if (fs.existsSync(repoRoot)) {
+      try {
+        fs.rmSync(repoRoot, { recursive: true, force: true });
+      } catch (cleanupError) {
+        log("sparse clone cleanup:", cleanupError.message);
+      }
+    }
+    throw err;
+  }
+}
+
 async function renderBrowse(rev, text) {
   const { repo, branch } = top().ctx;
   const dirPath = top().ctx.path || "";
@@ -1662,7 +1891,7 @@ function renderDownloading(rev) {
   });
 }
 
-async function startDownload(label, job) {
+async function startDownload(label, job, opts = {}) {
   if (state.downloading) return cmdToast("A download is already running");
   state.downloading = { label, progress: null, detail: "" };
   renderDownloading(0);
@@ -1670,7 +1899,7 @@ async function startDownload(label, job) {
     const dest = await job();
     state.downloading = null;
     cmdToast(`Saved to ${dest}`);
-    cmdOpen(path.dirname(dest));
+    cmdOpen(opts.openResult ? dest : path.dirname(dest));
     renderScreen(0, state.lastText);
   } catch (err) {
     state.downloading = null;
@@ -1791,6 +2020,40 @@ function renderSetup(rev, note) {
           label: "Download folder (optional)",
           placeholder: path.join(os.homedir(), "Downloads"),
           value: config.downloadDir || "",
+        },
+      ],
+    },
+  });
+}
+
+function renderDownloadFolderForm(rev) {
+  const formError = top().ctx.formError || "";
+  top().ctx.formError = "";
+  render(rev, "form", {
+    form: {
+      title: "Download one GitHub folder",
+      error: formError || undefined,
+      submitLabel: "Download Folder",
+      fields: [
+        {
+          id: "url",
+          type: "text",
+          label: "GitHub folder link",
+          placeholder:
+            "https://github.com/user/project/tree/main/assets/icons",
+          description:
+            "Paste a /tree/ link to a folder. Branches, tags, and commit SHAs are supported.",
+          required: true,
+        },
+        {
+          id: "destination",
+          type: "folderpicker",
+          label: "Destination",
+          value:
+            config.downloadDir && config.downloadDir.trim()
+              ? config.downloadDir.trim()
+              : path.join(os.homedir(), "Downloads"),
+          required: true,
         },
       ],
     },
@@ -2001,6 +2264,37 @@ async function submitCreateBranch(values) {
   return resetToRoot();
 }
 
+async function submitDownloadFolder(values) {
+  let parsed;
+  try {
+    parsed = parseGitHubFolderUrl(values.url);
+  } catch (err) {
+    top().ctx.formError = err.message;
+    return renderScreen(0, state.lastText);
+  }
+  const destination = String(values.destination || "").trim();
+  if (!destination) {
+    top().ctx.formError = "Choose a destination folder.";
+    return renderScreen(0, state.lastText);
+  }
+  try {
+    if (!fs.statSync(destination).isDirectory()) {
+      throw new Error("The selected destination is not a folder.");
+    }
+  } catch (err) {
+    top().ctx.formError =
+      err.code === "ENOENT"
+        ? "The selected destination does not exist."
+        : err.message;
+    return renderScreen(0, state.lastText);
+  }
+  return startDownload(
+    `Downloading ${parsed.fullName} folder`,
+    () => jobSparseFolder(parsed, destination),
+    { openResult: true },
+  );
+}
+
 // ── screen dispatch ──────────────────────────────────────────────────────────
 async function renderScreen(rev, text) {
   state.lastText = text;
@@ -2057,6 +2351,8 @@ async function renderScreen(rev, text) {
         return await renderMyStats(rev);
       case "browse":
         return await renderBrowse(rev, text);
+      case "download_folder_form":
+        return renderDownloadFolderForm(rev);
       case "create_issue_form":
         return renderCreateIssueForm(rev);
       case "create_pr_form":
@@ -2101,6 +2397,8 @@ async function runCommand(cmdId) {
       return push("repo_pick", { purpose: "runs" });
     case "download_repo":
       return push("repo_pick", { purpose: "download" });
+    case "download_folder":
+      return push("download_folder_form");
     default:
       return renderRoot(0, "");
   }
@@ -2267,6 +2565,8 @@ async function handleSubmit(values) {
         return await submitCreatePR(values);
       case "create_branch_form":
         return await submitCreateBranch(values);
+      case "download_folder_form":
+        return await submitDownloadFolder(values);
       default:
         return;
     }
@@ -2285,6 +2585,9 @@ function handleTab(id) {
 
 // ── stdin loop ───────────────────────────────────────────────────────────────
 let buffer = "";
+function stopActiveProcess() {
+  if (state.activeProcess) state.activeProcess.kill();
+}
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => {
   buffer += chunk;
@@ -2295,7 +2598,10 @@ process.stdin.on("data", (chunk) => {
     if (line) handleLine(line);
   }
 });
-process.stdin.on("end", () => process.exit(0));
+process.stdin.on("end", () => {
+  stopActiveProcess();
+  process.exit(0);
+});
 
 async function handleLine(line) {
   let msg;
@@ -2306,6 +2612,7 @@ async function handleLine(line) {
   }
   switch (msg.type) {
     case "close":
+      stopActiveProcess();
       process.exit(0);
       break;
     case "init":

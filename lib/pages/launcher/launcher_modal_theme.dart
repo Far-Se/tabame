@@ -38,6 +38,15 @@ class LauncherModalTokens {
           onSurface: TerminalTokens.fg(isDark),
           dim: TerminalTokens.dim(isDark),
         );
+      case LauncherDesign.terminal2:
+        return LauncherModalTokens._(
+          design: design,
+          isDark: isDark,
+          surface: Terminal2Tokens.bg(isDark),
+          accent: Design.accent,
+          onSurface: Terminal2Tokens.fg(isDark),
+          dim: Terminal2Tokens.dim(isDark),
+        );
       case LauncherDesign.zen:
         return LauncherModalTokens._(
           design: design,
@@ -128,6 +137,15 @@ class LauncherModalTokens {
           onSurface: SwitchboardTokens.foreground(isDark),
           dim: SwitchboardTokens.dim(isDark),
         );
+      case LauncherDesign.relay:
+        return LauncherModalTokens._(
+          design: design,
+          isDark: isDark,
+          surface: RelayTokens.panel(isDark, Design.accent),
+          accent: Design.accent,
+          onSurface: RelayTokens.foreground(isDark),
+          dim: RelayTokens.dim(isDark),
+        );
       case LauncherDesign.classic:
       case LauncherDesign.serene:
       case LauncherDesign.command:
@@ -191,6 +209,8 @@ class LauncherModalTokens {
         LauncherDesign.windows98 => 0.0,
         LauncherDesign.notion => 4.0,
         LauncherDesign.switchboard => 3.0,
+        LauncherDesign.relay => 3.0,
+        LauncherDesign.terminal2 => 2.0,
       };
 
   /// Designs whose controls carry a visible accent outline (console/drafting
@@ -198,12 +218,14 @@ class LauncherModalTokens {
   bool get outlinedControls =>
       design == LauncherDesign.command ||
       design == LauncherDesign.terminal ||
+      design == LauncherDesign.terminal2 ||
       design == LauncherDesign.blueprint ||
       design == LauncherDesign.orbit ||
       design == LauncherDesign.manifesto ||
       design == LauncherDesign.windowsXp ||
       design == LauncherDesign.windows98 ||
-      design == LauncherDesign.switchboard;
+      design == LauncherDesign.switchboard ||
+      design == LauncherDesign.relay;
 
   /// The design voice — same font family the launcher rows use.
   TextStyle text({
@@ -215,6 +237,8 @@ class LauncherModalTokens {
   }) {
     return switch (design) {
       LauncherDesign.terminal => TerminalTokens.mono(
+          fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
+      LauncherDesign.terminal2 => Terminal2Tokens.mono(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       LauncherDesign.zen => ZenTokens.soft(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
@@ -237,6 +261,8 @@ class LauncherModalTokens {
       LauncherDesign.notion => NotionTokens.ui(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       LauncherDesign.switchboard => SwitchboardTokens.body(
+          fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
+      LauncherDesign.relay => RelayTokens.body(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       _ => TextStyle(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
@@ -349,15 +375,17 @@ class LauncherModalFrame extends StatelessWidget {
         ],
         Container(
           decoration: BoxDecoration(
-            color: design == LauncherDesign.notion
+            color: design == LauncherDesign.relay
                 ? tokens.surface.withValues(alpha: 0.98)
-                : design == LauncherDesign.windows98
-                    ? Windows98Tokens.face
-                    : design == LauncherDesign.windowsXp
-                        ? WindowsXpTokens.surface
-                        : design == LauncherDesign.manifesto
-                            ? tokens.surface.withValues(alpha: 0.96)
-                            : Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
+                : design == LauncherDesign.notion
+                    ? tokens.surface.withValues(alpha: 0.98)
+                    : design == LauncherDesign.windows98
+                        ? Windows98Tokens.face
+                        : design == LauncherDesign.windowsXp
+                            ? WindowsXpTokens.surface
+                            : design == LauncherDesign.manifesto
+                                ? tokens.surface.withValues(alpha: 0.96)
+                                : Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
           ),
           child: child,
         ),
@@ -468,6 +496,11 @@ class LauncherModalHeader extends StatelessWidget {
           borderRadius: BorderRadius.circular(3),
           border: Border.all(color: accent.withAlpha(60)),
         ),
+      LauncherDesign.terminal2 => BoxDecoration(
+          color: Terminal2Tokens.raised(tokens.isDark),
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(color: accent.withAlpha(80)),
+        ),
       LauncherDesign.zen => BoxDecoration(
           color: accent.withAlpha(26),
           borderRadius: BorderRadius.circular(13),
@@ -531,6 +564,11 @@ class LauncherModalHeader extends StatelessWidget {
           borderRadius: BorderRadius.circular(3),
           border: Border.all(color: SwitchboardTokens.border(tokens.isDark)),
         ),
+      LauncherDesign.relay => BoxDecoration(
+          color: RelayTokens.raised(tokens.isDark, accent),
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(color: RelayTokens.border(tokens.isDark, accent)),
+        ),
       _ => BoxDecoration(
           color: accent.withAlpha(28),
           borderRadius: BorderRadius.circular(8),
@@ -541,9 +579,11 @@ class LauncherModalHeader extends StatelessWidget {
   bool get _uppercaseVoice =>
       tokens.design == LauncherDesign.blueprint ||
       tokens.design == LauncherDesign.command ||
+      tokens.design == LauncherDesign.terminal2 ||
       tokens.design == LauncherDesign.orbit ||
       tokens.design == LauncherDesign.manifesto ||
-      tokens.design == LauncherDesign.switchboard;
+      tokens.design == LauncherDesign.switchboard ||
+      tokens.design == LauncherDesign.relay;
 
   @override
   Widget build(BuildContext context) {
@@ -640,6 +680,7 @@ class LauncherModalFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color lineColor = switch (tokens.design) {
       LauncherDesign.terminal => tokens.accent.withAlpha(40),
+      LauncherDesign.terminal2 => tokens.dim.withAlpha(72),
       LauncherDesign.blueprint => tokens.accent.withAlpha(80),
       LauncherDesign.transit => tokens.accent.withAlpha(90),
       LauncherDesign.orbit => tokens.accent.withAlpha(50),
@@ -648,6 +689,7 @@ class LauncherModalFooter extends StatelessWidget {
       LauncherDesign.windows98 => Windows98Tokens.shadow,
       LauncherDesign.notion => NotionTokens.border(tokens.isDark),
       LauncherDesign.switchboard => SwitchboardTokens.border(tokens.isDark),
+      LauncherDesign.relay => RelayTokens.border(tokens.isDark, tokens.accent),
       _ => tokens.onSurface.withAlpha(16),
     };
     return Container(
@@ -655,17 +697,21 @@ class LauncherModalFooter extends StatelessWidget {
       decoration: BoxDecoration(
         color: tokens.design == LauncherDesign.terminal
             ? TerminalTokens.chrome(tokens.isDark)
-            : tokens.design == LauncherDesign.transit
-                ? TransitTokens.chrome(tokens.isDark)
-                : tokens.design == LauncherDesign.fluent
-                    ? FluentTokens.chrome(tokens.isDark)
-                    : tokens.design == LauncherDesign.orbit
-                        ? OrbitTokens.chrome(tokens.isDark)
-                        : tokens.design == LauncherDesign.notion
-                            ? NotionTokens.sidebar(tokens.isDark)
-                            : tokens.design == LauncherDesign.switchboard
-                                ? SwitchboardTokens.panel(tokens.isDark)
-                                : null,
+            : tokens.design == LauncherDesign.terminal2
+                ? Terminal2Tokens.chrome(tokens.isDark)
+                : tokens.design == LauncherDesign.transit
+                    ? TransitTokens.chrome(tokens.isDark)
+                    : tokens.design == LauncherDesign.fluent
+                        ? FluentTokens.chrome(tokens.isDark)
+                        : tokens.design == LauncherDesign.orbit
+                            ? OrbitTokens.chrome(tokens.isDark)
+                            : tokens.design == LauncherDesign.notion
+                                ? NotionTokens.sidebar(tokens.isDark)
+                                : tokens.design == LauncherDesign.switchboard
+                                    ? SwitchboardTokens.panel(tokens.isDark)
+                                    : tokens.design == LauncherDesign.relay
+                                        ? RelayTokens.panel(tokens.isDark, tokens.accent)
+                                        : null,
         border: Border(top: BorderSide(color: lineColor)),
       ),
       child: Row(
@@ -698,7 +744,7 @@ class LauncherModalKbd extends StatelessWidget {
   Widget build(BuildContext context) {
     // Terminal renders bare mono text, like its status bar; the rest use a
     // small keycap chip.
-    if (tokens.design == LauncherDesign.terminal) {
+    if (tokens.design == LauncherDesign.terminal || tokens.design == LauncherDesign.terminal2) {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[

@@ -29,37 +29,21 @@ TextTheme launcherTextTheme(TextTheme designTextTheme) {
   }
 }
 
-/// Shared visual tokens for the Terminal (CLI) launcher design.
-///
-/// The Terminal design overrides the active theme with a forced console palette
-/// so it always reads as a command prompt — regardless of the user's chosen
-/// launcher colors. Two curated palettes adapt to the active brightness: a
-/// near-black screen with light phosphor text in dark mode, and a soft "paper
-/// console" with dark ink in light mode. The accent stays user-driven (prompt,
-/// cursor, selection).
+/// Shared visual tokens for the original Terminal launcher design.
 abstract final class TerminalTokens {
-  // Dark — near-black screen (Windows Terminal default).
   static const Color _bgDark = Color(0xFF0C0C0C);
   static const Color _chromeDark = Color(0xFF161616);
   static const Color _fgDark = Color(0xFFCCCCCC);
   static const Color _dimDark = Color(0xFF7A7A7A);
 
-  // Light — "paper console": off-white screen, dark ink.
   static const Color _bgLight = Color(0xFFF4F4F1);
   static const Color _chromeLight = Color(0xFFE7E7E2);
   static const Color _fgLight = Color(0xFF2A2A2A);
   static const Color _dimLight = Color(0xFF6C6C6C);
 
-  /// Console "screen" background.
   static Color bg(bool isDark) => isDark ? _bgDark : _bgLight;
-
-  /// Slightly raised chrome (title bar / status bar).
   static Color chrome(bool isDark) => isDark ? _chromeDark : _chromeLight;
-
-  /// Primary foreground.
   static Color fg(bool isDark) => isDark ? _fgDark : _fgLight;
-
-  /// Dimmed/secondary foreground.
   static Color dim(bool isDark) => isDark ? _dimDark : _dimLight;
 
   static TextStyle mono({
@@ -70,6 +54,82 @@ abstract final class TerminalTokens {
     double? height,
   }) {
     return launcherTextStyle(GoogleFonts.jetBrainsMono(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    ));
+  }
+}
+
+/// Shared visual tokens for the Terminal2 (TUI) launcher design.
+///
+/// The Terminal design overrides the active theme with a forced console palette
+/// so it always reads as a command prompt — regardless of the user's chosen
+/// launcher colors. Two curated palettes adapt to the active brightness: a
+/// near-black screen with light phosphor text in dark mode, and a soft "paper
+/// console" with dark ink in light mode. The accent stays user-driven (prompt,
+/// cursor, selection).
+abstract final class Terminal2Tokens {
+  // Dark — near-black screen (Windows Terminal default).
+  static const Color _bgDark = Color(0xFF10130F);
+  static const Color _chromeDark = Color(0xFF171B15);
+  static const Color _raisedDark = Color(0xFF20261D);
+  static const Color _fgDark = Color(0xFFE4E7D5);
+  static const Color _dimDark = Color(0xFF89917D);
+  static const Color _amberDark = Color(0xFFE8B86A);
+
+  // Light — "paper console": off-white screen, dark ink.
+  static const Color _bgLight = Color(0xFFF2F1E8);
+  static const Color _chromeLight = Color(0xFFE7E6D9);
+  static const Color _raisedLight = Color(0xFFDCDDCF);
+  static const Color _fgLight = Color(0xFF242A20);
+  static const Color _dimLight = Color(0xFF6D7566);
+  static const Color _amberLight = Color(0xFF9A5D16);
+
+  /// Console "screen" background.
+  static Color bg(bool isDark) => isDark ? _bgDark : _bgLight;
+
+  /// Slightly raised chrome (title bar / status bar).
+  static Color chrome(bool isDark) => isDark ? _chromeDark : _chromeLight;
+
+  /// Active-line surface used for hover and keyboard selection.
+  static Color raised(bool isDark) => isDark ? _raisedDark : _raisedLight;
+
+  /// Primary foreground.
+  static Color fg(bool isDark) => isDark ? _fgDark : _fgLight;
+
+  /// Dimmed/secondary foreground.
+  static Color dim(bool isDark) => isDark ? _dimDark : _dimLight;
+
+  /// Secondary semantic color for modes, counts, and state.
+  static Color amber(bool isDark) => isDark ? _amberDark : _amberLight;
+
+  static TextStyle mono({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return launcherTextStyle(GoogleFonts.fragmentMono(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    ));
+  }
+
+  static TextStyle label({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return launcherTextStyle(GoogleFonts.azeretMono(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
@@ -579,6 +639,74 @@ abstract final class OrbitTokens {
   }
 }
 
+/// Shared palette and typography for the Relay communications backplane.
+///
+/// Relay keeps the user's accent as its live signal color and subtly folds it
+/// into otherwise quiet graphite/porcelain surfaces. Encode Sans carries the
+/// readable command content while Teko gives channel labels the narrow voice
+/// of stamped equipment legends without falling back to generic monospace.
+abstract final class RelayTokens {
+  static const Color _canvasDark = Color(0xFF18181D);
+  static const Color _panelDark = Color(0xFF202027);
+  static const Color _raisedDark = Color(0xFF292933);
+  static const Color _foregroundDark = Color(0xFFECEAF0);
+  static const Color _dimDark = Color(0xFF97939F);
+
+  static const Color _canvasLight = Color(0xFFF2F0E9);
+  static const Color _panelLight = Color(0xFFFAF8F2);
+  static const Color _raisedLight = Color(0xFFE7E3DA);
+  static const Color _foregroundLight = Color(0xFF25232A);
+  static const Color _dimLight = Color(0xFF716D77);
+
+  static Color _tint(Color base, Color accent, int alpha) => Color.alphaBlend(accent.withAlpha(alpha), base);
+
+  static Color canvas(bool isDark, Color accent) => _tint(isDark ? _canvasDark : _canvasLight, accent, isDark ? 9 : 6);
+
+  static Color panel(bool isDark, Color accent) => _tint(isDark ? _panelDark : _panelLight, accent, isDark ? 12 : 7);
+
+  static Color raised(bool isDark, Color accent) =>
+      _tint(isDark ? _raisedDark : _raisedLight, accent, isDark ? 16 : 10);
+
+  static Color foreground(bool isDark) => isDark ? _foregroundDark : _foregroundLight;
+
+  static Color dim(bool isDark) => isDark ? _dimDark : _dimLight;
+
+  static Color border(bool isDark, Color accent) =>
+      Color.alphaBlend(accent.withAlpha(isDark ? 48 : 34), isDark ? const Color(0xFF34323B) : const Color(0xFFD2CEC4));
+
+  static TextStyle body({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return launcherTextStyle(GoogleFonts.encodeSans(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    ));
+  }
+
+  static TextStyle channel({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return launcherTextStyle(GoogleFonts.teko(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    ));
+  }
+}
+
 @immutable
 class LauncherThemeData {
   const LauncherThemeData({required this.design});
@@ -589,6 +717,7 @@ class LauncherThemeData {
   bool get isClassic => design == LauncherDesign.classic;
   bool get isCommand => design == LauncherDesign.command;
   bool get isTerminal => design == LauncherDesign.terminal;
+  bool get isTerminal2 => design == LauncherDesign.terminal2;
   bool get isZen => design == LauncherDesign.zen;
   bool get isGlass => design == LauncherDesign.glass;
   bool get isBlueprint => design == LauncherDesign.blueprint;
@@ -601,6 +730,7 @@ class LauncherThemeData {
   bool get isWindows98 => design == LauncherDesign.windows98;
   bool get isNotion => design == LauncherDesign.notion;
   bool get isSwitchboard => design == LauncherDesign.switchboard;
+  bool get isRelay => design == LauncherDesign.relay;
   bool get isQuickMenuInspired => switch (design) {
         LauncherDesign.tech ||
         LauncherDesign.vector ||
@@ -640,6 +770,8 @@ class LauncherThemeData {
         LauncherDesign.windows98 => Icons.search,
         LauncherDesign.notion => Icons.search_rounded,
         LauncherDesign.switchboard => Icons.tune_rounded,
+        LauncherDesign.relay => Icons.alt_route_rounded,
+        LauncherDesign.terminal2 => Icons.terminal_rounded,
       };
 
   double get searchIconSize => switch (design) {
@@ -666,6 +798,8 @@ class LauncherThemeData {
         LauncherDesign.windows98 => 16.0,
         LauncherDesign.notion => 17.0,
         LauncherDesign.switchboard => 18.0,
+        LauncherDesign.relay => 18.0,
+        LauncherDesign.terminal2 => 20.0,
       };
 
   bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent || isNotion;
@@ -694,6 +828,8 @@ class LauncherThemeData {
         LauncherDesign.windows98 => 13.0,
         LauncherDesign.notion => 15.0,
         LauncherDesign.switchboard => 15.0,
+        LauncherDesign.relay => 16.0,
+        LauncherDesign.terminal2 => 14.0,
       };
   FontWeight? get searchFontWeight => switch (design) {
         LauncherDesign.serene => FontWeight.w400,
@@ -719,6 +855,8 @@ class LauncherThemeData {
         LauncherDesign.windows98 => FontWeight.w400,
         LauncherDesign.notion => FontWeight.w400,
         LauncherDesign.switchboard => FontWeight.w500,
+        LauncherDesign.relay => FontWeight.w600,
+        LauncherDesign.terminal2 => FontWeight.w500,
       };
 
   double get frameRadius => switch (design) {
@@ -745,6 +883,8 @@ class LauncherThemeData {
         LauncherDesign.windows98 => 0.0,
         LauncherDesign.notion => 8.0,
         LauncherDesign.switchboard => 4.0,
+        LauncherDesign.relay => 7.0,
+        LauncherDesign.terminal2 => 2.0,
       };
 
   EdgeInsets get resultsListPadding => const EdgeInsets.all(8.0);

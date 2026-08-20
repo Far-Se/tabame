@@ -36,6 +36,7 @@ there, or set the `GITHUB_TOKEN` / `GH_TOKEN` environment variable.
 | Search Repositories | Filter your public & private repos by name |
 | Create Branch | Pick a repo → name + source-branch form |
 | Download Repository | Pick a repo → download the ZIP, browse folders, download a single directory or file (with progress) |
+| Download One Folder | Paste a GitHub `/tree/<ref>/<folder>` link, choose a destination, and sparse-clone only that folder |
 | Workflow Runs | Pick a repo → inspect, re-run, re-run failed jobs, or cancel Actions runs |
 | Notifications | Your inbox — open, mark one/all as read |
 | Unread Notifications | Only the unread ones; a live unread badge also shows on the root list |
@@ -57,3 +58,6 @@ stats live in **My GitHub Stats**.
   it is not in your own list.
 - Downloads go to your `Downloads` folder by default; change it via
   **Set Personal Access Token** (it also holds the download-folder setting).
+- **Download One Folder** requires Git on `PATH`. It creates a sparse checkout
+  in `<destination>/<repository>` (or a numbered name when that already exists)
+  and supports branch, tag, and full commit-SHA links.
