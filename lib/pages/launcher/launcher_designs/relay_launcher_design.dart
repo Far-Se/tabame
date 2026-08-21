@@ -63,34 +63,36 @@ class _RelaySearchBarState extends State<_RelaySearchBar> with SingleTickerProvi
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Text(
-                'RELAY / INPUT 01',
-                style: RelayTokens.channel(
-                  fontSize: Design.baseFontSize + 1,
-                  fontWeight: FontWeight.w600,
-                  color: dim,
-                  letterSpacing: 1.5,
-                  height: 0.9,
-                ),
-              ),
-              const Spacer(),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 120),
-                child: Text(
-                  widget.isSearching ? 'ROUTING' : 'RX READY',
-                  key: ValueKey<bool>(widget.isSearching),
+          DragToMoveArea(
+            child: Row(
+              children: <Widget>[
+                Text(
+                  'RELAY / INPUT 01',
                   style: RelayTokens.channel(
                     fontSize: Design.baseFontSize + 1,
                     fontWeight: FontWeight.w600,
-                    color: widget.isSearching ? widget.accent : dim,
-                    letterSpacing: 1.4,
+                    color: dim,
+                    letterSpacing: 1.5,
                     height: 0.9,
                   ),
                 ),
-              ),
-            ],
+                const Spacer(),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 120),
+                  child: Text(
+                    widget.isSearching ? 'ROUTING' : 'RX READY',
+                    key: ValueKey<bool>(widget.isSearching),
+                    style: RelayTokens.channel(
+                      fontSize: Design.baseFontSize + 1,
+                      fontWeight: FontWeight.w600,
+                      color: widget.isSearching ? widget.accent : dim,
+                      letterSpacing: 1.4,
+                      height: 0.9,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 5),
           Row(

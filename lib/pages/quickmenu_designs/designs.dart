@@ -6,6 +6,7 @@ import '../../models/globals.dart';
 import '../../models/settings.dart';
 import 'design_anime.dart';
 import 'design_anime2.dart';
+import 'design_console2.dart';
 import 'design_cyber.dart';
 import 'design_aurora.dart';
 import 'design_cassette.dart';
@@ -122,6 +123,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.vector => MainMenuVectorWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.ledger => MainMenuLedgerWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.console => MainMenuConsoleWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.console2 => MainMenuConsole2Widget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.foundry => MainMenuFoundryWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.anime => MainMenuAnimeWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.anime2 => MainMenuAnime2Widget(key: ValueKey<int>(_refreshCounter)),

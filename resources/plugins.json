@@ -1129,7 +1129,7 @@
       "category": "AI Tools",
       "recommended": true,
       "keyword": "ask",
-      "description": "Chat with Claude in your browser without leaving the launcher.",
+      "description": "Chat with Claude in your browser without leaving the launcher without needing an API key.",
       "icon": "chat",
       "runtime": "node",
       "author": "Far-Se",

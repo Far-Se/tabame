@@ -46,19 +46,21 @@ class SwitchboardLauncherSearchBar extends StatelessWidget {
           children: <Widget>[
             dragHandle,
             const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-              decoration: BoxDecoration(
-                color: accent,
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: Text(
-                'ROUTE',
-                style: SwitchboardTokens.label(
-                  fontSize: Design.baseFontSize - 1,
-                  fontWeight: FontWeight.w700,
-                  color: SwitchboardTokens.panel(isDark),
-                  letterSpacing: 1.3,
+            DragToMoveArea(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Text(
+                  'ROUTE',
+                  style: SwitchboardTokens.label(
+                    fontSize: Design.baseFontSize - 1,
+                    fontWeight: FontWeight.w700,
+                    color: SwitchboardTokens.panel(isDark),
+                    letterSpacing: 1.3,
+                  ),
                 ),
               ),
             ),

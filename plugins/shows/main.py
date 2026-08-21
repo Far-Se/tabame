@@ -15,10 +15,13 @@ shows a form to paste one in and saves it to config.json for you.
 """
 
 import calendar as cal_mod
+import itertools
 import json
 import os
 import pathlib
+import queue
 import sys
+import threading
 from datetime import date, timedelta
 
 import requests
@@ -35,17 +38,94 @@ DATA_PATH = "data.json"
 POSTER_CACHE_DIR = "posters_cache"
 CALENDAR_OUT = "calendar.png"
 
+# Network and image work is deliberately kept off the stdin event loop.  The
+# lower-priority jobs can be numerous (one refresh per tracked show), so use a
+# single unbounded queue and a small worker pool rather than starting a thread
+# for every show.
+FETCH_WORKERS = 4
+_SEND_LOCK = threading.Lock()
+_STATE_LOCK = threading.RLock()
+_DATA_LOCK = threading.RLock()
+_CONFIG_LOCK = threading.RLock()
+_SHUTDOWN = threading.Event()
+_WORK_QUEUE = queue.PriorityQueue()
+_WORKERS_LOCK = threading.Lock()
+_WORKERS_STARTED = False
+_JOB_COUNTER = itertools.count()
+_PENDING_JOBS = set()
+_PENDING_JOBS_LOCK = threading.Lock()
+
 
 # ---------------------------------------------------------------- protocol --
 
 
 def send(frame):
-    sys.stdout.write(json.dumps(frame) + "\n")
-    sys.stdout.flush()
+    if _SHUTDOWN.is_set():
+        return
+    with _SEND_LOCK:
+        if _SHUTDOWN.is_set():
+            return
+        sys.stdout.write(json.dumps(frame) + "\n")
+        sys.stdout.flush()
 
 
 def log(*a):
     print(*a, file=sys.stderr, flush=True)
+
+
+def ensure_fetch_workers():
+    """Start the persistent queue workers once, on the first queued job."""
+    global _WORKERS_STARTED
+    with _WORKERS_LOCK:
+        if _WORKERS_STARTED:
+            return
+        for index in range(FETCH_WORKERS):
+            threading.Thread(
+                target=fetch_worker,
+                name=f"shows-fetch-{index + 1}",
+                daemon=True,
+            ).start()
+        _WORKERS_STARTED = True
+
+
+def enqueue_fetch(kind, payload, priority=10, dedupe_key=None):
+    """Put work on the shared queue without blocking the launcher event loop."""
+    if _SHUTDOWN.is_set():
+        return False
+
+    if dedupe_key is not None:
+        with _PENDING_JOBS_LOCK:
+            if dedupe_key in _PENDING_JOBS:
+                return False
+            _PENDING_JOBS.add(dedupe_key)
+
+    ensure_fetch_workers()
+    _WORK_QUEUE.put(
+        (priority, next(_JOB_COUNTER), kind, payload, dedupe_key)
+    )
+    return True
+
+
+def fetch_worker():
+    """Consume queued network/image jobs until the plugin is shutting down."""
+    while not _SHUTDOWN.is_set():
+        try:
+            _priority, _sequence, kind, payload, dedupe_key = _WORK_QUEUE.get(
+                timeout=0.2
+            )
+        except queue.Empty:
+            continue
+
+        try:
+            run_fetch_job(kind, payload)
+        except Exception as e:  # pragma: no cover - defensive worker boundary
+            log("fetch worker failed", kind, e)
+            handle_fetch_job_error(kind, payload, e)
+        finally:
+            if dedupe_key is not None:
+                with _PENDING_JOBS_LOCK:
+                    _PENDING_JOBS.discard(dedupe_key)
+            _WORK_QUEUE.task_done()
 
 
 # -------------------------------------------------------------- persistence --
@@ -63,24 +143,28 @@ def load_json(path, default):
 
 
 def load_config():
-    return load_json(CONFIG_PATH, {})
+    with _CONFIG_LOCK:
+        return load_json(CONFIG_PATH, {})
 
 
 def save_config(cfg):
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, ensure_ascii=False, indent=2)
+    with _CONFIG_LOCK:
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=2)
 
 
 def load_data():
-    return load_json(DATA_PATH, {"shows": {}})
+    with _DATA_LOCK:
+        return load_json(DATA_PATH, {"shows": {}})
 
 
 def save_data(data):
-    try:
-        with open(DATA_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        log("failed to write data.json", e)
+    with _DATA_LOCK:
+        try:
+            with open(DATA_PATH, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            log("failed to write data.json", e)
 
 
 def get_api_key():
@@ -696,26 +780,34 @@ def render_show_screen(
 
 def render_all_seasons(rev, show, persist):
     """List of all seasons; each item's side-preview shows every episode's rating."""
-    send(
-        {
-            "type": "render",
-            "rev": rev,
-            "view": "list",
-            "canGoBack": True,
-            "loading": True,
-            "loadingText": f"Loading all seasons of {show.get('name')}\u2026",
-            "items": [],
-        }
-    )
-
     seasons = show.get("all_seasons")
     if seasons is None:
-        seasons = fetch_all_seasons(show["id"], show.get("imdb_id"))
-        show["all_seasons"] = seasons
-        if persist:
-            data = load_data()
-            data.setdefault("shows", {})[str(show["id"])] = show
-            save_data(data)
+        send(
+            {
+                "type": "render",
+                "rev": rev,
+                "view": "list",
+                "canGoBack": True,
+                "loading": True,
+                "loadingText": f"Loading all seasons of {show.get('name')}\u2026",
+                "items": [],
+            }
+        )
+        with _STATE_LOCK:
+            state["all_seasons_request_id"] += 1
+            request_id = state["all_seasons_request_id"]
+        enqueue_fetch(
+            "all_seasons",
+            {
+                "request_id": request_id,
+                "show_id": show["id"],
+                "imdb_id": show.get("imdb_id"),
+                "persist": persist,
+                "show": show,
+            },
+            priority=0,
+        )
+        return
 
     items = []
     for s in seasons:
@@ -857,68 +949,59 @@ def render_root(rev, query_text):
             }
         )
 
-    send(
-        {
-            "type": "render",
-            "rev": rev,
-            "view": "list",
-            "placeholder": "Filter your shows, or Ctrl+K to add one\u2026",
-            "emptyText": "No shows tracked yet",
-            "empty": {
-                "icon": "video",
-                "title": "No shows tracked",
-                "hint": "Add a show from TMDB to get started",
-                "action": {"id": "add", "title": "Add a show", "icon": "add"},
-            },
-            "actions": [
-                {
-                    "id": "add",
-                    "title": "Add show from TMDB",
-                    "icon": "add",
-                    "shortcut": "ctrl+n",
-                },
-                {"id": "settings", "title": "Change TMDB API key", "icon": "key"},
-                {"id": "omdb_settings", "title": "Add OMDb API key", "icon": "key"},
-            ],
-            "items": items,
-        }
-    )
-
-
-def render_search(rev, query_text):
-    q = (query_text or "").strip()
-    if not q:
-        send(
+    frame = {
+        "type": "render",
+        "rev": rev,
+        "view": "list",
+        "placeholder": "Filter your shows, or Ctrl+K to add one\u2026",
+        "emptyText": "No shows tracked yet",
+        "empty": {
+            "icon": "video",
+            "title": "No shows tracked",
+            "hint": "Add a show from TMDB to get started",
+            "action": {"id": "add", "title": "Add a show", "icon": "add"},
+        },
+        "actions": [
             {
-                "type": "render",
-                "rev": rev,
-                "view": "list",
-                "canGoBack": True,
-                "placeholder": "Type a show name to search TMDB\u2026",
-                "emptyText": "Type to search TMDB",
-                "items": [],
+                "id": "add",
+                "title": "Add show from TMDB",
+                "icon": "add",
+                "shortcut": "ctrl+n",
+            },
+            {"id": "settings", "title": "Change TMDB API key", "icon": "key"},
+            {"id": "omdb_settings", "title": "Add OMDb API key", "icon": "key"},
+        ],
+        "items": items,
+    }
+    with _STATE_LOCK:
+        pending = len(state["root_refresh_pending"])
+        failed = len(state["root_refresh_errors"])
+    if pending:
+        frame["banners"] = [
+            {
+                "id": "refreshing-shows",
+                "style": "info",
+                "title": "Refreshing show data",
+                "message": f"{pending} show{'s' if pending != 1 else ''} queued in the background.",
             }
-        )
-        return
+        ]
+    elif failed:
+        frame["banners"] = [
+            {
+                "id": "refresh-errors",
+                "style": "warning",
+                "title": "Some shows could not be refreshed",
+                "message": f"{failed} background refresh{'es' if failed != 1 else ''} failed. Cached data is still available.",
+            }
+        ]
+    send(frame)
+    # Start the bulk refresh only after the cache-first frame is on stdout.
+    # This prevents a very fast worker (or a warm HTTP cache) from racing the
+    # first root frame and putting fresh data on screen before that frame.
+    schedule_stale_refreshes()
 
-    send(
-        {
-            "type": "render",
-            "rev": rev,
-            "view": "list",
-            "canGoBack": True,
-            "loading": True,
-            "loadingText": "Searching TMDB\u2026",
-            "placeholder": "Type a show name to search TMDB\u2026",
-            "items": [],
-        }
-    )
 
-    results, err = search_shows(q)
-    if err:
-        error_frame(rev, "Search failed", err_message(err), True)
-        return
-
+def send_search_results(rev, results):
     data = load_data()
     tracked_ids = set(data.get("shows", {}).keys())
 
@@ -956,6 +1039,45 @@ def render_search(rev, query_text):
             "emptyText": "No shows found",
             "items": items,
         }
+    )
+
+
+def render_search(rev, query_text):
+    q = (query_text or "").strip()
+    with _STATE_LOCK:
+        state["search_request_id"] += 1
+        request_id = state["search_request_id"]
+
+    if not q:
+        send(
+            {
+                "type": "render",
+                "rev": rev,
+                "view": "list",
+                "canGoBack": True,
+                "placeholder": "Type a show name to search TMDB\u2026",
+                "emptyText": "Type to search TMDB",
+                "items": [],
+            }
+        )
+        return
+
+    send(
+        {
+            "type": "render",
+            "rev": rev,
+            "view": "list",
+            "canGoBack": True,
+            "loading": True,
+            "loadingText": "Searching TMDB\u2026",
+            "placeholder": "Type a show name to search TMDB\u2026",
+            "items": [],
+        }
+    )
+    enqueue_fetch(
+        "search",
+        {"request_id": request_id, "rev": rev, "query": q},
+        priority=-request_id,
     )
 
 
@@ -1005,6 +1127,9 @@ def render_show(rev, show_id):
 
 
 def render_calendar(rev):
+    with _STATE_LOCK:
+        state["calendar_request_id"] += 1
+        request_id = state["calendar_request_id"]
     send(
         {
             "type": "render",
@@ -1016,23 +1141,10 @@ def render_calendar(rev):
             "detail": {"markdown": ""},
         }
     )
-    path, err = generate_calendar_image()
-    if err:
-        error_frame(rev, "No calendar yet", err, True)
-        return
-    uri = pathlib.Path(path).as_uri()
-    send(
-        {
-            "type": "render",
-            "rev": rev,
-            "view": "detail",
-            "canGoBack": True,
-            "detail": {
-                "wide": True,
-                "markdown": f"# \U0001f4c5 Episode Calendar\n\n![Calendar]({uri})\n\n"
-                f"Covers roughly the last 2 weeks through the next ~2.5 months across your tracked shows.",
-            },
-        }
+    enqueue_fetch(
+        "calendar",
+        {"request_id": request_id, "rev": rev},
+        priority=0,
     )
 
 
@@ -1045,37 +1157,340 @@ state = {
     "query_search": "",
     "peek_show": None,
     "all_seasons_from": None,
+    "root_refresh_started": False,
+    "root_refresh_pending": set(),
+    "root_refresh_errors": set(),
+    "search_request_id": 0,
+    "peek_load_request_id": 0,
+    "all_seasons_request_id": 0,
+    "calendar_request_id": 0,
 }
 
 
 def go_root(rev=0):
-    state["screen"] = "root"
-    state["show_id"] = None
-    state["peek_show"] = None
+    with _STATE_LOCK:
+        state["screen"] = "root"
+        state["show_id"] = None
+        state["peek_show"] = None
+        state["query_root"] = ""
+        state["search_request_id"] += 1
+        state["peek_load_request_id"] += 1
+        state["all_seasons_request_id"] += 1
+        state["calendar_request_id"] += 1
     send({"type": "command", "command": "setQuery", "text": " "})
     render_root(rev, "")
 
 
-def refresh_show(tv_id_str, rerender):
-    full, err = fetch_show_full(int(tv_id_str))
-    if err:
+def show_needs_refresh(show):
+    updated_at = str(show.get("updated_at") or "")
+    return not updated_at.startswith(date.today().isoformat())
+
+
+def schedule_stale_refreshes():
+    """Queue stale tracked shows after the cached root frame is ready."""
+    if not get_api_key():
+        return
+
+    with _STATE_LOCK:
+        if state["root_refresh_started"]:
+            return
+        state["root_refresh_started"] = True
+
+    data = load_data()
+    for key, show in data.get("shows", {}).items():
+        if not show_needs_refresh(show):
+            continue
+        show_id = str(show.get("id") or key)
+        with _STATE_LOCK:
+            state["root_refresh_pending"].add(show_id)
+        queued = enqueue_fetch(
+            "refresh_show",
+            {"show_id": show_id, "background": True, "context": "root"},
+            priority=20,
+            dedupe_key=("refresh", show_id),
+        )
+        if not queued:
+            with _STATE_LOCK:
+                state["root_refresh_pending"].discard(show_id)
+
+
+def refresh_show(tv_id_str, context):
+    """Queue an explicit refresh; the old cached row remains usable meanwhile."""
+    show_id = str(tv_id_str)
+    queued = enqueue_fetch(
+        "refresh_show",
+        {"show_id": show_id, "background": False, "context": context},
+        priority=0,
+        dedupe_key=("refresh", show_id),
+    )
+    if queued:
         send(
             {
                 "type": "command",
                 "command": "toast",
-                "text": f"Refresh failed: {err_message(err)[:60]}",
-                "style": "error",
+                "text": "Refreshing show data in the background\u2026",
+                "style": "progress",
             }
         )
     else:
-        data = load_data()
-        data.setdefault("shows", {})[tv_id_str] = full
-        save_data(data)
         send(
-            {"type": "command", "command": "toast", "text": f"Refreshed {full['name']}"}
+            {
+                "type": "command",
+                "command": "toast",
+                "text": "This show is already queued for refresh.",
+                "style": "info",
+            }
         )
-    if rerender:
-        rerender()
+
+
+def queue_show_preview(show_id):
+    with _STATE_LOCK:
+        state["peek_load_request_id"] += 1
+        request_id = state["peek_load_request_id"]
+        search_request_id = state["search_request_id"]
+    send(
+        {
+            "type": "render",
+            "rev": 0,
+            "view": "list",
+            "canGoBack": True,
+            "loading": True,
+            "loadingText": "Loading show\u2026",
+            "items": [],
+        }
+    )
+    enqueue_fetch(
+        "load_show",
+        {
+            "request_id": request_id,
+            "search_request_id": search_request_id,
+            "show_id": str(show_id),
+        },
+        priority=0,
+    )
+
+
+def replace_tracked_show(show_id, show):
+    """Persist a refresh without re-adding a show removed while it was queued."""
+    with _DATA_LOCK:
+        data = load_data()
+        if str(show_id) not in data.get("shows", {}):
+            return False
+        data.setdefault("shows", {})[str(show_id)] = show
+        save_data(data)
+    return True
+
+
+def run_fetch_job(kind, payload):
+    if kind == "search":
+        results, err = search_shows(payload["query"])
+        with _STATE_LOCK:
+            current = (
+                state["screen"] == "search"
+                and state["query_search"] == payload["query"]
+                and state["search_request_id"] == payload["request_id"]
+            )
+        if not current:
+            return
+        if err:
+            error_frame(payload["rev"], "Search failed", err_message(err), True)
+        else:
+            send_search_results(payload["rev"], results)
+        return
+
+    if kind == "load_show":
+        full, err = fetch_show_full(int(payload["show_id"]))
+        with _STATE_LOCK:
+            current = (
+                state["screen"] == "search"
+                and state["peek_load_request_id"] == payload["request_id"]
+                and state["search_request_id"] == payload["search_request_id"]
+            )
+        if not current:
+            return
+        if err:
+            send(
+                {
+                    "type": "command",
+                    "command": "toast",
+                    "text": f"Couldn't load show: {err_message(err)[:60]}",
+                    "style": "error",
+                }
+            )
+            render_search(0, state["query_search"])
+            return
+        with _STATE_LOCK:
+            state["screen"] = "peek"
+            state["peek_show"] = full
+        render_peek(0)
+        return
+
+    if kind == "all_seasons":
+        seasons = fetch_all_seasons(payload["show_id"], payload.get("imdb_id"))
+        show = payload["show"]
+        show["all_seasons"] = seasons
+        if payload["persist"]:
+            with _DATA_LOCK:
+                data = load_data()
+                saved = data.get("shows", {}).get(str(payload["show_id"]))
+                if saved is not None:
+                    saved["all_seasons"] = seasons
+                    save_data(data)
+
+        with _STATE_LOCK:
+            current = (
+                state["screen"] == "all_seasons"
+                and state["all_seasons_request_id"] == payload["request_id"]
+            )
+            source = state["all_seasons_from"]
+            show_id = state["show_id"]
+        if not current:
+            return
+        if source == "show":
+            data = load_data()
+            show = data.get("shows", {}).get(str(show_id))
+            if not show:
+                error_frame(0, "Show not found", "It may have been removed.", True)
+                return
+        render_all_seasons(0, show, persist=source == "show")
+        return
+
+    if kind == "calendar":
+        path, err = generate_calendar_image()
+        with _STATE_LOCK:
+            current = (
+                state["screen"] == "calendar"
+                and state["calendar_request_id"] == payload["request_id"]
+            )
+        if not current:
+            return
+        if err:
+            error_frame(payload["rev"], "No calendar yet", err, True)
+            return
+        uri = pathlib.Path(path).as_uri()
+        send(
+            {
+                "type": "render",
+                "rev": payload["rev"],
+                "view": "detail",
+                "canGoBack": True,
+                "detail": {
+                    "wide": True,
+                    "markdown": f"# \U0001f4c5 Episode Calendar\n\n![Calendar]({uri})\n\n"
+                    f"Covers roughly the last 2 weeks through the next ~2.5 months across your tracked shows.",
+                },
+            }
+        )
+        return
+
+    if kind == "refresh_show":
+        show_id = payload["show_id"]
+        full, err = fetch_show_full(int(show_id))
+        background = payload.get("background", False)
+        if not err:
+            replace_tracked_show(show_id, full)
+
+        with _STATE_LOCK:
+            if background:
+                state["root_refresh_pending"].discard(show_id)
+                if err:
+                    state["root_refresh_errors"].add(show_id)
+                else:
+                    state["root_refresh_errors"].discard(show_id)
+            elif not err:
+                state["root_refresh_errors"].discard(show_id)
+            screen = state["screen"]
+            query_root = state["query_root"]
+            current_show_id = state["show_id"]
+
+        if err:
+            if not background:
+                send(
+                    {
+                        "type": "command",
+                        "command": "toast",
+                        "text": f"Refresh failed: {err_message(err)[:60]}",
+                        "style": "error",
+                    }
+                )
+        elif not background:
+            send(
+                {
+                    "type": "command",
+                    "command": "toast",
+                    "text": f"Refreshed {full['name']}",
+                }
+            )
+
+        if background and screen == "root":
+            render_root(0, query_root)
+        elif not background and payload.get("context") == "root" and screen == "root":
+            render_root(0, query_root)
+        elif (
+            not background
+            and payload.get("context") == "show"
+            and screen == "show"
+            and str(current_show_id) == show_id
+        ):
+            render_show(0, show_id)
+
+
+def handle_fetch_job_error(kind, payload, error):
+    """Keep an unexpected worker exception visible without killing the plugin."""
+    message = f"The background operation failed: `{error}`"
+    if kind == "search":
+        with _STATE_LOCK:
+            current = (
+                state["screen"] == "search"
+                and state["search_request_id"] == payload.get("request_id")
+            )
+        if current:
+            error_frame(payload.get("rev", 0), "Search failed", message, True)
+    elif kind == "load_show":
+        with _STATE_LOCK:
+            current = (
+                state["screen"] == "search"
+                and state["peek_load_request_id"] == payload.get("request_id")
+                and state["search_request_id"] == payload.get("search_request_id")
+            )
+        if current:
+            error_frame(0, "Show failed to load", message, True)
+    elif kind == "all_seasons":
+        with _STATE_LOCK:
+            current = (
+                state["screen"] == "all_seasons"
+                and state["all_seasons_request_id"] == payload.get("request_id")
+            )
+        if current:
+            error_frame(0, "Seasons failed to load", message, True)
+    elif kind == "calendar":
+        with _STATE_LOCK:
+            current = (
+                state["screen"] == "calendar"
+                and state["calendar_request_id"] == payload.get("request_id")
+            )
+        if current:
+            error_frame(0, "Calendar failed", message, True)
+    elif kind == "refresh_show":
+        show_id = payload.get("show_id")
+        background = payload.get("background", False)
+        with _STATE_LOCK:
+            if background:
+                state["root_refresh_pending"].discard(show_id)
+                state["root_refresh_errors"].add(show_id)
+            screen = state["screen"]
+            query_root = state["query_root"]
+        if not background:
+            send(
+                {
+                    "type": "command",
+                    "command": "toast",
+                    "text": f"Refresh failed: {str(error)[:60]}",
+                    "style": "error",
+                }
+            )
+        if background and screen == "root":
+            render_root(0, query_root)
 
 
 # -------------------------------------------------------------------- events --
@@ -1155,12 +1570,13 @@ def handle_action(item_id, action):
                 send({"type": "command", "command": "setQuery", "text": " "})
                 render_show(0, sid)
             elif action == "refresh":
-                refresh_show(sid, lambda: render_root(0, state["query_root"]))
+                refresh_show(sid, "root")
             elif action == "remove":
-                data = load_data()
-                name = data.get("shows", {}).get(sid, {}).get("name", "Show")
-                data.get("shows", {}).pop(sid, None)
-                save_data(data)
+                with _DATA_LOCK:
+                    data = load_data()
+                    name = data.get("shows", {}).get(sid, {}).get("name", "Show")
+                    data.get("shows", {}).pop(sid, None)
+                    save_data(data)
                 send({"type": "command", "command": "toast", "text": f"Removed {name}"})
                 render_root(0, state["query_root"])
             elif action == "open_tmdb":
@@ -1177,32 +1593,7 @@ def handle_action(item_id, action):
         if item_id.startswith("peek:"):
             tid = item_id.split(":", 1)[1]
             if action == "default":
-                send(
-                    {
-                        "type": "render",
-                        "rev": 0,
-                        "view": "list",
-                        "canGoBack": True,
-                        "loading": True,
-                        "loadingText": "Loading show\u2026",
-                        "items": [],
-                    }
-                )
-                full, err = fetch_show_full(int(tid))
-                if err:
-                    send(
-                        {
-                            "type": "command",
-                            "command": "toast",
-                            "text": f"Couldn't load show: {err_message(err)[:60]}",
-                            "style": "error",
-                        }
-                    )
-                    render_search(0, state["query_search"])
-                    return
-                state["screen"] = "peek"
-                state["peek_show"] = full
-                render_peek(0)
+                queue_show_preview(tid)
             elif action == "open_tmdb":
                 send(
                     {
@@ -1218,9 +1609,10 @@ def handle_action(item_id, action):
         sid = str(show.get("id", ""))
         if item_id in ("", "summary"):
             if action == "add":
-                data = load_data()
-                data.setdefault("shows", {})[sid] = show
-                save_data(data)
+                with _DATA_LOCK:
+                    data = load_data()
+                    data.setdefault("shows", {})[sid] = show
+                    save_data(data)
                 send(
                     {
                         "type": "command",
@@ -1252,12 +1644,13 @@ def handle_action(item_id, action):
         sid = state.get("show_id")
         if item_id == "":
             if action == "refresh":
-                refresh_show(sid, lambda: render_show(0, sid))
+                refresh_show(sid, "show")
             elif action == "remove":
-                data = load_data()
-                name = data.get("shows", {}).get(sid, {}).get("name", "Show")
-                data.get("shows", {}).pop(sid, None)
-                save_data(data)
+                with _DATA_LOCK:
+                    data = load_data()
+                    name = data.get("shows", {}).get(sid, {}).get("name", "Show")
+                    data.get("shows", {}).pop(sid, None)
+                    save_data(data)
                 send({"type": "command", "command": "toast", "text": f"Removed {name}"})
                 go_root()
             elif action == "open_tmdb":
@@ -1329,6 +1722,7 @@ def main():
         t = msg.get("type")
         try:
             if t == "close":
+                _SHUTDOWN.set()
                 break
             elif t in ("init", "query"):
                 handle_query(msg.get("rev", 0), msg.get("text", msg.get("query", "")))
@@ -1344,6 +1738,7 @@ def main():
             error_frame(
                 0, "Something went wrong", f"```\n{e}\n```", state["screen"] != "root"
             )
+    _SHUTDOWN.set()
 
 
 if __name__ == "__main__":

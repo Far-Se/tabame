@@ -472,21 +472,27 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       prefix: r'$',
       icon: Icons.functions_rounded,
     )),
-    const LauncherSearchResultItem.info(LauncherInfoResult(
-      id: 'ctrlKInfo',
-      title: 'Ctrl+K',
-      subtitle: 'Opens Actions Menu for a specific result',
-      icon: Icons.menu_rounded,
-    )),
+    // const LauncherSearchResultItem.info(LauncherInfoResult(
+    //   id: 'ctrlKInfo',
+    //   title: 'Ctrl+K',
+    //   subtitle: 'Opens Actions Menu for a specific result',
+    //   icon: Icons.menu_rounded,
+    // )),
     const LauncherSearchResultItem.info(LauncherInfoResult(
       id: 'ctrlCInfo',
       title: 'Ctrl+C',
-      subtitle: 'Copy file/folder. Only for File Search',
+      subtitle: 'Ctrl+K: Opens Actions Menu for a specific result Ctrl+C: Copy file/folder. Only for File Search',
       icon: Icons.menu_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: '!',
+      caption: 'Plugin Standalone Launcher',
+      prefix: '!',
+      icon: Icons.extension_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: 'plugins',
-      caption: 'Plugins',
+      caption: 'Plugin Settings',
       prefix: '',
       icon: Icons.extension_outlined,
       opensPluginManager: true,
@@ -1829,7 +1835,11 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     // current query so it activates.
     unawaited(PluginRegistry.load().then((_) {
       if (!mounted || _activePlugin != null) return;
-      if (PluginRegistry.matchKeyword(_controller.text) != null) _onSearchChanged(_controller.text);
+      final String query = _controller.text;
+      if (PluginRegistry.matchKeyword(query) != null ||
+          LauncherQuery.parse(query).mode == LauncherSearchMode.pluginsOnly) {
+        _onSearchChanged(query);
+      }
     }));
     // if (Globals.isStandaloneLauncher == true) {
     //   Future<void>.delayed(const Duration(milliseconds: 300), () {
@@ -2489,6 +2499,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       case LauncherSearchMode.functionCommand:
         _handleFunctionCommand(context);
         break;
+      case LauncherSearchMode.pluginsOnly:
+        _handlePluginListSearch(context);
+        break;
       case LauncherSearchMode.mediaCommand:
         _handleMediaCommand(context);
         break;
@@ -2511,6 +2524,47 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         MixedSearchHandler.handle(context, searchMode);
         break;
     }
+  }
+
+  /// Lists enabled plugins for the `!` launcher shortcut. The keyword is kept
+  /// as the result prefix so selecting a row can hand it to a standalone
+  /// launcher process.
+  void _handlePluginListSearch(LauncherSearchContext context) {
+    final String filter = context.normalizedQuery.trim().toLowerCase();
+    final List<PluginManifest> plugins = PluginRegistry.manifests.where((PluginManifest plugin) {
+      if (!plugin.enabled) return false;
+      if (filter.isEmpty) return true;
+      return plugin.name.toLowerCase().contains(filter) ||
+          plugin.keyword.toLowerCase().contains(filter) ||
+          plugin.description.toLowerCase().contains(filter);
+    }).toList()
+      ..sort((PluginManifest a, PluginManifest b) => a.name.compareTo(b.name));
+
+    if (plugins.isEmpty) {
+      context.setResults(<LauncherSearchResultItem>[
+        LauncherSearchResultItem.info(LauncherInfoResult(
+          id: filter.isEmpty ? 'plugins-empty' : 'plugins-no-match:$filter',
+          title: filter.isEmpty ? 'No enabled plugins found' : 'No plugins match "$filter"',
+          subtitle:
+              filter.isEmpty ? 'Install or enable a plugin to launch it here' : 'Try another plugin name or keyword',
+          icon: Icons.extension_off_outlined,
+        )),
+      ], isSearching: false);
+      return;
+    }
+
+    context.setResults(
+      <LauncherSearchResultItem>[
+        for (final PluginManifest plugin in plugins)
+          LauncherSearchResultItem.shortcut(LauncherShortcut(
+            label: plugin.keyword,
+            caption: plugin.name,
+            prefix: plugin.keyword,
+            icon: PluginIcons.resolve(plugin.icon),
+          )),
+      ],
+      isSearching: false,
+    );
   }
 
   /// Matches the bare-word currency shorthand `100 usd to eur`, which is treated
@@ -4281,6 +4335,13 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   void _onShortcutPressed(LauncherShortcut shortcut) {
     if (shortcut.opensPluginManager) {
       _openLauncherPanel(context, const PluginManagerPanel());
+      return;
+    }
+
+    if (_searchMode == LauncherSearchMode.pluginsOnly) {
+      _controller.text = shortcut.prefix;
+      _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
+      unawaited(_handleLauncherWindowAction());
       return;
     }
 

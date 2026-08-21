@@ -320,7 +320,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
               : (gallery ? (_galleryLoading ? null : () => _loadGallery(force: true)) : (_reloading ? null : _reload)),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
           child: _buildModeRail(),
         ),
         Flexible(

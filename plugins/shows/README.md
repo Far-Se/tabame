@@ -39,5 +39,9 @@ time it runs.
 - Tracked show data (season, episodes, ratings) is cached locally in
   `data.json` in this folder so the list loads instantly; use **Refresh**
   to pull the latest air dates/ratings from TMDB.
+- Stale tracked shows are refreshed automatically in a background queue when
+  the plugin opens. The cached list appears immediately, and rows update as
+  each fetch finishes; interactive searches and show opens are prioritized
+  ahead of the bulk refresh.
 - "Current season" is determined from TMDB's `next_episode_to_air` /
   `last_episode_to_air` fields.

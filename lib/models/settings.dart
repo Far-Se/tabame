@@ -50,6 +50,7 @@ enum QuickMenuDesigns {
   vector,
   ledger,
   console,
+  console2,
   foundry,
   anime,
   anime2,
@@ -827,6 +828,32 @@ class Settings {
           entryFontFamily: 'Bahnschrift',
           entryFontWeight: 700,
           borderRadius: 6,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.console2.displayName: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffF3F3F3), // Win terminal "Campbell Light" paper
+          textColor: const Color(0xff0C0C0C), // near-black console text
+          accentColor: const Color(0xff0037DA), // classic cmd.exe blue
+          gradientAlpha: 0, // flat — no glow/gradient
+          uiFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
+          borderRadius: 0,
+          baseFontSize: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xff0C0C0C), // cmd.exe black
+          textColor: const Color(0xffCCCCCC), // cmd.exe light gray
+          accentColor: const Color(0xff16C60C), // cmd.exe bright green
+          gradientAlpha: 0,
+          uiFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontFamily: 'Consolas',
+          entryFontWeight: 700,
+          borderRadius: 0,
           baseFontSize: 10,
         ),
       ),

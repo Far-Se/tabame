@@ -385,7 +385,11 @@ class LauncherModalFrame extends StatelessWidget {
                             ? WindowsXpTokens.surface
                             : design == LauncherDesign.manifesto
                                 ? tokens.surface.withValues(alpha: 0.96)
-                                : Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
+                                : design == LauncherDesign.matrix
+                                    // Matrix text needs a solid reading surface;
+                                    // keep the launcher backdrop outside the modal.
+                                    ? tokens.surface.withValues(alpha: 1.0)
+                                    : Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
           ),
           child: child,
         ),

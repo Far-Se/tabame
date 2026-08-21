@@ -1,5 +1,7 @@
 // ignore_for_file: unused_import, unused_element
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
@@ -7,6 +9,7 @@ import '../../pages/launcher/launcher_modal_theme.dart';
 import '../../pages/quickmenu_designs/design_family_guy.dart';
 import '../../pages/quickmenu_designs/design_outrun2.dart';
 import '../../pages/quickmenu_designs/design_winamp.dart';
+import '../classes/boxes.dart';
 import '../globals.dart';
 import '../settings.dart';
 
@@ -964,7 +967,25 @@ class QuickMenuModalFrame extends StatelessWidget {
       //         ),
       //       ),
       //     ],
-      //   ),
+      // ),
+
+      QuickMenuDesigns.console2 => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius, // Design.borderRadius is 0 for this theme anyway
+            color: bg.withValues(alpha: 1.0), // opaque — terminal windows don't glass
+            border: Border.all(
+              color: accent.withValues(alpha: isDark ? 0.55 : 0.45),
+              width: 1,
+            ),
+          ),
+          underlays: <Widget>[
+            CustomPaint(painter: ConsoleScanPainter(text.withValues(alpha: isDark ? 0.045 : 0.035))),
+          ],
+          overlays: <Widget>[
+            CustomPaint(painter: ConsoleFramePainter(accent)),
+            const ConsoleCursorBlink(),
+          ],
+        ),
     };
 
     final bool hasBevel = spec.bevel != null;
@@ -2051,4 +2072,111 @@ class _FamilyGuyFramePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _FamilyGuyFramePainter oldDelegate) =>
       oldDelegate.outline != outline || oldDelegate.shadow != shadow;
+}
+
+class ConsoleScanPainter extends CustomPainter {
+  final Color color;
+  const ConsoleScanPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (color.a == 0) return;
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    for (double y = 0; y < size.height; y += 3) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant ConsoleScanPainter oldDelegate) => oldDelegate.color != color;
+}
+
+class ConsoleFramePainter extends CustomPainter {
+  final Color accent;
+  final double armLength;
+  final double inset;
+  const ConsoleFramePainter(this.accent, {this.armLength = 10, this.inset = 3});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = accent.withValues(alpha: 0.9)
+      ..strokeWidth = 1.4
+      ..style = PaintingStyle.stroke;
+
+    final double l = inset;
+    final double r = size.width - inset;
+    final double t = inset;
+    final double b = size.height - inset;
+
+    // Top-left ┌
+    canvas.drawLine(Offset(l, t), Offset(l + armLength, t), paint);
+    canvas.drawLine(Offset(l, t), Offset(l, t + armLength), paint);
+    // Top-right ┐
+    canvas.drawLine(Offset(r, t), Offset(r - armLength, t), paint);
+    canvas.drawLine(Offset(r, t), Offset(r, t + armLength), paint);
+    // Bottom-left └
+    canvas.drawLine(Offset(l, b), Offset(l + armLength, b), paint);
+    canvas.drawLine(Offset(l, b), Offset(l, b - armLength), paint);
+    // Bottom-right ┘
+    canvas.drawLine(Offset(r, b), Offset(r - armLength, b), paint);
+    canvas.drawLine(Offset(r, b), Offset(r, b - armLength), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant ConsoleFramePainter oldDelegate) =>
+      oldDelegate.accent != accent || oldDelegate.armLength != armLength || oldDelegate.inset != inset;
+}
+
+/// A blinking block cursor ("█") — used inline in the title strip and can
+/// also be dropped in as a standalone overlay widget for popups.
+class ConsoleCursorBlink extends StatefulWidget {
+  final bool inline;
+  const ConsoleCursorBlink({this.inline = false});
+
+  @override
+  State<ConsoleCursorBlink> createState() => _ConsoleCursorBlinkState();
+}
+
+class _ConsoleCursorBlinkState extends State<ConsoleCursorBlink> {
+  bool _visible = true;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 530), (_) {
+      if (!mounted || !QuickMenuFunctions.isQuickMenuVisible) return;
+      setState(() => _visible = !_visible);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = Design.accent;
+    final Widget block = AnimatedOpacity(
+      opacity: _visible ? 1 : 0,
+      duration: const Duration(milliseconds: 90),
+      child: Container(width: 7, height: 13, color: accent),
+    );
+    if (widget.inline) return block;
+    // This widget can be mounted below IgnorePointer by _mountModalLayer.
+    // Keep Stack parent data at the layer boundary instead of returning a
+    // Positioned widget from inside the stateful cursor.
+    return Align(
+      alignment: Alignment.bottomRight,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 10, bottom: 8),
+        child: block,
+      ),
+    );
+  }
 }
