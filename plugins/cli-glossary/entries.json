@@ -1,0 +1,16 @@
+[
+  {
+    "id": "ocr-image",
+    "name": "OCR image",
+    "agent_id": "codex",
+    "needs_file": true,
+    "prompt": "OCR this image. ONLY OUTPUT THE TEXT AND NOTHING ELSE"
+  },
+  {
+    "id": "translate",
+    "name": "Translate",
+    "agent_id": "codex",
+    "needs_file": false,
+    "prompt": "Please translate {text} to english, spanish and german. Please translate it with the meaning from original language. Do not search the web or open any file. Please only give a list of the language and the result such as English: [translated result]"
+  }
+]

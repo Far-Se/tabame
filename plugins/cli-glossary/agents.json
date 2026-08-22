@@ -1,0 +1,17 @@
+[
+  {
+    "id": "codex",
+    "name": "Codex",
+    "binary": ["codex", "exec"],
+    "file_flag": ["-i", "{file}"],
+    "output_flag": ["-o", "{output}"],
+    "trailing_flags": [
+      "-m",
+      "gpt-5.6-terra",
+      "-c",
+      "model_reasoning_effort=\"medium\"",
+      "--skip-git-repo-check"
+    ],
+    "output_filename": "result.md"
+  }
+]

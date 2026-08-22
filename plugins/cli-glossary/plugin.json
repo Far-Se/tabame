@@ -1,0 +1,12 @@
+{
+  "id": "cli-glossary",
+  "name": "CLI Agent Glossary",
+  "keyword": "aai",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "description": "Run saved prompt templates with Codex and other command-line agents.",
+  "icon": "terminal",
+  "pip": ["pillow>=10", "pywin32>=306"],
+  "dev": false
+}
