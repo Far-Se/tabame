@@ -413,9 +413,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       icon: Icons.apps_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
-      label: ';',
+      label: 'd ',
       caption: 'Desktop Files',
-      prefix: ';',
+      prefix: 'd ',
       icon: Icons.desktop_windows_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
@@ -860,7 +860,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
   void _setPluginQuery(String text) {
     final PluginManifest? plugin = _activePlugin;
     if (plugin == null) return;
-    final String next = text.isEmpty ? plugin.keyword : '${plugin.keyword} $text';
+    final String launchKeyword = PluginRegistry.launchKeyword(plugin);
+    final String next = text.isEmpty ? launchKeyword : '$launchKeyword $text';
     if (_controller.text == next) return;
     _controller.text = next;
     _controller.selection = TextSelection.collapsed(offset: next.length);
@@ -1040,9 +1041,10 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         _pluginHost.sendSubmitQuery(text, scope: _topPluginScope);
         // A submit-mode frame is a chat-style composer. Reset it immediately
         // so the next Enter sends a new message instead of an item action.
+        final String launchKeyword = PluginRegistry.launchKeyword(plugin);
         _controller.value = TextEditingValue(
-          text: '${plugin.keyword} ',
-          selection: TextSelection.collapsed(offset: plugin.keyword.length + 1),
+          text: '$launchKeyword ',
+          selection: TextSelection.collapsed(offset: launchKeyword.length + 1),
         );
         _pluginLastSubmittedQuery = null;
         return;
@@ -1536,9 +1538,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       ...availableShortcuts,
       for (final (int index, PluginManifest plugin) in enabledPlugins.indexed)
         LauncherSearchResultItem.shortcut(LauncherShortcut(
-          label: plugin.keyword,
+          label: PluginRegistry.launchKeyword(plugin),
           caption: plugin.name,
-          prefix: '${plugin.keyword} ',
+          prefix: PluginRegistry.launchPrefix(plugin),
           icon: PluginIcons.resolve(plugin.icon),
           showDividerBefore: index == 0,
         )),
@@ -2526,9 +2528,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     }
   }
 
-  /// Lists enabled plugins for the `!` launcher shortcut. The keyword is kept
-  /// as the result prefix so selecting a row can hand it to a standalone
-  /// launcher process.
+  /// Lists enabled plugins for the `!` launcher shortcut. The configured
+  /// plugin prefix is included so selecting a row hands the effective keyword
+  /// to a standalone launcher process.
   void _handlePluginListSearch(LauncherSearchContext context) {
     final String filter = context.normalizedQuery.trim().toLowerCase();
     final List<PluginManifest> plugins = PluginRegistry.manifests.where((PluginManifest plugin) {
@@ -2557,9 +2559,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       <LauncherSearchResultItem>[
         for (final PluginManifest plugin in plugins)
           LauncherSearchResultItem.shortcut(LauncherShortcut(
-            label: plugin.keyword,
+            label: PluginRegistry.launchKeyword(plugin),
             caption: plugin.name,
-            prefix: plugin.keyword,
+            prefix: PluginRegistry.launchKeyword(plugin),
             icon: PluginIcons.resolve(plugin.icon),
           )),
       ],

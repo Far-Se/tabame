@@ -87,6 +87,7 @@ class Boxes {
       await pref.setBool("autoOpenTaskManager", false);
       await pref.setBool("quickClickEnabled", false);
       await pref.setString("quickClickConfig", jsonEncode(user.quickClickConfig.toMap()));
+      await pref.setString("pluginShortcut", user.pluginShortcut);
       await pref.setBool("runAsAdministrator", false);
       await pref.setBool("hideTabameOnUnfocus", true);
       await pref.setString("wallpapersFolder", "");
@@ -167,6 +168,7 @@ class Boxes {
       ..trktivityEnabled = pref.getBool("trktivityEnabled") ?? user.trktivityEnabled
       ..autoCheckForUpdates = pref.getBool("autoUpdate") ?? user.autoCheckForUpdates
       ..pluginAutoUpdate = pref.getBool(PluginAutoUpdater.settingKey) ?? user.pluginAutoUpdate
+      ..pluginShortcut = pref.getString("pluginShortcut") ?? user.pluginShortcut
       ..wallpapersFolder = pref.getString("wallpapersFolder") ?? user.wallpapersFolder
       ..useCustomCursor = pref.getBool("useCustomCursor") ?? user.useCustomCursor
       ..fancyshotFolder = pref.getString("fancyshotFolder") ?? user.fancyshotFolder

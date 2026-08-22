@@ -74,23 +74,28 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   String _installStatus = '';
   final TextEditingController _installedSearchController = TextEditingController();
   final TextEditingController _gallerySearchController = TextEditingController();
+  final TextEditingController _pluginShortcutController = TextEditingController();
   String _galleryCategory = '';
   bool _pluginDirectoryBusy = false;
   String _pluginDirectoryStatus = '';
   bool _pluginDirectoryStatusError = false;
   bool _autoUpdateBusy = false;
   String _autoUpdateError = '';
+  bool _pluginShortcutBusy = false;
+  String _pluginShortcutError = '';
 
   @override
   void dispose() {
     _installedSearchController.dispose();
     _gallerySearchController.dispose();
+    _pluginShortcutController.dispose();
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
+    _pluginShortcutController.text = PluginRegistry.shortcut;
     // Rescan on open so freshly-dropped plugins show up without a restart.
     _reload();
   }
@@ -149,6 +154,34 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
     }
     if (!mounted) return;
     setState(() => _autoUpdateBusy = false);
+  }
+
+  Future<void> _savePluginShortcut() async {
+    if (_pluginShortcutBusy) return;
+    final String shortcut = _pluginShortcutController.text.trim();
+    final String? validationError = PluginRegistry.validateShortcut(shortcut);
+    if (validationError != null) {
+      setState(() => _pluginShortcutError = validationError);
+      return;
+    }
+
+    setState(() {
+      _pluginShortcutBusy = true;
+      _pluginShortcutError = '';
+    });
+    try {
+      await Boxes.updateSettings(PluginRegistry.shortcutSettingKey, shortcut);
+      user.pluginShortcut = shortcut;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _pluginShortcutBusy = false;
+        _pluginShortcutError = 'Could not save the plugin shortcut.';
+      });
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _pluginShortcutBusy = false);
   }
 
   Future<void> _editKeyword(PluginManifest manifest) async {
@@ -211,7 +244,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
     setState(() {
       _installingId = null;
       _installStatus = error == null
-          ? 'Installed "${entry.name}" — type "${entry.keyword}" in the launcher'
+          ? 'Installed "${entry.name}" — type "${PluginRegistry.launchKeywordFor(entry.keyword)}" in the launcher'
           : 'Install failed: $error';
     });
   }
@@ -422,7 +455,7 @@ Build a plugin with your favorite AI coding assistant:
 3. Tell the AI what plugin you need, with detailed instructions for how it should work.
 4. Create a new folder inside the plugin installation folder shown on the Installed tab.
 5. Paste in your `plugin.json` and script files.
-6. Open the launcher and type the shortcut.
+6. Open the launcher and type the plugin keyword shown on the Installed tab (including its optional prefix).
 7. If you want to share it with the community, make an issue [HERE](https://github.com/Far-Se/tabame/issues/new?template=plugin_submission.md) with the code, either paste it or zip/gist/rep.
 ''',
           selectable: true,
@@ -457,6 +490,7 @@ Build a plugin with your favorite AI coding assistant:
             manifest.name,
             manifest.id,
             manifest.keyword,
+            PluginRegistry.launchKeyword(manifest),
             manifest.description,
             manifest.runtime,
           ]),
@@ -470,6 +504,14 @@ Build a plugin with your favorite AI coding assistant:
         child: Column(
           crossAxisAlignment: C.start,
           children: <Widget>[
+            _buildSectionLabel(
+              label: "Launcher shortcut",
+              countText: _pluginShortcutController.text.trim().isEmpty ? "OFF" : _pluginShortcutController.text.trim(),
+              icon: Icons.keyboard_alt_rounded,
+            ),
+            const SizedBox(height: 8),
+            _buildPluginShortcutCard(),
+            const SizedBox(height: 16),
             _buildSectionLabel(
               label: "Plugin folder",
               countText: "CONFIG",
@@ -542,6 +584,145 @@ Build a plugin with your favorite AI coding assistant:
               message,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(130)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPluginShortcutCard() {
+    final Color accent = Design.accent;
+    final Color text = Design.text;
+    final bool configured = _pluginShortcutController.text.trim().isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
+      decoration: BoxDecoration(
+        color: configured ? accent.withAlpha(10) : text.withAlpha(7),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: configured ? accent.withAlpha(30) : text.withAlpha(16)),
+      ),
+      child: Row(
+        crossAxisAlignment: C.start,
+        children: <Widget>[
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: (configured ? accent : text).withAlpha(configured ? 24 : 12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.keyboard_alt_rounded,
+              size: 16,
+              color: configured ? accent : text.withAlpha(130),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: C.start,
+              children: <Widget>[
+                Text(
+                  'Prefix plugin keywords',
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize + 1.5,
+                    fontWeight: FontWeight.w700,
+                    color: text.withAlpha(235),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  configured
+                      ? 'Plugins launch as ${_pluginShortcutController.text.trim()}weather. Bare keywords stay available to Quick Actions.'
+                      : 'Leave empty for the legacy behavior, or set a symbol such as ; to type ;weather.',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: Design.baseFontSize - 0.5,
+                    height: 1.25,
+                    color: text.withAlpha(140),
+                  ),
+                ),
+                if (_pluginShortcutError.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 4),
+                  Text(
+                    _pluginShortcutError,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: Design.baseFontSize - 1,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red.shade400,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 58,
+            child: TextField(
+              controller: _pluginShortcutController,
+              maxLength: 1,
+              textAlign: TextAlign.center,
+              textInputAction: TextInputAction.done,
+              style: TextStyle(
+                fontSize: Design.baseFontSize + 2,
+                fontWeight: FontWeight.w700,
+                color: accent,
+              ),
+              decoration: InputDecoration(
+                hintText: ';',
+                hintStyle: TextStyle(color: text.withAlpha(90)),
+                counterText: '',
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                filled: true,
+                fillColor: accent.withAlpha(12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: text.withAlpha(18)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: text.withAlpha(18)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: accent.withAlpha(85)),
+                ),
+              ),
+              onChanged: (_) {
+                if (_pluginShortcutError.isNotEmpty) setState(() => _pluginShortcutError = '');
+                setState(() {});
+              },
+              onSubmitted: (_) => _savePluginShortcut(),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Tooltip(
+            message: 'Save plugin shortcut',
+            waitDuration: const Duration(milliseconds: 400),
+            child: InkWell(
+              onTap: _pluginShortcutBusy ? null : _savePluginShortcut,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: accent.withAlpha(60)),
+                ),
+                child: _pluginShortcutBusy
+                    ? SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: accent),
+                      )
+                    : Icon(Icons.save_rounded, size: 14, color: accent),
+              ),
             ),
           ),
         ],
@@ -843,6 +1024,7 @@ Build a plugin with your favorite AI coding assistant:
             entry.name,
             entry.id,
             entry.keyword,
+            PluginRegistry.launchKeywordFor(entry.keyword),
             entry.description,
             entry.category,
             entry.author,
@@ -1367,7 +1549,7 @@ class _PluginCardState extends State<_PluginCard> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    _buildKeywordBadge(manifest.keyword, enabled, accent),
+                    _buildKeywordBadge(PluginRegistry.launchKeyword(manifest), enabled, accent),
                   ],
                 ),
                 if (manifest.description.trim().isNotEmpty) ...<Widget>[
@@ -1669,7 +1851,7 @@ class _GalleryCard extends StatelessWidget {
               _buildInstallAction(accent, text, updateAvailable),
               const SizedBox(height: 3),
               if (entry.keyword.isNotEmpty) ...<Widget>[
-                _pill(entry.keyword, accent.withAlpha(22), accent),
+                _pill(PluginRegistry.launchKeywordFor(entry.keyword), accent.withAlpha(22), accent),
               ],
               const SizedBox(height: 3),
               if (entry.runtime.isNotEmpty) ...<Widget>[

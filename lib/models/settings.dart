@@ -241,6 +241,10 @@ class Settings {
   bool autoOpenTaskManager = false;
   bool autoCheckForUpdates = false;
   bool pluginAutoUpdate = false;
+
+  /// Optional prefix shared by launcher plugin keywords, e.g. `;` makes
+  /// `weather` launch as `;weather`.
+  String pluginShortcut = '';
   bool dragPopupsByIconOnly = true;
   bool quickActionsAtBottom = false;
   int quickMenuDesign = Random().nextInt(QuickMenuDesigns.values.length);

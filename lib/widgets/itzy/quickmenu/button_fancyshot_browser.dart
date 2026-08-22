@@ -225,7 +225,9 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
       dirs.length,
       (int i) => MapEntry<Directory, FileStat>(dirs[i], stats[i]),
     )..sort((MapEntry<Directory, FileStat> a, MapEntry<Directory, FileStat> b) {
-        return b.value.changed.compareTo(a.value.changed);
+        final int byModified = b.value.modified.compareTo(a.value.modified);
+        if (byModified != 0) return byModified;
+        return b.key.path.toLowerCase().compareTo(a.key.path.toLowerCase());
       });
 
     final Map<String, int> sizeMap = <String, int>{

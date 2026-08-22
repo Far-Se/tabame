@@ -55,7 +55,7 @@ class LauncherQuery {
     if (query.startsWith(r'$')) return LauncherSearchMode.functionCommand;
     if (query.startsWith('.')) return LauncherSearchMode.windowsOnly;
     if (query.startsWith(',')) return LauncherSearchMode.browserTabsOnly;
-    if (query.startsWith(';')) return LauncherSearchMode.desktopOnly;
+    if (query.startsWith('d ')) return LauncherSearchMode.desktopOnly;
     if (query.startsWith('timer ')) return LauncherSearchMode.timerCommand;
     if (query.startsWith('n ')) return LauncherSearchMode.notionOnly;
     if (query.startsWith('o ')) return LauncherSearchMode.obsidianOnly;
@@ -80,6 +80,7 @@ class LauncherQuery {
     final RegExpMatch? mediaMatch = _mediaCommandPrefixPattern.firstMatch(query);
     if (mediaMatch != null) return query.substring(mediaMatch.end).trimLeft();
     if (query.startsWith('timer ')) return query.substring(6).trimLeft();
+    if (query.startsWith('d ')) return query.substring(2).trimLeft();
     if (query.startsWith('cli ')) return query.substring(4).trimLeft();
     if (query.startsWith('app ')) return query.substring(4).trimLeft();
     if (query.startsWith('n ')) return query.substring(2).trimLeft();
@@ -95,7 +96,6 @@ class LauncherQuery {
         query.startsWith(r'$') ||
         query.startsWith('>') ||
         query.startsWith('?') ||
-        query.startsWith(';') ||
         query.startsWith(' ') ||
         query.startsWith("'")) {
       return query.substring(1).trimLeft();

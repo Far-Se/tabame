@@ -30,7 +30,8 @@ class PluginManifest {
   /// Human-friendly title shown in discovery hints.
   final String name;
 
-  /// The prefix the user types to enter this plugin's live mode, e.g. `weather`.
+  /// The plugin's keyword portion, e.g. `weather`. The launcher may prepend
+  /// the optional global plugin shortcut configured in the Plugin Manager.
   final String keyword;
 
   final String description;

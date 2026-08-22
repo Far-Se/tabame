@@ -116,3 +116,4 @@ resources/logos_x/
 **/generated_*
 **/GeneratedPluginRegistrant*
 lib/pages/quickmenu_designs/design_ledger2.dart
+move-plugin.js

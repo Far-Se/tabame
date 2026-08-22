@@ -20,10 +20,11 @@ import 'plugin_protocol.dart';
 /// tags) with one or more submit CTAs.
 ///
 /// Focus lives inside the form while it is shown (the launcher releases its
-/// search-field focus grab). Enter in a single-line field submits; Escape
-/// cancels via [onCancel]. Field state survives re-rendered frames as long as
-/// the field ids stay the same, so a plugin can refresh other parts of the
-/// frame (e.g. attach an `error` to a field) without wiping the user's input.
+/// search-field focus grab). Ctrl+Enter submits; plain Enter remains available
+/// for multiline fields. Escape cancels via [onCancel]. Field state survives
+/// re-rendered frames as long as the field ids stay the same, so a plugin can
+/// refresh other parts of the frame (e.g. attach an `error` to a field) without
+/// wiping the user's input.
 ///
 /// `required` fields are validated host-side before [onSubmit] fires; fields
 /// with `watch: true` report every change through [onChanged] so plugins can
@@ -381,6 +382,11 @@ class _PluginFormViewState extends State<PluginFormView> {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     if (event.logicalKey == LogicalKeyboardKey.escape) {
       widget.onCancel();
+      return KeyEventResult.handled;
+    }
+    if ((event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) &&
+        HardwareKeyboard.instance.isControlPressed) {
+      _submit();
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.keyK &&
@@ -1120,7 +1126,7 @@ class _PluginFormViewState extends State<PluginFormView> {
                       ),
                   const SizedBox(width: 10),
                   Text(
-                    'Enter to submit · Esc to cancel',
+                    'Ctrl+Enter to submit · Esc to cancel',
                     style: TextStyle(fontSize: 10, color: Design.text.withAlpha(90)),
                   ),
                 ],

@@ -523,7 +523,11 @@ class _PortableShellState extends State<PortableShell> {
             dense: true,
             leading: Icon(Icons.extension_rounded, color: widget.settings.accentColor),
             title: Text(plugin.name),
-            subtitle: Text('${plugin.keyword} · ${plugin.runtime}', maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: Text(
+              '${PluginRegistry.launchKeyword(plugin)} · ${plugin.runtime}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => _activatePlugin(plugin),
           ),
