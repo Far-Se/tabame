@@ -54,6 +54,32 @@ class FancyShotBrowserPanel extends StatefulWidget {
 class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
   static const Set<String> _imageExtensions = <String>{'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'};
   static const Set<String> _videoExtensions = <String>{'.mp4', '.mkv', '.avi', '.mov', '.webm', '.gif'};
+  static const Map<String, int> _monthNumbers = <String, int>{
+    'jan': 1,
+    'january': 1,
+    'feb': 2,
+    'february': 2,
+    'mar': 3,
+    'march': 3,
+    'apr': 4,
+    'april': 4,
+    'may': 5,
+    'jun': 6,
+    'june': 6,
+    'jul': 7,
+    'july': 7,
+    'aug': 8,
+    'august': 8,
+    'sep': 9,
+    'sept': 9,
+    'september': 9,
+    'oct': 10,
+    'october': 10,
+    'nov': 11,
+    'november': 11,
+    'dec': 12,
+    'december': 12,
+  };
 
   _MediaType _mediaType = _MediaType.screenshots;
 
@@ -202,6 +228,22 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
     return i == -1 ? '' : path.substring(i).toLowerCase();
   }
 
+  DateTime? _folderDate(Directory dir) {
+    final List<String> tokens =
+        _folderLabel(dir).toLowerCase().split(RegExp(r'[^a-z0-9]+')).where((String token) => token.isNotEmpty).toList();
+    int? year;
+    int? month;
+    for (final String token in tokens) {
+      if (token.length == 4) {
+        final int? parsedYear = int.tryParse(token);
+        if (parsedYear != null) year = parsedYear;
+      }
+      month ??= _monthNumbers[token];
+    }
+    if (year == null || month == null) return null;
+    return DateTime(year, month);
+  }
+
   void _loadMonths() async {
     final Directory root = Directory(_rootFolder);
     if (!root.existsSync()) {
@@ -225,6 +267,15 @@ class _FancyShotBrowserPanelState extends State<FancyShotBrowserPanel> {
       dirs.length,
       (int i) => MapEntry<Directory, FileStat>(dirs[i], stats[i]),
     )..sort((MapEntry<Directory, FileStat> a, MapEntry<Directory, FileStat> b) {
+        final DateTime? aDate = _folderDate(a.key);
+        final DateTime? bDate = _folderDate(b.key);
+        if (aDate != null || bDate != null) {
+          if (aDate == null) return 1;
+          if (bDate == null) return -1;
+          final int byDate = bDate.compareTo(aDate);
+          if (byDate != 0) return byDate;
+        }
+
         final int byModified = b.value.modified.compareTo(a.value.modified);
         if (byModified != 0) return byModified;
         return b.key.path.toLowerCase().compareTo(a.key.path.toLowerCase());

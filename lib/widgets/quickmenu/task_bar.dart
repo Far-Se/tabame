@@ -95,6 +95,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   bool _fetching = false;
   bool _keepFetching = true;
   Timer? _mainTimer;
+  Timer? _hideTimer;
   final ScrollController _scrollController = ScrollController();
   final Map<int, GlobalKey> _windowItemKeys = <int, GlobalKey>{};
 
@@ -144,6 +145,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   @override
   void dispose() {
     // PaintingBinding.instance.imageCache.clear();
+    _hideTimer?.cancel();
     _mainTimer?.cancel();
     _scrollController.removeListener(_updateBottomFade);
     _scrollController.dispose();
@@ -164,6 +166,11 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
         }
         _fetchWindows();
       }
+    });
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(minutes: 5), () {
+      if (QuickMenuFunctions.isQuickMenuVisible && Globals.quickMenuPage == QuickMenuPage.quickMenu)
+        QuickMenuFunctions.hideQuickMenu();
     });
   }
 

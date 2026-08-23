@@ -360,7 +360,11 @@ class WindowWatcher {
       int hWnd = GetTopWindow(0);
 
       while (hWnd != 0) {
-        if (hWnd != ownHandle && validHandles.contains(hWnd) && IsWindowVisible(hWnd) != 0 && IsIconic(hWnd) == 0) {
+        if (hWnd != ownHandle &&
+            Win32.getClass(hWnd) != "TABAME_WIN32_WINDOW" &&
+            validHandles.contains(hWnd) &&
+            IsWindowVisible(hWnd) != 0 &&
+            IsIconic(hWnd) == 0) {
           final Square rect = Win32.getWindowRect(hwnd: hWnd);
 
           final bool isUnderCursor =

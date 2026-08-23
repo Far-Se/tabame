@@ -1547,6 +1547,44 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     ];
   }
 
+  /// Suggests enabled plugins while the user is typing their effective
+  /// keyword, e.g. `;weat` resolves to the `;weather ` launcher prefix.
+  /// Returning null means the query is not using the configured plugin
+  /// shortcut; an empty list means it is, but no plugin matches yet.
+  List<LauncherSearchResultItem>? _pluginKeywordSuggestions(String query) {
+    final String shortcut = PluginRegistry.shortcut;
+    if (shortcut.isEmpty) return null;
+
+    final String lowerQuery = query.toLowerCase();
+    if (!lowerQuery.startsWith(shortcut.toLowerCase())) return null;
+
+    final String typedKeyword = query.substring(shortcut.length);
+    if (typedKeyword.contains(RegExp(r'\s'))) return null;
+
+    final List<PluginManifest> matches = PluginRegistry.manifests
+        .where(
+          (PluginManifest plugin) =>
+              plugin.enabled && PluginRegistry.launchKeyword(plugin).toLowerCase().startsWith(lowerQuery),
+        )
+        .toList()
+      ..sort((PluginManifest a, PluginManifest b) {
+        final int byKeyword =
+            PluginRegistry.launchKeyword(a).toLowerCase().compareTo(PluginRegistry.launchKeyword(b).toLowerCase());
+        if (byKeyword != 0) return byKeyword;
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
+
+    return <LauncherSearchResultItem>[
+      for (final PluginManifest plugin in matches)
+        LauncherSearchResultItem.shortcut(LauncherShortcut(
+          label: PluginRegistry.launchKeyword(plugin),
+          caption: plugin.name,
+          prefix: PluginRegistry.launchPrefix(plugin),
+          icon: PluginIcons.resolve(plugin.icon),
+        )),
+    ];
+  }
+
   void _openLauncherPanel(BuildContext context, Widget child) {
     showQuickMenuModal(
       context: context,
@@ -1839,6 +1877,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       if (!mounted || _activePlugin != null) return;
       final String query = _controller.text;
       if (PluginRegistry.matchKeyword(query) != null ||
+          _pluginKeywordSuggestions(query) != null ||
           LauncherQuery.parse(query).mode == LauncherSearchMode.pluginsOnly) {
         _onSearchChanged(query);
       }
@@ -2372,6 +2411,19 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
 
     _scrollResultsToTopForQuery(query);
     _searchDebounce?.cancel();
+
+    final List<LauncherSearchResultItem>? pluginSuggestions = _pluginKeywordSuggestions(query);
+    if (pluginSuggestions != null) {
+      _folderBrowsingStack.clear();
+      _folderBrowsingQueryStack.clear();
+      ++_searchGeneration;
+      setState(() {
+        _searchMode = LauncherSearchMode.mixed;
+        _isSearching = false;
+      });
+      _setResults(pluginSuggestions, isSearching: false);
+      return;
+    }
 
     final LauncherQuery launcherQuery = LauncherQuery.parse(query);
     final LauncherSearchMode searchMode = launcherQuery.mode;

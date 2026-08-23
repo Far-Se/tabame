@@ -192,16 +192,20 @@ class WindowsHotkeyActionService extends HotkeyActionService {
       'ShowSecondWindowUnderCursor': () {
         QuickMenuFunctions.hideQuickMenu();
         WindowWatcher.showSecondWindowUnderCursor();
-        Future<void>.delayed(const Duration(milliseconds: 320), () {
-          QuickMenuFunctions.hideQuickMenu();
-        });
+        if (Globals.quickMenuPage == QuickMenuPage.quickMenu) {
+          Future<void>.delayed(const Duration(milliseconds: 320), () {
+            QuickMenuFunctions.hideQuickMenu();
+          });
+        }
       },
       'ShowLastWindowUnderCursor': () {
         QuickMenuFunctions.hideQuickMenu();
         WindowWatcher.showLastWindowUnderCursor();
-        Future<void>.delayed(const Duration(milliseconds: 320), () {
-          QuickMenuFunctions.hideQuickMenu();
-        });
+        if (Globals.quickMenuPage == QuickMenuPage.quickMenu) {
+          Future<void>.delayed(const Duration(milliseconds: 320), () {
+            QuickMenuFunctions.hideQuickMenu();
+          });
+        }
       },
       'ToggleAlwaysOnTopForWindow': () => Win32.setAlwaysOnTop(GetForegroundWindow()),
       'ExpandSnippet': () => TextSnippetsManager.expand(),
