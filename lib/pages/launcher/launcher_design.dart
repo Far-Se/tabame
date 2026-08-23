@@ -707,6 +707,59 @@ abstract final class RelayTokens {
   }
 }
 
+/// Raycast-inspired command-palette tokens.
+///
+/// This design intentionally owns its graphite palette instead of inheriting
+/// the user's launcher colors. Result icons still keep their source colors;
+/// the shell reserves color for legibility, selection and depth.
+abstract final class RaycastTokens {
+  static const Color surface = Color(0xFF1C1C1E);
+  static const Color deepSurface = Color(0xFF151517);
+  static const Color selected = Color(0xFF3A3A3C);
+  static const Color divider = Color(0xFF2A2A2C);
+  static const Color badge = Color(0xFF2C2C2E);
+  static const Color primary = Color(0xFFF2F2F7);
+  static const Color secondary = Color(0xFFD1D1D6);
+  static const Color muted = Color(0xFF8E8E93);
+  static const Color dim = Color(0xFF6E6E73);
+
+  static TextStyle ui({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return launcherTextStyle(TextStyle(
+      fontFamily: 'Segoe UI Variable Text',
+      fontFamilyFallback: const <String>['Segoe UI', 'Arial'],
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    ));
+  }
+
+  static TextStyle mono({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return launcherTextStyle(TextStyle(
+      fontFamily: 'Cascadia Mono',
+      fontFamilyFallback: const <String>['Consolas', 'Segoe UI'],
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    ));
+  }
+}
+
 @immutable
 class LauncherThemeData {
   const LauncherThemeData({required this.design});
@@ -731,6 +784,7 @@ class LauncherThemeData {
   bool get isNotion => design == LauncherDesign.notion;
   bool get isSwitchboard => design == LauncherDesign.switchboard;
   bool get isRelay => design == LauncherDesign.relay;
+  bool get isRaycast => design == LauncherDesign.newCast;
   bool get isQuickMenuInspired => switch (design) {
         LauncherDesign.tech ||
         LauncherDesign.vector ||
@@ -772,6 +826,7 @@ class LauncherThemeData {
         LauncherDesign.switchboard => Icons.tune_rounded,
         LauncherDesign.relay => Icons.alt_route_rounded,
         LauncherDesign.terminal2 => Icons.terminal_rounded,
+        LauncherDesign.newCast => Icons.chevron_right_rounded,
       };
 
   double get searchIconSize => switch (design) {
@@ -800,9 +855,10 @@ class LauncherThemeData {
         LauncherDesign.switchboard => 18.0,
         LauncherDesign.relay => 18.0,
         LauncherDesign.terminal2 => 20.0,
+        LauncherDesign.newCast => 18.0,
       };
 
-  bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent || isNotion;
+  bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent || isNotion || isRaycast;
 
   double get searchFontSize => switch (design) {
         LauncherDesign.serene => 16.0,
@@ -830,6 +886,7 @@ class LauncherThemeData {
         LauncherDesign.switchboard => 15.0,
         LauncherDesign.relay => 16.0,
         LauncherDesign.terminal2 => 14.0,
+        LauncherDesign.newCast => 15.0,
       };
   FontWeight? get searchFontWeight => switch (design) {
         LauncherDesign.serene => FontWeight.w400,
@@ -857,7 +914,10 @@ class LauncherThemeData {
         LauncherDesign.switchboard => FontWeight.w500,
         LauncherDesign.relay => FontWeight.w600,
         LauncherDesign.terminal2 => FontWeight.w500,
+        LauncherDesign.newCast => FontWeight.w400,
       };
+
+  String? get searchHint => isRaycast ? 'Search apps, files, and commands...' : null;
 
   double get frameRadius => switch (design) {
         LauncherDesign.serene => 14.0,
@@ -885,6 +945,7 @@ class LauncherThemeData {
         LauncherDesign.switchboard => 4.0,
         LauncherDesign.relay => 7.0,
         LauncherDesign.terminal2 => 2.0,
+        LauncherDesign.newCast => 14.0,
       };
 
   EdgeInsets get resultsListPadding => const EdgeInsets.all(8.0);

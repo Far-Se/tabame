@@ -22,6 +22,52 @@ Widget _rowText(String value, TextStyle style, {required Color accent, required 
   );
 }
 
+/// Carries the shared result index to presentation-only row variants.
+///
+/// The launcher keeps ownership of result ordering, selection and execution;
+/// Raycast rows only read this value to render their optional ⌘-number hint.
+class LauncherRaycastResultIndex extends InheritedWidget {
+  const LauncherRaycastResultIndex({
+    super.key,
+    required this.index,
+    required super.child,
+  });
+
+  final int index;
+
+  static int? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<LauncherRaycastResultIndex>()?.index;
+
+  @override
+  bool updateShouldNotify(LauncherRaycastResultIndex oldWidget) => index != oldWidget.index;
+}
+
+class _RaycastShortcutBadge extends StatelessWidget {
+  const _RaycastShortcutBadge({required this.index});
+
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: RaycastTokens.badge,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        '⌘${index + 1}',
+        style: RaycastTokens.mono(
+          fontSize: 12,
+          color: RaycastTokens.muted,
+          fontWeight: FontWeight.w500,
+          height: 1.0,
+        ),
+      ),
+    );
+  }
+}
+
 abstract final class _SereneTokens {
   // Row geometry
   static const double rowHPad = 12;
@@ -162,7 +208,8 @@ class LauncherResultRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return switch (user.launcherDesign) {
+    final LauncherDesign design = LauncherTheme.maybeOf(context)?.design ?? user.launcherDesign;
+    return switch (design) {
       LauncherDesign.serene => _buildSerene(context),
       LauncherDesign.command => _buildCommand(context),
       LauncherDesign.terminal => _buildTerminal(context),
@@ -188,7 +235,84 @@ class LauncherResultRow extends StatelessWidget {
       LauncherDesign.switchboard => _buildSwitchboard(context),
       LauncherDesign.relay => _buildRelay(context),
       LauncherDesign.terminal2 => _buildTerminal2(context),
+      LauncherDesign.newCast => _buildRaycast(context),
     };
+  }
+
+  Widget _buildRaycast(BuildContext context) {
+    final bool reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final int animMs = reduceMotion || isRepeating ? 40 : 120;
+    final int? resultIndex = LauncherRaycastResultIndex.maybeOf(context);
+    final bool hasShortcut = resultIndex != null && resultIndex < 8;
+    final Widget titleContent = content ??
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            _titleText(RaycastTokens.ui(
+              fontSize: 14,
+              color: isSelected ? RaycastTokens.primary : RaycastTokens.secondary,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              height: 1.15,
+            )),
+            if ((subtitle ?? '').isNotEmpty)
+              _subtitleText(RaycastTokens.ui(
+                fontSize: 11,
+                color: isSelected ? RaycastTokens.muted.withAlpha(210) : RaycastTokens.dim,
+                fontWeight: FontWeight.w400,
+                height: 1.1,
+              )),
+          ],
+        );
+
+    return RepaintBoundary(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: animMs),
+            curve: Curves.easeOutQuart,
+            height: 40,
+            margin: const EdgeInsets.symmetric(vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: isSelected ? RaycastTokens.selected : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 20,
+                  height: 20,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(isSelected ? 18 : 10),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: icon,
+                ),
+                const SizedBox(width: 10),
+                Expanded(child: titleContent),
+                if (badge != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: badge,
+                  ),
+                if (hasShortcut)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: _RaycastShortcutBadge(index: resultIndex),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildRelay(BuildContext context) {

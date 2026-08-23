@@ -52,6 +52,7 @@ import 'launcher/result/result_item_bookmark.dart';
 import 'launcher/result/result_item_browser_tab.dart';
 import 'launcher/result/result_item_file.dart';
 import 'launcher/result/result_item_window.dart';
+import 'launcher/result/result_row.dart';
 import 'launcher/search/bookmarks_search_handler.dart';
 import 'launcher/search/browser_tabs_search_handler.dart';
 import 'launcher/search/desktop_search_handler.dart';
@@ -1631,6 +1632,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         final KeyEventResult pluginResult = _handlePluginKey(event);
         if (pluginResult != KeyEventResult.ignored) return pluginResult;
       }
+      if (_handleRaycastShortcutKey(node, event)) return KeyEventResult.handled;
       if (node == _resultsFocusNode) {
         final KeyEventResult editingResult = _handleResultEditingKey(event);
         if (editingResult != KeyEventResult.ignored) return editingResult;
@@ -2117,6 +2119,37 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     }
     _rememberKeyboardResultSelection();
     _scrollToActiveIndex();
+  }
+
+  bool _handleRaycastShortcutKey(FocusNode node, KeyEvent event) {
+    if (_design != LauncherDesign.newCast || _activePlugin != null || event is! KeyDownEvent) return false;
+
+    final HardwareKeyboard keyboard = HardwareKeyboard.instance;
+    final bool hasModifier = keyboard.isControlPressed || keyboard.isMetaPressed;
+    // Plain number keys remain available for search input. Once the user is
+    // browsing results, they can jump directly without a modifier; from the
+    // search field the familiar command/control chord is required.
+    if (!hasModifier && node != _resultsFocusNode) return false;
+
+    final LogicalKeyboardKey key = event.logicalKey;
+    final int? shortcutIndex = switch (key) {
+      LogicalKeyboardKey.digit1 || LogicalKeyboardKey.numpad1 => 0,
+      LogicalKeyboardKey.digit2 || LogicalKeyboardKey.numpad2 => 1,
+      LogicalKeyboardKey.digit3 || LogicalKeyboardKey.numpad3 => 2,
+      LogicalKeyboardKey.digit4 || LogicalKeyboardKey.numpad4 => 3,
+      LogicalKeyboardKey.digit5 || LogicalKeyboardKey.numpad5 => 4,
+      LogicalKeyboardKey.digit6 || LogicalKeyboardKey.numpad6 => 5,
+      LogicalKeyboardKey.digit7 || LogicalKeyboardKey.numpad7 => 6,
+      LogicalKeyboardKey.digit8 || LogicalKeyboardKey.numpad8 => 7,
+      _ => null,
+    };
+    if (shortcutIndex == null || shortcutIndex >= _results.length) return false;
+
+    _resultsFocusNode.requestFocus();
+    _activeIndexNotifier.value = shortcutIndex;
+    _rememberKeyboardResultSelection();
+    _scrollToActiveIndex();
+    return true;
   }
 
   void _scrollToActiveIndex() {
@@ -4795,7 +4828,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       ),
       highlightColor: Design.accent.withAlpha(30),
     );
-    final bool isDark = baseTheme.brightness == Brightness.dark;
+    final bool isDark = _design == LauncherDesign.newCast || baseTheme.brightness == Brightness.dark;
     final bool isTerminal = _design == LauncherDesign.terminal;
     final bool isTerminal2 = _design == LauncherDesign.terminal2;
     final bool isZen = _design == LauncherDesign.zen;
@@ -4811,6 +4844,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final bool isNotion = _design == LauncherDesign.notion;
     final bool isSwitchboard = _design == LauncherDesign.switchboard;
     final bool isRelay = _design == LauncherDesign.relay;
+    final bool isRaycast = _design == LauncherDesign.newCast;
     // Terminal, Zen, Blueprint, Transit and Fluent force their own palette +
     // text theme. Every result builder reads its colors from this theme, so
     // they all inherit the look without per-builder branching. Terminal,
@@ -4831,177 +4865,196 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                         : isNotion
                             ? NotionTokens.blue(isDark)
                             : Design.accent;
-    final ThemeData designTheme = isWindowsXp
+    final ThemeData designTheme = isRaycast
         ? baseTheme.copyWith(
+            brightness: Brightness.dark,
             colorScheme: baseTheme.colorScheme.copyWith(
-              surface: WindowsXpTokens.paper,
-              onSurface: WindowsXpTokens.foreground,
-              primary: WindowsXpTokens.selection,
+              brightness: Brightness.dark,
+              surface: RaycastTokens.surface,
+              onSurface: RaycastTokens.primary,
+              primary: RaycastTokens.primary,
             ),
-            highlightColor: WindowsXpTokens.selection.withAlpha(34),
+            highlightColor: RaycastTokens.selected,
             textTheme: baseTheme.textTheme.apply(
-              fontFamily: 'Tahoma',
-              fontFamilyFallback: const <String>['Verdana', 'Segoe UI'],
-              bodyColor: WindowsXpTokens.foreground,
-              displayColor: WindowsXpTokens.foreground,
+              fontFamily: 'Segoe UI Variable Text',
+              fontFamilyFallback: const <String>['Segoe UI', 'Arial'],
+              bodyColor: RaycastTokens.primary,
+              displayColor: RaycastTokens.primary,
             ),
           )
-        : isWindows98
+        : isWindowsXp
             ? baseTheme.copyWith(
                 colorScheme: baseTheme.colorScheme.copyWith(
-                  surface: Windows98Tokens.face,
-                  onSurface: Windows98Tokens.foreground,
-                  primary: Windows98Tokens.selection,
+                  surface: WindowsXpTokens.paper,
+                  onSurface: WindowsXpTokens.foreground,
+                  primary: WindowsXpTokens.selection,
                 ),
-                highlightColor: Windows98Tokens.selection.withAlpha(34),
+                highlightColor: WindowsXpTokens.selection.withAlpha(34),
                 textTheme: baseTheme.textTheme.apply(
-                  fontFamily: 'MS Sans Serif',
-                  fontFamilyFallback: const <String>['Tahoma', 'Segoe UI'],
-                  bodyColor: Windows98Tokens.foreground,
-                  displayColor: Windows98Tokens.foreground,
+                  fontFamily: 'Tahoma',
+                  fontFamilyFallback: const <String>['Verdana', 'Segoe UI'],
+                  bodyColor: WindowsXpTokens.foreground,
+                  displayColor: WindowsXpTokens.foreground,
                 ),
               )
-            : isNotion
+            : isWindows98
                 ? baseTheme.copyWith(
                     colorScheme: baseTheme.colorScheme.copyWith(
-                      surface: NotionTokens.canvas(isDark),
-                      onSurface: NotionTokens.foreground(isDark),
-                      primary: NotionTokens.blue(isDark),
+                      surface: Windows98Tokens.face,
+                      onSurface: Windows98Tokens.foreground,
+                      primary: Windows98Tokens.selection,
                     ),
-                    highlightColor: NotionTokens.selection(isDark),
+                    highlightColor: Windows98Tokens.selection.withAlpha(34),
                     textTheme: baseTheme.textTheme.apply(
-                      fontFamily: 'Segoe UI Variable Text',
-                      fontFamilyFallback: const <String>['Segoe UI'],
-                      bodyColor: NotionTokens.foreground(isDark),
-                      displayColor: NotionTokens.foreground(isDark),
+                      fontFamily: 'MS Sans Serif',
+                      fontFamilyFallback: const <String>['Tahoma', 'Segoe UI'],
+                      bodyColor: Windows98Tokens.foreground,
+                      displayColor: Windows98Tokens.foreground,
                     ),
                   )
-                : isTerminal
+                : isNotion
                     ? baseTheme.copyWith(
                         colorScheme: baseTheme.colorScheme.copyWith(
-                          surface: TerminalTokens.bg(isDark),
-                          onSurface: TerminalTokens.fg(isDark),
+                          surface: NotionTokens.canvas(isDark),
+                          onSurface: NotionTokens.foreground(isDark),
+                          primary: NotionTokens.blue(isDark),
                         ),
-                        highlightColor: accent.withAlpha(38),
-                        textTheme: GoogleFonts.jetBrainsMonoTextTheme(baseTheme.textTheme)
-                            .apply(bodyColor: TerminalTokens.fg(isDark), displayColor: TerminalTokens.fg(isDark)),
+                        highlightColor: NotionTokens.selection(isDark),
+                        textTheme: baseTheme.textTheme.apply(
+                          fontFamily: 'Segoe UI Variable Text',
+                          fontFamilyFallback: const <String>['Segoe UI'],
+                          bodyColor: NotionTokens.foreground(isDark),
+                          displayColor: NotionTokens.foreground(isDark),
+                        ),
                       )
-                    : isTerminal2
+                    : isTerminal
                         ? baseTheme.copyWith(
                             colorScheme: baseTheme.colorScheme.copyWith(
-                              surface: Terminal2Tokens.bg(isDark),
-                              onSurface: Terminal2Tokens.fg(isDark),
+                              surface: TerminalTokens.bg(isDark),
+                              onSurface: TerminalTokens.fg(isDark),
                             ),
                             highlightColor: accent.withAlpha(38),
-                            textTheme: GoogleFonts.fragmentMonoTextTheme(baseTheme.textTheme).apply(
-                              bodyColor: Terminal2Tokens.fg(isDark),
-                              displayColor: Terminal2Tokens.fg(isDark),
-                            ),
+                            textTheme: GoogleFonts.jetBrainsMonoTextTheme(baseTheme.textTheme)
+                                .apply(bodyColor: TerminalTokens.fg(isDark), displayColor: TerminalTokens.fg(isDark)),
                           )
-                        : isZen
+                        : isTerminal2
                             ? baseTheme.copyWith(
                                 colorScheme: baseTheme.colorScheme.copyWith(
-                                  surface: ZenTokens.bg(isDark),
-                                  onSurface: ZenTokens.fg(isDark),
+                                  surface: Terminal2Tokens.bg(isDark),
+                                  onSurface: Terminal2Tokens.fg(isDark),
                                 ),
-                                highlightColor: accent.withAlpha(isDark ? 42 : 30),
-                                textTheme: GoogleFonts.quicksandTextTheme(baseTheme.textTheme)
-                                    .apply(bodyColor: ZenTokens.fg(isDark), displayColor: ZenTokens.fg(isDark)),
+                                highlightColor: accent.withAlpha(38),
+                                textTheme: GoogleFonts.fragmentMonoTextTheme(baseTheme.textTheme).apply(
+                                  bodyColor: Terminal2Tokens.fg(isDark),
+                                  displayColor: Terminal2Tokens.fg(isDark),
+                                ),
                               )
-                            : isBlueprint
+                            : isZen
                                 ? baseTheme.copyWith(
                                     colorScheme: baseTheme.colorScheme.copyWith(
-                                      surface: BlueprintTokens.bg(isDark),
-                                      onSurface: BlueprintTokens.fg(isDark),
+                                      surface: ZenTokens.bg(isDark),
+                                      onSurface: ZenTokens.fg(isDark),
                                     ),
-                                    highlightColor: accent.withAlpha(34),
-                                    textTheme: GoogleFonts.chakraPetchTextTheme(baseTheme.textTheme).apply(
-                                        bodyColor: BlueprintTokens.fg(isDark),
-                                        displayColor: BlueprintTokens.fg(isDark)),
+                                    highlightColor: accent.withAlpha(isDark ? 42 : 30),
+                                    textTheme: GoogleFonts.quicksandTextTheme(baseTheme.textTheme)
+                                        .apply(bodyColor: ZenTokens.fg(isDark), displayColor: ZenTokens.fg(isDark)),
                                   )
-                                : isTransit
+                                : isBlueprint
                                     ? baseTheme.copyWith(
                                         colorScheme: baseTheme.colorScheme.copyWith(
-                                          surface: TransitTokens.bg(isDark),
-                                          onSurface: TransitTokens.fg(isDark),
+                                          surface: BlueprintTokens.bg(isDark),
+                                          onSurface: BlueprintTokens.fg(isDark),
                                         ),
-                                        highlightColor: accent.withAlpha(30),
-                                        textTheme: GoogleFonts.overpassTextTheme(baseTheme.textTheme).apply(
-                                            bodyColor: TransitTokens.fg(isDark),
-                                            displayColor: TransitTokens.fg(isDark)),
+                                        highlightColor: accent.withAlpha(34),
+                                        textTheme: GoogleFonts.chakraPetchTextTheme(baseTheme.textTheme).apply(
+                                            bodyColor: BlueprintTokens.fg(isDark),
+                                            displayColor: BlueprintTokens.fg(isDark)),
                                       )
-                                    : isFluent
+                                    : isTransit
                                         ? baseTheme.copyWith(
                                             colorScheme: baseTheme.colorScheme.copyWith(
-                                              surface: FluentTokens.bg(isDark),
-                                              onSurface: FluentTokens.fg(isDark),
+                                              surface: TransitTokens.bg(isDark),
+                                              onSurface: TransitTokens.fg(isDark),
                                             ),
-                                            highlightColor: accent.withAlpha(28),
-                                            textTheme: baseTheme.textTheme.apply(
-                                              fontFamily: 'Segoe UI Variable Text',
-                                              fontFamilyFallback: const <String>['Segoe UI'],
-                                              bodyColor: FluentTokens.fg(isDark),
-                                              displayColor: FluentTokens.fg(isDark),
-                                            ),
+                                            highlightColor: accent.withAlpha(30),
+                                            textTheme: GoogleFonts.overpassTextTheme(baseTheme.textTheme).apply(
+                                                bodyColor: TransitTokens.fg(isDark),
+                                                displayColor: TransitTokens.fg(isDark)),
                                           )
-                                        : isManifesto
+                                        : isFluent
                                             ? baseTheme.copyWith(
                                                 colorScheme: baseTheme.colorScheme.copyWith(
-                                                  surface: ManifestoTokens.bg(isDark),
-                                                  onSurface: ManifestoTokens.fg(isDark),
+                                                  surface: FluentTokens.bg(isDark),
+                                                  onSurface: FluentTokens.fg(isDark),
                                                 ),
-                                                highlightColor: accent.withAlpha(32),
+                                                highlightColor: accent.withAlpha(28),
                                                 textTheme: baseTheme.textTheme.apply(
                                                   fontFamily: 'Segoe UI Variable Text',
                                                   fontFamilyFallback: const <String>['Segoe UI'],
-                                                  bodyColor: ManifestoTokens.fg(isDark),
-                                                  displayColor: ManifestoTokens.fg(isDark),
+                                                  bodyColor: FluentTokens.fg(isDark),
+                                                  displayColor: FluentTokens.fg(isDark),
                                                 ),
                                               )
-                                            : isOrbit
+                                            : isManifesto
                                                 ? baseTheme.copyWith(
                                                     colorScheme: baseTheme.colorScheme.copyWith(
-                                                      surface: OrbitTokens.bg(isDark),
-                                                      onSurface: OrbitTokens.fg(isDark),
+                                                      surface: ManifestoTokens.bg(isDark),
+                                                      onSurface: ManifestoTokens.fg(isDark),
                                                     ),
-                                                    highlightColor: accent.withAlpha(30),
-                                                    textTheme: GoogleFonts.spaceGroteskTextTheme(baseTheme.textTheme)
-                                                        .apply(
-                                                            bodyColor: OrbitTokens.fg(isDark),
-                                                            displayColor: OrbitTokens.fg(isDark)),
+                                                    highlightColor: accent.withAlpha(32),
+                                                    textTheme: baseTheme.textTheme.apply(
+                                                      fontFamily: 'Segoe UI Variable Text',
+                                                      fontFamilyFallback: const <String>['Segoe UI'],
+                                                      bodyColor: ManifestoTokens.fg(isDark),
+                                                      displayColor: ManifestoTokens.fg(isDark),
+                                                    ),
                                                   )
-                                                : isRelay
+                                                : isOrbit
                                                     ? baseTheme.copyWith(
                                                         colorScheme: baseTheme.colorScheme.copyWith(
-                                                          surface: RelayTokens.canvas(isDark, accent),
-                                                          onSurface: RelayTokens.foreground(isDark),
+                                                          surface: OrbitTokens.bg(isDark),
+                                                          onSurface: OrbitTokens.fg(isDark),
                                                         ),
                                                         highlightColor: accent.withAlpha(30),
                                                         textTheme:
-                                                            GoogleFonts.encodeSansTextTheme(baseTheme.textTheme).apply(
-                                                          bodyColor: RelayTokens.foreground(isDark),
-                                                          displayColor: RelayTokens.foreground(isDark),
-                                                        ),
+                                                            GoogleFonts.spaceGroteskTextTheme(baseTheme.textTheme)
+                                                                .apply(
+                                                                    bodyColor: OrbitTokens.fg(isDark),
+                                                                    displayColor: OrbitTokens.fg(isDark)),
                                                       )
-                                                    : isSwitchboard
+                                                    : isRelay
                                                         ? baseTheme.copyWith(
                                                             colorScheme: baseTheme.colorScheme.copyWith(
-                                                              surface: SwitchboardTokens.canvas(isDark),
-                                                              onSurface: SwitchboardTokens.foreground(isDark),
+                                                              surface: RelayTokens.canvas(isDark, accent),
+                                                              onSurface: RelayTokens.foreground(isDark),
                                                             ),
-                                                            highlightColor: accent.withAlpha(28),
+                                                            highlightColor: accent.withAlpha(30),
                                                             textTheme:
-                                                                GoogleFonts.publicSansTextTheme(baseTheme.textTheme)
+                                                                GoogleFonts.encodeSansTextTheme(baseTheme.textTheme)
                                                                     .apply(
-                                                              bodyColor: SwitchboardTokens.foreground(isDark),
-                                                              displayColor: SwitchboardTokens.foreground(isDark),
+                                                              bodyColor: RelayTokens.foreground(isDark),
+                                                              displayColor: RelayTokens.foreground(isDark),
                                                             ),
                                                           )
-                                                        : isGlass
+                                                        : isSwitchboard
                                                             ? baseTheme.copyWith(
+                                                                colorScheme: baseTheme.colorScheme.copyWith(
+                                                                  surface: SwitchboardTokens.canvas(isDark),
+                                                                  onSurface: SwitchboardTokens.foreground(isDark),
+                                                                ),
+                                                                highlightColor: accent.withAlpha(28),
                                                                 textTheme:
-                                                                    GoogleFonts.interTextTheme(baseTheme.textTheme))
-                                                            : baseTheme;
+                                                                    GoogleFonts.publicSansTextTheme(baseTheme.textTheme)
+                                                                        .apply(
+                                                                  bodyColor: SwitchboardTokens.foreground(isDark),
+                                                                  displayColor: SwitchboardTokens.foreground(isDark),
+                                                                ),
+                                                              )
+                                                            : isGlass
+                                                                ? baseTheme.copyWith(
+                                                                    textTheme:
+                                                                        GoogleFonts.interTextTheme(baseTheme.textTheme))
+                                                                : baseTheme;
     final ThemeData theme =
         Design.useCustomFont ? designTheme.copyWith(textTheme: launcherTextTheme(designTheme.textTheme)) : designTheme;
     final Color onSurface = theme.colorScheme.onSurface;
@@ -5041,8 +5094,9 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         ),
         decoration: InputDecoration(
           hintText: (_activePlugin != null ? _pluginFrame?.placeholder : null) ??
+              launcherTheme.searchHint ??
               (isTerminal2 ? 'type a command or search the system...' : 'Search applications, files, bookmarks...'),
-          hintStyle: TextStyle(color: onSurface.withAlpha(70)),
+          hintStyle: TextStyle(color: isRaycast ? RaycastTokens.muted : onSurface.withAlpha(70)),
           border: InputBorder.none,
           isDense: true,
           contentPadding: EdgeInsets.only(
@@ -5175,6 +5229,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                                                 ? Column(
                                                     mainAxisSize: MainAxisSize.min,
                                                     children: <Widget>[
+                                                      if (_design == LauncherDesign.newCast)
+                                                        _design.buildSectionHeader(label: 'Others', accent: accent),
                                                       Divider(
                                                         height: 17,
                                                         thickness: 1,
@@ -5188,12 +5244,15 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
                                                 : resultWidget;
                                             return KeyedSubtree(
                                               key: _resultKeys[_resultKeyId(result, index)],
-                                              child: MouseRegion(
-                                                onHover: (PointerHoverEvent event) =>
-                                                    _selectResultFromPointerHover(event, index),
-                                                child: Stack(
-                                                  alignment: Alignment.centerRight,
-                                                  children: <Widget>[resultWithDivider],
+                                              child: LauncherRaycastResultIndex(
+                                                index: index,
+                                                child: MouseRegion(
+                                                  onHover: (PointerHoverEvent event) =>
+                                                      _selectResultFromPointerHover(event, index),
+                                                  child: Stack(
+                                                    alignment: Alignment.centerRight,
+                                                    children: <Widget>[resultWithDivider],
+                                                  ),
                                                 ),
                                               ),
                                             );
@@ -5449,6 +5508,12 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
           resultCount: _results.length,
           child: innerContent,
         ),
+      LauncherDesign.newCast => RaycastLauncherFrame(
+          surface: theme.colorScheme.surface,
+          accent: accent,
+          onSurface: onSurface,
+          child: innerContent,
+        ),
       LauncherDesign.terminal2 => Terminal2LauncherFrame(
           surface: theme.colorScheme.surface,
           accent: accent,
@@ -5472,7 +5537,8 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         isWindows98 ||
         isNotion ||
         isSwitchboard ||
-        isRelay;
+        isRelay ||
+        isRaycast;
     final ThemeData launcherThemeData = !Design.useCustomFont || usesDesignFont
         ? theme
         : theme.copyWith(
@@ -5693,6 +5759,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
+    if (_design == LauncherDesign.newCast) {
+      return LauncherResultRow(
+        isSelected: isSelected,
+        isRepeating: isRepeatingKey,
+        accent: accent,
+        onSurface: onSurface,
+        onTap: () => _onShortcutPressed(shortcut),
+        onHover: () => _selectResultFromMouse(index),
+        icon: Icon(shortcut.icon, size: 15, color: accent),
+        title: shortcut.caption,
+        subtitle: shortcut.label,
+      );
+    }
+
     return MouseRegion(
       onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
       child: GestureDetector(
@@ -5802,6 +5882,22 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
+    if (_design == LauncherDesign.newCast) {
+      return LauncherResultRow(
+        isSelected: isSelected,
+        isRepeating: isRepeatingKey,
+        accent: accent,
+        onSurface: onSurface,
+        onTap: () => _openNotionResult(result),
+        onHover: () => _selectResultFromMouse(index),
+        icon: result.emojiIcon != null
+            ? Text(result.emojiIcon!, style: const TextStyle(fontSize: 14))
+            : Icon(Icons.description_outlined, size: 15, color: accent),
+        title: result.title,
+        subtitle: 'Notion · ${result.objectType}',
+      );
+    }
+
     return MouseRegion(
       onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
       child: GestureDetector(
@@ -5865,6 +5961,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
+    if (_design == LauncherDesign.newCast) {
+      return LauncherResultRow(
+        isSelected: isSelected,
+        isRepeating: isRepeatingKey,
+        accent: accent,
+        onSurface: onSurface,
+        onTap: () => _openObsidianResult(result),
+        onHover: () => _selectResultFromMouse(index),
+        icon: Icon(Icons.menu_book_rounded, size: 15, color: accent),
+        title: result.name,
+        subtitle: result.folder.isEmpty ? 'Obsidian · Vault root' : 'Obsidian · ${result.folder}',
+      );
+    }
+
     return MouseRegion(
       onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
       child: GestureDetector(
@@ -5925,6 +6035,34 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
       BuildContext context, ThemeData theme, SteamGame result, int index, bool isSelected, bool isRepeatingKey) {
     final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
+
+    if (_design == LauncherDesign.newCast) {
+      final Widget icon = result.coverPath != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: Image.file(
+                File(result.coverPath!),
+                width: 18,
+                height: 18,
+                fit: BoxFit.cover,
+                cacheWidth: 54,
+                errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
+                    Icon(Icons.sports_esports_rounded, size: 15, color: accent),
+              ),
+            )
+          : Icon(Icons.sports_esports_rounded, size: 15, color: accent);
+      return LauncherResultRow(
+        isSelected: isSelected,
+        isRepeating: isRepeatingKey,
+        accent: accent,
+        onSurface: onSurface,
+        onTap: () => _openSteamResult(result),
+        onHover: () => _selectResultFromMouse(index),
+        icon: icon,
+        title: result.name,
+        subtitle: result.sizeLabel.isEmpty ? 'Steam' : 'Steam · ${result.sizeLabel}',
+      );
+    }
 
     Widget leading;
     if (result.coverPath != null) {
@@ -6006,6 +6144,20 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
+    if (_design == LauncherDesign.newCast) {
+      return LauncherResultRow(
+        isSelected: isSelected,
+        isRepeating: isRepeatingKey,
+        accent: accent,
+        onSurface: onSurface,
+        onTap: () {},
+        onHover: () => _selectResultFromMouse(index),
+        icon: Icon(result.icon, size: 15, color: accent),
+        title: result.title,
+        subtitle: result.subtitle,
+      );
+    }
+
     return MouseRegion(
       onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),
       child: AnimatedContainer(
@@ -6066,6 +6218,19 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final GlobalKey? actionKey = _quickActionKeys[quickAction.id];
     final Color accent = Design.accent;
     final bool showSplash = _quickActionSplashId == quickAction.id;
+
+    if (_design == LauncherDesign.newCast) {
+      return LauncherResultRow(
+        isSelected: isSelected,
+        isRepeating: isRepeatingKey,
+        accent: accent,
+        onSurface: theme.colorScheme.onSurface,
+        onTap: () => _runQuickAction(quickAction),
+        onHover: () => _selectResultFromMouse(index),
+        icon: Icon(Icons.bolt_rounded, size: 15, color: accent),
+        title: quickAction.title,
+      );
+    }
 
     return MouseRegion(
       onHover: (PointerHoverEvent event) => _selectResultFromPointerHover(event, index),

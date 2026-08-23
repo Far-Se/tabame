@@ -129,7 +129,11 @@ enum LauncherDesign {
 
   /// Communications backplane launcher with routed signal paths and compact
   /// connection ports. Append-only to preserve persisted preferences.
-  relay;
+  relay,
+
+  /// Raycast-inspired command palette with a dense dark utility surface.
+  /// Append-only to preserve persisted launcher preferences.
+  newCast;
 
   String get displayName => switch (this) {
         LauncherDesign.windowsXp => 'Windows XP',

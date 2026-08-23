@@ -146,6 +146,15 @@ class LauncherModalTokens {
           onSurface: RelayTokens.foreground(isDark),
           dim: RelayTokens.dim(isDark),
         );
+      case LauncherDesign.newCast:
+        return const LauncherModalTokens._(
+          design: LauncherDesign.newCast,
+          isDark: true,
+          surface: RaycastTokens.surface,
+          accent: RaycastTokens.primary,
+          onSurface: RaycastTokens.primary,
+          dim: RaycastTokens.dim,
+        );
       case LauncherDesign.classic:
       case LauncherDesign.serene:
       case LauncherDesign.command:
@@ -211,6 +220,7 @@ class LauncherModalTokens {
         LauncherDesign.switchboard => 3.0,
         LauncherDesign.relay => 3.0,
         LauncherDesign.terminal2 => 2.0,
+        LauncherDesign.newCast => 8.0,
       };
 
   /// Designs whose controls carry a visible accent outline (console/drafting
@@ -263,6 +273,8 @@ class LauncherModalTokens {
       LauncherDesign.switchboard => SwitchboardTokens.body(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       LauncherDesign.relay => RelayTokens.body(
+          fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
+      LauncherDesign.newCast => RaycastTokens.ui(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       _ => TextStyle(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
@@ -377,19 +389,21 @@ class LauncherModalFrame extends StatelessWidget {
           decoration: BoxDecoration(
             color: design == LauncherDesign.relay
                 ? tokens.surface.withValues(alpha: 0.98)
-                : design == LauncherDesign.notion
+                : design == LauncherDesign.newCast
                     ? tokens.surface.withValues(alpha: 0.98)
-                    : design == LauncherDesign.windows98
-                        ? Windows98Tokens.face
-                        : design == LauncherDesign.windowsXp
-                            ? WindowsXpTokens.surface
-                            : design == LauncherDesign.manifesto
-                                ? tokens.surface.withValues(alpha: 0.96)
-                                : design == LauncherDesign.matrix
-                                    // Matrix text needs a solid reading surface;
-                                    // keep the launcher backdrop outside the modal.
-                                    ? tokens.surface.withValues(alpha: 1.0)
-                                    : Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
+                    : design == LauncherDesign.notion
+                        ? tokens.surface.withValues(alpha: 0.98)
+                        : design == LauncherDesign.windows98
+                            ? Windows98Tokens.face
+                            : design == LauncherDesign.windowsXp
+                                ? WindowsXpTokens.surface
+                                : design == LauncherDesign.manifesto
+                                    ? tokens.surface.withValues(alpha: 0.96)
+                                    : design == LauncherDesign.matrix
+                                        // Matrix text needs a solid reading surface;
+                                        // keep the launcher backdrop outside the modal.
+                                        ? tokens.surface.withValues(alpha: 1.0)
+                                        : Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
           ),
           child: child,
         ),
