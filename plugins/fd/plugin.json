@@ -2,6 +2,7 @@
   "id": "fd",
   "name": "fd File Search",
   "keyword": "fd",
+  "category": "System Tools",
   "description": "Find files instantly across your chosen folders with fd",
   "icon": "search",
   "runtime": "python",

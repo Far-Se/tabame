@@ -2,6 +2,7 @@
   "id": "cli-glossary",
   "name": "CLI Agent Glossary",
   "keyword": "aai",
+  "category": "AI tools",
   "runtime": "python",
   "version": "1.0.0",
   "entry": "main.py",

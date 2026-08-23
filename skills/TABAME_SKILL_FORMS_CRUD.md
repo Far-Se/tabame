@@ -78,6 +78,7 @@ Example manifest:
 {
   "id": "task-manager",
   "name": "Task Manager",
+  "category": "Productivity",
   "description": "Create and manage local tasks",
   "keyword": "task",
   "runtime": "python",
@@ -92,8 +93,13 @@ Example manifest:
 ```
 
 Required fields are `keyword`, `runtime`, `version`, `entry`, `id`, `name`,
-`description`, and `icon`. `runtime` is `python`, `node`, or `bun` and must be on
-`PATH`. The process starts in the plugin folder without a shell.
+`category`, `description`, and `icon`. `category` must be exactly one of `AI Tools`,
+`Communication`, `Developer Tools`, `Entertainment`, `Finance`, `Fun & Casual`,
+`Language & Writing`, `Media & Design`, `Network Tools`, `Productivity`,
+`Shopping`, `System Tools`, `Utilities`, `Weather`, or `Web & Browser`; choose
+by the plugin's primary purpose. `runtime` is `python`, `node`,
+or `bun` and must be on `PATH`. The process starts in the plugin folder without
+a shell.
 
 Python dependencies may be declared in `pip` or `requirements.txt`; Tabame
 installs them into `.pluginlibs`. Node/Bun dependencies belong in
@@ -739,6 +745,7 @@ This example provides a complete local task manager skeleton. It demonstrates:
 {
   "id": "local-tasks",
   "name": "Local Tasks",
+  "category": "Productivity",
   "description": "Create and manage tasks",
   "keyword": "task",
   "runtime": "python",

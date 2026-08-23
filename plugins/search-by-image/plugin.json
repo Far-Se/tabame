@@ -1,0 +1,13 @@
+{
+  "id": "search-by-image",
+  "name": "Search by Image",
+  "keyword": "sbi",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "category": "Media & Design",
+  "description": "Capture an area with Windows Screen Snipping and search it with reverse-image engines.",
+  "icon": "image",
+  "pip": ["pillow>=10"],
+  "dev": false
+}

@@ -65,12 +65,20 @@ Page rules:
 | `entry`       | yes | —             | Script path relative to folder.                                                                                                      |
 | `id`          | yes | folder name   | Stable identifier.                                                                                                                   |
 | `name`        | yes | folder name   | Shown in discovery hint.                                                                                                             |
+| `category`    | yes | —             | One exact canonical discovery category from `resources/plugins.json`.                                                                 |
 | `description` | yes | `""`          | One-liner.                                                                                                                           |
 | `icon`        | yes | `"extension"` | §7 icon name.                                                                                                                        |
 | `args`        | no  | `[]`          | CLI args inserted before `entry`.                                                                                                    |
 | `pip`         | no  | `[]`          | Python only — packages to auto-install (see §3).                                                                                     |
 | `env`         | no  | `{}`          | Extra env vars, merged over Tabame defaults.                                                                                         |
 | `dev`         | no  | `false`       | Hot reload + on-screen debug console (stderr, malformed lines, dropped/accepted frames, commands, crashes). Turn off before sharing. |
+
+`category` is mandatory. Choose exactly one of these current registry values
+using the exact spelling/capitalization: `AI Tools`, `Communication`,
+`Developer Tools`, `Entertainment`, `Finance`, `Fun & Casual`,
+`Language & Writing`, `Media & Design`, `Network Tools`, `Productivity`,
+`Shopping`, `System Tools`, `Utilities`, `Weather`, or `Web & Browser`. Choose by the
+plugin's primary purpose; do not invent variants or multiple categories.
 
 Launch = `<runtime> <args...> <entry>`. **Install/reload**: drop folder in `plugins`, reopen launcher (rescans every open, no restart needed).
 
@@ -539,10 +547,10 @@ if __name__ == "__main__":
     main()
 ```
 
-`plugin.json`: `{"name":"My Plugin","keyword":"mp","runtime":"python","version": "1.0.0","entry":"main.py","icon":"star"}`
+`plugin.json`: `{"name":"My Plugin","category":"Utilities","keyword":"mp","runtime":"python","version": "1.0.0","entry":"main.py","icon":"star"}`
 
 **Node/Bun**: same protocol/logic — `send()` = `process.stdout.write(JSON.stringify(frame)+"\n")`; buffer stdin chunks and split on `"\n"`; `msg.type==="close"` → `process.exit(0)`; also exit on stdin `"end"`. `runtime:"node"`, `entry:"main.js"` (or `"bun"`/`.ts`).
 
 ## 14. Prompt template for generating a plugin
 
-> Using the Tabame Launcher Plugin spec above, write a **<Python|Node>** plugin. Keyword: `<keyword>`. It should: `<users, data source, major tasks, desired workflows>`. Before coding, give a compact page map with each page's stable id, purpose, native view, query meaning, Enter/primary action, and destinations. Choose from **all** §7 views; do not default to list + preview or hide primary navigation in Ctrl+K. Use proper history/breadcrumbs, visible floating actions, forms, loading/empty/error states, and scoped dashboard panels where they improve the workflow—without irrelevant view variety. Store secrets with `storage secret:true`. Follow §12. Give `plugin.json`, complete script, install folder, and a short walkthrough of the finished pages.
+> Using the Tabame Launcher Plugin spec above, write a **<Python|Node>** plugin. Choose one exact `category` from the registry vocabulary based on the plugin's primary purpose. Keyword: `<keyword>`. It should: `<users, data source, major tasks, desired workflows>`. Before coding, give a compact page map with each page's stable id, purpose, native view, query meaning, Enter/primary action, and destinations. Choose from **all** §7 views; do not default to list + preview or hide primary navigation in Ctrl+K. Use proper history/breadcrumbs, visible floating actions, forms, loading/empty/error states, and scoped dashboard panels where they improve the workflow—without irrelevant view variety. Store secrets with `storage secret:true`. Follow §12. Give `plugin.json`, complete script, install folder, and a short walkthrough of the finished pages.

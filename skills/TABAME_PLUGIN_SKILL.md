@@ -50,6 +50,7 @@ protocol; it is **not** a UX template for a real plugin:
 ```json
 {
   "name": "Hello",
+  "category": "Utilities",
   "keyword": "hi",
   "runtime": "python",
   "version": "1.0.0",
@@ -174,12 +175,39 @@ Each plugin lives in its own folder under:
 | `entry`       | **yes**  | —             | Script filename, relative to the plugin folder, e.g. `"main.py"` / `"main.js"`.                                                                  |
 | `id`          | **yes**  | folder name   | Stable identifier.                                                                                                                               |
 | `name`        | **yes**  | folder name   | Human title shown in the launcher's discovery hint.                                                                                              |
+| `category`    | **yes**  | —             | Discovery category. Use exactly one canonical value from the category list below.                                                               |
 | `description` | **yes**  | `""`          | One-line description.                                                                                                                            |
 | `icon`        | **yes**  | `"extension"` | Icon for the discovery hint (see §11).                                                                                                           |
 | `args`        | no       | `[]`          | Extra command-line arguments inserted **before** `entry`.                                                                                        |
 | `pip`         | no       | `[]`          | **Python only.** Packages to auto-install into the plugin's own `.pluginlibs` folder on first run (see §4.1). e.g. `["requests", "pillow>=10"]`. |
 | `env`         | no       | `{}`          | Extra environment variables handed to the process, e.g. `{"API_BASE": "https://…"}`. Merged on top of Tabame's defaults.                         |
 | `dev`         | no       | `false`       | Development mode: hot reload + on-screen debug console (see below). Turn it off before sharing the plugin.                                       |
+
+### Required discovery category
+
+Every `plugin.json` **must** include `category`. Choose exactly one value from
+the current vocabulary in `resources/plugins.json`, using the spelling and
+capitalization shown here. Select the category that best describes the
+plugin's primary user-facing purpose; do not invent variants such as `AI tools`
+or add multiple categories.
+
+| Category | Prefer it for |
+| --- | --- |
+| `AI Tools` | LLM, AI-assisted generation, analysis, or assistants |
+| `Communication` | Email, chat, messaging, or collaboration |
+| `Developer Tools` | Code, APIs, packages, repositories, or development workflows |
+| `Entertainment` | Movies, shows, music, and other leisure media |
+| `Finance` | Stocks, crypto, currencies, budgets, or financial data |
+| `Fun & Casual` | Playful, lightweight, or novelty experiences |
+| `Language & Writing` | Translation, spelling, writing, and text transformation |
+| `Media & Design` | Images, audio/video, colors, fonts, and design assets |
+| `Network Tools` | Network diagnostics, connectivity, or network lookups |
+| `Productivity` | Tasks, notes, calendars, planning, and work organization |
+| `Shopping` | Products, prices, stores, and shopping research |
+| `System Tools` | Windows, processes, devices, files, and system administration |
+| `Utilities` | General-purpose helpers and converters that do not fit elsewhere |
+| `Weather` | Forecasts, conditions, and weather data |
+| `Web & Browser` | Websites, browser tabs, and browser-integrated workflows |
 
 The launch command is effectively:
 
@@ -245,6 +273,7 @@ array in `plugin.json`, and/or drop a `requirements.txt` next to your script:
 
 ```json
 {
+  "category": "Media & Design",
   "keyword": "img",
   "runtime": "python",
   "version": "1.0.0",
@@ -281,7 +310,7 @@ launch, showing an "Installing dependencies…" spinner, then starts your script
 Node resolves `require`/`import` from that local `node_modules`, so you just:
 
 ```json
-{ "keyword": "fonts", "runtime": "node", "entry": "main.js" }
+{ "category": "Media & Design", "keyword": "fonts", "runtime": "node", "entry": "main.js" }
 ```
 
 with a `package.json` listing your deps:
@@ -1373,6 +1402,7 @@ except Exception as e:
 - [ ] **Handle `close` and stdin EOF** by exiting.
 - [ ] **Read stdin line by line**; don't block waiting for all input.
 - [ ] Keep the keyword **short and distinct**.
+- [ ] Include exactly one required `category` from the canonical list in §3.
 - [ ] Only use documented `view` values, message types, and fields.
 - [ ] For a multi-workflow plugin, write a page map and choose each page's view
       from its real task/data shape — do not ship the smoke-test list + preview
@@ -1478,6 +1508,7 @@ if __name__ == "__main__":
 ```json
 {
   "name": "My Plugin",
+  "category": "Utilities",
   "keyword": "mp",
   "runtime": "python",
   "entry": "main.py",
@@ -1563,6 +1594,7 @@ process.stdin.on("end", () => process.exit(0));
 ```json
 {
   "name": "My Plugin",
+  "category": "Utilities",
   "keyword": "mp",
   "runtime": "node",
   "entry": "main.js",
@@ -1577,7 +1609,8 @@ process.stdin.on("end", () => process.exit(0));
 Paste this document into your chatbot, then add a request like:
 
 > Using the Tabame Launcher Plugin spec above, write a **<Python|Node>** plugin.
-> Keyword: `<keyword>`. It should: `<describe the users, data source, major tasks,
+> Category: choose one exact value from the §3 category table based on the
+> plugin's primary purpose. Keyword: `<keyword>`. It should: `<describe the users, data source, major tasks,
 > and desired workflows>`. Before coding, provide a compact page map: each page's
 > stable id, purpose, native view, what the query does, Enter/primary action, and
 > destinations. Choose from **all** documented views according to §8; do not

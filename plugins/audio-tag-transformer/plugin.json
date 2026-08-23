@@ -1,0 +1,13 @@
+{
+  "id": "audio-tag-transformer",
+  "name": "Audio Tag Transformer",
+  "description": "Batch-transform MP3 and FLAC filenames and audio tags with ordered regular-expression rules.",
+  "keyword": "atag",
+  "category": "Utilities",
+  "runtime": "python",
+  "entry": "main.py",
+  "version": "1.0.0",
+  "icon": "music",
+  "pip": ["mutagen"],
+  "dev": false
+}

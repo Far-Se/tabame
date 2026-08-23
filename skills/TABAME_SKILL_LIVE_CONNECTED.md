@@ -88,6 +88,7 @@ Example:
 {
   "id": "service-monitor",
   "name": "Service Monitor",
+  "category": "Developer Tools",
   "description": "Monitor and deploy services",
   "keyword": "svc",
   "runtime": "python",
@@ -101,9 +102,13 @@ Example:
 }
 ```
 
-Required: `keyword`, `runtime`, `version`, `entry`, `id`, `name`, `description`,
-`icon`. Runtime must be on `PATH`. The working directory is the plugin folder;
-the process starts without a shell.
+Required: `keyword`, `runtime`, `version`, `entry`, `id`, `name`, `category`,
+`description`, `icon`. `category` is exactly one of `AI Tools`,
+`Communication`, `Developer Tools`, `Entertainment`, `Finance`, `Fun & Casual`,
+`Language & Writing`, `Media & Design`, `Network Tools`, `Productivity`,
+`Shopping`, `System Tools`, `Utilities`, `Weather`, or `Web & Browser`; choose
+by the plugin's primary purpose. Runtime must be on `PATH`. The working
+directory is the plugin folder; the process starts without a shell.
 
 Python packages in `pip`/`requirements.txt` are installed into `.pluginlibs`.
 Node/Bun packages in `package.json` are installed with npm/Bun. Lazy-load heavy
@@ -771,6 +776,7 @@ architecture for a real API client:
 {
   "id": "service-control",
   "name": "Service Control",
+  "category": "Developer Tools",
   "description": "Monitor and deploy a service",
   "keyword": "svc",
   "runtime": "python",

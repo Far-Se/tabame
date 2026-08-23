@@ -1,0 +1,13 @@
+{
+  "id": "hackernews",
+  "name": "Hacker News",
+  "keyword": "hn",
+  "category": "Entertainment",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "description": "Front page, New/Best/Ask/Show/Jobs, story discussions, full comment threads, user profiles, search, and saved stories.",
+  "icon": "terminal",
+  "pip": ["requests"],
+  "dev": false
+}

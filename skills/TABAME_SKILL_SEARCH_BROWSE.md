@@ -83,6 +83,7 @@ Install each plugin under:
 {
   "id": "docs-search",
   "name": "Docs Search",
+  "category": "Developer Tools",
   "description": "Search local documentation",
   "keyword": "docs",
   "runtime": "python",
@@ -106,12 +107,21 @@ Fields:
 | `entry`       | yes      | Script path relative to plugin folder.             |
 | `id`          | yes      | Stable plugin identifier; normally folder name.    |
 | `name`        | yes      | Human-readable title.                              |
+| `category`    | yes      | One exact discovery category from the registry.    |
 | `description` | yes      | One-line description.                              |
 | `icon`        | yes      | Icon name, color, data URI, or file/HTTPS image.   |
 | `args`        | no       | Arguments inserted before `entry`.                 |
 | `pip`         | no       | Python packages auto-installed into `.pluginlibs`. |
 | `env`         | no       | Extra environment variables.                       |
 | `dev`         | no       | Hot reload and debug console while developing.     |
+
+`category` is mandatory. Choose exactly one current registry value, preserving
+its spelling: `AI Tools`, `Communication`, `Developer Tools`, `Entertainment`,
+`Finance`, `Fun & Casual`, `Language & Writing`, `Media & Design`,
+`Network Tools`, `Productivity`, `Shopping`, `System Tools`, `Utilities`, `Weather`, or
+`Web & Browser`. For search/browse plugins, usually choose `Developer Tools`,
+`Web & Browser`, `Media & Design`, or `Utilities` according to the data being
+browsed.
 
 The launch command is effectively:
 
@@ -726,6 +736,7 @@ This template demonstrates the focused architecture for this skill:
 {
   "id": "package-browser",
   "name": "Package Browser",
+  "category": "Developer Tools",
   "description": "Search and inspect packages",
   "keyword": "pkg",
   "runtime": "python",
@@ -1073,8 +1084,8 @@ Unknown names fall back to a generic plugin icon.
 
 Before returning a plugin, verify:
 
-- [ ] `plugin.json` includes stable `id`, name, description, keyword, runtime,
-      version, entry, and icon.
+- [ ] `plugin.json` includes stable `id`, name, category, description, keyword,
+      runtime, version, entry, and icon.
 - [ ] stdout contains only one-line protocol JSON; logs use stderr.
 - [ ] Every write ends with a newline and is flushed.
 - [ ] Query responses echo `rev`; action/navigation pushes use `rev: 0`.

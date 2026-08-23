@@ -37,6 +37,7 @@ When a detail isn't covered below, consult the full spec rather than guessing.
 ```json
 {
   "keyword": "weather", // required — what the user types; short & unique
+  "category": "Weather", // required — one canonical discovery category
   "runtime": "python", // required — "python" | "node" | "bun" (on PATH)
   "entry": "main.py", // required — script filename in the plugin folder
   "id": "weather", // optional — defaults to folder name
@@ -49,6 +50,13 @@ When a detail isn't covered below, consult the full spec rather than guessing.
   //   plugin without deleting it
 }
 ```
+
+`category` is mandatory in every manifest. Choose exactly one current registry
+value: `AI Tools`, `Communication`, `Developer Tools`, `Entertainment`,
+`Finance`, `Fun & Casual`, `Language & Writing`, `Media & Design`,
+`Network Tools`, `Productivity`, `Shopping`, `System Tools`, `Utilities`, `Weather`, or
+`Web & Browser`. Match the plugin's primary user-facing purpose and preserve
+the exact spelling/capitalization; do not invent variants or multiple values.
 
 Launch is effectively `<runtime> <args...> <entry>`, started **without a shell**, with the **working directory set to the plugin folder** (so `config.json`/assets resolve relatively). Activation: the query **equals the keyword** or **starts with `keyword + " "`**; the keyword prefix is stripped before your script sees the text.
 

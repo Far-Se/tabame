@@ -36,6 +36,7 @@ Recommended complete `plugin.json`:
 {
   "id": "my-plugin",
   "name": "My Plugin",
+  "category": "Utilities",
   "description": "One-line description",
   "icon": "extension",
   "keyword": "mp",
@@ -48,6 +49,13 @@ Recommended complete `plugin.json`:
   "dev": true
 }
 ```
+
+`category` is mandatory. Choose one exact current registry value based on the
+plugin's primary purpose: `AI Tools`, `Communication`, `Developer Tools`,
+`Entertainment`, `Finance`, `Fun & Casual`, `Language & Writing`,
+`Media & Design`, `Network Tools`, `Productivity`, `Shopping`, `System Tools`,
+`Utilities`, `Weather`, or `Web & Browser`. Do not invent spelling variants or
+multiple categories.
 
 - `keyword`, `runtime` (`python|node|bun`), `entry`, and version/metadata identify the plugin. `args` are inserted before `entry` in `<runtime> <args...> <entry>`.
 - Runtime must be on `PATH`; process starts without a shell; working directory is the plugin folder. Python stdin/stdout is UTF-8. Use Python 3, Node 18+, or Bun.
@@ -594,7 +602,7 @@ These are transport smoke tests, not mandatory product architecture.
 
 ## 13. Non-negotiable checklist
 
-1. Output `plugin.json` plus every complete source/config file; no pseudocode or omitted handlers.
+1. Output `plugin.json` including the required `category` plus every complete source/config file; no pseudocode or omitted handlers.
 2. One JSON line per protocol message; flush; protocol-only stdout; stderr for logs.
 3. Echo query `rev`; use `rev:0` for action/async/stream/progress results.
 4. Stable unique item IDs and stable page/panel/element IDs.

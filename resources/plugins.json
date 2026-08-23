@@ -1206,6 +1206,93 @@
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/simkl/plugin.json",
         "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/simkl/main.js"
       }
+    },
+    {
+      "id": "search-by-image",
+      "name": "Search by Image",
+      "category": "Media & Design",
+      "keyword": "sbi",
+      "description": "Capture an area with Windows Screen Snipping and search it with reverse-image engines.",
+      "icon": "image",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/search-by-image",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/search-by-image/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/search-by-image/main.py",
+        "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/search-by-image/config.example.json",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/search-by-image/README.md"
+      }
+    },
+    {
+      "id": "audio-tag-transformer",
+      "name": "Audio Tag Transformer",
+      "category": "Utilities",
+      "keyword": "atag",
+      "description": "Batch-transform MP3 and FLAC filenames and audio tags with ordered regular-expression rules.",
+      "icon": "music",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/audio-tag-transformer",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/audio-tag-transformer/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/audio-tag-transformer/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/audio-tag-transformer/README.md"
+      }
+    },
+    {
+      "id": "cli-glossary",
+      "name": "CLI Agent Glossary",
+      "category": "AI tools",
+      "keyword": "aai",
+      "recommended": true,
+      "description": "Run saved prompt templates with Codex and other command-line agents.",
+      "icon": "terminal",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/cli-glossary",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/cli-glossary/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/cli-glossary/main.py"
+      }
+    },
+    {
+      "id": "fd",
+      "name": "fd File Search",
+      "category": "System Tools",
+      "keyword": "fd",
+      "recommended": true,
+      "description": "Find files instantly across your chosen folders with fd",
+      "icon": "search",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.1.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/fd",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/fd/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/fd/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/fd/README.md"
+      }
+    },
+    {
+      "id": "hackernews",
+      "name": "Hacker News",
+      "category": "Entertainment",
+      "keyword": "hn",
+      "recommended": true,
+      "description": "Front page, New/Best/Ask/Show/Jobs, story discussions, full comment threads, user profiles, search, and saved stories.",
+      "icon": "terminal",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/hacker-news",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/hacker-news/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/hacker-news/main.py"
+      }
     }
   ]
 }
