@@ -707,6 +707,102 @@ class QMDesignThemeSet {
   int get hashCode => lightTheme.hashCode ^ darkTheme.hashCode;
 }
 
+class LauncherDesignThemeSet {
+  ThemeColors lightTheme;
+  ThemeColors darkTheme;
+  bool lightThemeCustomized;
+  bool darkThemeCustomized;
+  bool lightFontCustomized;
+  bool darkFontCustomized;
+  bool useCustomFont;
+
+  LauncherDesignThemeSet({
+    required this.lightTheme,
+    required this.darkTheme,
+    this.lightThemeCustomized = true,
+    this.darkThemeCustomized = true,
+    this.lightFontCustomized = false,
+    this.darkFontCustomized = false,
+    this.useCustomFont = false,
+  });
+
+  LauncherDesignThemeSet copyWith({
+    ThemeColors? lightTheme,
+    ThemeColors? darkTheme,
+    bool? lightThemeCustomized,
+    bool? darkThemeCustomized,
+    bool? lightFontCustomized,
+    bool? darkFontCustomized,
+    bool? useCustomFont,
+  }) {
+    return LauncherDesignThemeSet(
+      lightTheme: lightTheme ?? this.lightTheme.copyWith(),
+      darkTheme: darkTheme ?? this.darkTheme.copyWith(),
+      lightThemeCustomized: lightThemeCustomized ?? this.lightThemeCustomized,
+      darkThemeCustomized: darkThemeCustomized ?? this.darkThemeCustomized,
+      lightFontCustomized: lightFontCustomized ?? this.lightFontCustomized,
+      darkFontCustomized: darkFontCustomized ?? this.darkFontCustomized,
+      useCustomFont: useCustomFont ?? this.useCustomFont,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'lightTheme': lightTheme.toMap(),
+      'darkTheme': darkTheme.toMap(),
+      'lightThemeCustomized': lightThemeCustomized,
+      'darkThemeCustomized': darkThemeCustomized,
+      'lightFontCustomized': lightFontCustomized,
+      'darkFontCustomized': darkFontCustomized,
+      'useCustomFont': useCustomFont,
+    };
+  }
+
+  factory LauncherDesignThemeSet.fromMap(Map<String, dynamic> map) {
+    return LauncherDesignThemeSet(
+      lightTheme: ThemeColors.fromMap(Map<String, dynamic>.from(map['lightTheme'] as Map<dynamic, dynamic>)),
+      darkTheme: ThemeColors.fromMap(Map<String, dynamic>.from(map['darkTheme'] as Map<dynamic, dynamic>)),
+      lightThemeCustomized: (map['lightThemeCustomized'] ?? true) as bool,
+      darkThemeCustomized: (map['darkThemeCustomized'] ?? true) as bool,
+      lightFontCustomized: (map['lightFontCustomized'] ?? false) as bool,
+      darkFontCustomized: (map['darkFontCustomized'] ?? false) as bool,
+      useCustomFont: (map['useCustomFont'] ?? false) as bool,
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory LauncherDesignThemeSet.fromJson(String source) =>
+      LauncherDesignThemeSet.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() =>
+      'LauncherDesignThemeSet(lightTheme: $lightTheme, darkTheme: $darkTheme, lightThemeCustomized: $lightThemeCustomized, darkThemeCustomized: $darkThemeCustomized, lightFontCustomized: $lightFontCustomized, darkFontCustomized: $darkFontCustomized, useCustomFont: $useCustomFont)';
+
+  @override
+  bool operator ==(covariant LauncherDesignThemeSet other) {
+    if (identical(this, other)) return true;
+
+    return other.lightTheme == lightTheme &&
+        other.darkTheme == darkTheme &&
+        other.lightThemeCustomized == lightThemeCustomized &&
+        other.darkThemeCustomized == darkThemeCustomized &&
+        other.lightFontCustomized == lightFontCustomized &&
+        other.darkFontCustomized == darkFontCustomized &&
+        other.useCustomFont == useCustomFont;
+  }
+
+  @override
+  int get hashCode =>
+      lightTheme.hashCode ^
+      darkTheme.hashCode ^
+      lightThemeCustomized.hashCode ^
+      darkThemeCustomized.hashCode ^
+      lightFontCustomized.hashCode ^
+      darkFontCustomized.hashCode ^
+      useCustomFont.hashCode;
+}
+
 class ApiRequest {
   String url;
   List<String> headers;

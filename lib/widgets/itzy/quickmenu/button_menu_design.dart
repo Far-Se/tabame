@@ -178,6 +178,12 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     setState(() {});
   }
 
+  Future<void> _switchLauncherDesign(LauncherDesign design) async {
+    await Boxes.switchLauncherDesign(design);
+    if (!mounted) return;
+    setState(() {});
+  }
+
   void _syncSelectedBackdrop({String? selectedPath}) {
     if (_designTarget == _DesignTarget.quickMenu) {
       QuickMenuFunctions.syncSelectedBackdrop(selectedPath: selectedPath);
@@ -288,16 +294,19 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
 
   Future<void> _resetCurrentPalette() async {
     if (_designTarget == _DesignTarget.launcher) {
+      final LauncherDesignThemeSet defaults =
+          Settings.createDefaultLauncherDesignThemes()[user.launcherDesign.displayName]!;
       await _updateTheme(() {
-        final ThemeColors source = _paletteMode == _QuickMenuPaletteMode.dark ? user.darkTheme : user.lightTheme;
+        final ThemeColors source =
+            _paletteMode == _QuickMenuPaletteMode.dark ? defaults.darkTheme : defaults.lightTheme;
         final ThemeColors copy = ThemeColors.fromMap(source.toMap());
         if (_paletteMode == _QuickMenuPaletteMode.dark) {
           user.launcherDarkTheme = copy;
-          user.launcherDarkThemeCustomized = false;
+          user.launcherDarkThemeCustomized = true;
           user.launcherDarkFontCustomized = false;
         } else {
           user.launcherLightTheme = copy;
-          user.launcherLightThemeCustomized = false;
+          user.launcherLightThemeCustomized = true;
           user.launcherLightFontCustomized = false;
         }
         user.launcherUseCustomFont = false;
@@ -395,8 +404,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
           title: _designTarget == _DesignTarget.quickMenu ? "QuickMenu Design" : "Launcher Design",
           icon: Icons.dashboard_customize_outlined,
           buttonPressed: _resetCurrentPalette,
-          buttonTooltip:
-              _designTarget == _DesignTarget.quickMenu ? "Reset To Design Defaults" : "Use QuickMenu Defaults",
+          buttonTooltip: "Reset To Design Defaults",
           buttonIcon: Icons.history,
           extraActions: <Widget>[
             CustomTooltip(
@@ -632,11 +640,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                           if (isQuickMenu) {
                             _switchDesign(design);
                           } else {
-                            await Boxes.pref.setInt("launcherDesign", index);
-                            user.launcherDesign = LauncherDesign.values[index];
-                            Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
-                            await QuickMenuFunctions.refreshQuickMenu();
-                            setState(() {});
+                            await _switchLauncherDesign(LauncherDesign.values[index]);
                           }
                         },
                   visualDensity: VisualDensity.compact,

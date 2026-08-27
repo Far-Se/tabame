@@ -339,23 +339,32 @@ class Settings {
     accentColor: const Color(0xFFA7CF3F),
     gradientAlpha: 20,
   );
-  ThemeColors launcherLightTheme = Settings._defaultThemeColors(
-    background: const Color(0xffD5E0FB),
-    textColor: const Color(0xff3A404A),
-    accentColor: const Color(0xff446EE9),
-    gradientAlpha: 200,
-  );
-  ThemeColors launcherDarkTheme = Settings._defaultThemeColors(
-    background: const Color(0xFF0A0A0A),
-    textColor: const Color(0xFFFAF9F8),
-    accentColor: const Color(0xFFA7CF3F),
-    gradientAlpha: 20,
-  );
-  bool launcherLightThemeCustomized = false;
-  bool launcherDarkThemeCustomized = false;
-  bool launcherLightFontCustomized = false;
-  bool launcherDarkFontCustomized = false;
-  bool launcherUseCustomFont = false;
+  Map<String, LauncherDesignThemeSet> launcherDesignThemes = Settings.createDefaultLauncherDesignThemes();
+
+  LauncherDesignThemeSet get currentLauncherDesignThemeSet {
+    final String key = launcherDesign.displayName;
+    final LauncherDesignThemeSet? savedThemeSet = launcherDesignThemes[key];
+    if (savedThemeSet != null) return savedThemeSet;
+
+    final LauncherDesignThemeSet fallback = Settings.createDefaultLauncherDesignThemes()[key]!;
+    launcherDesignThemes[key] = fallback;
+    return fallback;
+  }
+
+  ThemeColors get launcherLightTheme => currentLauncherDesignThemeSet.lightTheme;
+  set launcherLightTheme(ThemeColors value) => currentLauncherDesignThemeSet.lightTheme = value;
+  ThemeColors get launcherDarkTheme => currentLauncherDesignThemeSet.darkTheme;
+  set launcherDarkTheme(ThemeColors value) => currentLauncherDesignThemeSet.darkTheme = value;
+  bool get launcherLightThemeCustomized => currentLauncherDesignThemeSet.lightThemeCustomized;
+  set launcherLightThemeCustomized(bool value) => currentLauncherDesignThemeSet.lightThemeCustomized = value;
+  bool get launcherDarkThemeCustomized => currentLauncherDesignThemeSet.darkThemeCustomized;
+  set launcherDarkThemeCustomized(bool value) => currentLauncherDesignThemeSet.darkThemeCustomized = value;
+  bool get launcherLightFontCustomized => currentLauncherDesignThemeSet.lightFontCustomized;
+  set launcherLightFontCustomized(bool value) => currentLauncherDesignThemeSet.lightFontCustomized = value;
+  bool get launcherDarkFontCustomized => currentLauncherDesignThemeSet.darkFontCustomized;
+  set launcherDarkFontCustomized(bool value) => currentLauncherDesignThemeSet.darkFontCustomized = value;
+  bool get launcherUseCustomFont => currentLauncherDesignThemeSet.useCustomFont;
+  set launcherUseCustomFont(bool value) => currentLauncherDesignThemeSet.useCustomFont = value;
   Map<String, QMDesignThemeSet> quickMenuDesignThemes = Settings.createDefaultQuickMenuDesignThemes();
   ThemeColors get themeColors => themeTypeMode == ThemeType.dark ? darkTheme : lightTheme;
   ThemeColors get launcherThemeColors => themeTypeMode == ThemeType.dark ? launcherDarkTheme : launcherLightTheme;
@@ -399,6 +408,294 @@ class Settings {
       borderRadius: borderRadius,
       baseFontSize: baseFontSize,
     );
+  }
+
+  static Map<String, LauncherDesignThemeSet> createDefaultLauncherDesignThemes() {
+    final Map<String, QMDesignThemeSet> quickMenuDefaults = createDefaultQuickMenuDesignThemes();
+
+    LauncherDesignThemeSet fromQuickMenu(QuickMenuDesigns design) {
+      final QMDesignThemeSet source = quickMenuDefaults[design.displayName] ?? quickMenuDefaults[design.name]!;
+      return LauncherDesignThemeSet(
+        lightTheme: source.lightTheme.copyWith(),
+        darkTheme: source.darkTheme.copyWith(),
+      );
+    }
+
+    return <String, LauncherDesignThemeSet>{
+      LauncherDesign.classic.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xffD5E0FB),
+          textColor: const Color(0xff3A404A),
+          accentColor: const Color(0xff446EE9),
+          gradientAlpha: 200,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF0A0A0A),
+          textColor: const Color(0xFFFAF9F8),
+          accentColor: const Color(0xFFA7CF3F),
+          gradientAlpha: 20,
+        ),
+      ),
+      LauncherDesign.serene.displayName: fromQuickMenu(QuickMenuDesigns.serene),
+      LauncherDesign.command.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFE8E9E2),
+          textColor: const Color(0xFF171A17),
+          accentColor: const Color(0xFF2F6B50),
+          gradientAlpha: 28,
+          uiFontFamily: 'Bahnschrift',
+          uiFontWeight: 500,
+          entryFontFamily: 'Segoe UI Variable Text',
+          entryFontWeight: 600,
+          borderRadius: 12,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF151815),
+          textColor: const Color(0xFFE4E8DE),
+          accentColor: const Color(0xFFC3E56A),
+          gradientAlpha: 36,
+          uiFontFamily: 'Bahnschrift',
+          entryFontFamily: 'Segoe UI Variable Text',
+          entryFontWeight: 600,
+          borderRadius: 12,
+        ),
+      ),
+      LauncherDesign.terminal.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFF4F4F1),
+          textColor: const Color(0xFF2A2A2A),
+          accentColor: const Color(0xFF00A896),
+          gradientAlpha: 0,
+          uiFontFamily: 'JetBrains Mono',
+          uiFontWeight: 500,
+          entryFontFamily: 'JetBrains Mono',
+          entryFontWeight: 600,
+          borderRadius: 6,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF0C0C0C),
+          textColor: const Color(0xFFCCCCCC),
+          accentColor: const Color(0xFF39D353),
+          gradientAlpha: 0,
+          uiFontFamily: 'JetBrains Mono',
+          uiFontWeight: 500,
+          entryFontFamily: 'JetBrains Mono',
+          entryFontWeight: 600,
+          borderRadius: 6,
+        ),
+      ),
+      LauncherDesign.terminal2.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFF2F1E8),
+          textColor: const Color(0xFF242A20),
+          accentColor: const Color(0xFF9A5D16),
+          gradientAlpha: 0,
+          uiFontFamily: 'Fragment Mono',
+          uiFontWeight: 500,
+          entryFontFamily: 'Fragment Mono',
+          entryFontWeight: 600,
+          borderRadius: 2,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF10130F),
+          textColor: const Color(0xFFE4E7D5),
+          accentColor: const Color(0xFFE8B86A),
+          gradientAlpha: 0,
+          uiFontFamily: 'Fragment Mono',
+          uiFontWeight: 500,
+          entryFontFamily: 'Fragment Mono',
+          entryFontWeight: 600,
+          borderRadius: 2,
+        ),
+      ),
+      LauncherDesign.zen.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFEEF1E6),
+          textColor: const Color(0xFF3C463B),
+          accentColor: const Color(0xFF7B9A6B),
+          gradientAlpha: 0,
+          uiFontFamily: 'Quicksand',
+          entryFontFamily: 'Quicksand',
+          entryFontWeight: 600,
+          borderRadius: 26,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF171C18),
+          textColor: const Color(0xFFD7DFCF),
+          accentColor: const Color(0xFF93B281),
+          gradientAlpha: 0,
+          uiFontFamily: 'Quicksand',
+          entryFontFamily: 'Quicksand',
+          entryFontWeight: 600,
+          borderRadius: 26,
+        ),
+      ),
+      LauncherDesign.glass.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFE8EEF9),
+          textColor: const Color(0xFF26354A),
+          accentColor: const Color(0xFF4A78D1),
+          gradientAlpha: 0,
+          uiFontFamily: 'Inter',
+          entryFontFamily: 'Inter',
+          entryFontWeight: 500,
+          borderRadius: 28,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF11151D),
+          textColor: const Color(0xFFE6ECF7),
+          accentColor: const Color(0xFF8AAEF5),
+          gradientAlpha: 0,
+          uiFontFamily: 'Inter',
+          entryFontFamily: 'Inter',
+          entryFontWeight: 500,
+          borderRadius: 28,
+        ),
+      ),
+      LauncherDesign.blueprint.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFD9D8FF),
+          textColor: const Color(0xFF1F4467),
+          accentColor: const Color(0xFF2E6DA4),
+          gradientAlpha: 0,
+          uiFontFamily: 'Chakra Petch',
+          entryFontFamily: 'Chakra Petch',
+          borderRadius: 3,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF0C2841),
+          textColor: const Color(0xFFD9EAF8),
+          accentColor: const Color(0xFF7FB8E6),
+          gradientAlpha: 0,
+          uiFontFamily: 'Chakra Petch',
+          entryFontFamily: 'Chakra Petch',
+          borderRadius: 3,
+        ),
+      ),
+      LauncherDesign.transit.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFF7F7F4),
+          textColor: const Color(0xFF17191C),
+          accentColor: const Color(0xFFDF3F55),
+          gradientAlpha: 0,
+          uiFontFamily: 'Overpass',
+          entryFontFamily: 'Overpass',
+          entryFontWeight: 600,
+          borderRadius: 16,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF15181D),
+          textColor: const Color(0xFFE9EDF2),
+          accentColor: const Color(0xFF0E5D57),
+          gradientAlpha: 0,
+          uiFontFamily: 'Overpass',
+          entryFontFamily: 'Overpass',
+          entryFontWeight: 600,
+          borderRadius: 16,
+        ),
+      ),
+      LauncherDesign.fluent.displayName: fromQuickMenu(QuickMenuDesigns.fluent),
+      LauncherDesign.manifesto.displayName: fromQuickMenu(QuickMenuDesigns.manifesto),
+      LauncherDesign.orbit.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFEEF3EF),
+          textColor: const Color(0xFF1C2A28),
+          accentColor: const Color(0xFFB8662F),
+          gradientAlpha: 0,
+          uiFontFamily: 'Space Grotesk',
+          entryFontFamily: 'Space Grotesk',
+          entryFontWeight: 600,
+          borderRadius: 10,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF04090E),
+          textColor: const Color(0xFFD9E8E4),
+          accentColor: const Color(0xFF63D6B4),
+          gradientAlpha: 0,
+          uiFontFamily: 'Space Grotesk',
+          entryFontFamily: 'Space Grotesk',
+          entryFontWeight: 600,
+          borderRadius: 10,
+        ),
+      ),
+      LauncherDesign.anime.displayName: fromQuickMenu(QuickMenuDesigns.anime),
+      LauncherDesign.tech.displayName: fromQuickMenu(QuickMenuDesigns.tech),
+      LauncherDesign.vector.displayName: fromQuickMenu(QuickMenuDesigns.vector),
+      LauncherDesign.outrun2.displayName: fromQuickMenu(QuickMenuDesigns.outrun2),
+      LauncherDesign.matrix.displayName: fromQuickMenu(QuickMenuDesigns.matrix),
+      LauncherDesign.steam.displayName: fromQuickMenu(QuickMenuDesigns.steam),
+      LauncherDesign.cyber.displayName: fromQuickMenu(QuickMenuDesigns.cyber),
+      LauncherDesign.manga.displayName: fromQuickMenu(QuickMenuDesigns.manga),
+      LauncherDesign.windowsXp.displayName: fromQuickMenu(QuickMenuDesigns.windowsXp),
+      LauncherDesign.windows98.displayName: fromQuickMenu(QuickMenuDesigns.windows98),
+      LauncherDesign.notion.displayName: fromQuickMenu(QuickMenuDesigns.notion),
+      LauncherDesign.switchboard.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFEDF0EB),
+          textColor: const Color(0xFF1C251F),
+          accentColor: const Color(0xFF4E9B73),
+          gradientAlpha: 0,
+          uiFontFamily: 'Public Sans',
+          entryFontFamily: 'Public Sans',
+          entryFontWeight: 600,
+          borderRadius: 4,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF141816),
+          textColor: const Color(0xFFE8EEE9),
+          accentColor: const Color(0xFF8CCFA7),
+          gradientAlpha: 0,
+          uiFontFamily: 'Public Sans',
+          entryFontFamily: 'Public Sans',
+          entryFontWeight: 600,
+          borderRadius: 4,
+        ),
+      ),
+      LauncherDesign.relay.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFF2F0E9),
+          textColor: const Color(0xFF25232A),
+          accentColor: const Color(0xFFB36B4B),
+          gradientAlpha: 0,
+          uiFontFamily: 'Encode Sans',
+          entryFontFamily: 'Encode Sans',
+          entryFontWeight: 600,
+          borderRadius: 7,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF18181D),
+          textColor: const Color(0xFFECEAF0),
+          accentColor: const Color(0xFFD68C67),
+          gradientAlpha: 0,
+          uiFontFamily: 'Encode Sans',
+          entryFontFamily: 'Encode Sans',
+          entryFontWeight: 600,
+          borderRadius: 7,
+        ),
+      ),
+      LauncherDesign.newCast.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFF1C1C1E),
+          textColor: const Color(0xFFF2F2F7),
+          accentColor: const Color(0xFF0A84FF),
+          gradientAlpha: 0,
+          uiFontFamily: 'Segoe UI Variable Text',
+          entryFontFamily: 'Segoe UI Variable Text',
+          entryFontWeight: 600,
+          borderRadius: 14,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF1C1C1E),
+          textColor: const Color(0xFFF2F2F7),
+          accentColor: const Color(0xFF0A84FF),
+          gradientAlpha: 0,
+          uiFontFamily: 'Segoe UI Variable Text',
+          entryFontFamily: 'Segoe UI Variable Text',
+          entryFontWeight: 600,
+          borderRadius: 14,
+        ),
+      ),
+    };
   }
 
   static Map<String, QMDesignThemeSet> createDefaultQuickMenuDesignThemes() {
@@ -1328,13 +1625,14 @@ class Settings {
   }
 
   void inheritLauncherThemesFromQuickMenu() {
-    launcherLightTheme = ThemeColors.fromMap(lightTheme.toMap());
-    launcherDarkTheme = ThemeColors.fromMap(darkTheme.toMap());
-    launcherLightThemeCustomized = false;
-    launcherDarkThemeCustomized = false;
-    launcherLightFontCustomized = false;
-    launcherDarkFontCustomized = false;
-    launcherUseCustomFont = false;
+    final LauncherDesignThemeSet current = currentLauncherDesignThemeSet;
+    current.lightTheme = ThemeColors.fromMap(lightTheme.toMap());
+    current.darkTheme = ThemeColors.fromMap(darkTheme.toMap());
+    current.lightThemeCustomized = false;
+    current.darkThemeCustomized = false;
+    current.lightFontCustomized = false;
+    current.darkFontCustomized = false;
+    current.useCustomFont = false;
   }
 
   ThemeColors _inheritedLauncherTheme(
@@ -1372,56 +1670,86 @@ class Settings {
   }
 
   void syncInheritedLauncherThemes() {
-    if (!launcherLightThemeCustomized) {
-      launcherLightTheme = _inheritedLauncherTheme(
-        lightTheme,
-        launcherLightTheme,
-        fontCustomized: launcherLightFontCustomized,
-      );
-    } else {
-      launcherLightTheme = _launcherThemeWithInheritedFonts(
-        launcherLightTheme,
-        lightTheme,
-        fontCustomized: launcherLightFontCustomized,
-      );
+    for (final LauncherDesignThemeSet themeSet in launcherDesignThemes.values) {
+      if (!themeSet.lightThemeCustomized) {
+        themeSet.lightTheme = _inheritedLauncherTheme(
+          lightTheme,
+          themeSet.lightTheme,
+          fontCustomized: themeSet.lightFontCustomized,
+        );
+      } else {
+        themeSet.lightTheme = _launcherThemeWithInheritedFonts(
+          themeSet.lightTheme,
+          lightTheme,
+          fontCustomized: themeSet.lightFontCustomized,
+        );
+      }
+      if (!themeSet.darkThemeCustomized) {
+        themeSet.darkTheme = _inheritedLauncherTheme(
+          darkTheme,
+          themeSet.darkTheme,
+          fontCustomized: themeSet.darkFontCustomized,
+        );
+      } else {
+        themeSet.darkTheme = _launcherThemeWithInheritedFonts(
+          themeSet.darkTheme,
+          darkTheme,
+          fontCustomized: themeSet.darkFontCustomized,
+        );
+      }
     }
-    if (!launcherDarkThemeCustomized) {
-      launcherDarkTheme = _inheritedLauncherTheme(
-        darkTheme,
-        launcherDarkTheme,
-        fontCustomized: launcherDarkFontCustomized,
-      );
-    } else {
-      launcherDarkTheme = _launcherThemeWithInheritedFonts(
-        launcherDarkTheme,
-        darkTheme,
-        fontCustomized: launcherDarkFontCustomized,
-      );
+  }
+
+  void hydrateLauncherDesignThemes([Map<String, LauncherDesignThemeSet>? source]) {
+    final Map<String, LauncherDesignThemeSet> defaults = Settings.createDefaultLauncherDesignThemes();
+    if (source != null) {
+      for (final MapEntry<String, LauncherDesignThemeSet> entry in source.entries) {
+        defaults[entry.key] = entry.value.copyWith();
+      }
     }
+    launcherDesignThemes = defaults.map(
+      (String key, LauncherDesignThemeSet value) => MapEntry<String, LauncherDesignThemeSet>(key, value.copyWith()),
+    );
   }
 
   void loadLauncherDesignSettingsFromJson(String source) {
     final Map<String, dynamic> decoded = Map<String, dynamic>.from(jsonDecode(source) as Map<dynamic, dynamic>);
-    launcherLightTheme = ThemeColors.fromMap(Map<String, dynamic>.from(decoded['lightTheme'] as Map<dynamic, dynamic>));
-    launcherDarkTheme = ThemeColors.fromMap(Map<String, dynamic>.from(decoded['darkTheme'] as Map<dynamic, dynamic>));
-    launcherLightThemeCustomized = (decoded['lightThemeCustomized'] ?? false) as bool;
-    launcherDarkThemeCustomized = (decoded['darkThemeCustomized'] ?? false) as bool;
-    launcherUseCustomFont = (decoded['useCustomFont'] ?? false) as bool;
-    launcherLightFontCustomized = (decoded['lightFontCustomized'] ?? launcherUseCustomFont) as bool;
-    launcherDarkFontCustomized = (decoded['darkFontCustomized'] ?? launcherUseCustomFont) as bool;
+    final dynamic serializedThemes = decoded['launcherDesignThemes'];
+    if (serializedThemes is Map) {
+      final Map<String, LauncherDesignThemeSet> parsedThemes = <String, LauncherDesignThemeSet>{};
+      for (final MapEntry<dynamic, dynamic> entry in serializedThemes.entries) {
+        parsedThemes[entry.key as String] =
+            LauncherDesignThemeSet.fromMap(Map<String, dynamic>.from(entry.value as Map<dynamic, dynamic>));
+      }
+      hydrateLauncherDesignThemes(parsedThemes);
+    } else {
+      // Migrate the former single launcher palette into the currently selected
+      // design while all other designs keep their new built-in defaults.
+      hydrateLauncherDesignThemes();
+      final LauncherDesignThemeSet current = currentLauncherDesignThemeSet;
+      current.lightTheme =
+          ThemeColors.fromMap(Map<String, dynamic>.from(decoded['lightTheme'] as Map<dynamic, dynamic>));
+      current.darkTheme = ThemeColors.fromMap(Map<String, dynamic>.from(decoded['darkTheme'] as Map<dynamic, dynamic>));
+      current.lightThemeCustomized = (decoded['lightThemeCustomized'] ?? false) as bool;
+      current.darkThemeCustomized = (decoded['darkThemeCustomized'] ?? false) as bool;
+      current.useCustomFont = (decoded['useCustomFont'] ?? false) as bool;
+      current.lightFontCustomized = (decoded['lightFontCustomized'] ?? current.useCustomFont) as bool;
+      current.darkFontCustomized = (decoded['darkFontCustomized'] ?? current.useCustomFont) as bool;
+    }
     syncInheritedLauncherThemes();
   }
 
   String launcherDesignSettingsToJson() {
     return jsonEncode(<String, dynamic>{
-      'lightTheme': launcherLightTheme.toMap(),
-      'darkTheme': launcherDarkTheme.toMap(),
-      'lightThemeCustomized': launcherLightThemeCustomized,
-      'darkThemeCustomized': launcherDarkThemeCustomized,
-      'lightFontCustomized': launcherLightFontCustomized,
-      'darkFontCustomized': launcherDarkFontCustomized,
-      'useCustomFont': launcherUseCustomFont,
+      'launcherDesignThemes': launcherDesignThemes.map(
+        (String key, LauncherDesignThemeSet value) => MapEntry<String, dynamic>(key, value.toMap()),
+      ),
     });
+  }
+
+  void applyLauncherThemesForDesign(LauncherDesign design) {
+    launcherDesign = design;
+    launcherDesignThemes[design.displayName] ??= Settings.createDefaultLauncherDesignThemes()[design.displayName]!;
   }
 
   void saveActiveThemesToCurrentDesign([QuickMenuDesigns? design]) {

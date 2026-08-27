@@ -3744,8 +3744,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     }
 
     void applyDesign(LauncherDesign design) {
-      Boxes.pref.setInt('launcherDesign', design.index);
-      user.launcherDesign = design;
+      unawaited(Boxes.switchLauncherDesign(design));
       setState(() => _design = design);
       _onSearchChanged(_controller.text);
       // The new design replaces the search field. Restore focus after that

@@ -266,13 +266,16 @@ class Boxes {
 
     final String? savedLauncherDesignSettings = pref.getString("launcherDesignSettings");
     if (savedLauncherDesignSettings == null || savedLauncherDesignSettings.trim().isEmpty) {
-      user.inheritLauncherThemesFromQuickMenu();
+      user.hydrateLauncherDesignThemes();
       await pref.setString("launcherDesignSettings", user.launcherDesignSettingsToJson());
     } else {
       try {
         user.loadLauncherDesignSettingsFromJson(savedLauncherDesignSettings);
+        // Re-serialize here so the former single-palette format is migrated
+        // to the per-design map on the first launch after the upgrade.
+        await pref.setString("launcherDesignSettings", user.launcherDesignSettingsToJson());
       } catch (_) {
-        user.inheritLauncherThemesFromQuickMenu();
+        user.hydrateLauncherDesignThemes();
         await pref.setString("launcherDesignSettings", user.launcherDesignSettingsToJson());
       }
     }
@@ -504,6 +507,17 @@ class Boxes {
 
     await pref.setInt("quickMenuDesign", design.index);
     await saveActiveQuickMenuThemes(notify: notify);
+
+    for (final QuickMenuTriggers quickMenuListener in QuickMenuFunctions.listeners) {
+      quickMenuListener.refreshQuickMenu();
+    }
+  }
+
+  static Future<void> switchLauncherDesign(LauncherDesign design, {bool notify = true}) async {
+    user.applyLauncherThemesForDesign(design);
+
+    await pref.setInt("launcherDesign", design.index);
+    await saveLauncherDesignSettings(notify: notify);
 
     for (final QuickMenuTriggers quickMenuListener in QuickMenuFunctions.listeners) {
       quickMenuListener.refreshQuickMenu();
