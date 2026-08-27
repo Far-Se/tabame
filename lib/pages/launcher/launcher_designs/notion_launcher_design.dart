@@ -137,6 +137,8 @@ class NotionLauncherFrame extends StatelessWidget {
     required this.child,
     required this.surface,
     required this.resultCount,
+    Color? accent,
+    Color? onSurface,
   });
 
   final Widget child;

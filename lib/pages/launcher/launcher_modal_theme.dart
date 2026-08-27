@@ -162,7 +162,7 @@ class LauncherModalTokens {
       case LauncherDesign.anime:
       case LauncherDesign.tech:
       case LauncherDesign.vector:
-      case LauncherDesign.outrun2:
+      case LauncherDesign.outrun:
       case LauncherDesign.matrix:
       case LauncherDesign.steam:
       case LauncherDesign.cyber:
@@ -218,7 +218,7 @@ class LauncherModalTokens {
         LauncherDesign.anime => 12.0,
         LauncherDesign.tech => 8.0,
         LauncherDesign.vector => 4.0,
-        LauncherDesign.outrun2 => 0.0,
+        LauncherDesign.outrun => 0.0,
         LauncherDesign.matrix => 2.0,
         LauncherDesign.steam => 6.0,
         LauncherDesign.cyber => 4.0,

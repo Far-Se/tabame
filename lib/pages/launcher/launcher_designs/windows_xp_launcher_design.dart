@@ -205,6 +205,9 @@ class WindowsXpLauncherFrame extends StatelessWidget {
     super.key,
     required this.child,
     required this.resultCount,
+    Color? surface,
+    Color? accent,
+    Color? onSurface,
   });
 
   final Widget child;

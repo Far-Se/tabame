@@ -202,6 +202,7 @@ class RelayLauncherFrame extends StatelessWidget {
     required this.surface,
     required this.accent,
     this.resultCount = 0,
+    Color? onSurface,
   });
 
   final Widget child;

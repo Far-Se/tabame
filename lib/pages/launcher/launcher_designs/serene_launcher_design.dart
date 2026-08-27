@@ -92,6 +92,9 @@ class SereneLauncherFrame extends StatelessWidget {
     super.key,
     required this.child,
     required this.accent,
+    Color? surface,
+    Color? onSurface,
+    int? resultCount,
   });
 
   final Widget child;

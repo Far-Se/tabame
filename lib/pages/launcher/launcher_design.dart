@@ -788,7 +788,7 @@ class LauncherThemeData {
   bool get isQuickMenuInspired => switch (design) {
         LauncherDesign.tech ||
         LauncherDesign.vector ||
-        LauncherDesign.outrun2 ||
+        LauncherDesign.outrun ||
         LauncherDesign.matrix ||
         LauncherDesign.steam ||
         LauncherDesign.cyber ||
@@ -815,7 +815,7 @@ class LauncherThemeData {
         LauncherDesign.anime => Icons.auto_awesome_rounded,
         LauncherDesign.tech => Icons.memory_rounded,
         LauncherDesign.vector => Icons.radar_rounded,
-        LauncherDesign.outrun2 => Icons.bolt_rounded,
+        LauncherDesign.outrun => Icons.bolt_rounded,
         LauncherDesign.matrix => Icons.terminal_rounded,
         LauncherDesign.steam => Icons.settings_rounded,
         LauncherDesign.cyber => Icons.hub_rounded,
@@ -844,7 +844,7 @@ class LauncherThemeData {
         LauncherDesign.anime => 19.0,
         LauncherDesign.tech => 19.0,
         LauncherDesign.vector => 18.0,
-        LauncherDesign.outrun2 => 20.0,
+        LauncherDesign.outrun => 20.0,
         LauncherDesign.matrix => 18.0,
         LauncherDesign.steam => 18.0,
         LauncherDesign.cyber => 19.0,
@@ -875,7 +875,7 @@ class LauncherThemeData {
         LauncherDesign.anime => 16.0,
         LauncherDesign.tech => 15.0,
         LauncherDesign.vector => 15.0,
-        LauncherDesign.outrun2 => 16.0,
+        LauncherDesign.outrun => 16.0,
         LauncherDesign.matrix => 14.0,
         LauncherDesign.steam => 15.0,
         LauncherDesign.cyber => 15.0,
@@ -903,7 +903,7 @@ class LauncherThemeData {
         LauncherDesign.anime => FontWeight.w500,
         LauncherDesign.tech => FontWeight.w600,
         LauncherDesign.vector => FontWeight.w600,
-        LauncherDesign.outrun2 => FontWeight.w700,
+        LauncherDesign.outrun => FontWeight.w700,
         LauncherDesign.matrix => FontWeight.w500,
         LauncherDesign.steam => FontWeight.w600,
         LauncherDesign.cyber => FontWeight.w600,
@@ -934,7 +934,7 @@ class LauncherThemeData {
         LauncherDesign.anime => 16.0,
         LauncherDesign.tech => 10.0,
         LauncherDesign.vector => 4.0,
-        LauncherDesign.outrun2 => 0.0,
+        LauncherDesign.outrun => 0.0,
         LauncherDesign.matrix => 2.0,
         LauncherDesign.steam => 6.0,
         LauncherDesign.cyber => 4.0,

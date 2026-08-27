@@ -269,7 +269,7 @@ extension LauncherDesignBuilder on LauncherDesign {
         return techLauncherOuterDecoration(surface, accent);
       case LauncherDesign.vector:
         return vectorLauncherOuterDecoration(surface, accent);
-      case LauncherDesign.outrun2:
+      case LauncherDesign.outrun:
         return outrun2LauncherOuterDecoration(surface, accent);
       case LauncherDesign.matrix:
         return matrixLauncherOuterDecoration(surface, accent);
@@ -469,7 +469,7 @@ extension LauncherDesignBuilder on LauncherDesign {
             textField: textField,
             trailingBadge: trailingBadge,
             isSearching: isSearching);
-      case LauncherDesign.outrun2:
+      case LauncherDesign.outrun:
         return Outrun2LauncherSearchBar(
             surface: surface,
             accent: accent,
@@ -839,7 +839,7 @@ extension LauncherDesignBuilder on LauncherDesign {
         return TechLauncherHeader(label: label, accent: accent);
       case LauncherDesign.vector:
         return VectorLauncherHeader(label: label, accent: accent);
-      case LauncherDesign.outrun2:
+      case LauncherDesign.outrun:
         return Outrun2LauncherHeader(label: label, accent: accent);
       case LauncherDesign.matrix:
         return MatrixLauncherHeader(label: label, accent: accent);

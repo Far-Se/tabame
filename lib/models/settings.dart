@@ -83,9 +83,6 @@ enum LauncherDesign {
   serene,
   command,
   terminal,
-
-  /// Contemporary TUI operator shell. Append-only to preserve persisted
-  /// launcher preferences.
   terminal2,
   zen,
   glass,
@@ -93,46 +90,20 @@ enum LauncherDesign {
   transit,
   fluent,
   manifesto,
-
-  /// Spacecraft guidance-computer HUD. Persisted by index — always append new
-  /// designs at the end so stored preferences keep pointing at the right design.
   orbit,
-
-  /// Kawaii character-card panel with ribbons, tape and sparkles.
-  ///
-  /// Persisted by index — append-only to preserve stored preferences.
   anime,
-
-  /// Launcher counterparts to the named Quick Menu visual languages.
-  /// Kept append-only because this preference is persisted by index.
   tech,
   vector,
-  outrun2,
+  outrun,
   matrix,
   steam,
   cyber,
   manga,
-
-  /// Windows XP "Luna" launcher. Append-only: launcher preferences are stored
-  /// by enum index.
   windowsXp,
-
-  /// Windows 98 shell launcher. Append-only to preserve stored preferences.
   windows98,
-
-  /// Notion-inspired workspace launcher. Append-only to preserve preferences.
   notion,
-
-  /// Three-region command workstation with source lenses and an always-visible
-  /// inspector. Append-only to preserve persisted launcher preferences.
   switchboard,
-
-  /// Communications backplane launcher with routed signal paths and compact
-  /// connection ports. Append-only to preserve persisted preferences.
   relay,
-
-  /// Raycast-inspired command palette with a dense dark utility surface.
-  /// Append-only to preserve persisted launcher preferences.
   newCast;
 
   String get displayName => switch (this) {
@@ -621,7 +592,7 @@ class Settings {
       LauncherDesign.anime.displayName: fromQuickMenu(QuickMenuDesigns.anime),
       LauncherDesign.tech.displayName: fromQuickMenu(QuickMenuDesigns.tech),
       LauncherDesign.vector.displayName: fromQuickMenu(QuickMenuDesigns.vector),
-      LauncherDesign.outrun2.displayName: fromQuickMenu(QuickMenuDesigns.outrun2),
+      LauncherDesign.outrun.displayName: fromQuickMenu(QuickMenuDesigns.outrun2),
       LauncherDesign.matrix.displayName: fromQuickMenu(QuickMenuDesigns.matrix),
       LauncherDesign.steam.displayName: fromQuickMenu(QuickMenuDesigns.steam),
       LauncherDesign.cyber.displayName: fromQuickMenu(QuickMenuDesigns.cyber),

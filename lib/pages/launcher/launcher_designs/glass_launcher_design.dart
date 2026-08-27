@@ -86,6 +86,7 @@ class GlassLauncherFrame extends StatelessWidget {
     required this.surface,
     required this.accent,
     required this.onSurface,
+    int? resultCount,
   });
 
   final Widget child;

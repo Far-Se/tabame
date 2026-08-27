@@ -28,7 +28,7 @@ class Outrun2LauncherFrame extends StatelessWidget {
     final bool isDark = surface.computeLuminance() < .5;
     final Color palm = Color.alphaBlend(Colors.black.withAlpha(198), surface);
     return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.outrun2),
+      data: const LauncherThemeData(design: LauncherDesign.outrun),
       child: Container(
         constraints: const BoxConstraints(minHeight: 360),
         decoration: outrun2LauncherOuterDecoration(surface, accent),

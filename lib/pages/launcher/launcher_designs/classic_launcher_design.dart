@@ -70,6 +70,8 @@ class ClassicLauncherFrame extends StatelessWidget {
     required this.child,
     required this.surface,
     required this.accent,
+    Color? onSurface,
+    int? resultCount,
   });
 
   final Widget child;

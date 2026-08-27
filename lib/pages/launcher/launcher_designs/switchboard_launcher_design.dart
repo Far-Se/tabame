@@ -136,6 +136,7 @@ class SwitchboardLauncherFrame extends StatelessWidget {
     required this.surface,
     required this.accent,
     required this.resultCount,
+    Color? onSurface,
   });
 
   final Widget child;
