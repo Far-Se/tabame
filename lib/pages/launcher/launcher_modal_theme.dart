@@ -190,6 +190,15 @@ class LauncherModalTokens {
   /// Secondary/dimmed foreground.
   final Color dim;
 
+  /// Foreground used by controls while they carry the design's selection
+  /// highlight. Legacy Windows palettes use a dark blue highlight, so their
+  /// selected labels need a light foreground instead of [onSurface].
+  Color get onSelection => switch (design) {
+        LauncherDesign.windowsXp => Colors.white,
+        LauncherDesign.windows98 => Windows98Tokens.light,
+        _ => onSurface,
+      };
+
   /// Corner radius of the modal card — same voice as the launcher frame.
   double get frameRadius => LauncherThemeData(design: design).frameRadius;
 

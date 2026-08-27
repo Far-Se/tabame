@@ -527,6 +527,7 @@ class _ActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool destructive = action.isDestructive;
+    final Color selectedText = tokens.onSelection;
     final Widget icon = SizedBox(
       width: 16,
       height: 16,
@@ -553,7 +554,10 @@ class _ActionTile extends StatelessWidget {
             ),
             child: Text(
               action.kbdHint!,
-              style: tokens.text(fontSize: Design.baseFontSize, color: tokens.onSurface.withAlpha(120)),
+              style: tokens.text(
+                fontSize: Design.baseFontSize,
+                color: isActive ? selectedText.withAlpha(210) : tokens.onSurface.withAlpha(120),
+              ),
             ),
           );
 
@@ -566,7 +570,7 @@ class _ActionTile extends StatelessWidget {
                     tokens.design == LauncherDesign.orbit)
             ? tokens.accent
             : isActive
-                ? tokens.onSurface
+                ? selectedText
                 : tokens.onSurface.withAlpha(220);
 
     // The row shell (icon nest, selection treatment, motion) comes from
@@ -607,7 +611,7 @@ class _ActionTile extends StatelessWidget {
                 color: destructive
                     ? Colors.redAccent.withAlpha(150)
                     : isActive
-                        ? tokens.onSurface.withAlpha(160)
+                        ? selectedText.withAlpha(200)
                         : tokens.dim,
                 height: 1.2,
               ),

@@ -548,6 +548,7 @@ class _PluginActionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     // Destructive actions carry a danger tint so deletes read as deletes.
     final Color tint = action.destructive ? const Color(0xFFE5534B) : tokens.accent;
+    final Color selectedText = tokens.onSelection;
     final PluginShortcut? shortcut = PluginShortcut.parse(action.shortcut);
 
     // The row shell (icon nest, selection treatment, motion) comes from
@@ -582,7 +583,7 @@ class _PluginActionRow extends StatelessWidget {
                                 tokens.design == LauncherDesign.orbit)
                         ? tokens.accent
                         : isSelected
-                            ? tokens.onSurface
+                            ? selectedText
                             : tokens.onSurface.withAlpha(210),
                 height: 1.25,
               ),
@@ -598,7 +599,10 @@ class _PluginActionRow extends StatelessWidget {
               ),
               child: Text(
                 shortcut.label,
-                style: tokens.text(fontSize: Design.baseFontSize - 1.5, color: tokens.onSurface.withAlpha(130)),
+                style: tokens.text(
+                  fontSize: Design.baseFontSize - 1.5,
+                  color: isSelected ? selectedText.withAlpha(190) : tokens.onSurface.withAlpha(130),
+                ),
               ),
             ),
         ],
