@@ -37,7 +37,7 @@ part 'launcher_designs/windows_98_launcher_design.dart';
 part 'launcher_designs/notion_launcher_design.dart';
 part 'launcher_designs/switchboard_launcher_design.dart';
 part 'launcher_designs/relay_launcher_design.dart';
-part 'launcher_designs/raycast_launcher_design.dart';
+part 'launcher_designs/newcast_launcher_design.dart';
 
 // ---------------------------------------------------------------------------
 // Extension: per-design widget factories used by LauncherState
