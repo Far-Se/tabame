@@ -105,6 +105,11 @@ class _ClaudeUsagePanelState extends State<ClaudeUsagePanel> {
   bool _refreshing = false;
 
   DateTime? get _lastUpdatedAt {
+    // Claude can restore its disk cache before Codex finishes loading on a
+    // cold start. Do not present that older timestamp as the combined status
+    // while the other provider is still expected to report.
+    if ((_claudeRecord == null && _claudeLoading) || (_codexRecord == null && _codexLoading)) return null;
+
     final List<DateTime> dates = <DateTime>[
       if (_claudeRecord != null) _claudeRecord!.fetchedAt,
       if (_codexRecord != null) _codexRecord!.fetchedAt,
@@ -410,6 +415,7 @@ class _ClaudeUsagePanelState extends State<ClaudeUsagePanel> {
     if (diff.isNegative || diff.inMinutes < 1) return 'just now';
     if (diff.inMinutes == 1) return '1 min ago';
     if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inDays > 2) return 'days ago';
     return '${diff.inHours}h ago';
   }
 
