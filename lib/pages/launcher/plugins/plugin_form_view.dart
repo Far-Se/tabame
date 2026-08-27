@@ -40,6 +40,8 @@ class PluginFormView extends StatefulWidget {
     this.onOpenActions,
     this.initialValues = const <String, Object?>{},
     this.onStateChanged,
+    this.scrollController,
+    this.draggable = false,
   });
 
   final PluginForm form;
@@ -64,6 +66,8 @@ class PluginFormView extends StatefulWidget {
   /// field values remain the fallback for keys that are absent here.
   final Map<String, Object?> initialValues;
   final ValueChanged<Map<String, Object?>>? onStateChanged;
+  final ScrollController? scrollController;
+  final bool draggable;
 
   @override
   State<PluginFormView> createState() => _PluginFormViewState();
@@ -1080,6 +1084,8 @@ class _PluginFormViewState extends State<PluginFormView> {
     return Focus(
       onKeyEvent: _onKey,
       child: WindowsScrollView(
+        controller: widget.scrollController,
+        draggable: widget.draggable,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
           child: Column(

@@ -6220,7 +6220,7 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
     final bool showSplash = _quickActionSplashId == quickAction.id;
 
     if (_design == LauncherDesign.newCast) {
-      return LauncherResultRow(
+      final Widget resultRow = LauncherResultRow(
         isSelected: isSelected,
         isRepeating: isRepeatingKey,
         accent: accent,
@@ -6230,6 +6230,26 @@ class LauncherState extends State<Launcher> with QuickMenuTriggers, SingleTicker
         icon: Icon(Icons.bolt_rounded, size: 15, color: accent),
         title: quickAction.title,
       );
+
+      // Some legacy quick actions expose their behavior only through the
+      // tappable widget returned by [builder]. Keep that widget mounted offstage
+      // so both the row tap and keyboard submission can use the shared fallback
+      // executor without changing the NewCast row visuals.
+      if (quickAction.onExecute == null && quickAction.allowRenderedFallbackExecute && actionKey != null) {
+        return Stack(
+          children: <Widget>[
+            resultRow,
+            Offstage(
+              child: KeyedSubtree(
+                key: actionKey,
+                child: quickAction.builder(context),
+              ),
+            ),
+          ],
+        );
+      }
+
+      return resultRow;
     }
 
     return MouseRegion(

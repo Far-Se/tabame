@@ -901,6 +901,8 @@ class _PluginViewState extends State<PluginView> {
                 ? _buildEmptyOrLoading(frame)
                 : PluginFormView(
                     form: frame.form!,
+                    scrollController: scrollController,
+                    draggable: true,
                     initialValues:
                         _formStateByPage['${_pageKey(widget.frame)}:${panel.id}'] ?? const <String, Object?>{},
                     onStateChanged: (Map<String, Object?> values) =>
@@ -1086,6 +1088,7 @@ class _PluginViewState extends State<PluginView> {
       onNotification: (ScrollNotification notification) => _onScrollNotification(frame, notification),
       child: WindowsScrollView(
         controller: controller ?? _scrollController,
+        draggable: controller != null,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -1138,6 +1141,7 @@ class _PluginViewState extends State<PluginView> {
           },
           child: WindowsScrollView(
             controller: chatController,
+            draggable: controller != null,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(10, 4, 10, 14),
               child: Column(
@@ -1285,6 +1289,7 @@ class _PluginViewState extends State<PluginView> {
       onNotification: (ScrollNotification notification) => _onScrollNotification(frame, notification),
       child: WindowsScrollView(
         controller: controller ?? _scrollController,
+        draggable: controller != null,
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: Column(
@@ -1436,6 +1441,7 @@ class _PluginViewState extends State<PluginView> {
       );
       final Widget rows = WindowsScrollView(
         controller: controller ?? _scrollController,
+        draggable: controller != null,
         child: Column(children: <Widget>[
           if (!frame.tableStickyHeader) header,
           for (int i = 0; i < frame.items.length; i++)
@@ -1617,6 +1623,7 @@ class _PluginViewState extends State<PluginView> {
 
   Widget _buildTree(PluginRenderFrame frame, {ScrollController? controller}) => WindowsScrollView(
         controller: controller ?? _scrollController,
+        draggable: controller != null,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(children: <Widget>[
@@ -1657,6 +1664,7 @@ class _PluginViewState extends State<PluginView> {
 
   Widget _buildTimeline(PluginRenderFrame frame, {ScrollController? controller}) => WindowsScrollView(
         controller: controller ?? _scrollController,
+        draggable: controller != null,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           child: Column(children: <Widget>[
@@ -1797,6 +1805,7 @@ class _PluginViewState extends State<PluginView> {
     if (frame.diffLines.isEmpty) return _buildEmptyOrLoading(frame);
     return WindowsScrollView(
       controller: controller ?? _scrollController,
+      draggable: controller != null,
       child: SelectionArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
@@ -1841,6 +1850,7 @@ class _PluginViewState extends State<PluginView> {
     if (frame.logLines.isEmpty) return _buildEmptyOrLoading(frame);
     return WindowsScrollView(
       controller: controller ?? _scrollController,
+      draggable: controller != null,
       child: SelectionArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
@@ -2023,6 +2033,7 @@ class _PluginViewState extends State<PluginView> {
     }
     return WindowsScrollView(
       controller: controller ?? _scrollController,
+      draggable: controller != null,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
@@ -2035,6 +2046,7 @@ class _PluginViewState extends State<PluginView> {
       onNotification: (ScrollNotification notification) => _onScrollNotification(frame, notification),
       child: WindowsScrollView(
         controller: controller ?? _scrollController,
+        draggable: controller != null,
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: Column(children: <Widget>[
@@ -2131,6 +2143,7 @@ class _PluginViewState extends State<PluginView> {
     final String renderedMarkdown = _normalizeLocalMarkdownImageUris(markdown);
     return WindowsScrollView(
       controller: controller ?? widget.detailScrollController,
+      draggable: controller != null,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
         child: !hasMarkdown && metadata.isEmpty

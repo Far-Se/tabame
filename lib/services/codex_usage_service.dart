@@ -310,7 +310,9 @@ class CodexUsageService {
     if (value == null) return null;
     if (value is num) {
       final double raw = value.toDouble();
-      return raw >= 0 && raw <= 1 ? raw * 100 : raw;
+      // A whole-number percentage of 1 means 1%, not a 1.0 ratio (100%).
+      // Only values strictly between 0 and 1 represent fractional input.
+      return raw > 0 && raw < 1 ? raw * 100 : raw;
     }
     if (value is String) {
       final double? parsed = double.tryParse(value.trim().replaceAll('%', ''));

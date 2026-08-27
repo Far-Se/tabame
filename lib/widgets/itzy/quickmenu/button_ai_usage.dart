@@ -262,8 +262,9 @@ class _ClaudeUsagePanelState extends State<ClaudeUsagePanel> {
                 : 'Install codex-cli-usage or run it once, then refresh.',
           )
         else ...<Widget>[
-          if (record.fiveHourRemaining != record.weeklyRemaining &&
-              record.fiveHourResetAt != record.weeklyResetAt) ...<Widget>[
+          if (record.fiveHourRemaining != null ||
+              record.fiveHourResetAt != null ||
+              record.fiveHourResetDateTime != null) ...<Widget>[
             _UsageCard(
               label: '5h',
               value: record.fiveHourRemaining,
@@ -271,15 +272,17 @@ class _ClaudeUsagePanelState extends State<ClaudeUsagePanel> {
               resetDateTime: record.fiveHourResetDateTime,
               direction: _UsageDirection.remaining,
             ),
-            const SizedBox(height: 8)
+            if (record.weeklyRemaining != null || record.weeklyResetAt != null || record.weeklyResetDateTime != null)
+              const SizedBox(height: 8),
           ],
-          _UsageCard(
-            label: 'Weekly',
-            value: record.weeklyRemaining,
-            resetAt: record.weeklyResetAt,
-            resetDateTime: record.weeklyResetDateTime,
-            direction: _UsageDirection.remaining,
-          ),
+          if (record.weeklyRemaining != null || record.weeklyResetAt != null || record.weeklyResetDateTime != null)
+            _UsageCard(
+              label: 'Weekly',
+              value: record.weeklyRemaining,
+              resetAt: record.weeklyResetAt,
+              resetDateTime: record.weeklyResetDateTime,
+              direction: _UsageDirection.remaining,
+            ),
         ],
       ],
     );
