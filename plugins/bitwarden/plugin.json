@@ -1,0 +1,13 @@
+{
+  "id": "bitwarden",
+  "name": "Bitwarden",
+  "keyword": "bw",
+  "description": "Search your Bitwarden vault, copy credentials, generate passwords, and manage the vault",
+  "category": "Utilities",
+  "icon": "lock",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "args": [],
+  "dev": false
+}

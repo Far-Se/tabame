@@ -1,0 +1,7 @@
+{
+  "cli_path": "bw",
+  "server_url": "",
+  "server_certs_path": "",
+  "sync_on_launch": false,
+  "fetch_favicons": false
+}
