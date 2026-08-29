@@ -45,6 +45,22 @@ the configured display limit.
 - **Ctrl+R** — rerun the current search.
 - **Ctrl+Shift+S** — open Settings.
 
+### File icons
+
+On Windows, results use the shell icon for the file or folder instead of a
+generic launcher icon. Icons are stored in `.cache/icons` inside this plugin:
+
+- ordinary files share a cache entry by extension;
+- packaged Windows associations, such as the default Media Player icon for
+  `.mp3`, are resolved to their installed image asset;
+- files whose icons can vary per path, such as `.exe`, `.dll`, `.lnk`, and
+  `.url`, use a path-and-file-signature cache entry;
+- **Ctrl+K -> Clear Icons Cache** removes the generated PNGs so associations or
+  changed shortcut/executable icons can be picked up again.
+
+Other platforms keep the existing extension-based fallback icons until native
+file-icon extraction is implemented there.
+
 ## Settings
 
 The settings page stores its data in Tabame's per-plugin storage. No config file

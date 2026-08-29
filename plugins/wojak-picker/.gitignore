@@ -1,0 +1,5 @@
+# Runtime caches created by the plugin.
+image-cache/
+thumbnail-cache/
+wojaks-cache.json
+*.tmp

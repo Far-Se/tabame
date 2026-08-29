@@ -9,15 +9,22 @@ process and its stale render frame.
 from __future__ import annotations
 
 import copy
+import ctypes
+from ctypes import wintypes
 import fnmatch
+import hashlib
 import json
 import os
 from pathlib import Path
 import shutil
+import struct
 import subprocess
 import sys
+import tempfile
 import threading
 from typing import Any
+from urllib.parse import unquote
+import zlib
 
 
 SEND_LOCK = threading.Lock()
@@ -30,6 +37,700 @@ INSTALL_COMMANDS = {
     "install_chocolatey": ("Chocolatey", "choco install fd"),
     "install_winget": ("Winget", "winget install sharkdp.fd"),
 }
+ICON_CACHE_DIR = Path(__file__).resolve().parent / ".cache" / "icons"
+ICON_CACHE_VERSION = "v3"
+ICON_CACHE_LOCK = threading.RLock()
+
+# These file types can carry an icon per file rather than using the Windows
+# association for their extension. Keep their cache keys path-specific.
+DYNAMIC_ICON_EXTENSIONS = frozenset(
+    {
+        ".ani",
+        ".appref-ms",
+        ".appx",
+        ".appxbundle",
+        ".application",
+        ".bat",
+        ".cur",
+        ".cpl",
+        ".com",
+        ".deskthemepack",
+        ".dll",
+        ".exe",
+        ".ico",
+        ".library-ms",
+        ".lnk",
+        ".msc",
+        ".msi",
+        ".msix",
+        ".msixbundle",
+        ".msp",
+        ".mst",
+        ".ocx",
+        ".pif",
+        ".scf",
+        ".scr",
+        ".search-ms",
+        ".settingcontent-ms",
+        ".theme",
+        ".themepack",
+        ".url",
+        ".website",
+    }
+)
+
+
+class _WindowsShFileInfo(ctypes.Structure):
+    _fields_ = [
+        ("hIcon", ctypes.c_void_p),
+        ("iIcon", ctypes.c_int),
+        ("dwAttributes", wintypes.DWORD),
+        ("szDisplayName", wintypes.WCHAR * 260),
+        ("szTypeName", wintypes.WCHAR * 80),
+    ]
+
+
+class _WindowsIconInfo(ctypes.Structure):
+    _fields_ = [
+        ("fIcon", wintypes.BOOL),
+        ("xHotspot", wintypes.DWORD),
+        ("yHotspot", wintypes.DWORD),
+        ("hbmMask", ctypes.c_void_p),
+        ("hbmColor", ctypes.c_void_p),
+    ]
+
+
+class _WindowsBitmap(ctypes.Structure):
+    _fields_ = [
+        ("bmType", wintypes.LONG),
+        ("bmWidth", wintypes.LONG),
+        ("bmHeight", wintypes.LONG),
+        ("bmWidthBytes", wintypes.LONG),
+        ("bmPlanes", wintypes.WORD),
+        ("bmBitsPixel", wintypes.WORD),
+        ("bmBits", ctypes.c_void_p),
+    ]
+
+
+class _WindowsBitmapInfoHeader(ctypes.Structure):
+    _fields_ = [
+        ("biSize", wintypes.DWORD),
+        ("biWidth", wintypes.LONG),
+        ("biHeight", wintypes.LONG),
+        ("biPlanes", wintypes.WORD),
+        ("biBitCount", wintypes.WORD),
+        ("biCompression", wintypes.DWORD),
+        ("biSizeImage", wintypes.DWORD),
+        ("biXPelsPerMeter", wintypes.LONG),
+        ("biYPelsPerMeter", wintypes.LONG),
+        ("biClrUsed", wintypes.DWORD),
+        ("biClrImportant", wintypes.DWORD),
+    ]
+
+
+class _WindowsRgbQuad(ctypes.Structure):
+    _fields_ = [
+        ("rgbBlue", wintypes.BYTE),
+        ("rgbGreen", wintypes.BYTE),
+        ("rgbRed", wintypes.BYTE),
+        ("rgbReserved", wintypes.BYTE),
+    ]
+
+
+class _WindowsBitmapInfo(ctypes.Structure):
+    _fields_ = [
+        ("bmiHeader", _WindowsBitmapInfoHeader),
+        ("bmiColors", _WindowsRgbQuad * 1),
+    ]
+
+
+class _WindowsIconExtractor:
+    """Small dependency-free bridge from a Windows shell icon to PNG bytes."""
+
+    SHGFI_ICON = 0x000000100
+    SHGFI_LARGEICON = 0x000000000
+    DIB_RGB_COLORS = 0
+    BI_RGB = 0
+
+    def __init__(self) -> None:
+        if os.name != "nt":
+            raise OSError("Windows shell icons are unavailable on this platform")
+
+        self.shell32 = ctypes.WinDLL("shell32", use_last_error=True)
+        self.user32 = ctypes.WinDLL("user32", use_last_error=True)
+        self.gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
+
+        self.shell32.SHGetFileInfoW.argtypes = [
+            ctypes.c_wchar_p,
+            wintypes.DWORD,
+            ctypes.POINTER(_WindowsShFileInfo),
+            wintypes.UINT,
+            wintypes.UINT,
+        ]
+        self.shell32.SHGetFileInfoW.restype = ctypes.c_void_p
+        self.shell32.ExtractIconExW.argtypes = [
+            ctypes.c_wchar_p,
+            ctypes.c_int,
+            ctypes.POINTER(ctypes.c_void_p),
+            ctypes.POINTER(ctypes.c_void_p),
+            wintypes.UINT,
+        ]
+        self.shell32.ExtractIconExW.restype = wintypes.UINT
+        self.user32.DestroyIcon.argtypes = [ctypes.c_void_p]
+        self.user32.DestroyIcon.restype = wintypes.BOOL
+        self.user32.GetIconInfo.argtypes = [ctypes.c_void_p, ctypes.POINTER(_WindowsIconInfo)]
+        self.user32.GetIconInfo.restype = wintypes.BOOL
+        self.gdi32.CreateCompatibleDC.argtypes = [ctypes.c_void_p]
+        self.gdi32.CreateCompatibleDC.restype = ctypes.c_void_p
+        self.gdi32.DeleteDC.argtypes = [ctypes.c_void_p]
+        self.gdi32.DeleteDC.restype = wintypes.BOOL
+        self.gdi32.DeleteObject.argtypes = [ctypes.c_void_p]
+        self.gdi32.DeleteObject.restype = wintypes.BOOL
+        self.gdi32.GetObjectW.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]
+        self.gdi32.GetObjectW.restype = ctypes.c_int
+        self.gdi32.GetDIBits.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            wintypes.UINT,
+            wintypes.UINT,
+            ctypes.c_void_p,
+            ctypes.POINTER(_WindowsBitmapInfo),
+            wintypes.UINT,
+        ]
+        self.gdi32.GetDIBits.restype = ctypes.c_int
+
+    def extract(self, path: str) -> bytes | None:
+        file_info = _WindowsShFileInfo()
+        result = self.shell32.SHGetFileInfoW(
+            path,
+            0,
+            ctypes.byref(file_info),
+            ctypes.sizeof(file_info),
+            self.SHGFI_ICON | self.SHGFI_LARGEICON,
+        )
+        if not result or not file_info.hIcon:
+            return None
+
+        try:
+            return self._icon_handle_to_png(file_info.hIcon)
+        finally:
+            self.user32.DestroyIcon(file_info.hIcon)
+
+    def extract_icon_location(self, path: str, icon_index: int) -> bytes | None:
+        """Extract an icon from a registry DefaultIcon path and index."""
+
+        large_icon = ctypes.c_void_p()
+        small_icon = ctypes.c_void_p()
+        try:
+            count = self.shell32.ExtractIconExW(
+                path,
+                icon_index,
+                ctypes.byref(large_icon),
+                ctypes.byref(small_icon),
+                1,
+            )
+            if count == 0:
+                return None
+            hicon = large_icon.value or small_icon.value
+            return self._icon_handle_to_png(hicon) if hicon else None
+        finally:
+            if large_icon.value:
+                self.user32.DestroyIcon(large_icon)
+            if small_icon.value and small_icon.value != large_icon.value:
+                self.user32.DestroyIcon(small_icon)
+
+    def _icon_handle_to_png(self, hicon: ctypes.c_void_p) -> bytes | None:
+        device_context = self.gdi32.CreateCompatibleDC(None)
+        if not device_context:
+            return None
+
+        icon_info = _WindowsIconInfo()
+        color_bitmap = None
+        mask_bitmap = None
+        try:
+            if not self.user32.GetIconInfo(hicon, ctypes.byref(icon_info)):
+                return None
+            color_bitmap = icon_info.hbmColor
+            mask_bitmap = icon_info.hbmMask
+            if not color_bitmap:
+                return None
+
+            dimensions = _bitmap_dimensions(self.gdi32, color_bitmap)
+            if dimensions is None:
+                return None
+            width, height = dimensions
+            if width <= 0 or height <= 0 or width > 512 or height > 512:
+                return None
+
+            color_info = _bitmap_info(width, height, 32)
+            color_size = width * height * 4
+            color_pixels = (ctypes.c_ubyte * color_size)()
+            if (
+                self.gdi32.GetDIBits(
+                    device_context,
+                    color_bitmap,
+                    0,
+                    height,
+                    color_pixels,
+                    ctypes.byref(color_info),
+                    self.DIB_RGB_COLORS,
+                )
+                == 0
+            ):
+                return None
+
+            mask_pixels, mask_stride = self._read_mask(device_context, mask_bitmap, width, height)
+            return _png_from_bgra(
+                width,
+                height,
+                bytes(color_pixels),
+                mask_pixels,
+                mask_stride,
+            )
+        finally:
+            if color_bitmap:
+                self.gdi32.DeleteObject(color_bitmap)
+            if mask_bitmap:
+                self.gdi32.DeleteObject(mask_bitmap)
+            self.gdi32.DeleteDC(device_context)
+
+    def _read_mask(
+        self,
+        device_context: ctypes.c_void_p,
+        mask_bitmap: ctypes.c_void_p,
+        width: int,
+        height: int,
+    ) -> tuple[bytes | None, int]:
+        if not mask_bitmap:
+            return None, 0
+
+        mask_dimensions = _bitmap_dimensions(self.gdi32, mask_bitmap)
+        if mask_dimensions is None:
+            return None, 0
+        mask_height = min(height, mask_dimensions[1])
+        if mask_height <= 0:
+            return None, 0
+
+        stride = ((width + 31) // 32) * 4
+        mask_info = _bitmap_info(width, mask_height, 1)
+        mask_size = stride * mask_height
+        mask_pixels = (ctypes.c_ubyte * mask_size)()
+        if (
+            self.gdi32.GetDIBits(
+                device_context,
+                mask_bitmap,
+                0,
+                mask_height,
+                mask_pixels,
+                ctypes.byref(mask_info),
+                self.DIB_RGB_COLORS,
+            )
+            == 0
+        ):
+            return None, 0
+        return bytes(mask_pixels), stride
+
+
+def _bitmap_dimensions(gdi32: Any, bitmap: ctypes.c_void_p) -> tuple[int, int] | None:
+    info = _WindowsBitmap()
+    if gdi32.GetObjectW(bitmap, ctypes.sizeof(info), ctypes.byref(info)) == 0:
+        return None
+    return abs(info.bmWidth), abs(info.bmHeight)
+
+
+def _bitmap_info(width: int, height: int, bits_per_pixel: int) -> _WindowsBitmapInfo:
+    info = _WindowsBitmapInfo()
+    info.bmiHeader.biSize = ctypes.sizeof(_WindowsBitmapInfoHeader)
+    info.bmiHeader.biWidth = width
+    # A negative height asks GetDIBits for top-down rows, which keeps the icon
+    # orientation intact when the bytes are converted to PNG.
+    info.bmiHeader.biHeight = -height
+    info.bmiHeader.biPlanes = 1
+    info.bmiHeader.biBitCount = bits_per_pixel
+    info.bmiHeader.biCompression = _WindowsIconExtractor.BI_RGB
+    info.bmiHeader.biSizeImage = 0
+    return info
+
+
+def _png_chunk(kind: bytes, payload: bytes) -> bytes:
+    return (
+        struct.pack(">I", len(payload))
+        + kind
+        + payload
+        + struct.pack(">I", zlib.crc32(kind + payload) & 0xFFFFFFFF)
+    )
+
+
+def _png_from_bgra(
+    width: int,
+    height: int,
+    bgra: bytes,
+    mask: bytes | None,
+    mask_stride: int,
+) -> bytes:
+    alpha_present = any(bgra[offset + 3] != 0 for offset in range(0, len(bgra), 4))
+    rgba = bytearray(width * height * 4)
+    for y in range(height):
+        for x in range(width):
+            source_offset = (y * width + x) * 4
+            target_offset = source_offset
+            blue, green, red, alpha = bgra[source_offset : source_offset + 4]
+            if mask is not None and (mask[y * mask_stride + x // 8] & (0x80 >> (x % 8))):
+                alpha = 0
+            elif not alpha_present:
+                alpha = 255
+            rgba[target_offset : target_offset + 4] = bytes((red, green, blue, alpha))
+
+    rows = bytearray()
+    row_size = width * 4
+    for offset in range(0, len(rgba), row_size):
+        rows.append(0)
+        rows.extend(rgba[offset : offset + row_size])
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + _png_chunk(b"IHDR", header)
+        + _png_chunk(b"IDAT", zlib.compress(bytes(rows), 9))
+        + _png_chunk(b"IEND", b"")
+    )
+
+
+_WINDOWS_ICON_EXTRACTOR: _WindowsIconExtractor | None = None
+_WINDOWS_ICON_EXTRACTOR_FAILED = False
+
+
+def _windows_icon_extractor() -> _WindowsIconExtractor | None:
+    global _WINDOWS_ICON_EXTRACTOR, _WINDOWS_ICON_EXTRACTOR_FAILED
+    if os.name != "nt" or _WINDOWS_ICON_EXTRACTOR_FAILED:
+        return None
+    if _WINDOWS_ICON_EXTRACTOR is not None:
+        return _WINDOWS_ICON_EXTRACTOR
+    try:
+        _WINDOWS_ICON_EXTRACTOR = _WindowsIconExtractor()
+    except Exception as exc:
+        _WINDOWS_ICON_EXTRACTOR_FAILED = True
+        log("Windows file icons are unavailable:", repr(exc))
+    return _WINDOWS_ICON_EXTRACTOR
+
+
+def _association_icon_locations(path: str) -> list[str]:
+    """Return the Windows registry icon locations for a file extension."""
+
+    extension = os.path.splitext(path)[1].casefold()
+    if not extension:
+        return []
+
+    try:
+        import winreg
+    except ImportError:
+        return []
+
+    locations: list[str] = []
+    seen_locations: set[str] = set()
+    prog_ids: list[str] = []
+    seen_prog_ids: set[str] = set()
+
+    def add_location(value: Any) -> None:
+        if not isinstance(value, str):
+            return
+        normalized = value.strip()
+        key = normalized.casefold()
+        if normalized and key not in seen_locations:
+            seen_locations.add(key)
+            locations.append(normalized)
+
+    def add_prog_id(value: Any) -> None:
+        if not isinstance(value, str):
+            return
+        normalized = value.strip()
+        key = normalized.casefold()
+        if normalized and key not in seen_prog_ids:
+            seen_prog_ids.add(key)
+            prog_ids.append(normalized)
+
+    def read_default(subkey: str) -> Any:
+        try:
+            with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, subkey) as key:
+                value, _ = winreg.QueryValueEx(key, "")
+                return value
+        except OSError:
+            return None
+
+    try:
+        user_choice_key = (
+            "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\"
+            f"{extension}\\UserChoice"
+        )
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, user_choice_key) as key:
+            user_choice, _ = winreg.QueryValueEx(key, "ProgId")
+            add_prog_id(user_choice)
+    except OSError:
+        pass
+
+    add_prog_id(read_default(extension))
+    for prog_id in prog_ids:
+        add_location(read_default(f"{prog_id}\\DefaultIcon"))
+
+    # A few applications put DefaultIcon directly below the extension key.
+    add_location(read_default(f"{extension}\\DefaultIcon"))
+    return locations
+
+
+def _parse_icon_location(value: str) -> tuple[str, int] | None:
+    """Parse a registry DefaultIcon value into an image path and icon index."""
+
+    location = value.strip()
+    if not location or location.startswith("@{"):
+        return None
+
+    if location.startswith('"'):
+        closing_quote = location.find('"', 1)
+        if closing_quote < 0:
+            return None
+        icon_path = location[1:closing_quote]
+        index_text = location[closing_quote + 1 :].strip()
+        if index_text.startswith(","):
+            index_text = index_text[1:].strip()
+    else:
+        icon_path, separator, index_text = location.rpartition(",")
+        if not separator:
+            icon_path, index_text = location, ""
+        icon_path = icon_path.strip()
+
+    icon_path = os.path.expandvars(icon_path.strip().strip('"'))
+    if icon_path.startswith("@"):
+        icon_path = icon_path[1:]
+    if not icon_path or "%" in icon_path:
+        return None
+
+    try:
+        icon_index = int(index_text) if index_text else 0
+    except ValueError:
+        return None
+    return icon_path, icon_index
+
+
+def _packaged_icon_asset(value: str) -> Path | None:
+    """Resolve a packaged Windows ms-resource icon to its PNG asset."""
+
+    location = value.strip()
+    if not (location.startswith("@{") and location.endswith("}")):
+        return None
+
+    package_name, separator, resource_uri = location[2:-1].partition("?ms-resource://")
+    if not separator or not package_name or "/" not in resource_uri:
+        return None
+
+    _, _, resource_path = resource_uri.partition("/")
+    resource_path = unquote(resource_path).replace("\\", "/")
+    if resource_path.casefold().startswith("files/"):
+        resource_path = resource_path[6:]
+    if not resource_path or any(part == ".." for part in resource_path.split("/")):
+        return None
+
+    program_files = os.environ.get("ProgramW6432") or os.environ.get("ProgramFiles")
+    if not program_files:
+        return None
+    windows_apps = Path(program_files) / "WindowsApps"
+    package_roots: list[Path] = [windows_apps / package_name]
+    if not package_roots[0].is_dir():
+        try:
+            package_prefix = package_name.casefold()
+            package_roots = [
+                child
+                for child in windows_apps.iterdir()
+                if child.is_dir()
+                and (
+                    child.name.casefold() == package_prefix
+                    or child.name.casefold().startswith(f"{package_prefix}_")
+                )
+            ]
+        except OSError:
+            return None
+
+    relative_parts = [part for part in resource_path.split("/") if part]
+    preferred_variants = (
+        "targetsize-64",
+        "targetsize-48",
+        "targetsize-32",
+        "targetsize-96",
+        "targetsize-128",
+        "targetsize-256",
+        "scale-200",
+        "scale-100",
+    )
+    for package_root in package_roots:
+        candidate = package_root.joinpath(*relative_parts)
+        candidates = [candidate]
+        if candidate.suffix.casefold() == ".png":
+            candidates.extend(
+                candidate.with_name(f"{candidate.stem}.{variant}{candidate.suffix}")
+                for variant in preferred_variants
+            )
+            try:
+                candidates.extend(
+                    sorted(
+                        candidate.parent.glob(f"{candidate.stem}.*{candidate.suffix}"),
+                        key=lambda item: item.name.casefold(),
+                    )
+                )
+            except OSError:
+                pass
+        for icon_file in candidates:
+            try:
+                if icon_file.is_file():
+                    return icon_file
+            except OSError:
+                continue
+    return None
+
+
+def _associated_icon_bytes(path: str, extractor: _WindowsIconExtractor) -> bytes | None:
+    """Resolve an extension's association, including packaged app icons."""
+
+    for location in _association_icon_locations(path):
+        packaged_asset = _packaged_icon_asset(location)
+        if packaged_asset is not None:
+            try:
+                icon_bytes = packaged_asset.read_bytes()
+            except OSError:
+                icon_bytes = None
+            if icon_bytes and icon_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+                return icon_bytes
+            continue
+
+        parsed_location = _parse_icon_location(location)
+        if parsed_location is None:
+            continue
+        icon_path, icon_index = parsed_location
+        if not os.path.isfile(icon_path):
+            continue
+        try:
+            icon_bytes = extractor.extract_icon_location(icon_path, icon_index)
+        except Exception as exc:
+            log("Could not extract associated file icon:", icon_path, repr(exc))
+            continue
+        if icon_bytes:
+            return icon_bytes
+    return None
+
+
+def _icon_cache_file(path: str, is_dir: bool) -> Path:
+    if is_dir:
+        cache_key = "folder"
+        prefix = "extension"
+    else:
+        extension = os.path.splitext(path)[1].casefold()
+        if extension in DYNAMIC_ICON_EXTENSIONS:
+            try:
+                stat = os.stat(path, follow_symlinks=False)
+                signature = f"{stat.st_size}:{stat.st_mtime_ns}"
+            except OSError:
+                signature = "missing"
+            normalized_path = os.path.normcase(os.path.abspath(path))
+            cache_key = f"{normalized_path}|{signature}"
+            prefix = "file"
+        else:
+            cache_key = extension or "no-extension"
+            prefix = "extension"
+
+    digest = hashlib.sha256(f"{ICON_CACHE_VERSION}|{cache_key}".encode("utf-8", "surrogatepass")).hexdigest()[:24]
+    return ICON_CACHE_DIR / f"{prefix}_{digest}.png"
+
+
+def _cached_icon_uri(path: str, is_dir: bool) -> str | None:
+    cache_file = _icon_cache_file(path, is_dir)
+    try:
+        if cache_file.is_file() and cache_file.stat().st_size > 32:
+            return cache_file.resolve().as_uri()
+    except OSError:
+        pass
+    return None
+
+
+def _write_icon_cache(cache_file: Path, icon_bytes: bytes) -> bool:
+    temporary_path: Path | None = None
+    try:
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            prefix=f".{cache_file.stem}-",
+            suffix=".tmp",
+            dir=cache_file.parent,
+            delete=False,
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+            temporary.write(icon_bytes)
+            temporary.flush()
+        os.replace(temporary_path, cache_file)
+        return True
+    except OSError as exc:
+        log("Could not cache file icon:", repr(exc))
+        return False
+    finally:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+def _system_icon_for(path: str, is_dir: bool) -> str | None:
+    if os.name != "nt":
+        # //TODO: Implement multiplatform
+        return None
+
+    with ICON_CACHE_LOCK:
+        cached = _cached_icon_uri(path, is_dir)
+        if cached is not None:
+            return cached
+
+        extractor = _windows_icon_extractor()
+        if extractor is None:
+            return None
+
+        icon_bytes: bytes | None = None
+        extension = os.path.splitext(path)[1].casefold() if not is_dir else ""
+        if not is_dir and extension not in DYNAMIC_ICON_EXTENSIONS:
+            try:
+                icon_bytes = _associated_icon_bytes(path, extractor)
+            except Exception as exc:
+                log("Could not resolve associated file icon:", path, repr(exc))
+        try:
+            if icon_bytes is None:
+                icon_bytes = extractor.extract(path)
+        except Exception as exc:
+            log("Could not extract file icon:", path, repr(exc))
+            icon_bytes = None
+        if icon_bytes is None and not is_dir:
+            try:
+                icon_bytes = _associated_icon_bytes(path, extractor)
+            except Exception as exc:
+                log("Could not resolve associated file icon:", path, repr(exc))
+        if not icon_bytes or not _write_icon_cache(_icon_cache_file(path, is_dir), icon_bytes):
+            return None
+        return _cached_icon_uri(path, is_dir)
+
+
+def clear_icon_cache() -> int:
+    removed = 0
+    with ICON_CACHE_LOCK:
+        if not ICON_CACHE_DIR.exists():
+            return 0
+        try:
+            for child in ICON_CACHE_DIR.iterdir():
+                if not child.is_file() and not child.is_symlink():
+                    continue
+                if child.suffix.casefold() not in {".png", ".tmp"}:
+                    continue
+                try:
+                    child.unlink()
+                    removed += 1
+                except OSError as exc:
+                    log("Could not remove cached icon:", child, repr(exc))
+        except OSError as exc:
+            log("Could not enumerate icon cache:", repr(exc))
+    return removed
 
 
 def default_settings() -> dict[str, Any]:
@@ -91,6 +792,7 @@ def page(page_id: str, title: str, history: str = "none", *, root: bool = False)
 SEARCH_ACTIONS = [
     {"id": "refresh", "title": "Run search again", "icon": "refresh", "shortcut": "ctrl+r"},
     {"id": "settings", "title": "Search settings", "icon": "settings", "shortcut": "ctrl+shift+s"},
+    {"id": "clear_icons_cache", "title": "Clear Icons Cache", "icon": "trash"},
     {"id": "help", "title": "How this search works", "icon": "help", "shortcut": "ctrl+shift+h"},
 ]
 
@@ -626,7 +1328,7 @@ def root_label(root: str) -> str:
     return f"{name} · {drive}" if drive else name
 
 
-def icon_for(path: str, is_dir: bool) -> str:
+def _fallback_icon_for(path: str, is_dir: bool) -> str:
     if is_dir:
         return "folder"
     extension = Path(path).suffix.casefold()
@@ -643,6 +1345,10 @@ def icon_for(path: str, is_dir: bool) -> str:
     if extension in {".zip", ".7z", ".rar", ".tar", ".gz"}:
         return "download"
     return "file"
+
+
+def icon_for(path: str, is_dir: bool) -> str:
+    return _system_icon_for(path, is_dir) or _fallback_icon_for(path, is_dir)
 
 
 def markdown_escape(value: str) -> str:
@@ -1045,6 +1751,14 @@ def handle_action(item_id: str, action: str) -> None:
             cancel_search()
             render_help()
         elif action == "refresh":
+            start_search(0, STATE["current_query"])
+        elif action == "clear_icons_cache":
+            # Cancel first so a result renderer cannot hold STATE_LOCK while
+            # this action owns ICON_CACHE_LOCK.
+            cancel_search()
+            removed = clear_icon_cache()
+            message = "No cached file icons to clear" if removed == 0 else f"Cleared {removed} cached file icon(s)"
+            command("toast", text=message, style="success")
             start_search(0, STATE["current_query"])
         elif action == "check_fd":
             check_fd_again()

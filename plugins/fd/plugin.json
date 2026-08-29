@@ -6,7 +6,7 @@
   "description": "Find files instantly across your chosen folders with fd",
   "icon": "search",
   "runtime": "python",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "entry": "main.py",
   "args": [],
   "enabled": true

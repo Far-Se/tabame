@@ -1,0 +1,14 @@
+{
+  "id": "wojak-picker",
+  "name": "Wojak Picker",
+  "keyword": "wojak",
+  "category": "Fun & Casual",
+  "description": "Browse, search, and copy Wojak images to the Windows clipboard.",
+  "icon": "image",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "args": [],
+  "pip": ["pillow>=10"],
+  "dev": false
+}
