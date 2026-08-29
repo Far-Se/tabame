@@ -1098,6 +1098,8 @@ class _HotkeyActionRowState extends State<_HotkeyActionRow> {
         }
       case ActionType.openQuickMenuPage:
         return "Open: ${a.value}";
+      case ActionType.insertClipboardHistory:
+        return "Insert Clipboard #${a.value}";
       case ActionType.wait:
         return "Wait: ${a.value}ms";
       case ActionType.openLauncherWithPrefix:

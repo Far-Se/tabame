@@ -177,6 +177,7 @@ class PortableHotkeyConfiguration {
       case ActionType.sendClick:
       case ActionType.openQuickMenuPage:
       case ActionType.openLauncherWithPrefix:
+      case ActionType.insertClipboardHistory:
         return false;
     }
   }

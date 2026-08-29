@@ -147,13 +147,13 @@ class LauncherModalTokens {
           dim: RelayTokens.dim(isDark),
         );
       case LauncherDesign.newCast:
-        return const LauncherModalTokens._(
+        return LauncherModalTokens._(
           design: LauncherDesign.newCast,
-          isDark: true,
-          surface: RaycastTokens.surface,
-          accent: RaycastTokens.primary,
-          onSurface: RaycastTokens.primary,
-          dim: RaycastTokens.dim,
+          isDark: isDark,
+          surface: RaycastTokens.surface(isDark),
+          accent: RaycastTokens.primary(isDark),
+          onSurface: RaycastTokens.primary(isDark),
+          dim: RaycastTokens.dim(isDark),
         );
       case LauncherDesign.classic:
       case LauncherDesign.serene:

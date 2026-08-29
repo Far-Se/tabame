@@ -49,17 +49,18 @@ class _RaycastShortcutBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        color: RaycastTokens.badge,
+        color: RaycastTokens.badge(isDark),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         '⌘${index + 1}',
         style: RaycastTokens.mono(
           fontSize: 12,
-          color: RaycastTokens.muted,
+          color: RaycastTokens.muted(isDark),
           fontWeight: FontWeight.w500,
           height: 1.0,
         ),
@@ -240,6 +241,7 @@ class LauncherResultRow extends StatelessWidget {
   }
 
   Widget _buildRaycast(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final bool reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final int animMs = reduceMotion || isRepeating ? 40 : 120;
     final int? resultIndex = LauncherRaycastResultIndex.maybeOf(context);
@@ -251,14 +253,14 @@ class LauncherResultRow extends StatelessWidget {
           children: <Widget>[
             _titleText(RaycastTokens.ui(
               fontSize: 14,
-              color: isSelected ? RaycastTokens.primary : RaycastTokens.secondary,
+              color: isSelected ? RaycastTokens.primary(isDark) : RaycastTokens.secondary(isDark),
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
               height: 1.15,
             )),
             if ((subtitle ?? '').isNotEmpty)
               _subtitleText(RaycastTokens.ui(
                 fontSize: 11,
-                color: isSelected ? RaycastTokens.muted.withAlpha(210) : RaycastTokens.dim,
+                color: isSelected ? RaycastTokens.muted(isDark).withAlpha(210) : RaycastTokens.dim(isDark),
                 fontWeight: FontWeight.w400,
                 height: 1.1,
               )),
@@ -280,7 +282,7 @@ class LauncherResultRow extends StatelessWidget {
             margin: const EdgeInsets.symmetric(vertical: 1),
             padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
-              color: isSelected ? RaycastTokens.selected : Colors.transparent,
+              color: isSelected ? RaycastTokens.selected(isDark) : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -290,7 +292,7 @@ class LauncherResultRow extends StatelessWidget {
                   height: 20,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(isSelected ? 18 : 10),
+                    color: (isDark ? Colors.white : Colors.black).withAlpha(isSelected ? 18 : 10),
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: icon,

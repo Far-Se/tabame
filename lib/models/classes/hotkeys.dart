@@ -694,6 +694,7 @@ enum ActionType {
   openQuickMenuPage,
   wait,
   openLauncherWithPrefix,
+  insertClipboardHistory,
 }
 
 class HotKeyInfo {
@@ -748,6 +749,7 @@ class HotKeyInfo {
     ActionType.openQuickMenuPage: Icons.apps,
     ActionType.wait: Icons.timer_sharp,
     ActionType.openLauncherWithPrefix: Icons.menu_book,
+    ActionType.insertClipboardHistory: Icons.copy,
   };
   static const Map<TriggerType, IconData> triggerTypeIcons = <TriggerType, IconData>{
     TriggerType.press: Icons.touch_app,

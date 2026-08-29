@@ -302,10 +302,11 @@ extension LauncherDesignBuilder on LauncherDesign {
           ],
         );
       case LauncherDesign.newCast:
+        final bool isDark = surface.computeLuminance() < 0.5;
         return BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          color: RaycastTokens.surface.withAlpha(236),
-          border: Border.all(color: Colors.white.withAlpha(10)),
+          color: surface.withAlpha(236),
+          border: Border.all(color: (isDark ? Colors.white : Colors.black).withAlpha(10)),
           boxShadow: <BoxShadow>[
             BoxShadow(
               color: Colors.black.withAlpha(72),
@@ -860,18 +861,23 @@ extension LauncherDesignBuilder on LauncherDesign {
       case LauncherDesign.relay:
         return RelayLauncherHeader(label: label, accent: accent);
       case LauncherDesign.newCast:
-        return Padding(
-          padding: const EdgeInsets.only(left: 16, top: 8, bottom: 6),
-          child: Text(
-            (label == 'Results' ? 'Suggestions' : label).toUpperCase(),
-            style: RaycastTokens.ui(
-              fontSize: 11,
-              color: RaycastTokens.dim,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.25,
-              height: 1.1,
-            ),
-          ),
+        return Builder(
+          builder: (BuildContext context) {
+            final bool isDark = Theme.of(context).brightness == Brightness.dark;
+            return Padding(
+              padding: const EdgeInsets.only(left: 16, top: 8, bottom: 6),
+              child: Text(
+                (label == 'Results' ? 'Suggestions' : label).toUpperCase(),
+                style: RaycastTokens.ui(
+                  fontSize: 11,
+                  color: RaycastTokens.dim(isDark),
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.25,
+                  height: 1.1,
+                ),
+              ),
+            );
+          },
         );
       case LauncherDesign.terminal2:
         return Terminal2LauncherHeader(label: label, accent: accent);

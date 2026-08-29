@@ -341,6 +341,15 @@ class ClipboardHistoryStore {
     return _copyEntry(entry);
   }
 
+  /// Copies the [index]th most recent unpinned entry to the system clipboard.
+  /// Indexes are one-based, so index 1 is the newest entry.
+  static Future<bool> copyByIndex(int index) async {
+    if (index < 1) return false;
+    final List<ClipboardHistoryEntry> entries = await loadPaged(limit: index);
+    if (entries.length < index) return false;
+    return copyEntry(entries[index - 1]);
+  }
+
   @Deprecated('Use loadPaged or loadPinned instead')
   static Future<List<ClipboardHistoryEntry>> load() async => loadPaged(limit: 99999);
 

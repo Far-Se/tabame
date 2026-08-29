@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/classes/hotkeys.dart';
 import '../../models/classes/text_snippet.dart';
+import '../../models/clipboard_history.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/win32/keys.dart';
@@ -328,7 +329,16 @@ class WindowsHotkeyActionService extends HotkeyActionService {
         if (action.value.isNotEmpty) {
           await QuickMenuFunctions.openQuickMenuWithAction(action.value, center: true, useSlash: false);
         }
+      case 'insertClipboardHistory':
+        await _pasteClipboardHistory(action.value);
     }
+  }
+
+  Future<void> _pasteClipboardHistory(String rawIndex) async {
+    final int? index = int.tryParse(rawIndex.trim());
+    if (index == null || index < 1 || index > 9) return;
+    if (!await ClipboardHistoryStore.copyByIndex(index)) return;
+    await _sendHotkey('CTRL+V');
   }
 
   Future<void> _sendHotkey(String value) async {

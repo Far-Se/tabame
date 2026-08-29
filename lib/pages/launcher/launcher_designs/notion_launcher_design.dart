@@ -155,15 +155,20 @@ class NotionLauncherFrame extends StatelessWidget {
         decoration: notionLauncherOuterDecoration(surface),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(7),
-          child: ColoredBox(
-            color: NotionTokens.canvas(isDark),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                child,
-                _NotionLauncherFooter(isDark: isDark, resultCount: resultCount),
-              ],
-            ),
+          child: Stack(
+            children: <Widget>[
+              if (Design.hasBackdrop) const StableBackdrop(),
+              ColoredBox(
+                color: NotionTokens.canvas(isDark).withAlpha(Design.hasBackdrop ? (isDark ? 224 : 232) : 255),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    child,
+                    _NotionLauncherFooter(isDark: isDark, resultCount: resultCount),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

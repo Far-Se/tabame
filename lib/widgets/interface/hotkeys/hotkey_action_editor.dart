@@ -942,7 +942,14 @@ class HotKeyActionState extends State<HotKeyAction> {
       return CustomTextInput(
         labelText: "Wait (ms)",
         value: action.value,
-        onChanged: (String v) => action.value = v,
+        onChanged: (String v) => action.value = (int.tryParse(v) ?? 0).toString(),
+        keyboardType: TextInputType.number,
+      );
+    } else if (action.type == ActionType.insertClipboardHistory) {
+      return CustomTextInput(
+        labelText: "Index of the clipboard",
+        value: action.value,
+        onChanged: (String v) => action.value = (int.tryParse(v) ?? 1).clamp(1, 9).toString(),
         keyboardType: TextInputType.number,
       );
     } else if (action.type == ActionType.openLauncherWithPrefix) {
@@ -1193,6 +1200,8 @@ class _ActionStepCardState extends State<_ActionStepCard> with SingleTickerProvi
                                         widget.action.value = HotKeyInfo.quickMenuPopups[0];
                                       } else if (widget.action.type == ActionType.wait) {
                                         widget.action.value = "1000";
+                                      } else if (widget.action.type == ActionType.insertClipboardHistory) {
+                                        widget.action.value = "1";
                                       } else if (widget.action.type == ActionType.openLauncherWithPrefix) {
                                         widget.action.value = "";
                                       }

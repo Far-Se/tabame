@@ -15,12 +15,13 @@ class _RaycastSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Container(
           height: 56,
-          color: RaycastTokens.deepSurface.withAlpha(80),
+          color: RaycastTokens.deepSurface(isDark).withAlpha(80),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 12, 0),
             child: Row(
@@ -48,7 +49,7 @@ class _RaycastSearchBar extends StatelessWidget {
                       height: 13,
                       child: CircularProgressIndicator(
                         strokeWidth: 1.5,
-                        color: RaycastTokens.muted.withAlpha(150),
+                        color: RaycastTokens.muted(isDark).withAlpha(150),
                       ),
                     ),
                   ),
@@ -58,10 +59,10 @@ class _RaycastSearchBar extends StatelessWidget {
             ),
           ),
         ),
-        const Divider(
+        Divider(
           height: 1,
           thickness: 1,
-          color: RaycastTokens.divider,
+          color: RaycastTokens.divider(isDark),
         ),
       ],
     );
@@ -74,29 +75,30 @@ class _RaycastQuickAiButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Semantics(
       button: true,
       label: 'Quick AI',
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
         decoration: BoxDecoration(
-          color: RaycastTokens.badge,
+          color: RaycastTokens.badge(isDark),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const Icon(
+            Icon(
               Icons.move_to_inbox_rounded,
               size: 14,
-              color: RaycastTokens.muted,
+              color: RaycastTokens.muted(isDark),
             ),
             const SizedBox(width: 5),
             Text(
               'Quick AI',
               style: RaycastTokens.ui(
                 fontSize: 13,
-                color: RaycastTokens.secondary,
+                color: RaycastTokens.secondary(isDark),
                 fontWeight: FontWeight.w500,
                 height: 1.0,
               ),
@@ -126,6 +128,8 @@ class RaycastLauncherFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const BorderRadius radius = BorderRadius.all(Radius.circular(14));
+    final bool isDark = surface.computeLuminance() < 0.5;
+    final Color sheen = isDark ? Colors.white : Colors.black;
 
     return LauncherTheme(
       data: const LauncherThemeData(design: LauncherDesign.newCast),
@@ -138,23 +142,20 @@ class RaycastLauncherFrame extends StatelessWidget {
           borderRadius: radius,
           child: Stack(
             children: <Widget>[
-              if (Design.hasBackdrop)
-                const Positioned.fill(
-                  child: IgnorePointer(child: StableBackdrop()),
-                ),
-              const Positioned.fill(
+              if (Design.hasBackdrop) const StableBackdrop(),
+              Positioned.fill(
                 child: IgnorePointer(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topRight,
-                        end: Alignment(-0.18, 0.38),
+                        end: const Alignment(-0.18, 0.38),
                         colors: <Color>[
-                          Color(0x1AFFFFFF),
-                          Color(0x08FFFFFF),
+                          sheen.withAlpha(isDark ? 26 : 10),
+                          sheen.withAlpha(isDark ? 8 : 4),
                           Colors.transparent,
                         ],
-                        stops: <double>[0, 0.28, 1],
+                        stops: const <double>[0, 0.28, 1],
                       ),
                     ),
                   ),
@@ -171,7 +172,7 @@ class RaycastLauncherFrame extends StatelessWidget {
                       gradient: RadialGradient(
                         center: Alignment.topRight,
                         radius: 1.0,
-                        colors: <Color>[Colors.white.withAlpha(10), Colors.transparent],
+                        colors: <Color>[sheen.withAlpha(isDark ? 10 : 5), Colors.transparent],
                       ),
                     ),
                   ),
@@ -199,9 +200,10 @@ class _RaycastFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = onSurface.computeLuminance() > 0.5;
     final TextStyle labelStyle = RaycastTokens.ui(
       fontSize: 13,
-      color: RaycastTokens.dim,
+      color: RaycastTokens.dim(isDark),
       fontWeight: FontWeight.w500,
       height: 1.0,
     );
@@ -219,7 +221,7 @@ class _RaycastFooter extends StatelessWidget {
                   '⌘',
                   style: RaycastTokens.mono(
                     fontSize: 15,
-                    color: RaycastTokens.muted,
+                    color: RaycastTokens.muted(isDark),
                     fontWeight: FontWeight.w500,
                     height: 1.0,
                   ),
@@ -227,25 +229,25 @@ class _RaycastFooter extends StatelessWidget {
                 const SizedBox(width: 7),
                 Text('Displays', style: labelStyle),
                 const Spacer(),
-                const Icon(Icons.keyboard_return_rounded, size: 14, color: RaycastTokens.muted),
+                Icon(Icons.keyboard_return_rounded, size: 14, color: RaycastTokens.muted(isDark)),
                 const SizedBox(width: 5),
                 Text('Open', style: labelStyle),
                 const SizedBox(width: 16),
-                Container(width: 1, height: 15, color: RaycastTokens.divider),
+                Container(width: 1, height: 15, color: RaycastTokens.divider(isDark)),
                 const SizedBox(width: 16),
                 Text('Actions', style: labelStyle),
                 const SizedBox(width: 7),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
                   decoration: BoxDecoration(
-                    color: RaycastTokens.badge,
+                    color: RaycastTokens.badge(isDark),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     '⌘K',
                     style: RaycastTokens.mono(
                       fontSize: 11,
-                      color: RaycastTokens.muted,
+                      color: RaycastTokens.muted(isDark),
                       fontWeight: FontWeight.w500,
                       height: 1.0,
                     ),
@@ -255,10 +257,10 @@ class _RaycastFooter extends StatelessWidget {
             ),
           ),
         ),
-        const Divider(
+        Divider(
           height: 1,
           thickness: 1,
-          color: RaycastTokens.divider,
+          color: RaycastTokens.divider(isDark),
         ),
       ],
     );

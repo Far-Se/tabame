@@ -444,6 +444,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       tryPop = true;
       user.launcherSearchText = "";
       Globals.clearQuickMenuSearchInput();
+      WinUtils.fixDrawBug(delay: const Duration(milliseconds: 10));
       try {
         if (mounted) setState(() {});
       } catch (_) {}

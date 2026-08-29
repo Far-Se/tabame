@@ -19,8 +19,11 @@ class AnimeLauncherFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color card = Color.alphaBlend(Colors.white.withAlpha(isDark ? 13 : 105), surface);
-    final Color ribbon = Color.alphaBlend(accent.withAlpha(isDark ? 76 : 48), surface);
+    final bool hasBackdrop = Design.hasBackdrop;
+    final int cardAlpha = hasBackdrop ? (isDark ? 224 : 232) : 255;
+    final int ribbonAlpha = hasBackdrop ? (isDark ? 216 : 224) : 255;
+    final Color card = Color.alphaBlend(Colors.white.withAlpha(isDark ? 13 : 105), surface).withAlpha(cardAlpha);
+    final Color ribbon = Color.alphaBlend(accent.withAlpha(isDark ? 76 : 48), surface).withAlpha(ribbonAlpha);
     return LauncherTheme(
       data: const LauncherThemeData(design: LauncherDesign.anime),
       child: Container(

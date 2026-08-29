@@ -13,17 +13,17 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
     return switch (_design) {
       LauncherDesign.newCast => _copyDesignTheme(
           baseTheme,
-          brightness: Brightness.dark,
-          colorSchemeBrightness: Brightness.dark,
-          surface: RaycastTokens.surface,
-          onSurface: RaycastTokens.primary,
-          primary: RaycastTokens.primary,
-          highlightColor: RaycastTokens.selected,
+          brightness: isDark ? Brightness.dark : Brightness.light,
+          colorSchemeBrightness: isDark ? Brightness.dark : Brightness.light,
+          surface: RaycastTokens.surface(isDark),
+          onSurface: RaycastTokens.primary(isDark),
+          primary: RaycastTokens.primary(isDark),
+          highlightColor: RaycastTokens.selected(isDark),
           textTheme: baseTheme.textTheme.apply(
             fontFamily: 'Segoe UI Variable Text',
             fontFamilyFallback: const <String>['Segoe UI', 'Arial'],
-            bodyColor: RaycastTokens.primary,
-            displayColor: RaycastTokens.primary,
+            bodyColor: RaycastTokens.primary(isDark),
+            displayColor: RaycastTokens.primary(isDark),
           ),
         ),
       LauncherDesign.windowsXp => _copyDesignTheme(

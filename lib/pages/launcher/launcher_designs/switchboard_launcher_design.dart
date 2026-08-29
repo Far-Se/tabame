@@ -155,19 +155,24 @@ class SwitchboardLauncherFrame extends StatelessWidget {
         decoration: switchboardLauncherOuterDecoration(surface, accent),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(math.max(0, radius - 1)),
-          child: ColoredBox(
-            color: SwitchboardTokens.canvas(isDark),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                child,
-                _SwitchboardFooter(
-                  isDark: isDark,
-                  accent: accent,
-                  resultCount: resultCount,
+          child: Stack(
+            children: <Widget>[
+              if (Design.hasBackdrop) const StableBackdrop(),
+              ColoredBox(
+                color: SwitchboardTokens.canvas(isDark).withAlpha(Design.hasBackdrop ? (isDark ? 224 : 232) : 255),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    child,
+                    _SwitchboardFooter(
+                      isDark: isDark,
+                      accent: accent,
+                      resultCount: resultCount,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

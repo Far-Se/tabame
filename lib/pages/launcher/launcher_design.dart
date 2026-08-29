@@ -709,19 +709,41 @@ abstract final class RelayTokens {
 
 /// Raycast-inspired command-palette tokens.
 ///
-/// This design intentionally owns its graphite palette instead of inheriting
-/// the user's launcher colors. Result icons still keep their source colors;
-/// the shell reserves color for legibility, selection and depth.
+/// This design intentionally owns its neutral palette instead of inheriting
+/// the user's launcher colors. The palette follows the host brightness so the
+/// shell remains legible in both light and dark mode. Result icons still keep
+/// their source colors; the shell reserves color for legibility, selection and
+/// depth.
 abstract final class RaycastTokens {
-  static const Color surface = Color(0xFF1C1C1E);
-  static const Color deepSurface = Color(0xFF151517);
-  static const Color selected = Color(0xFF3A3A3C);
-  static const Color divider = Color(0xFF2A2A2C);
-  static const Color badge = Color(0xFF2C2C2E);
-  static const Color primary = Color(0xFFF2F2F7);
-  static const Color secondary = Color(0xFFD1D1D6);
-  static const Color muted = Color(0xFF8E8E93);
-  static const Color dim = Color(0xFF6E6E73);
+  static const Color _surfaceDark = Color(0xFF1C1C1E);
+  static const Color _deepSurfaceDark = Color(0xFF151517);
+  static const Color _selectedDark = Color(0xFF3A3A3C);
+  static const Color _dividerDark = Color(0xFF2A2A2C);
+  static const Color _badgeDark = Color(0xFF2C2C2E);
+  static const Color _primaryDark = Color(0xFFF2F2F7);
+  static const Color _secondaryDark = Color(0xFFD1D1D6);
+  static const Color _mutedDark = Color(0xFF8E8E93);
+  static const Color _dimDark = Color(0xFF6E6E73);
+
+  static const Color _surfaceLight = Color(0xFFF7F7F8);
+  static const Color _deepSurfaceLight = Color(0xFFF0F0F2);
+  static const Color _selectedLight = Color(0xFFE4E4E7);
+  static const Color _dividerLight = Color(0xFFD9D9DD);
+  static const Color _badgeLight = Color(0xFFEAEAED);
+  static const Color _primaryLight = Color(0xFF1C1C1E);
+  static const Color _secondaryLight = Color(0xFF48484A);
+  static const Color _mutedLight = Color(0xFF636366);
+  static const Color _dimLight = Color(0xFF8E8E93);
+
+  static Color surface(bool isDark) => isDark ? _surfaceDark : _surfaceLight;
+  static Color deepSurface(bool isDark) => isDark ? _deepSurfaceDark : _deepSurfaceLight;
+  static Color selected(bool isDark) => isDark ? _selectedDark : _selectedLight;
+  static Color divider(bool isDark) => isDark ? _dividerDark : _dividerLight;
+  static Color badge(bool isDark) => isDark ? _badgeDark : _badgeLight;
+  static Color primary(bool isDark) => isDark ? _primaryDark : _primaryLight;
+  static Color secondary(bool isDark) => isDark ? _secondaryDark : _secondaryLight;
+  static Color muted(bool isDark) => isDark ? _mutedDark : _mutedLight;
+  static Color dim(bool isDark) => isDark ? _dimDark : _dimLight;
 
   static TextStyle ui({
     double? fontSize,

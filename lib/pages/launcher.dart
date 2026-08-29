@@ -749,7 +749,7 @@ class LauncherState extends State<Launcher>
       ),
       highlightColor: Design.accent.withAlpha(30),
     );
-    final bool isDark = _design == LauncherDesign.newCast || baseTheme.brightness == Brightness.dark;
+    final bool isDark = baseTheme.brightness == Brightness.dark;
     final bool isTerminal = _design == LauncherDesign.terminal;
     final bool isTerminal2 = _design == LauncherDesign.terminal2;
     final bool isZen = _design == LauncherDesign.zen;
@@ -828,7 +828,7 @@ class LauncherState extends State<Launcher>
           hintText: (_activePlugin != null ? _pluginFrame?.placeholder : null) ??
               launcherTheme.searchHint ??
               (isTerminal2 ? 'type a command or search the system...' : 'Search applications, files, bookmarks...'),
-          hintStyle: TextStyle(color: isRaycast ? RaycastTokens.muted : onSurface.withAlpha(70)),
+          hintStyle: TextStyle(color: isRaycast ? RaycastTokens.muted(isDark) : onSurface.withAlpha(70)),
           border: InputBorder.none,
           isDense: true,
           contentPadding: EdgeInsets.only(
