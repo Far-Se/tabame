@@ -485,6 +485,24 @@ void main() {
       expect(PluginCommand.knownCommands.contains(command.name), isTrue);
     });
 
+    test('parses image and file clipboard commands', () {
+      final PluginCommand image = PluginCommand.fromJson(<String, dynamic>{
+        'command': 'copyImage',
+        'url': 'https://example.com/image.png',
+      })!;
+      expect(image.name, 'copyimage');
+      expect(image.url, 'https://example.com/image.png');
+      expect(PluginCommand.knownCommands.contains(image.name), isTrue);
+
+      final PluginCommand file = PluginCommand.fromJson(<String, dynamic>{
+        'command': 'copyFile',
+        'file': r'C:\Users\me\report.pdf',
+      })!;
+      expect(file.name, 'copyfile');
+      expect(file.url, r'C:\Users\me\report.pdf');
+      expect(PluginCommand.knownCommands.contains(file.name), isTrue);
+    });
+
     test('rejects messages without a usable command name', () {
       expect(PluginCommand.fromJson(<String, dynamic>{'type': 'command'}), isNull);
       expect(PluginCommand.fromJson(<String, dynamic>{'command': ''}), isNull);

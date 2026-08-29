@@ -156,7 +156,7 @@ Sent once after process start:
 {
   "type": "init",
   "query": "initial text",
-  "protocol": 13,
+  "protocol": 14,
   "theme": {
     "accent": "#63A0EA",
     "text": "#E8E8E8",
@@ -272,6 +272,8 @@ Relevant commands:
 | Command            | Fields                               | Effect                                                        |
 | ------------------ | ------------------------------------ | ------------------------------------------------------------- |
 | `copy`             | `text`                               | Copy and show a toast.                                        |
+| `copyImage`        | `url` (HTTP(S)) or `path`/`file`     | Copy image pixels to the image clipboard; Windows currently.   |
+| `copyFile`         | `path`/`file` or `paths`             | Copy local files/folders as file-drop clipboard data; Windows. |
 | `paste`            | `text`                               | Copy, hide launcher, reactivate previous window, send Ctrl+V. |
 | `open`             | `url` or `path`                      | Open URL/file/folder with default handler.                    |
 | `hide`             | —                                    | Hide launcher.                                                |

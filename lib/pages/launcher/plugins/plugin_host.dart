@@ -37,7 +37,8 @@ class LauncherPluginHost {
   final void Function(PluginRenderFrame frame) onFrame;
 
   /// Called with every `{"type":"command"}` message the plugin emits (copy,
-  /// paste, open, hide, toast). The launcher executes the side effect.
+  /// copyimage, copyfile, paste, open, hide, toast). The launcher executes the
+  /// side effect.
   final void Function(PluginCommand command) onCommand;
 
   /// Protocol/lifecycle events shown in the dev-mode debug console. Always

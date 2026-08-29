@@ -24,7 +24,8 @@ import 'dart:ui' show Color;
 /// 13 = toolbars, configurable tables, resizable previews, file drops,
 ///      inline editing, banners, skeletons, media controls, async form
 ///      validation, richer form inputs, and production chart controls.
-const int pluginProtocolVersion = 13;
+/// 14 = host-mediated image and file clipboard commands.
+const int pluginProtocolVersion = 14;
 
 /// The layout a plugin render frame requests.
 enum PluginViewType {
@@ -1510,6 +1511,8 @@ class PluginEmptyState {
 /// of shelling out to `clip`/`start` itself, a plugin asks the host to copy,
 /// paste, open a URL, hide the launcher, show a toast/notification, read the
 /// clipboard, or persist values in per-plugin storage.
+/// Image pixels and native file-drop payloads use the `copyimage` and
+/// `copyfile` commands respectively.
 class PluginCommand {
   const PluginCommand({required this.name, this.text, this.url, this.data = const <String, dynamic>{}});
 
@@ -1527,7 +1530,7 @@ class PluginCommand {
   final Map<String, dynamic> data;
 
   static const Set<String> knownCommands = <String>{
-    'copy', 'paste', 'open', 'hide', 'toast', 'setquery', //
+    'copy', 'copyimage', 'copyfile', 'paste', 'open', 'hide', 'toast', 'setquery', //
     'storage', 'clipboardread', 'clipboardhistory', 'notify', 'background', 'oauth', 'browserbridge',
   };
 
@@ -1538,7 +1541,14 @@ class PluginCommand {
     final Object? name = json['command'];
     if (name is! String || name.trim().isEmpty) return null;
     final Object? text = json['text'];
-    final Object? url = json['url'] ?? json['path'];
+    Object? url;
+    for (final String key in <String>['url', 'path', 'file']) {
+      final Object? candidate = json[key];
+      if (candidate is String && candidate.trim().isNotEmpty) {
+        url = candidate;
+        break;
+      }
+    }
     return PluginCommand(
       name: name.trim().toLowerCase(),
       text: text is String ? text : null,

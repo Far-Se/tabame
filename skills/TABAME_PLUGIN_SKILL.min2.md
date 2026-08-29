@@ -82,7 +82,7 @@ All are JSON objects with `type`:
 
 | Type               | Important fields / meaning                                                                                                 |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `init`             | `query`, `protocol` (currently 13), `theme:{accent,text,background,dark}`, `locale`                                        |
+| `init`             | `query`, `protocol` (currently 14), `theme:{accent,text,background,dark}`, `locale`                                        |
 | `query`            | `text`, `rev`; each keystroke unless `inputMode:"submit"`                                                                  |
 | `submitQuery`      | `text`, `rev`; Enter in submit mode                                                                                        |
 | `select`           | `id`, `rev`                                                                                                                |
@@ -127,6 +127,8 @@ Only:
 | `command`          | Fields / behavior                                                                                                                                         |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `copy`             | `text`; clipboard + toast                                                                                                                                 |
+| `copyImage`        | `url` (HTTP(S)) or `path`/`file` (local image); copies image pixels; Windows currently                                                                    |
+| `copyFile`         | `path`/`file`, or `paths` (local file/folder paths); copies native file-drop references; Windows currently                                               |
 | `paste`            | `text`; clipboard, hide launcher, reactivate prior window, Ctrl+V                                                                                         |
 | `open`             | `url` or `path`; default handler                                                                                                                          |
 | `hide`             | hide launcher; sends `close` (send `background` first for long-running work)                                                                                                                          |
@@ -140,7 +142,7 @@ Only:
 | `oauth`            | `authorizationUrl` containing literal `{redirectUri}`, optional `requestId,timeout`; exchange returned code yourself; store tokens as secrets             |
 | `browserBridge`    | `op:status                                                                                                                                                | request`, required `requestId`for requests, optional`method,params,timeoutMs` |
 
-Commands are fire-and-forget unless documented with a reply. Several commands may be sent in sequence. `hide`/`paste` end the UI and send `close`; for long-running work, send `background` first, then `notify` on completion. A `copy` immediately followed by `hide` may hide its toast.
+Commands are fire-and-forget unless documented with a reply. Several commands may be sent in sequence. `copyImage` accepts an HTTP(S) image URL, a `file://` URL, or a local path; relative paths use the plugin folder. `copyFile` accepts a local `path`/`file` or `paths` array. `hide`/`paste` end the UI and send `close`; for long-running work, send `background` first, then `notify` on completion. A `copy` immediately followed by `hide` may hide its toast.
 
 Browser-owned JS uses `browserBridge` method `javascript.execute` with `params:{tabId?,code,input?,world?,allFrames?,frameIds?,injectImmediately?}`. `code` is required, may `await`, and returns through `return` (128 KiB maximum). `input` may be any JSON value; returned data must be JSON-serializable (192 KiB maximum). Default tab is active, default world is `USER_SCRIPT`; use `MAIN` only when page globals are required. Only HTTP(S) tabs are scriptable and Chromium “Allow User Scripts” must be enabled. Related methods include `tabs.open/list/close`.
 

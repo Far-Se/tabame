@@ -961,8 +961,8 @@ class LauncherState extends State<Launcher>
                                                 ? Column(
                                                     mainAxisSize: MainAxisSize.min,
                                                     children: <Widget>[
-                                                      if (_design == LauncherDesign.newCast)
-                                                        _design.buildSectionHeader(label: 'Others', accent: accent),
+                                                      // if (_design == LauncherDesign.newCast)
+                                                      _design.buildSectionHeader(label: 'Plugins', accent: accent),
                                                       Divider(
                                                         height: 17,
                                                         thickness: 1,

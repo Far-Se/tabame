@@ -6,6 +6,9 @@ part of '../../launcher.dart';
 // Plugin host and plugin-owned launcher behavior
 // ---------------------------------------------------------------------------
 
+const int _maxPluginImageDownloadBytes = 50 * 1024 * 1024;
+const Duration _pluginImageRequestTimeout = Duration(seconds: 30);
+
 mixin _PluginHostMixin on _LauncherStateMembersMixin {
   PluginAction get _launcherWindowAction => PluginAction(
         id: '__launcher_window__',
@@ -340,6 +343,12 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
         Clipboard.setData(ClipboardData(text: command.text ?? ''));
         _showPluginToast('Copied to clipboard');
         break;
+      case 'copyimage':
+        unawaited(_copyPluginImage(command));
+        break;
+      case 'copyfile':
+        unawaited(_copyPluginFiles(command));
+        break;
       case 'paste':
         unawaited(_pastePluginText(command.text ?? ''));
         break;
@@ -366,6 +375,196 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
       case 'setquery':
         _setPluginQuery(command.text ?? '');
         break;
+    }
+  }
+
+  /// Copies a plugin-provided image payload. Remote HTTP(S) sources are first
+  /// downloaded into a short-lived file so the Windows clipboard adapter can
+  /// decode large images on its native worker thread without crossing the
+  /// platform channel as a byte array.
+  Future<void> _copyPluginImage(PluginCommand command) async {
+    final PluginManifest? plugin = _activePlugin;
+    if (plugin == null) return;
+    final String pluginId = plugin.id;
+
+    if (!ClipboardService.instance.supportsImages) {
+      //TODO: Implement multiplatform
+      _showPluginToast('Image clipboard is currently available on Windows only', style: 'error');
+      return;
+    }
+
+    final String source = _pluginCommandSource(command);
+    if (source.isEmpty) {
+      _showPluginToast('copyImage requires an image URL or local path', style: 'error');
+      return;
+    }
+
+    Directory? temporaryDirectory;
+    try {
+      final Uri? remoteUri = _pluginHttpUri(source);
+      late final String imagePath;
+      if (remoteUri != null) {
+        if (_isCurrentPlugin(pluginId)) _showPluginToast('Downloading image…', style: 'progress');
+        temporaryDirectory = await Directory.systemTemp.createTemp('tabame_plugin_image_');
+        final File downloadedImage = File(p.join(temporaryDirectory.path, 'image'));
+        await _downloadPluginImage(remoteUri, downloadedImage);
+        imagePath = downloadedImage.path;
+      } else {
+        final String? localSource = _pluginLocalSource(source);
+        if (localSource == null) {
+          throw ArgumentError('copyImage accepts an HTTP(S) URL or a local image path');
+        }
+        imagePath = _resolvePluginPath(localSource, plugin.directory);
+        final FileSystemEntityType type = await FileSystemEntity.type(imagePath);
+        if (type != FileSystemEntityType.file) {
+          throw ArgumentError('Image file not found: $imagePath');
+        }
+      }
+
+      final bool copied = await ClipboardService.instance.writeContentFromFiles(imagePath: imagePath);
+      if (!copied) throw StateError('The image could not be copied to the clipboard');
+      if (_isCurrentPlugin(pluginId)) _showPluginToast('Copied image to clipboard');
+    } catch (error) {
+      if (_isCurrentPlugin(pluginId)) _showPluginToast('Could not copy image: $error', style: 'error');
+    } finally {
+      if (temporaryDirectory != null) {
+        try {
+          await temporaryDirectory.delete(recursive: true);
+        } catch (_) {
+          // A failed cleanup must not turn a successful clipboard operation
+          // into an error shown to the user.
+        }
+      }
+    }
+  }
+
+  /// Copies one or more local files/folders as a native file-drop clipboard
+  /// payload. A paths list supports plugin actions that already have a
+  /// multi-selection; a single path/file value is the common form.
+  Future<void> _copyPluginFiles(PluginCommand command) async {
+    final PluginManifest? plugin = _activePlugin;
+    if (plugin == null) return;
+    final String pluginId = plugin.id;
+
+    if (!ClipboardService.instance.supportsFileClipboard) {
+      //TODO: Implement multiplatform
+      _showPluginToast('File clipboard is currently available on Windows only', style: 'error');
+      return;
+    }
+
+    final List<String> sources = _pluginCommandPaths(command);
+    if (sources.isEmpty) {
+      _showPluginToast('copyFile requires a local path', style: 'error');
+      return;
+    }
+
+    try {
+      final List<String> paths = <String>[];
+      for (final String source in sources) {
+        final String? localSource = _pluginLocalSource(source);
+        if (localSource == null) throw ArgumentError('copyFile accepts local paths only');
+        final String path = _resolvePluginPath(localSource, plugin.directory);
+        final FileSystemEntityType type = await FileSystemEntity.type(path);
+        if (type == FileSystemEntityType.notFound) throw ArgumentError('File not found: $path');
+        paths.add(path);
+      }
+
+      final bool copied = await ClipboardService.instance.writeFiles(paths);
+      if (!copied) throw StateError('The file could not be copied to the clipboard');
+      if (_isCurrentPlugin(pluginId)) {
+        _showPluginToast(paths.length == 1 ? 'Copied file to clipboard' : 'Copied files to clipboard');
+      }
+    } catch (error) {
+      if (_isCurrentPlugin(pluginId)) _showPluginToast('Could not copy file: $error', style: 'error');
+    }
+  }
+
+  String _pluginCommandSource(PluginCommand command) {
+    final String? target = command.url;
+    if (target != null && target.trim().isNotEmpty) return target.trim();
+    final Object? rawSource = command.data['source'];
+    return rawSource is String ? rawSource.trim() : '';
+  }
+
+  List<String> _pluginCommandPaths(PluginCommand command) {
+    final Object? rawPaths = command.data['paths'];
+    if (rawPaths is List) {
+      final List<String> paths = rawPaths
+          .whereType<String>()
+          .map((String path) => path.trim())
+          .where((String path) => path.isNotEmpty)
+          .toList(growable: false);
+      if (paths.isNotEmpty) return paths;
+    }
+    final String source = _pluginCommandSource(command);
+    return source.isEmpty ? const <String>[] : <String>[source];
+  }
+
+  bool _isCurrentPlugin(String pluginId) => mounted && _activePlugin?.id == pluginId;
+
+  Uri? _pluginHttpUri(String source) {
+    final Uri? uri = Uri.tryParse(source);
+    if (uri == null || uri.host.isEmpty) return null;
+    final String scheme = uri.scheme.toLowerCase();
+    return scheme == 'http' || scheme == 'https' ? uri : null;
+  }
+
+  String? _pluginLocalSource(String source) {
+    final bool isWindowsPath =
+        RegExp(r'^[a-zA-Z]:[\\/]').hasMatch(source) || source.startsWith(r'\\') || source.startsWith('//');
+    if (isWindowsPath) return source;
+
+    final Uri? uri = Uri.tryParse(source);
+    if (uri != null && uri.scheme.toLowerCase() == 'file') {
+      try {
+        return uri.toFilePath(windows: Platform.isWindows);
+      } catch (_) {
+        return null;
+      }
+    }
+    if (uri != null && uri.hasScheme) return null;
+    return source;
+  }
+
+  String _resolvePluginPath(String source, String pluginDirectory) {
+    final File file = File(source);
+    if (file.isAbsolute || source.startsWith(r'\\') || RegExp(r'^[a-zA-Z]:[\\/]').hasMatch(source)) {
+      return file.path;
+    }
+    return p.join(pluginDirectory, source);
+  }
+
+  Future<void> _downloadPluginImage(Uri uri, File destination) async {
+    final HttpClient client = HttpClient()..connectionTimeout = _pluginImageRequestTimeout;
+    try {
+      final HttpClientRequest request = await client.getUrl(uri).timeout(_pluginImageRequestTimeout);
+      request
+        ..followRedirects = true
+        ..maxRedirects = 5;
+      final HttpClientResponse response = await request.close().timeout(_pluginImageRequestTimeout);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw HttpException('Image request failed (HTTP ${response.statusCode})', uri: uri);
+      }
+      if (response.contentLength > _maxPluginImageDownloadBytes) {
+        throw StateError('Image download exceeds the 50 MB limit');
+      }
+
+      final IOSink sink = destination.openWrite();
+      int byteCount = 0;
+      try {
+        await for (final List<int> chunk in response.timeout(_pluginImageRequestTimeout)) {
+          byteCount += chunk.length;
+          if (byteCount > _maxPluginImageDownloadBytes) {
+            throw StateError('Image download exceeds the 50 MB limit');
+          }
+          sink.add(chunk);
+        }
+      } finally {
+        await sink.close();
+      }
+      if (byteCount == 0) throw StateError('The image response was empty');
+    } finally {
+      client.close(force: true);
     }
   }
 

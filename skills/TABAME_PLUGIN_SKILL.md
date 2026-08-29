@@ -349,7 +349,7 @@ Notes:
 
 | Message         | When                                                                                                             | Fields                                                                                                                                                                                                                    |
 | --------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `init`          | Once, right after your process starts                                                                            | `query`: initial text after the keyword; `protocol`: int protocol version (currently 13); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"`                             |
+| `init`          | Once, right after your process starts                                                                            | `query`: initial text after the keyword; `protocol`: int protocol version (currently 14); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"`                             |
 | `query`         | On every keystroke while the keyword is active (not sent in `inputMode: "submit"`)                               | `text`: current text after the keyword; `rev`: integer generation counter                                                                                                                                                 |
 | `submitQuery`   | **Enter** while the frame declared `inputMode: "submit"` — the whole query line at once (chat-style input)       | `text`, `rev`                                                                                                                                                                                                             |
 | `select`        | When the highlighted item changes                                                                                | `id`: the selected item's id; `rev`                                                                                                                                                                                       |
@@ -380,7 +380,7 @@ Notes:
 Example stdin lines:
 
 ```json
-{"type":"init","query":"rome","protocol":13,"theme":{"accent":"#63A0EA","text":"#E8E8E8","background":"#1B1D23","dark":true},"locale":"en-US"}
+{"type":"init","query":"rome","protocol":14,"theme":{"accent":"#63A0EA","text":"#E8E8E8","background":"#1B1D23","dark":true},"locale":"en-US"}
 {"type":"query","text":"rome","rev":1}
 {"type":"select","id":"item-2","rev":1}
 {"type":"action","id":"item-2","action":"copy"}
@@ -422,6 +422,8 @@ Instead of shelling out to `clip`/`start` yourself, ask the host:
 | Command            | Fields                                                   | Effect                                                                                                                                                                                                                                                                                                                                                                                               |
 | ------------------ | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `copy`             | `text`                                                   | Puts `text` on the clipboard and shows a "Copied to clipboard" toast.                                                                                                                                                                                                                                                                                                                                |
+| `copyImage`        | `url` (HTTP(S)) or `path`/`file` (local image)            | Downloads or loads the image and places its pixels on the image clipboard. Windows currently; unsupported platforms show an error toast.                                                                                                                                                                                                                                                            |
+| `copyFile`         | `path`/`file`, or `paths` (local file/folder paths)        | Places one or more local files/folders on the clipboard as a native file-drop payload. Windows currently; unsupported platforms show an error toast.                                                                                                                                                                                                                                                  |
 | `paste`            | `text`                                                   | Puts `text` on the clipboard, **hides the launcher**, re-activates the previously focused window, and sends **Ctrl+V** — i.e. types the text where the user was working.                                                                                                                                                                                                                             |
 | `open`             | `url` (or `path`)                                        | Opens a URL in the default browser, or a file/folder with its default handler.                                                                                                                                                                                                                                                                                                                       |
 | `hide`             | —                                                        | Hides the launcher.                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -439,6 +441,9 @@ Example stdout lines:
 
 ```json
 {"type":"command","command":"copy","text":"#FF8800"}
+{"type":"command","command":"copyImage","url":"https://example.com/image.png"}
+{"type":"command","command":"copyImage","path":"C:\\Images\\poster.png"}
+{"type":"command","command":"copyFile","path":"C:\\Exports\\report.pdf"}
 {"type":"command","command":"open","url":"https://example.com"}
 {"type":"command","command":"toast","text":"Issue created"}
 {"type":"command","command":"hide"}
@@ -449,6 +454,11 @@ Notes:
 - Commands are fire-and-forget: **no `rev`**, no response.
 - Combine effects by printing several lines — the classic "Enter = copy and
   dismiss" is `copy` followed by `hide`.
+- `copyImage` accepts an HTTP(S) image URL, a `file://` URL, or a local path.
+  Relative local paths resolve against the plugin folder. It copies image
+  pixels, not the source URL; use `copy` when the URL itself is wanted.
+- `copyFile` accepts a local `path`/`file`, or a `paths` array for multiple
+  files/folders. It copies file references, not their contents.
 - `hide` and `paste` close the launcher and send `close`. For long-running work,
   send `background` first; the process then remains alive during the grace
   period and can still send `notify`. Without `background`, expect shutdown.
@@ -1223,11 +1233,14 @@ network requests, filesystem access, spawning tools. Some recipes:
 global `fetch` in Node 18+/Bun). Read secrets from a `config.json` in the plugin
 folder (the working directory) or from environment variables.
 
-**Clipboard, opening URLs, hiding the launcher** — use **commands** (§5.2);
-don't shell out:
+**Clipboard, image/file clipboard payloads, opening URLs, hiding the launcher**
+— use **commands** (§5.2); don't shell out:
 
 ```python
 send({"type": "command", "command": "copy", "text": value})
+send({"type": "command", "command": "copyImage", "url": image_url})
+send({"type": "command", "command": "copyImage", "path": local_image_path})
+send({"type": "command", "command": "copyFile", "path": local_file_path})
 send({"type": "command", "command": "open", "url": "https://example.com"})
 send({"type": "command", "command": "hide"})
 ```
