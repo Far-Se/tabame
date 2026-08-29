@@ -1,6 +1,7 @@
 {
   "id": "ask-claude",
   "name": "Ask Claude",
+  "category": "AI Tools",
   "description": "Chat with Claude in your browser without leaving the launcher.",
   "keyword": "ask",
   "runtime": "node",

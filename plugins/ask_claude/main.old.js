@@ -3,10 +3,11 @@
 
 // Ask Claude — a Tabame launcher plugin.
 //
-// Keyword: "ask". On first use it opens (or reuses) a claude.ai tab through
-// Tabame's app-owned browser bridge. Every message you submit from the
-// launcher is typed into that tab, sent, and the plugin waits for Claude's
-// reply in-page before relaying the text back into the launcher's chat view.
+// Keyword: "ask". The first screen lists saved Claude shortcuts and keeps a
+// direct-message row at the top. When a message is submitted, the plugin
+// opens (or reuses) a claude.ai tab through Tabame's app-owned browser bridge,
+// types the expanded prompt, and waits for Claude's reply in-page before
+// relaying the text back into the launcher's chat view.
 // The browser exposes snapshots while that response is streaming, so the
 // plugin interpolates those snapshots into character-level chat frames instead
 // of showing each polling chunk as a jump.
@@ -24,10 +25,7 @@ const path = require("path");
 const crypto = require("crypto");
 
 const SNIPPETS_STORAGE_KEY = "snippets";
-const HOME_ASK_ITEM_ID = "ask-claude";
-const CREATE_SNIPPET_ITEM_ID = "create-snippet";
-const DRAFT_MESSAGE_ITEM_ID = "draft-message";
-const DRAFT_PREVIEW_ITEM_ID = "draft-preview";
+const DIRECT_MESSAGE_ITEM_ID = "direct-message";
 const DEFAULT_SNIPPET_TRIGGER = "$process";
 const DEFAULT_SNIPPET_TEMPLATE =
   "Please tell me how many i have in my basked: $1, $2, $3";
@@ -306,7 +304,6 @@ function unwrapBrowserResult(execution) {
 class BrowserBridge {
   constructor(onStateChange) {
     this.onStateChange = onStateChange;
-    this.statusKnown = false;
     this.enabled = false;
     this.running = false;
     this.connected = false;
@@ -329,7 +326,6 @@ class BrowserBridge {
       this.onStateChange();
       return status;
     } catch (error) {
-      this.statusKnown = true;
       this.startError = error instanceof Error ? error.message : String(error);
       this.onStateChange();
       throw error;
@@ -356,7 +352,6 @@ class BrowserBridge {
   }
 
   applyStatus(status) {
-    this.statusKnown = true;
     this.enabled = Boolean(status.enabled);
     this.running = Boolean(status.running);
     this.connected = Boolean(status.connected);
@@ -403,8 +398,7 @@ class BrowserBridge {
 
 const state = {
   initialized: false,
-  screen: "home", // home | connection | chat | snippets | snippet_form
-  chatMode: "conversation", // autocomplete | conversation
+  screen: "connection", // connection | chat | snippets | snippet_form
   tabId: null,
   tabOwned: false,
   snippetFormMode: "create", // create | edit
@@ -412,8 +406,7 @@ const state = {
   snippetQuery: "",
   snippets: [],
   snippetsLoaded: false,
-  snippetsReturnScreen: "home",
-  draftText: "",
+  snippetsReturnScreen: "root",
   messages: [], // {id, role: "user"|"assistant"|"error"|"system", text, time}
   busy: false,
   thinkingStartedAt: null,
@@ -433,12 +426,17 @@ function newSnippetId() {
 
 function normalizeSnippet(value, fallbackId) {
   if (!value || typeof value !== "object") return null;
-  const trigger = String(value.trigger || "").trim();
+  const trigger = String(value.trigger || value.shortcut || "").trim();
   if (!trigger) return null;
+  const name = String(value.name || value.title || trigger).trim() || trigger;
+  const template = String(
+    value.template ?? value.prompt ?? value.text ?? DEFAULT_SNIPPET_TEMPLATE,
+  ).trim();
   return {
     id: String(value.id || fallbackId || newSnippetId()),
+    name,
     trigger,
-    template: String(value.template || DEFAULT_SNIPPET_TEMPLATE),
+    template: template || DEFAULT_SNIPPET_TEMPLATE,
   };
 }
 
@@ -495,46 +493,32 @@ function quotedArguments(text) {
 }
 
 function substituteArguments(value, args) {
-  return String(value || "").replace(/\$(\d+)/g, (_, number) => {
+  const template = String(value || "");
+  const withPositionalArguments = template.replace(/\$(\d+)/g, (_, number) => {
     const index = Number(number) - 1;
     return index >= 0 && index < args.length ? args[index] : "";
   });
-}
-
-function snippetCandidates() {
-  return [...state.snippets].sort(
-    (left, right) => right.trigger.length - left.trigger.length,
-  );
-}
-
-function snippetForInput(text) {
-  const source = String(text || "").trim();
-  if (!source) return null;
-
-  return (
-    snippetCandidates().find(
-      (candidate) =>
-        source === candidate.trigger ||
-        source.startsWith(`${candidate.trigger} `) ||
-        source.startsWith(`${candidate.trigger}\t`),
-    ) || null
-  );
-}
-
-function snippetPrefixForInput(text) {
-  const source = String(text || "").trim().toLowerCase();
-  if (!source || /\s/.test(source)) return null;
-
-  return (
-    snippetCandidates().find((candidate) =>
-      candidate.trigger.toLowerCase().startsWith(source),
-    ) || null
-  );
+  const namedArguments = [];
+  for (const match of withPositionalArguments.matchAll(/\{(\w+)\}/g)) {
+    if (!namedArguments.includes(match[1])) namedArguments.push(match[1]);
+  }
+  return withPositionalArguments.replace(/\{(\w+)\}/g, (match, name) => {
+    const index = namedArguments.indexOf(name);
+    return index >= 0 && index < args.length ? args[index] : match;
+  });
 }
 
 function expandSnippet(text) {
   const source = String(text || "").trim();
-  const snippet = snippetForInput(source);
+  const candidates = [...state.snippets].sort(
+    (left, right) => right.trigger.length - left.trigger.length,
+  );
+  const snippet = candidates.find(
+    (candidate) =>
+      source === candidate.trigger ||
+      source.startsWith(`${candidate.trigger} `) ||
+      source.startsWith(`${candidate.trigger}\t`),
+  );
   if (!snippet) return source;
 
   const remainder = source.slice(snippet.trigger.length).trim();
@@ -550,21 +534,55 @@ function snippetById(id) {
 
 function snippetFormValues(snippet = null) {
   return {
+    name: snippet?.name || snippet?.trigger || "",
     trigger: snippet?.trigger || DEFAULT_SNIPPET_TRIGGER,
     template: snippet?.template || DEFAULT_SNIPPET_TEMPLATE,
   };
 }
 
+function directMessageItem(query) {
+  const normalizedQuery = String(query || "").trim();
+  return {
+    id: DIRECT_MESSAGE_ITEM_ID,
+    title: "Type anything and press enter to send",
+    subtitle: normalizedQuery
+      ? `Send “${normalizedQuery}” directly to Claude`
+      : "Send a direct message, or choose a saved shortcut below",
+    icon: "chat",
+    section: "Send a message",
+    actions: [{ id: "default", title: "Send to Claude", icon: "chat" }],
+  };
+}
+
+function uniqueSnippetValue(base, suffix) {
+  const normalizedBase = String(base || "Snippet").trim() || "Snippet";
+  const existing = new Set(
+    state.snippets.map((snippet) =>
+      String(snippet[suffix] || "").toLowerCase(),
+    ),
+  );
+  let candidate = `${normalizedBase} copy`;
+  let counter = 2;
+  while (existing.has(candidate.toLowerCase())) {
+    candidate = `${normalizedBase} copy ${counter}`;
+    counter += 1;
+  }
+  return candidate;
+}
+
 function snippetItem(snippet) {
   return {
     id: snippet.id,
-    title: snippet.trigger,
+    title: snippet.name || snippet.trigger,
     subtitle: snippet.template,
     icon: "code",
+    section: "Saved shortcuts",
     lines: 2,
+    accessories: [{ text: snippet.trigger, icon: "code" }],
     actions: [
       { id: "default", title: "Use shortcut", icon: "chat" },
       { id: "edit_snippet", title: "Edit snippet", icon: "edit" },
+      { id: "duplicate_snippet", title: "Duplicate snippet", icon: "copy" },
       {
         id: "delete_snippet",
         title: "Delete snippet",
@@ -572,7 +590,7 @@ function snippetItem(snippet) {
         destructive: true,
         confirm: {
           title: "Delete this snippet?",
-          message: `Remove ${snippet.trigger} from your saved snippets.`,
+          message: `Remove ${snippet.name || snippet.trigger} from your saved shortcuts.`,
           confirmLabel: "Delete",
         },
       },
@@ -580,119 +598,39 @@ function snippetItem(snippet) {
   };
 }
 
-function connectionStatusLabel() {
-  if (!bridge.statusKnown) return "Checking";
-  if (bridge.connected) return "Connected";
-  return "Not connected";
-}
-
-function connectionStatusColor() {
-  if (!bridge.statusKnown) return "#8A7F88";
-  if (bridge.connected) return "#3D9B72";
-  return "#D18B47";
-}
-
-function connectionSummary() {
-  if (!bridge.statusKnown) return "Checking the browser connector…";
-  if (!bridge.enabled) return "Not connected · connector disabled";
-  if (bridge.connected) {
-    const browser = String(bridge.clientInfo.browser || "").trim();
-    const version = String(bridge.clientInfo.extensionVersion || "").trim();
-    const details = [];
-    if (browser && browser.toLowerCase() !== "unknown") details.push(browser);
-    if (version && version.toLowerCase() !== "unknown")
-      details.push(`extension ${version}`);
-    return `Connected${details.length ? ` · ${details.join(" · ")}` : ""} · ready to chat`;
-  }
-  if (!bridge.running) return "Not connected · connector is starting";
-  return `Not connected · waiting for browser extension on port ${bridge.port}`;
-}
-
-function askClaudeHomeItem() {
-  return {
-    id: HOME_ASK_ITEM_ID,
-    title: "Ask Claude",
-    subtitle: connectionSummary(),
-    icon: "chat",
-    lines: 2,
-    accessories: [
-      { text: connectionStatusLabel(), color: connectionStatusColor() },
-    ],
-    actions: [
-      {
-        id: "open_chat",
-        title: bridge.connected ? "Open chat" : "Show connection details",
-        icon: bridge.connected ? "chat" : "info",
-      },
-    ],
-  };
-}
-
-function renderHome(rev, query = state.snippetQuery) {
+function renderSnippets(rev, query = state.snippetQuery, pageHistory = "none") {
   const normalizedQuery = String(query || "")
     .trim()
     .toLowerCase();
   const savedItems = state.snippets
     .filter((snippet) => {
       if (!normalizedQuery) return true;
-      return `${snippet.trigger} ${snippet.template}`
+      return `${snippet.name} ${snippet.trigger} ${snippet.template}`
         .toLowerCase()
         .includes(normalizedQuery);
     })
     .map(snippetItem);
 
-  render(rev, "list", {
-    page: { id: "ask:home", title: "Ask Claude", history: "none" },
-    placeholder: "Type a shortcut or prompt…",
-    emptyText: "No saved shortcuts yet",
-    items: [askClaudeHomeItem(), ...savedItems],
-    actions: [
-      { id: "reconnect", title: "Refresh connection", icon: "refresh" },
-      { id: "create_snippet", title: "Create snippet", icon: "add" },
-    ],
-    floatingAction: {
-      id: "create_snippet",
-      title: "Create snippet",
-      icon: "add",
+  const fields = {
+    page: {
+      id: "ask:snippets",
+      title: "Claude shortcuts",
+      history: pageHistory,
     },
-  });
-}
-
-function renderSnippets(rev, query = state.snippetQuery) {
-  const normalizedQuery = String(query || "")
-    .trim()
-    .toLowerCase();
-  const savedItems = state.snippets
-    .filter((snippet) => {
-      if (!normalizedQuery) return true;
-      return `${snippet.trigger} ${snippet.template}`
-        .toLowerCase()
-        .includes(normalizedQuery);
-    })
-    .map(snippetItem);
-
-  render(rev, "list", {
-    page: { id: "ask:snippets", title: "Snippets", history: "push" },
-    canGoBack: true,
-    placeholder: "Filter snippets…",
+    placeholder: "Type a message or search shortcuts…",
     emptyText: normalizedQuery
       ? "No matching snippets"
       : "No saved snippets yet",
-    items: [
-      {
-        id: CREATE_SNIPPET_ITEM_ID,
-        title: "Create new snippet",
-        subtitle: "Save a reusable prompt transformation",
-        icon: "add",
-      },
-      ...savedItems,
-    ],
+    items: [directMessageItem(query), ...savedItems],
+    actions: [{ id: "create_snippet", title: "Create snippet", icon: "add" }],
     floatingAction: {
       id: "create_snippet",
       title: "Create snippet",
       icon: "add",
     },
-  });
+  };
+  if (state.snippetsReturnScreen !== "root") fields.canGoBack = true;
+  render(rev, "list", fields);
 }
 
 function renderSnippetForm(rev, error = null) {
@@ -721,6 +659,16 @@ function renderSnippetForm(rev, error = null) {
       error: error?.message || undefined,
       fields: [
         {
+          id: "name",
+          type: "text",
+          label: "Name",
+          placeholder: "Summarize text",
+          value: values.name,
+          required: true,
+          description: "The label shown in the shortcut list.",
+          error: error?.field === "name" ? error.message : undefined,
+        },
+        {
           id: "trigger",
           type: "text",
           label: "Shortcut",
@@ -737,7 +685,7 @@ function renderSnippetForm(rev, error = null) {
           value: values.template,
           required: true,
           description:
-            "Use $1, $2, etc. for the quoted values supplied after the shortcut.",
+            "Use $1, $2, etc. or {name} placeholders for quoted values supplied after the shortcut.",
           error: error?.field === "template" ? error.message : undefined,
         },
       ],
@@ -754,10 +702,9 @@ function enterSnippetForm(mode = "create", id = null) {
 }
 
 async function enterSnippets() {
-  state.snippetsReturnScreen =
-    state.screen === "snippets" || state.screen === "snippet_form"
-      ? "chat"
-      : state.screen;
+  if (state.screen !== "snippets" && state.screen !== "snippet_form") {
+    state.snippetsReturnScreen = state.screen;
+  }
   state.screen = "snippets";
   state.snippetQuery = "";
   render(0, "list", {
@@ -767,29 +714,29 @@ async function enterSnippets() {
   });
   command("setQuery", { text: " " });
   await ensureSnippetsLoaded();
-  if (!shuttingDown && state.screen === "snippets") renderSnippets(0);
+  if (!shuttingDown && state.screen === "snippets") {
+    renderSnippets(0, state.snippetQuery, "push");
+  }
 }
 
 function leaveSnippets() {
   const returnScreen = state.snippetsReturnScreen || "chat";
-  const returningToAutocomplete = Boolean(
-    returnScreen === "chat" &&
-      state.chatMode === "autocomplete" &&
-      state.draftText.trim(),
-  );
   state.screen = returnScreen;
-  state.snippetQuery = returningToAutocomplete ? state.draftText : "";
-  if (!returningToAutocomplete) state.draftText = "";
+  state.snippetQuery = "";
   state.editingSnippetId = null;
-  command("setQuery", {
-    text: returningToAutocomplete ? state.draftText : " ",
-  });
+  command("setQuery", { text: " " });
   renderCurrent(0);
 }
 
 function handleSnippetSubmit(values) {
+  const name = String(values.name || "").trim();
   const trigger = String(values.trigger || "").trim();
   const template = String(values.template || "").trim();
+  if (!name)
+    return renderSnippetForm(0, {
+      field: "name",
+      message: "Name is required.",
+    });
   if (!trigger)
     return renderSnippetForm(0, {
       field: "trigger",
@@ -815,6 +762,7 @@ function handleSnippetSubmit(values) {
   if (state.snippetFormMode === "edit") {
     const snippet = snippetById(state.editingSnippetId);
     if (!snippet) return enterSnippets();
+    snippet.name = name;
     snippet.trigger = trigger;
     snippet.template = template;
     saveSnippets();
@@ -822,6 +770,7 @@ function handleSnippetSubmit(values) {
   } else {
     state.snippets.push({
       id: newSnippetId(),
+      name,
       trigger,
       template,
     });
@@ -835,27 +784,41 @@ function handleSnippetSubmit(values) {
   renderSnippets(0);
 }
 
-function openSnippetAutocomplete(snippet) {
-  state.screen = "chat";
-  state.chatMode = "autocomplete";
-  state.draftText = snippet.trigger;
-  state.snippetQuery = snippet.trigger;
-  command("setQuery", { text: snippet.trigger });
-  renderAutocompleteChat(0, snippet.trigger);
-}
-
-function handleSnippetAction(id, action) {
+async function handleSnippetAction(id, action) {
   if (state.screen === "snippets") {
     if (id === "" && (action === "create_snippet" || action === "default")) {
       return enterSnippetForm();
     }
-    if (id === CREATE_SNIPPET_ITEM_ID && action === "default")
+    if (id === DIRECT_MESSAGE_ITEM_ID && action === "default") {
+      const text = state.snippetQuery.trim();
+      if (!text) {
+        return toast("Type a message first.", "error");
+      }
+      state.screen = "chat";
+      return handleSubmit(0, text);
+    }
+    if (id === "create-snippet" && action === "default")
       return enterSnippetForm();
     const snippet = snippetById(id);
     if (!snippet) return;
-    if (action === "default") return openSnippetAutocomplete(snippet);
+    if (action === "default" || action === "use_snippet") {
+      const text = state.snippetQuery.trim() || snippet.trigger;
+      state.screen = "chat";
+      return handleSubmit(0, text);
+    }
     if (action === "edit_snippet") {
       return enterSnippetForm("edit", snippet.id);
+    }
+    if (action === "duplicate_snippet") {
+      state.snippets.push({
+        id: newSnippetId(),
+        name: uniqueSnippetValue(snippet.name || snippet.trigger, "name"),
+        trigger: uniqueSnippetValue(snippet.trigger, "trigger"),
+        template: snippet.template,
+      });
+      saveSnippets();
+      renderSnippets(0);
+      return toast(`Duplicated ${snippet.name || snippet.trigger}`);
     }
     if (action === "delete_snippet") {
       state.snippets = state.snippets.filter(
@@ -882,8 +845,11 @@ let openClaudePromise = null;
 
 const bridge = new BrowserBridge(() => {
   if (shuttingDown || !state.initialized) return;
-  if (state.screen === "home") renderHome(0);
-  else if (state.screen === "connection") renderConnection(0);
+  if (state.screen === "connection" && bridge.connected) {
+    void openClaudeTab(0);
+  } else if (state.screen === "connection") {
+    renderConnection(0);
+  }
 });
 bridge.start();
 
@@ -1058,6 +1024,16 @@ function ensureTabOpen() {
   if (tabOpenPromise) return tabOpenPromise;
 
   const opening = (async () => {
+    if (!bridge.connected) {
+      await bridge.refreshStatus().catch(() => {});
+    }
+    if (!bridge.connected) {
+      throw new Error(
+        bridge.startError ||
+          "The browser connector is not connected. Enable it in Launcher Plugins and pair the extension.",
+      );
+    }
+
     if (state.tabId != null) {
       const snapshot = await bridge.request("tabs.list");
       if ((snapshot.tabs || []).some((t) => t.id === state.tabId)) {
@@ -1143,80 +1119,18 @@ function titleFor(role) {
   return "Claude";
 }
 
-function chatMessageItem(message) {
-  return {
-    id: message.id,
-    title: titleFor(message.role),
-    subtitle: message.text,
-    icon: iconFor(message.role),
+function renderChat(rev) {
+  const items = state.messages.map((m) => ({
+    id: m.id,
+    title: titleFor(m.role),
+    subtitle: m.text,
+    icon: iconFor(m.role),
     lines: 3,
     accessories: [
-      {
-        text:
-          message.id === state.streamingMessageId ? "Writing…" : message.time,
-      },
+      { text: m.id === state.streamingMessageId ? "Writing…" : m.time },
     ],
     actions: [{ id: "copy", title: "Copy message", icon: "copy" }],
-  };
-}
-
-function renderAutocompleteChat(rev, text = state.draftText) {
-  const draft = String(text || "").trim();
-  state.draftText = draft;
-
-  const matchedSnippet = snippetForInput(draft);
-  const suggestedSnippet = matchedSnippet || snippetPrefixForInput(draft);
-  const previewText = matchedSnippet
-    ? expandSnippet(draft)
-    : suggestedSnippet
-      ? suggestedSnippet.template
-      : draft;
-  const previewLabel = matchedSnippet
-    ? `Will send · ${matchedSnippet.trigger}`
-    : suggestedSnippet
-      ? `Shortcut suggestion · ${suggestedSnippet.trigger}`
-      : "Ready to send";
-
-  const items = state.messages.map(chatMessageItem);
-  items.push({
-    id: DRAFT_MESSAGE_ITEM_ID,
-    title: "You",
-    subtitle: draft,
-    icon: "person",
-    lines: 3,
-    accessories: [{ text: matchedSnippet ? "Shortcut" : "Draft" }],
-    actions: [{ id: "default", title: "Send to Claude", icon: "chat" }],
-  });
-
-  if (matchedSnippet || suggestedSnippet) {
-    items.push({
-      id: DRAFT_PREVIEW_ITEM_ID,
-      title: "Ask Claude",
-      subtitle: previewText,
-      icon: "chat",
-      lines: 3,
-      accessories: [{ text: previewLabel }],
-      actions: [{ id: "send_draft", title: "Send to Claude", icon: "chat" }],
-    });
-  }
-
-  // Keep the normal query mode here so every keystroke can refresh the
-  // shortcut expansion. A submitted conversation switches to submit mode.
-  render(rev, "chat", {
-    page: { id: "ask:composer", title: chatTitleFor(), history: "none" },
-    placeholder: "Type a shortcut or prompt…",
-    emptyText: "Type a message to preview it here",
-    items,
-    actions: [
-      { id: "new_chat", title: "New conversation", icon: "add" },
-      { id: "reconnect", title: "Refresh connection", icon: "refresh" },
-    ],
-    floatingAction: { id: "snippets", title: "Snippets", icon: "code" },
-  });
-}
-
-function renderChat(rev) {
-  const items = state.messages.map(chatMessageItem);
+  }));
 
   if (state.busy && !state.streamingMessageId) {
     const elapsed = state.thinkingStartedAt
@@ -1342,11 +1256,7 @@ function renderConnection(rev) {
 }
 
 function renderCurrent(rev) {
-  if (state.screen === "home") renderHome(rev);
-  else if (state.screen === "chat") {
-    if (state.chatMode === "autocomplete") renderAutocompleteChat(rev);
-    else renderChat(rev);
-  }
+  if (state.screen === "chat") renderChat(rev);
   else if (state.screen === "snippets") renderSnippets(rev);
   else if (state.screen === "snippet_form") renderSnippetForm(rev);
   else renderConnection(rev);
@@ -1358,33 +1268,19 @@ async function handleInit(rev, text) {
     return;
   }
   state.initialized = true;
-  state.screen = "home";
-  state.chatMode = "autocomplete";
-  state.snippetsReturnScreen = "home";
+  state.screen = "snippets";
+  state.snippetsReturnScreen = "root";
   state.snippetQuery = String(text ?? "");
-  state.draftText = state.snippetQuery.trim();
 
   render(rev, "list", {
-    page: { id: "ask:home", title: "Ask Claude", history: "none" },
+    page: { id: "ask:snippets", title: "Claude shortcuts", history: "none" },
     loading: true,
     loadingText: "Loading Claude shortcuts…",
     items: [],
   });
-  try {
-    if (!bridge.connected) await bridge.refreshStatus().catch(() => {});
-  } catch {
-    /* handled by applyStatus/startError */
-  }
-
   await ensureSnippetsLoaded();
-  if (shuttingDown) return;
-
-  if (state.snippetQuery.trim()) {
-    state.screen = "chat";
-    state.chatMode = "autocomplete";
-    renderAutocompleteChat(0, state.snippetQuery);
-  } else if (state.screen === "home") {
-    renderHome(0);
+  if (!shuttingDown && state.screen === "snippets") {
+    renderSnippets(0, state.snippetQuery, "none");
   }
 }
 
@@ -1502,15 +1398,6 @@ async function handleSubmit(rev, text) {
     return;
   }
 
-  if (!bridge.connected) {
-    await bridge.refreshStatus().catch(() => {});
-    if (!bridge.connected) {
-      state.screen = "connection";
-      renderConnection(0);
-      return;
-    }
-  }
-
   await ensureSnippetsLoaded();
   const expanded = expandSnippet(trimmed);
   if (expanded !== trimmed) {
@@ -1519,8 +1406,6 @@ async function handleSubmit(rev, text) {
     );
   }
 
-  state.chatMode = "conversation";
-  state.draftText = "";
   pushMessage("user", expanded);
   state.busy = true;
   state.thinkingStartedAt = Date.now();
@@ -1563,8 +1448,6 @@ async function handleSubmit(rev, text) {
 }
 
 async function startNewConversation() {
-  state.chatMode = "conversation";
-  state.draftText = "";
   state.streamingMessageId = null;
   resetStreamingAnimation();
   render(0, "chat", {
@@ -1588,75 +1471,10 @@ async function startNewConversation() {
   }
 }
 
-async function openClaudeFromHome() {
-  await bridge.refreshStatus().catch(() => {});
-  if (!bridge.connected) {
-    state.screen = "connection";
-    renderConnection(0);
-    return;
-  }
-
-  state.screen = "chat";
-  state.chatMode = "conversation";
-  state.draftText = "";
-  await openClaudeTab(0);
-}
-
-async function handleHomeAction(id, action) {
-  if (id === HOME_ASK_ITEM_ID && ["default", "open_chat"].includes(action)) {
-    await openClaudeFromHome();
-    return;
-  }
-
-  if (id === "" && action === "reconnect") {
-    await bridge.refreshStatus().catch(() => {});
-    renderHome(0);
-    return;
-  }
-
-  if (
-    id === "" &&
-    (action === "create_snippet" || action === "default")
-  ) {
-    enterSnippetForm();
-    return;
-  }
-
-  if (id === CREATE_SNIPPET_ITEM_ID && action === "default") {
-    enterSnippetForm();
-    return;
-  }
-
-  const snippet = snippetById(id);
-  if (!snippet) return;
-  if (action === "default") return openSnippetAutocomplete(snippet);
-  if (action === "edit_snippet") return enterSnippetForm("edit", snippet.id);
-  if (action === "delete_snippet") {
-    state.snippets = state.snippets.filter(
-      (candidate) => candidate.id !== snippet.id,
-    );
-    saveSnippets();
-    renderHome(0);
-    toast(`Deleted ${snippet.trigger}`);
-  }
-}
-
 async function handleAction(id, action) {
   try {
-    if (state.screen === "home") {
-      await handleHomeAction(id, action);
-      return;
-    }
     if (state.screen === "snippets" || state.screen === "snippet_form") {
-      handleSnippetAction(id, action);
-      return;
-    }
-    if (
-      state.screen === "chat" &&
-      state.chatMode === "autocomplete" &&
-      ["default", "send_draft"].includes(action)
-    ) {
-      await handleSubmit(0, state.draftText);
+      await handleSnippetAction(id, action);
       return;
     }
     if (action === "snippets") {
@@ -1675,27 +1493,16 @@ async function handleAction(id, action) {
       await bridge.refreshStatus().catch(() => {});
       if (bridge.connected) {
         if (state.screen === "connection") await openClaudeTab(0);
-        else if (state.screen === "chat") {
-          if (state.chatMode === "autocomplete")
-            renderAutocompleteChat(0);
-          else renderChat(0);
-        } else renderCurrent(0);
+        else renderChat(0);
       } else {
-        if (state.screen === "chat" && state.chatMode === "autocomplete")
-          renderAutocompleteChat(0);
-        else {
-          state.screen = "connection";
-          renderConnection(0);
-        }
+        state.screen = "connection";
+        renderConnection(0);
       }
       return;
     }
     if (action === "retry") {
       state.screen = bridge.connected ? "chat" : "connection";
-      if (state.screen === "chat") {
-        state.chatMode = "conversation";
-        await openClaudeTab(0);
-      }
+      if (state.screen === "chat") await openClaudeTab(0);
       else renderConnection(0);
       return;
     }
@@ -1753,38 +1560,10 @@ async function handleLine(line) {
       break;
     case "query": {
       const rev = Number(message.rev) || 0;
-      const text = String(message.text ?? "");
       if (!state.initialized) {
-        await handleInit(rev, text || message.query || "");
-      } else if (state.screen === "home") {
-        state.snippetQuery = text;
-        if (text.trim()) {
-          state.screen = "chat";
-          state.chatMode = "autocomplete";
-          renderAutocompleteChat(rev, text);
-        } else {
-          renderHome(rev);
-        }
-      } else if (
-        state.screen === "chat" &&
-        state.chatMode === "autocomplete"
-      ) {
-        if (text.trim()) {
-          state.snippetQuery = text;
-          renderAutocompleteChat(rev, text);
-        } else {
-          state.screen = "home";
-          state.draftText = "";
-          state.snippetQuery = "";
-          renderHome(rev);
-        }
-      } else if (state.screen === "connection" && text.trim()) {
-        state.screen = "chat";
-        state.chatMode = "autocomplete";
-        state.snippetQuery = text;
-        renderAutocompleteChat(rev, text);
+        await handleInit(rev, message.text ?? message.query ?? "");
       } else if (state.screen === "snippets") {
-        state.snippetQuery = text;
+        state.snippetQuery = String(message.text ?? "");
         if (!state.snippetsLoaded) {
           render(rev, "list", {
             loading: true,
@@ -1807,19 +1586,6 @@ async function handleLine(line) {
     case "action":
       await handleAction(String(message.id || ""), message.action || "default");
       break;
-    case "tab": {
-      const id = String(message.id || "");
-      if (state.screen === "home") {
-        const snippet = snippetById(id);
-        if (snippet) openSnippetAutocomplete(snippet);
-      } else if (state.screen === "chat" && state.chatMode === "autocomplete") {
-        const snippet =
-          snippetForInput(state.draftText) ||
-          snippetPrefixForInput(state.draftText);
-        if (snippet) command("setQuery", { text: snippet.trigger });
-      }
-      break;
-    }
     case "back":
       if (state.screen === "snippet_form") {
         state.screen = "snippets";
@@ -1827,11 +1593,6 @@ async function handleLine(line) {
         renderSnippets(Number(message.rev) || 0);
       } else if (state.screen === "snippets") {
         leaveSnippets();
-      } else if (state.screen === "chat" && state.chatMode === "autocomplete") {
-        state.screen = "home";
-        state.draftText = "";
-        state.snippetQuery = "";
-        renderHome(Number(message.rev) || 0);
       }
       break;
     case "storage": {
