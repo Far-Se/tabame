@@ -61,6 +61,10 @@ generic launcher icon. Icons are stored in `.cache/icons` inside this plugin:
 Other platforms keep the existing extension-based fallback icons until native
 file-icon extraction is implemented there.
 
+The split preview loads on selection/hover, so searching does not read every
+result file. Supported image files are shown directly; readable text files are
+shown as a code preview, limited to the first 5,000 characters.
+
 ## Settings
 
 The settings page stores its data in Tabame's per-plugin storage. No config file

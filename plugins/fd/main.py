@@ -79,6 +79,58 @@ DYNAMIC_ICON_EXTENSIONS = frozenset(
     }
 )
 
+TEXT_PREVIEW_CHARACTER_LIMIT = 5000
+TEXT_PREVIEW_READ_BYTE_LIMIT = 64 * 1024
+# Let the pointer settle before doing file I/O for a newly highlighted row.
+PREVIEW_HOVER_DELAY_SECONDS = 0.12
+IMAGE_PREVIEW_EXTENSIONS = frozenset(
+    {
+        ".bmp",
+        ".gif",
+        ".jfif",
+        ".jpeg",
+        ".jpg",
+        ".png",
+        ".svg",
+        ".wbmp",
+        ".webp",
+    }
+)
+BINARY_PREVIEW_EXTENSIONS = frozenset(
+    {
+        ".7z",
+        ".aac",
+        ".avi",
+        ".bin",
+        ".bz2",
+        ".class",
+        ".com",
+        ".dll",
+        ".dmg",
+        ".doc",
+        ".docx",
+        ".exe",
+        ".flac",
+        ".gz",
+        ".iso",
+        ".m4a",
+        ".mkv",
+        ".mov",
+        ".mp3",
+        ".mp4",
+        ".msi",
+        ".ogg",
+        ".pdf",
+        ".rar",
+        ".so",
+        ".tar",
+        ".wav",
+        ".webm",
+        ".xz",
+        ".zip",
+    }
+)
+
 
 class _WindowsShFileInfo(ctypes.Structure):
     _fields_ = [
@@ -759,6 +811,13 @@ STATE: dict[str, Any] = {
     "items": {},
     "active_process": None,
     "search_serial": 0,
+    "results_limited": False,
+    "base_item_payloads": {},
+    "preview_serial": 0,
+    "preview_cache": {},
+    "preview_timer": None,
+    "preview_requested_id": None,
+    "preview_rendered_id": None,
     "closing": False,
 }
 
@@ -1064,7 +1123,7 @@ def render_search_prompt(rev: int, *, history: str = "none") -> None:
             "page": page("fd:search", "fd File Search", history, root=True),
             "elementId": "fd-results",
             "placeholder": f"Search filenames across {len(settings['roots'])} configured location(s)…",
-            "wide": True,
+            "wide": False,
             "empty": {
                 "icon": "search",
                 "title": "Start typing a filename",
@@ -1090,7 +1149,7 @@ def render_loading(rev: int, query: str, *, history: str = "none") -> None:
             "placeholder": "Keep typing to refine…",
             "loading": True,
             "loadingText": f"fd is searching for “{query}”…",
-            "wide": True,
+            "wide": False,
             "actions": SEARCH_ACTIONS,
             "items": [],
         }
@@ -1179,7 +1238,7 @@ def render_fd_installer(rev: int = 0, *, launch_error: str = "") -> None:
                 {"id": "settings", "title": "Settings", "icon": "settings"},
             ],
             "detail": {
-                "wide": True,
+                "wide": False,
                 "markdown": (
                     "# `fd` is required\n\n"
                     "The plugin itself is ready, but the `fd` executable was not found.\n\n"
@@ -1233,7 +1292,7 @@ def render_help(rev: int = 0, *, history: str = "push") -> None:
             "actions": [{"id": "settings", "title": "Search settings", "icon": "settings"}],
             "floatingAction": {"id": "settings", "title": "Settings", "icon": "settings"},
             "detail": {
-                "wide": True,
+                "wide": False,
                 "markdown": (
                     "# Fast file search with `fd`\n\n"
                     "Type **`fd`**, a space, then part of a filename. Searches are cancelled and restarted "
@@ -1355,6 +1414,259 @@ def markdown_escape(value: str) -> str:
     return value.replace("\\", "\\\\").replace("`", "\\`").replace("*", "\\*").replace("_", "\\_")
 
 
+def _decode_text_preview(raw: bytes) -> str | None:
+    if not raw:
+        return ""
+
+    encodings: list[tuple[bytes, str, int]] = [
+        (b"\xff\xfe\x00\x00", "utf-32-le", 4),
+        (b"\x00\x00\xfe\xff", "utf-32-be", 4),
+        (b"\xff\xfe", "utf-16-le", 2),
+        (b"\xfe\xff", "utf-16-be", 2),
+        (b"\xef\xbb\xbf", "utf-8", 3),
+    ]
+    for marker, encoding, offset in encodings:
+        if raw.startswith(marker):
+            try:
+                return raw[offset:].decode(encoding)
+            except UnicodeDecodeError:
+                return None
+
+    binary_signatures = (b"MZ", b"PK\x03\x04", b"\x7fELF", b"%PDF-", b"ID3", b"OggS", b"RIFF")
+    if raw.startswith(binary_signatures):
+        return None
+
+    if b"\x00" in raw:
+        pair_count = max(1, len(raw) // 2)
+        even_nulls = sum(1 for index in range(0, len(raw), 2) if raw[index] == 0)
+        odd_nulls = sum(1 for index in range(1, len(raw), 2) if raw[index] == 0)
+        if odd_nulls > pair_count * 0.6 and even_nulls < pair_count * 0.1:
+            try:
+                return raw.decode("utf-16-le")
+            except UnicodeDecodeError:
+                return None
+        if even_nulls > pair_count * 0.6 and odd_nulls < pair_count * 0.1:
+            try:
+                return raw.decode("utf-16-be")
+            except UnicodeDecodeError:
+                return None
+        return None
+
+    suspicious_bytes = sum(
+        1 for byte in raw if byte < 0x09 or (0x0D < byte < 0x20) or byte == 0x7F
+    )
+    if suspicious_bytes > max(2, len(raw) // 100):
+        return None
+
+    try:
+        return raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        try:
+            return raw.decode("cp1252")
+        except UnicodeDecodeError:
+            return None
+
+
+def _markdown_code_fence(text: str) -> str:
+    longest_run = 0
+    current_run = 0
+    for character in text:
+        if character == "`":
+            current_run += 1
+            longest_run = max(longest_run, current_run)
+        else:
+            current_run = 0
+    return "`" * max(3, longest_run + 1)
+
+
+def _image_preview_uri(path: str, extension: str) -> str | None:
+    is_image = extension in IMAGE_PREVIEW_EXTENSIONS
+    if not is_image:
+        try:
+            with open(path, "rb") as handle:
+                header = handle.read(16)
+            is_image = header.startswith(
+                (
+                    b"\x89PNG\r\n\x1a\n",
+                    b"\xff\xd8\xff",
+                    b"GIF87a",
+                    b"GIF89a",
+                    b"BM",
+                )
+            ) or (header[:4] == b"RIFF" and header[8:12] == b"WEBP")
+        except OSError:
+            return None
+    if not is_image:
+        return None
+    try:
+        return Path(path).resolve().as_uri()
+    except (OSError, ValueError):
+        return None
+
+
+def _file_preview_signature(path: str) -> tuple[int, int] | None:
+    try:
+        stat = os.stat(path, follow_symlinks=False)
+    except OSError:
+        return None
+    return stat.st_size, stat.st_mtime_ns
+
+
+def _load_file_preview(record: dict[str, Any]) -> str | None:
+    path = record["path"]
+    if record["is_dir"]:
+        return None
+
+    signature = _file_preview_signature(path)
+    cache_key = os.path.normcase(os.path.abspath(path))
+    if signature is not None:
+        with STATE_LOCK:
+            cached = STATE["preview_cache"].get(cache_key)
+        if cached is not None and cached[0] == signature:
+            return cached[1]
+
+    extension = Path(path).suffix.casefold()
+    preview: str | None = None
+    image_uri = _image_preview_uri(path, extension)
+    if image_uri is None and extension == ".ico":
+        cached_icon = _system_icon_for(path, False)
+        if cached_icon is not None:
+            image_uri = cached_icon
+    if image_uri is not None:
+        preview = (
+            f"### {markdown_escape(record['name'])}\n\n"
+            f"![Image preview]({image_uri})\n\n"
+            "Press **Enter** to open this file."
+        )
+    elif signature is not None and extension not in BINARY_PREVIEW_EXTENSIONS:
+        try:
+            with open(path, "rb") as handle:
+                raw = handle.read(TEXT_PREVIEW_READ_BYTE_LIMIT)
+            decoded = _decode_text_preview(raw)
+            if decoded is not None:
+                truncated = signature[0] > len(raw) or len(decoded) > TEXT_PREVIEW_CHARACTER_LIMIT
+                text = decoded[:TEXT_PREVIEW_CHARACTER_LIMIT]
+                if text:
+                    fence = _markdown_code_fence(text)
+                    body = f"{fence}text\n{text}\n{fence}"
+                else:
+                    body = "_(empty text file)_"
+                if truncated:
+                    body += "\n\n> Preview truncated to 5,000 characters."
+                preview = (
+                    f"### {markdown_escape(record['name'])}\n\n"
+                    f"{body}\n\n"
+                    "Press **Enter** to open this file."
+                )
+        except OSError as exc:
+            log("Could not read file preview:", path, repr(exc))
+
+    if signature is not None:
+        with STATE_LOCK:
+            STATE["preview_cache"][cache_key] = (signature, preview)
+    return preview
+
+
+def _load_selected_preview(
+    serial: int,
+    rev: int,
+    item_id: str,
+    record: dict[str, Any],
+) -> None:
+    try:
+        preview = _load_file_preview(record)
+    except Exception as exc:
+        with STATE_LOCK:
+            if serial == STATE["preview_serial"]:
+                STATE["preview_requested_id"] = None
+        log("Could not prepare file preview:", record.get("path", ""), repr(exc))
+        return
+    with STATE_LOCK:
+        if serial != STATE["preview_serial"] or STATE["closing"] or STATE["screen"] != "search":
+            return
+        current_record = STATE["items"].get(item_id)
+        if current_record is None or current_record["path"] != record["path"]:
+            return
+        if preview is None:
+            STATE["preview_requested_id"] = None
+            STATE["preview_rendered_id"] = item_id
+            return
+        records = list(STATE["results"])
+        query = STATE["current_query"]
+        limited = STATE["results_limited"]
+        try:
+            render_results(
+                rev,
+                query,
+                records,
+                limited,
+                selected_id=item_id,
+                selected_preview=preview,
+                reuse_items=True,
+            )
+        except Exception as exc:
+            STATE["preview_requested_id"] = None
+            log("Could not render file preview:", record.get("path", ""), repr(exc))
+            return
+        STATE["preview_requested_id"] = None
+        STATE["preview_rendered_id"] = item_id
+
+
+def _start_selected_preview(
+    serial: int,
+    rev: int,
+    item_id: str,
+    record: dict[str, Any],
+) -> None:
+    with STATE_LOCK:
+        if (
+            serial != STATE["preview_serial"]
+            or STATE["closing"]
+            or STATE["screen"] != "search"
+        ):
+            return
+        STATE["preview_timer"] = None
+    _load_selected_preview(serial, rev, item_id, record)
+
+
+def request_file_preview(rev: int, item_id: str) -> None:
+    with STATE_LOCK:
+        if STATE["screen"] != "search" or not item_id:
+            return
+        record = STATE["items"].get(item_id)
+        if record is None:
+            return
+        requested_id = STATE.get("preview_requested_id")
+        if item_id == requested_id:
+            return
+        if item_id == STATE.get("preview_rendered_id"):
+            previous_timer = STATE.get("preview_timer")
+            if previous_timer is not None:
+                previous_timer.cancel()
+            STATE["preview_timer"] = None
+            if requested_id is not None:
+                STATE["preview_serial"] += 1
+                STATE["preview_requested_id"] = None
+            return
+        previous_timer = STATE.get("preview_timer")
+        if previous_timer is not None:
+            previous_timer.cancel()
+        STATE["preview_serial"] += 1
+        serial = STATE["preview_serial"]
+        STATE["preview_requested_id"] = item_id
+        record = dict(record)
+        timer = threading.Timer(
+            PREVIEW_HOVER_DELAY_SECONDS,
+            _start_selected_preview,
+            args=(serial, rev, item_id, record),
+        )
+        timer.name = f"fd-preview-delay-{serial}"
+        timer.daemon = True
+        STATE["preview_timer"] = timer
+
+    timer.start()
+
+
 def result_rank(record: dict[str, Any], query: str, mode: str) -> tuple[Any, ...]:
     name = record["name"].casefold()
     stem = Path(record["name"]).stem.casefold()
@@ -1374,13 +1686,21 @@ def result_rank(record: dict[str, Any], query: str, mode: str) -> tuple[Any, ...
     return (bucket, len(name), name, len(record["path"]), record["path"].casefold())
 
 
-def item_from_record(record: dict[str, Any]) -> dict[str, Any]:
+def item_from_record(record: dict[str, Any], *, selected_preview: str | None = None) -> dict[str, Any]:
     path = record["path"]
     name = record["name"]
     parent = os.path.dirname(path)
     is_dir = record["is_dir"]
     extension = Path(name).suffix[1:] if Path(name).suffix else ""
     accessories = [{"text": "Folder" if is_dir else (extension.upper() if extension else "File")}]
+    instruction = (
+        f"Press **Enter** to open this {'folder' if is_dir else 'file'}."
+        if is_dir
+        else "Hover to load an inline preview, or press **Enter** to open this file."
+    )
+    preview_markdown = f"### {markdown_escape(name)}\n\n{instruction}"
+    if selected_preview is not None:
+        preview_markdown = selected_preview
     return {
         "id": path,
         "title": name,
@@ -1398,7 +1718,7 @@ def item_from_record(record: dict[str, Any]) -> dict[str, Any]:
             {"id": "paste_path", "title": "Paste path into previous app", "icon": "paste"},
         ],
         "preview": {
-            "markdown": f"### {markdown_escape(name)}\n\nPress **Enter** to open this {'folder' if is_dir else 'file'}.",
+            "markdown": preview_markdown,
             "metadata": [
                 {"label": "Full path", "text": path, "icon": "file" if not is_dir else "folder"},
                 {"label": "Containing folder", "text": parent, "icon": "folder"},
@@ -1409,8 +1729,40 @@ def item_from_record(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def render_results(rev: int, query: str, records: list[dict[str, Any]], limited: bool) -> None:
+def _apply_selected_preview(
+    items: list[dict[str, Any]],
+    selected_id: str | None,
+    selected_preview: str | None,
+) -> None:
+    if selected_id is None or selected_preview is None:
+        return
+    for index, item in enumerate(items):
+        if item["id"] != selected_id:
+            continue
+        updated_item = dict(item)
+        updated_preview = dict(item.get("preview") or {})
+        updated_preview["markdown"] = selected_preview
+        updated_item["preview"] = updated_preview
+        items[index] = updated_item
+        return
+
+
+def render_results(
+    rev: int,
+    query: str,
+    records: list[dict[str, Any]],
+    limited: bool,
+    *,
+    selected_id: str | None = None,
+    selected_preview: str | None = None,
+    reuse_items: bool = False,
+) -> None:
     if not records:
+        with STATE_LOCK:
+            STATE["results"] = []
+            STATE["items"] = {}
+            STATE["results_limited"] = False
+            STATE["base_item_payloads"] = {}
         settings = STATE["settings"]
         send(
             {
@@ -1433,10 +1785,27 @@ def render_results(rev: int, query: str, records: list[dict[str, Any]], limited:
         )
         return
 
-    items = [item_from_record(record) for record in records]
+    items: list[dict[str, Any]] | None = None
+    if reuse_items:
+        # Preview updates should not repeat icon extraction for every result.
+        with STATE_LOCK:
+            cached_items = STATE["base_item_payloads"]
+            if len(cached_items) == len(records) and all(record["path"] in cached_items for record in records):
+                items = [dict(cached_items[record["path"]]) for record in records]
+
+    if items is None:
+        items = [item_from_record(record) for record in records]
+        base_item_payloads = {item["id"]: item for item in items}
+    else:
+        base_item_payloads = None
+    _apply_selected_preview(items, selected_id, selected_preview)
+
     with STATE_LOCK:
         STATE["results"] = records
         STATE["items"] = {item["id"]: record for item, record in zip(items, records)}
+        STATE["results_limited"] = limited
+        if base_item_payloads is not None:
+            STATE["base_item_payloads"] = base_item_payloads
     count_text = f"{len(items)}+ matches" if limited else f"{len(items)} match{'es' if len(items) != 1 else ''}"
     send(
         {
@@ -1446,7 +1815,7 @@ def render_results(rev: int, query: str, records: list[dict[str, Any]], limited:
             "page": page("fd:search", f"fd · {count_text}", root=True),
             "elementId": "fd-results",
             "placeholder": "Search filenames…",
-            "preview": {"enabled": True, "wide": True},
+            "preview": {"enabled": True, "wide": False},
             "actions": SEARCH_ACTIONS,
             "floatingAction": {"id": "settings", "title": "Settings", "icon": "settings"},
             "items": items,
@@ -1469,6 +1838,13 @@ def cancel_search() -> int:
         serial = STATE["search_serial"]
         process = STATE.get("active_process")
         STATE["active_process"] = None
+        preview_timer = STATE.get("preview_timer")
+        STATE["preview_timer"] = None
+        STATE["preview_serial"] += 1
+        STATE["preview_requested_id"] = None
+        STATE["preview_rendered_id"] = None
+    if preview_timer is not None:
+        preview_timer.cancel()
     terminate_process(process)
     return serial
 
@@ -1633,6 +2009,9 @@ def start_search(rev: int, text: str, *, history: str = "none") -> None:
     with STATE_LOCK:
         STATE["results"] = []
         STATE["items"] = {}
+        STATE["results_limited"] = False
+        STATE["base_item_payloads"] = {}
+        STATE["preview_cache"].clear()
     if not query:
         render_search_prompt(rev, history=history)
         return
@@ -1839,6 +2218,8 @@ def handle_message(message: dict[str, Any]) -> bool:
         STATE["current_query"] = str(message.get("text", ""))
         if STATE["loaded"] and STATE["screen"] == "search":
             start_search(int(message.get("rev", 0)), STATE["current_query"])
+    elif kind == "select":
+        request_file_preview(int(message.get("rev", 0)), str(message.get("id", "")))
     elif kind == "storage":
         handle_storage(message)
     elif kind == "submit" and STATE["screen"] == "settings":

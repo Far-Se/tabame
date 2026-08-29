@@ -1244,7 +1244,7 @@
     },
     {
       "id": "cli-glossary",
-      "name": "CLI Agent Glossary",
+      "name": "AI Agent Glossary",
       "category": "AI tools",
       "keyword": "aai",
       "recommended": true,
@@ -1292,6 +1292,41 @@
       "files": {
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/hacker-news/plugin.json",
         "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/hacker-news/main.py"
+      }
+    },
+    {
+      "id": "bitwarden",
+      "name": "Bitwarden",
+      "category": "Utilities",
+      "keyword": "bw",
+      "description": "Search your Bitwarden vault, copy credentials, generate passwords, and manage the vault",
+      "icon": "lock",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/bitwarden",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/bitwarden/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/bitwarden/main.py",
+        "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/bitwarden/config.example.json",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/bitwarden/README.md"
+      }
+    },
+    {
+      "id": "wojak-picker",
+      "name": "Wojak Picker",
+      "category": "Fun & Casual",
+      "keyword": "wojak",
+      "description": "Browse, search, and copy Wojak images to the Windows clipboard.",
+      "icon": "image",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/wojak-picker",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/wojak-picker/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/wojak-picker/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/wojak-picker/README.md"
       }
     }
   ]

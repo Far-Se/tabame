@@ -142,6 +142,8 @@ class LauncherState extends State<Launcher>
   final FocusNode _searchFocusNode = FocusNode(debugLabel: 'Launcher search');
   final FocusNode _resultsFocusNode = FocusNode(debugLabel: 'Launcher results');
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey _resultsViewportKey = GlobalKey();
+  final GlobalKey _pluginsSectionHeaderKey = GlobalKey();
   final ValueNotifier<int> _activeIndexNotifier = ValueNotifier<int>(0);
   final ValueNotifier<bool> _isRepeatingKey = ValueNotifier<bool>(false);
   final Map<String, GlobalKey> _quickActionKeys = <String, GlobalKey>{};
@@ -164,6 +166,10 @@ class LauncherState extends State<Launcher>
   bool _isResizingResults = false;
   bool _isFilePreviewVisible = true;
   double? _previewWidthPercent;
+  bool _isPluginsSectionActive = false;
+  bool _resultsSectionHeaderUpdateScheduled = false;
+  double? _pluginsSectionStartOffset;
+  Object? _pluginsSectionResultsIdentity;
 
   final Map<String, PlatformWindowPreview> _windowPreviewCache = <String, PlatformWindowPreview>{};
   final Map<String, Future<PlatformWindowPreview?>> _windowPreviewCaptures = <String, Future<PlatformWindowPreview?>>{};
@@ -440,6 +446,7 @@ class LauncherState extends State<Launcher>
   void initState() {
     super.initState();
     _pluginWindowTransitionController = AnimationController(vsync: this);
+    _scrollController.addListener(_updateResultsSectionHeader);
     QuickMenuFunctions.addListener(this);
     _design = user.launcherDesign;
     _isFilePreviewVisible = Boxes.pref.getBool(_filePreviewVisiblePreferenceKey) ?? true;
@@ -562,6 +569,7 @@ class LauncherState extends State<Launcher>
     _controller.dispose();
     _searchFocusNode.dispose();
     _resultsFocusNode.dispose();
+    _scrollController.removeListener(_updateResultsSectionHeader);
     _scrollController.dispose();
     _activeIndexNotifier.dispose();
     _windowPreviewCacheVersion.dispose();
@@ -912,6 +920,7 @@ class LauncherState extends State<Launcher>
                                   children: <Widget>[
                                     Positioned.fill(
                                       child: Padding(
+                                        key: _resultsViewportKey,
                                         padding: EdgeInsets.only(
                                           right: showPreview ? previewWidth + _previewResizeHandleWidth : 0,
                                         ),
@@ -962,7 +971,14 @@ class LauncherState extends State<Launcher>
                                                     mainAxisSize: MainAxisSize.min,
                                                     children: <Widget>[
                                                       // if (_design == LauncherDesign.newCast)
-                                                      _design.buildSectionHeader(label: 'Plugins', accent: accent),
+                                                      Padding(
+                                                        key: _pluginsSectionHeaderKey,
+                                                        padding: EdgeInsets.zero,
+                                                        child: _design.buildSectionHeader(
+                                                          label: 'Plugins',
+                                                          accent: accent,
+                                                        ),
+                                                      ),
                                                       Divider(
                                                         height: 17,
                                                         thickness: 1,
@@ -1283,9 +1299,18 @@ class LauncherState extends State<Launcher>
   /// Returns the badge shown in the search bar trailing area.
   /// Priority: info badge (transient) > copied files bubble (persistent).
   Widget _buildResultsHeaderWithBadges(Color accent, Color onSurface) {
+    _scheduleResultsSectionHeaderUpdate();
+    final bool hasPluginsSection = _results.any(
+      (LauncherSearchResultItem result) => result.shortcut?.showDividerBefore == true,
+    );
     return Row(
       children: <Widget>[
-        Expanded(child: _design.buildSectionHeader(label: 'Results', accent: accent)),
+        Expanded(
+          child: _design.buildSectionHeader(
+            label: hasPluginsSection && _isPluginsSectionActive ? 'Plugins' : 'Results',
+            accent: accent,
+          ),
+        ),
         _LauncherStatusBadges(
           accent: accent,
           onSurface: onSurface,
@@ -1294,6 +1319,60 @@ class LauncherState extends State<Launcher>
         ),
       ],
     );
+  }
+
+  void _scheduleResultsSectionHeaderUpdate() {
+    if (_resultsSectionHeaderUpdateScheduled) return;
+    _resultsSectionHeaderUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _resultsSectionHeaderUpdateScheduled = false;
+      _updateResultsSectionHeader();
+    });
+  }
+
+  void _updateResultsSectionHeader() {
+    if (!mounted) return;
+
+    final bool hasPluginsSection = _results.any(
+      (LauncherSearchResultItem result) => result.shortcut?.showDividerBefore == true,
+    );
+    if (!hasPluginsSection) {
+      _pluginsSectionResultsIdentity = _results;
+      _pluginsSectionStartOffset = null;
+      if (_isPluginsSectionActive) setState(() => _isPluginsSectionActive = false);
+      return;
+    }
+
+    if (!identical(_pluginsSectionResultsIdentity, _results)) {
+      _pluginsSectionResultsIdentity = _results;
+      _pluginsSectionStartOffset = null;
+      if (_isPluginsSectionActive) {
+        setState(() => _isPluginsSectionActive = false);
+        return;
+      }
+    }
+
+    final RenderObject? headerObject = _pluginsSectionHeaderKey.currentContext?.findRenderObject();
+    final RenderObject? viewportObject = _resultsViewportKey.currentContext?.findRenderObject();
+    if (headerObject is RenderBox &&
+        viewportObject is RenderBox &&
+        headerObject.hasSize &&
+        viewportObject.hasSize &&
+        _scrollController.hasClients) {
+      final double headerTop = headerObject.localToGlobal(Offset.zero).dy;
+      final double viewportTop = viewportObject.localToGlobal(Offset.zero).dy;
+      _pluginsSectionStartOffset = _scrollController.offset + headerTop - viewportTop;
+    }
+
+    final double? sectionStartOffset = _pluginsSectionStartOffset;
+    if (sectionStartOffset == null || !_scrollController.hasClients) return;
+
+    // The section becomes active when its heading reaches the top of the
+    // scrolling viewport, which is the point at which the fixed heading is
+    // representing the Plugins section rather than the preceding results.
+    final bool isPluginsSectionActive = _scrollController.offset >= sectionStartOffset - 0.5;
+    if (isPluginsSectionActive == _isPluginsSectionActive) return;
+    setState(() => _isPluginsSectionActive = isPluginsSectionActive);
   }
 
   Widget? _buildTrailingBadge(Color accent, Color onSurface) {
