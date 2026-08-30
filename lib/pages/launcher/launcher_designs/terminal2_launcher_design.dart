@@ -29,39 +29,39 @@ class _Terminal2SearchBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 5, 8, 4),
-            child: Row(
-              children: <Widget>[
-                Container(
-                  padding: const EdgeInsets.fromLTRB(5, 3, 5, 2),
-                  color: accent,
-                  child: Text(
-                    'QUERY',
-                    style: Terminal2Tokens.label(
-                      fontSize: Design.baseFontSize - 2,
-                      fontWeight: FontWeight.w700,
-                      color: Terminal2Tokens.bg(isDark),
-                      letterSpacing: 1.1,
-                      height: 1,
-                    ),
-                  ),
-                ),
-                Expanded(child: Container(height: 1, color: dim.withAlpha(60))),
-                const SizedBox(width: 8),
-                Text(
-                  isSearching ? 'RESOLVING' : 'INSERT',
-                  style: Terminal2Tokens.label(
-                    fontSize: Design.baseFontSize - 2,
-                    fontWeight: FontWeight.w600,
-                    color: isSearching ? Terminal2Tokens.amber(isDark) : dim,
-                    letterSpacing: 1,
-                    height: 1,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.fromLTRB(8, 5, 8, 4),
+          //   child: Row(
+          //     children: <Widget>[
+          //       Container(
+          //         padding: const EdgeInsets.fromLTRB(5, 3, 5, 2),
+          //         color: accent,
+          //         child: Text(
+          //           'QUERY',
+          //           style: Terminal2Tokens.label(
+          //             fontSize: Design.baseFontSize - 2,
+          //             fontWeight: FontWeight.w700,
+          //             color: Terminal2Tokens.bg(isDark),
+          //             letterSpacing: 1.1,
+          //             height: 1,
+          //           ),
+          //         ),
+          //       ),
+          //       Expanded(child: Container(height: 1, color: dim.withAlpha(60))),
+          //       const SizedBox(width: 8),
+          //       Text(
+          //         isSearching ? 'RESOLVING' : 'INSERT',
+          //         style: Terminal2Tokens.label(
+          //           fontSize: Design.baseFontSize - 2,
+          //           fontWeight: FontWeight.w600,
+          //           color: isSearching ? Terminal2Tokens.amber(isDark) : dim,
+          //           letterSpacing: 1,
+          //           height: 1,
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
           Container(height: 1, color: dim.withAlpha(48)),
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 5),
@@ -71,21 +71,22 @@ class _Terminal2SearchBar extends StatelessWidget {
                   message: 'Drag launcher',
                   child: SizedBox(width: 18, height: 22, child: Center(child: dragHandle)),
                 ),
-                Text(
-                  'tabame@local',
-                  style: Terminal2Tokens.mono(
-                    fontSize: Design.baseFontSize,
-                    fontWeight: FontWeight.w600,
-                    color: accent,
-                  ),
-                ),
-                Text(
-                  ':~/launcher',
-                  style: Terminal2Tokens.mono(
-                    fontSize: Design.baseFontSize,
-                    color: Terminal2Tokens.amber(isDark),
-                  ),
-                ),
+                // Text(
+                //   'tabame@local',
+                //   style: Terminal2Tokens.mono(
+                //     fontSize: Design.baseFontSize,
+                //     fontWeight: FontWeight.w600,
+                //     color: accent,
+                //   ),
+                // ),
+                // Text(
+                //   ':~/launcher',
+                //   style: Terminal2Tokens.mono(
+                //     fontSize: Design.baseFontSize,
+                //     color: Terminal2Tokens.amber(isDark),
+                //   ),
+                // ),
+                const SizedBox(width: 8),
                 Text(
                   r'$ ',
                   style: Terminal2Tokens.mono(
@@ -247,9 +248,10 @@ class Terminal2LauncherFrame extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    _Terminal2TitleBar(accent: accent, isDark: isDark),
+                    // _Terminal2TitleBar(accent: accent, isDark: isDark),
                     child,
-                    _Terminal2StatusBar(accent: accent, resultCount: resultCount, isDark: isDark),
+                    DragToMoveArea(
+                        child: _Terminal2StatusBar(accent: accent, resultCount: resultCount, isDark: isDark)),
                   ],
                 ),
               ),
@@ -261,6 +263,7 @@ class Terminal2LauncherFrame extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _Terminal2TitleBar extends StatelessWidget {
   const _Terminal2TitleBar({required this.accent, required this.isDark});
 

@@ -18,7 +18,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
@@ -144,7 +143,7 @@ class MainMenuConsole2Widget extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    DragToMoveArea(child: _ConsoleTitleStrip(accent: accent, dividerColor: dividerColor)),
+                    // DragToMoveArea(child: _ConsoleTitleStrip(accent: accent, dividerColor: dividerColor)),
                     if (!user.quickActionsAtBottom) ...<Widget>[
                       Container(
                         padding: const EdgeInsets.fromLTRB(4, 5, 10, 6),
@@ -186,6 +185,7 @@ class MainMenuConsole2Widget extends StatelessWidget {
 
 /// "C:\QuickMenu>" title strip with a blinking block cursor, in place of a
 /// generic top bar decoration — this is what sells the CMD look at a glance.
+// ignore: unused_element
 class _ConsoleTitleStrip extends StatelessWidget {
   final Color accent;
   final Color dividerColor;

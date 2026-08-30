@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
@@ -52,7 +53,7 @@ class MainMenuManifestoWidget extends StatelessWidget {
                   ],
                 ),
               ),
-              Positioned(left: 0, top: 0, bottom: 0, width: 22, child: _FolioRail(p: p)),
+              Positioned(left: 0, top: 0, bottom: 0, width: 22, child: DragToMoveArea(child: _FolioRail(p: p))),
             ],
           ),
         ),

@@ -1,3 +1,5 @@
+// ignore_for_file: unused_element
+
 import 'dart:async';
 import 'dart:io';
 
@@ -133,7 +135,7 @@ class MainMenuTerminal2Widget extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      _TerminalHeader(palette: palette),
+                      // _TerminalHeader(palette: palette),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(5, 5, 5, 4),
                         child: Column(
@@ -510,44 +512,44 @@ class _TerminalStatusBar extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          Container(
-            height: double.infinity,
-            color: palette.accent,
-            padding: const EdgeInsets.symmetric(horizontal: 7),
-            alignment: Alignment.center,
-            child: Text(
-              '[0] qmenu*',
-              style: _terminalText(
-                palette.accentInk,
-                size: Design.baseFontSize - 1,
-                weight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 7),
-            child: Text(
-              'NORMAL',
-              style: _terminalText(
-                palette.accent,
-                size: Design.baseFontSize - 1,
-                weight: FontWeight.w700,
-                letterSpacing: 0.7,
-              ),
-            ),
-          ),
+          // Container(
+          //   height: double.infinity,
+          //   color: palette.accent,
+          //   padding: const EdgeInsets.symmetric(horizontal: 7),
+          //   alignment: Alignment.center,
+          //   child: Text(
+          //     '[0] qmenu*',
+          //     style: _terminalText(
+          //       palette.accentInk,
+          //       size: Design.baseFontSize - 1,
+          //       weight: FontWeight.w700,
+          //     ),
+          //   ),
+          // ),
+          // Padding(
+          //   padding: const EdgeInsets.symmetric(horizontal: 7),
+          //   child: Text(
+          //     'NORMAL',
+          //     style: _terminalText(
+          //       palette.accent,
+          //       size: Design.baseFontSize - 1,
+          //       weight: FontWeight.w700,
+          //       letterSpacing: 0.7,
+          //     ),
+          //   ),
+          // ),
           Expanded(child: DefaultTextStyle.merge(style: _terminalText(palette.text), child: const BottomBar())),
-          Padding(
-            padding: const EdgeInsets.only(left: 6, right: 7),
-            child: Text(
-              'TTY0',
-              style: _terminalText(
-                palette.muted,
-                size: Design.baseFontSize - 1,
-                weight: FontWeight.w600,
-              ),
-            ),
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.only(left: 6, right: 7),
+          //   child: Text(
+          //     'TTY0',
+          //     style: _terminalText(
+          //       palette.muted,
+          //       size: Design.baseFontSize - 1,
+          //       weight: FontWeight.w600,
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );

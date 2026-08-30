@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
@@ -184,41 +185,43 @@ class MainMenuSteamWidget extends StatelessWidget {
                       const SizedBox(height: 4),
 
                     // Library panel.
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(8, 7, 8, 4),
-                      decoration: BoxDecoration(
-                        color: t.panel.withValues(alpha: hasBackdrop ? 0.88 : 1.0),
-                        borderRadius: BorderRadius.circular((radius - 1).clamp(3.0, 8.0)),
-                        border: Border.all(color: t.panelStroke),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(9, 4, 9, 0),
-                            child: Row(
-                              children: <Widget>[
-                                Text(
-                                  "LIBRARY",
-                                  style: TextStyle(
-                                    fontSize: Design.baseFontSize - 2,
-                                    fontFamily: Design.uiFontFamily,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 2.0,
-                                    color: t.label,
+                    DragToMoveArea(
+                      child: Container(
+                        margin: const EdgeInsets.fromLTRB(8, 7, 8, 4),
+                        decoration: BoxDecoration(
+                          color: t.panel.withValues(alpha: hasBackdrop ? 0.88 : 1.0),
+                          borderRadius: BorderRadius.circular((radius - 1).clamp(3.0, 8.0)),
+                          border: Border.all(color: t.panelStroke),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(9, 4, 9, 0),
+                              child: Row(
+                                children: <Widget>[
+                                  Text(
+                                    "LIBRARY",
+                                    style: TextStyle(
+                                      fontSize: Design.baseFontSize - 2,
+                                      fontFamily: Design.uiFontFamily,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 2.0,
+                                      color: t.label,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(child: Container(height: 1, color: t.panelStroke)),
-                              ],
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Container(height: 1, color: t.panelStroke)),
+                                ],
+                              ),
                             ),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 2),
-                            child: TaskBar(),
-                          ),
-                        ],
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 2),
+                              child: TaskBar(),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
 

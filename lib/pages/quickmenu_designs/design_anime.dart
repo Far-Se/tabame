@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes/quick_menu_box.dart';
 import '../../models/globals.dart';
@@ -145,7 +146,7 @@ class MainMenuAnimeWidget extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    _RibbonHeader(t: t),
+                    DragToMoveArea(child: _RibbonHeader(t: t)),
                     if (!user.quickActionsAtBottom)
                       const Padding(
                         padding: EdgeInsets.fromLTRB(9, 3, 9, 0),

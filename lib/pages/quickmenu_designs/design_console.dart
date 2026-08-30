@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
@@ -147,7 +148,7 @@ class _MainMenuConsoleWidgetState extends State<MainMenuConsoleWidget>
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
-                        _ConsoleHeader(accent: accent, breathe: _breathe),
+                        DragToMoveArea(child: _ConsoleHeader(accent: accent, breathe: _breathe)),
                         if (!user.quickActionsAtBottom)
                           const Padding(
                             padding: EdgeInsets.fromLTRB(6, 0, 6, 2),

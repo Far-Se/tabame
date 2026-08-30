@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
@@ -154,7 +155,7 @@ class MainMenuCassetteWidget extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    _FasciaHeader(p: p),
+                    DragToMoveArea(child: _FasciaHeader(p: p)),
                     if (!user.quickActionsAtBottom) _ButtonPlate(p: p),
                     if (user.bottomBarOnTop) const PinnedAndTrayList(),
                     _CrtScreen(p: p, hasBackdrop: hasBackdrop),

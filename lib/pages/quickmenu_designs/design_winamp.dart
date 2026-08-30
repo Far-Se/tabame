@@ -1,6 +1,7 @@
 import 'dart:math' show max;
 
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
 import '../../models/util/theme_colors.dart';
@@ -51,7 +52,7 @@ class MainMenuWinampWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     // Title / LED strip
-                    _WinampTitleBar(t: t),
+                    DragToMoveArea(child: _WinampTitleBar(t: t)),
 
                     if (!user.quickActionsAtBottom)
                       _WinampBevel(
