@@ -235,9 +235,12 @@ class _Win98Footer extends StatelessWidget {
             raised: false,
             child: ColoredBox(
               color: _Win98Colors.face,
-              child: const Padding(
-                padding: EdgeInsets.fromLTRB(2, 1, 2, 1),
-                child: BottomBar(),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(2, 1, 2, 1),
+                child: DefaultTextStyle.merge(
+                  style: TextStyle(color: _Win98Colors.dark),
+                  child: const BottomBar(),
+                ),
               ),
             ),
           ),

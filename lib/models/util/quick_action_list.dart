@@ -170,7 +170,7 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.theater_comedy_sharp,
     widget: () => const ChangeThemeButton(),
   ),
-  "ClaudeUsageButton": QuickAction(
+  "AiUsageButton": QuickAction(
     name: "AI Usage Stats",
     icon: Icons.bar_chart_rounded,
     widget: () => const AiUsageButton(),

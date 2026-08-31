@@ -3,6 +3,7 @@
 
 Examples:
   curr 10 USD to eur   -> 10 USD converted to EUR, default chart period
+  curr £100 to €       -> 100 GBP converted to EUR
   curr USD EUR         -> 1 USD converted to EUR
   curr eur             -> defaultAmount defaultFrom converted to EUR
   curr 10 usd eur 1y   -> same, with a 1 year rate chart
@@ -54,6 +55,50 @@ PERIOD_PRESETS = [
 ]
 
 CONNECTOR_WORDS = {"to", "in", "into", "as", "->", "="}
+
+CURRENCY_SYMBOL_ALIASES = {
+    "US$": "USD",
+    "C$": "CAD",
+    "A$": "AUD",
+    "NZ$": "NZD",
+    "HK$": "HKD",
+    "S$": "SGD",
+    "R$": "BRL",
+    "€": "EUR",
+    "£": "GBP",
+    "₤": "GBP",
+    "₹": "INR",
+    "¥": "JPY",
+    "￥": "JPY",
+    "元": "CNY",
+    "₩": "KRW",
+    "₽": "RUB",
+    "₺": "TRY",
+    "₴": "UAH",
+    "₦": "NGN",
+    "₱": "PHP",
+    "฿": "THB",
+    "₪": "ILS",
+    "₫": "VND",
+    "₡": "CRC",
+    "₲": "PYG",
+    "₾": "GEL",
+    "₸": "KZT",
+    "₮": "MNT",
+    "₭": "LAK",
+    "₵": "GHS",
+    "₨": "INR",
+    "$": "USD",
+}
+
+
+def expand_currency_symbols(text):
+    expanded = text
+    for symbol, code in sorted(
+        CURRENCY_SYMBOL_ALIASES.items(), key=lambda item: len(item[0]), reverse=True
+    ):
+        expanded = re.sub(re.escape(symbol), f" {code} ", expanded, flags=re.IGNORECASE)
+    return expanded
 
 
 def send(frame):
@@ -127,7 +172,7 @@ _NUM_RE = re.compile(r"^-?\d+(\.\d+)?$")
 
 
 def parse_query(text):
-    tokens = text.strip().split()
+    tokens = expand_currency_symbols(text.strip()).split()
 
     period_token = None
     if tokens:
@@ -145,7 +190,9 @@ def parse_query(text):
         if amount is None and _NUM_RE.match(cleaned):
             amount = float(cleaned)
             continue
-        codes.append(tok.upper())
+        code = tok.upper()
+        if code not in codes:
+            codes.append(code)
 
     if len(codes) >= 2:
         from_code, to_code = codes[0], codes[1]
@@ -302,6 +349,7 @@ def instructions_frame(rev):
         "Type an amount and two currencies, then press **Enter**:",
         "",
         "- `curr 10 USD to EUR` — convert 10 USD to EUR",
+        "- `curr £100 to €` — symbols can be before or after the amount",
         "- `curr USD EUR` — convert 1 USD to EUR",
         f"- `curr EUR` — convert your default amount of **{DEFAULT_FROM}** to EUR",
         "- `curr 10 USD EUR 1y` — with a 1 year rate chart",

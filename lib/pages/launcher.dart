@@ -650,15 +650,6 @@ class LauncherState extends State<Launcher>
   /// results for a different query always start at the first row.
   String? _resultsQuery;
 
-  /// Matches the bare-word currency shorthand `100 usd to eur`, which is treated
-  /// exactly like `$cur 100 usd to eur`. Requires an amount, a 3-letter source
-  /// currency, a `to`/`in`/`into` connector, and a 3-letter target currency so it
-  /// doesn't hijack ordinary searches.
-  static final RegExp _currencyShorthandPattern = RegExp(
-    r'^\d+(?:[.,]\d+)?\s+[a-z]{3}\s+(?:to|in|into)\s+[a-z]{3}$',
-    caseSensitive: false,
-  );
-
   /// A bare arithmetic expression made up only of digits, whitespace and the
   /// arithmetic characters `. ( ) + - * / ^ %`.
   static final RegExp _mathShorthandPattern = RegExp(r'^[\d\s.()+\-*/^%]+$');

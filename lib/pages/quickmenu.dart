@@ -156,9 +156,14 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
 
   @override
   Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) => _onQuickMenuToggled(visible, type);
-
+  bool tryToPop = false;
   @override
-  Future<void> onQuickMenuMaybePop() => Navigator.of(context).maybePop();
+  Future<void> onQuickMenuMaybePop() async {
+    print("Maybe pop?");
+    tryToPop = true;
+    Navigator.of(context).maybePop();
+  }
+
   @override
   Future<void> onQuickMenuSwitchedPage(QuickMenuPage newType, QuickMenuPage oldType, bool visible) =>
       _onQuickMenuSwitchedPage(newType, oldType, visible);
@@ -405,13 +410,17 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
 
       if (Navigator.of(context).canPop()) {
         if (user.hideTabameOnUnfocus) {
-          if (!user.keepPopupsOpen) {
+          if (!user.keepPopupsOpen && !user.keepPopupOpenOnDemand) {
             Navigator.of(context).pop();
           } else {
-            if (DateTime.now().difference(lastTimeShown).inSeconds > 30) {
+            if (DateTime.now().difference(lastTimeShown).inSeconds > 30 && !user.keepPopupOpenOnDemand) {
               Navigator.of(context).pop();
             }
           }
+        }
+        if (tryToPop) {
+          Navigator.of(context).pop();
+          tryToPop = false;
         }
       }
       if (Globals.quickMenuPage == QuickMenuPage.launcher) {
@@ -462,6 +471,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
   }
 
   Future<void> _onQuickMenuSwitchedPage(QuickMenuPage newType, QuickMenuPage oldType, bool visible) async {
+    tryToPop = true;
     Win32.setWindowInvisible(true);
     if (oldType == QuickMenuPage.quickClick) {
       WinUtils.makeWindowClickThrough(false);
@@ -708,25 +718,26 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
   }
 
   Widget _mainWidget(BuildContext context) {
-    if (Globals.quickMenuPage == QuickMenuPage.quickSnap) {
-      Navigator.of(context).maybePop();
-      return const ViewsScreen();
+    switch (Globals.quickMenuPage) {
+      case QuickMenuPage.quickMenu:
+      case QuickMenuPage.launcher:
+        break;
+      default:
+        Navigator.of(context).maybePop();
     }
-    if (Globals.quickMenuPage == QuickMenuPage.quickClick) {
-      Navigator.of(context).maybePop();
-      return const QuickClickOverlay();
-    }
-    if (Globals.quickMenuPage == QuickMenuPage.fancyShotLive) {
-      Navigator.of(context).maybePop();
-      return const FancyShotCaptureWidget(freezeMode: false);
-    }
-    if (Globals.quickMenuPage == QuickMenuPage.fancyShotFreeze) {
-      Navigator.of(context).maybePop();
-      return const FancyShotCaptureWidget(freezeMode: true);
-    }
-    if (Globals.quickMenuPage == QuickMenuPage.emojiPicker) {
-      Navigator.of(context).maybePop();
-      return const EmojiPage();
+    switch (Globals.quickMenuPage) {
+      case QuickMenuPage.quickSnap:
+        return const ViewsScreen();
+      case QuickMenuPage.quickClick:
+        return const QuickClickOverlay();
+      case QuickMenuPage.fancyShotLive:
+        return const FancyShotCaptureWidget(freezeMode: false);
+      case QuickMenuPage.fancyShotFreeze:
+        return const FancyShotCaptureWidget(freezeMode: true);
+      case QuickMenuPage.emojiPicker:
+        return const EmojiPage();
+      default:
+        break;
     }
     return Focus(
       focusNode: focusNode,

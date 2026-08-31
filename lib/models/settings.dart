@@ -221,6 +221,7 @@ class Settings {
   /// `weather` launch as `;weather`.
   String pluginShortcut = '';
   bool dragPopupsByIconOnly = true;
+  bool keepPopupOpenOnDemand = false;
   bool quickActionsAtBottom = false;
   int quickMenuDesign = Random().nextInt(QuickMenuDesigns.values.length);
   LauncherDesign launcherDesign = LauncherDesign.values[Random().nextInt(LauncherDesign.values.length)];

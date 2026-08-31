@@ -404,7 +404,7 @@ QuickActions are the building blocks of Tabame. You can put them on the QuickMen
 - **ShutDown** - schedule a shutdown at a set time or after a delay; can be persistent.
 - **TrktivityToday** - a quick summary of today's [Trktivity](#-trktivity) activity.
 - **Subscription** - track recurring subscriptions and what they cost you.
-- **ClaudeUsage** - keep an eye on your Claude/Anthropic API usage.
+- **AiUsage** - keep an eye on your Claude/Codex API usage.
 
 ---
 

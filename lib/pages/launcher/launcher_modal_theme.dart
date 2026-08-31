@@ -303,7 +303,10 @@ class LauncherModalFrame extends StatelessWidget {
     required this.width,
     this.maxHeight = double.infinity,
     this.constraints,
-    this.margin = const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+    this.margin = const EdgeInsets.symmetric(
+      horizontal: 24,
+      vertical: 48,
+    ),
     required this.child,
   });
 
@@ -314,116 +317,135 @@ class LauncherModalFrame extends StatelessWidget {
   /// Overrides the [maxHeight]-derived constraints when provided (used by the
   /// QuickMenu popup frame, which also carries a minHeight).
   final BoxConstraints? constraints;
+
   final EdgeInsetsGeometry margin;
   final Widget child;
 
+  LauncherDesign get design => tokens.design;
+  Color get accent => tokens.accent;
+
+  BorderRadius get radius => BorderRadius.circular(tokens.frameRadius);
+
   @override
   Widget build(BuildContext context) {
-    final LauncherDesign design = tokens.design;
-    final Color accent = tokens.accent;
-    final BorderRadius radius = BorderRadius.circular(tokens.frameRadius);
+    Widget core = _buildCore(context);
 
-    Widget core = Stack(
+    core = _applyBackdropEffect(core);
+
+    return Container(
+      width: width,
+      constraints: constraints ?? BoxConstraints(maxHeight: maxHeight),
+      margin: margin,
+      decoration: design.outerDecoration(
+        surface: tokens.surface,
+        accent: accent,
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: core,
+        clipBehavior: Clip.antiAlias,
+      ),
+    );
+  }
+
+  Widget _buildCore(BuildContext context) {
+    return Stack(
+      fit: StackFit.passthrough,
       children: <Widget>[
-        // Background flourishes.
-        if (design == LauncherDesign.blueprint)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(painter: _ModalSheetPainter(ink: accent)),
+        ..._buildBackgroundFlourishes(),
+        _buildContent(context),
+        ..._buildForegroundFlourishes(),
+      ],
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _surfaceColor(context),
+      ),
+      child: child,
+    );
+  }
+
+  Color _surfaceColor(BuildContext context) {
+    return switch (design) {
+      LauncherDesign.relay || LauncherDesign.newCast || LauncherDesign.notion => tokens.surface.withValues(alpha: 0.98),
+      LauncherDesign.windows98 => Windows98Tokens.face,
+      LauncherDesign.windowsXp => WindowsXpTokens.surface,
+      LauncherDesign.manifesto => tokens.surface.withValues(alpha: 0.96),
+
+      // Matrix text needs a solid reading surface;
+      // keep the launcher backdrop outside the modal.
+      LauncherDesign.matrix => tokens.surface.withValues(alpha: 1.0),
+      _ => Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
+    };
+  }
+
+  List<Widget> _buildBackgroundFlourishes() {
+    return switch (design) {
+      LauncherDesign.blueprint => <Widget>[
+          _fill(
+            CustomPaint(
+              painter: _ModalSheetPainter(ink: accent),
             ),
           ),
-        if (design == LauncherDesign.zen)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(-0.7, -0.9),
-                    radius: 1.3,
-                    colors: <Color>[accent.withAlpha(22), accent.withAlpha(0)],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        if (design == LauncherDesign.manifesto)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(painter: _ModalManifestoPainter(ink: tokens.onSurface.withAlpha(20))),
-            ),
-          ),
-        if (design == LauncherDesign.orbit)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(painter: _ModalOrbitPainter(ink: tokens.accent, isDark: tokens.isDark)),
-            ),
-          ),
-        if (design == LauncherDesign.glass) ...<Widget>[
-          // Specular sheen from the top-left.
-          Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.center,
-                    colors: <Color>[Colors.white.withAlpha(tokens.isDark ? 24 : 90), Colors.transparent],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Bright glass edge along the very top.
-          Positioned(
-            top: 0,
-            left: 18,
-            right: 18,
-            height: 1.5,
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: <Color>[
-                      Colors.transparent,
-                      Colors.white.withAlpha(tokens.isDark ? 70 : 200),
-                      Colors.transparent,
-                    ],
-                  ),
+        ],
+      LauncherDesign.zen => <Widget>[
+          _fill(
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: const Alignment(-0.7, -0.9),
+                  radius: 1.3,
+                  colors: <Color>[
+                    accent.withAlpha(22),
+                    accent.withAlpha(0),
+                  ],
                 ),
               ),
             ),
           ),
         ],
-        Container(
-          decoration: BoxDecoration(
-            color: design == LauncherDesign.relay
-                ? tokens.surface.withValues(alpha: 0.98)
-                : design == LauncherDesign.newCast
-                    ? tokens.surface.withValues(alpha: 0.98)
-                    : design == LauncherDesign.notion
-                        ? tokens.surface.withValues(alpha: 0.98)
-                        : design == LauncherDesign.windows98
-                            ? Windows98Tokens.face
-                            : design == LauncherDesign.windowsXp
-                                ? WindowsXpTokens.surface
-                                : design == LauncherDesign.manifesto
-                                    ? tokens.surface.withValues(alpha: 0.96)
-                                    : design == LauncherDesign.matrix
-                                        // Matrix text needs a solid reading surface;
-                                        // keep the launcher backdrop outside the modal.
-                                        ? tokens.surface.withValues(alpha: 1.0)
-                                        : Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
-          ),
-          child: child,
-        ),
-        // Foreground flourishes.
-        if (design == LauncherDesign.terminal)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(painter: _ModalScanlinePainter(isDark: tokens.isDark)),
+      LauncherDesign.manifesto => <Widget>[
+          _fill(
+            CustomPaint(
+              painter: _ModalManifestoPainter(
+                ink: tokens.onSurface.withAlpha(20),
+              ),
             ),
           ),
-        if (design == LauncherDesign.command)
+        ],
+      LauncherDesign.orbit => <Widget>[
+          _fill(
+            CustomPaint(
+              painter: _ModalOrbitPainter(
+                ink: accent,
+                isDark: tokens.isDark,
+              ),
+            ),
+          ),
+        ],
+      LauncherDesign.glass => <Widget>[
+          _buildGlassSheen(),
+          _buildGlassTopEdge(),
+        ],
+      _ => const <Widget>[],
+    };
+  }
+
+  List<Widget> _buildForegroundFlourishes() {
+    return switch (design) {
+      LauncherDesign.terminal => <Widget>[
+          _fill(
+            CustomPaint(
+              painter: _ModalScanlinePainter(
+                isDark: tokens.isDark,
+              ),
+            ),
+          ),
+        ],
+      LauncherDesign.command => <Widget>[
           Positioned(
             top: 0,
             left: 0,
@@ -433,59 +455,138 @@ class LauncherModalFrame extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: <Color>[accent.withAlpha(200), accent.withAlpha(40), Colors.transparent],
+                    colors: <Color>[
+                      accent.withAlpha(200),
+                      accent.withAlpha(40),
+                      Colors.transparent,
+                    ],
                   ),
                 ),
               ),
             ),
           ),
-        if (design == LauncherDesign.manifesto)
+        ],
+      LauncherDesign.manifesto => <Widget>[
           Positioned(
             top: 0,
             right: 0,
             width: 34,
             height: 7,
-            child: IgnorePointer(child: ColoredBox(color: accent)),
-          ),
-      ],
-    );
-
-    // Glass paints its fill inside the clip (the outer decoration only carries
-    // the floating shadow + refraction glow); Serene adds its frosted blur.
-    if (design == LauncherDesign.glass) {
-      final Color baseFill = tokens.surface.withAlpha(tokens.isDark ? 205 : 225);
-      core = BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: <Color>[
-                Color.alphaBlend(Colors.white.withAlpha(tokens.isDark ? 50 : 90), baseFill),
-                baseFill,
-                Color.alphaBlend(accent.withAlpha(tokens.isDark ? 40 : 26), baseFill),
-              ],
+            child: IgnorePointer(
+              child: ColoredBox(color: accent),
             ),
-            border: Border.all(color: Colors.white.withAlpha(tokens.isDark ? 40 : 120), width: 1.2),
+          ),
+        ],
+      _ => const <Widget>[],
+    };
+  }
+
+  Widget _applyBackdropEffect(Widget core) {
+    return switch (design) {
+      LauncherDesign.glass => _buildGlassBackdrop(core),
+      LauncherDesign.serene => BackdropFilter(
+          filter: ui.ImageFilter.blur(
+            sigmaX: 24,
+            sigmaY: 24,
           ),
           child: core,
         ),
-      );
-    } else if (design == LauncherDesign.serene) {
-      core = BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: core,
-      );
-    }
+      _ => core,
+    };
+  }
 
-    return Container(
-      width: width,
-      constraints: constraints ?? BoxConstraints(maxHeight: maxHeight),
-      margin: margin,
-      decoration: design.outerDecoration(surface: tokens.surface, accent: accent),
-      child: ClipRRect(borderRadius: radius, child: core),
+  Widget _buildGlassBackdrop(Widget core) {
+    final Color baseFill = tokens.surface.withAlpha(
+      tokens.isDark ? 205 : 225,
+    );
+
+    return BackdropFilter(
+      filter: ui.ImageFilter.blur(
+        sigmaX: 30,
+        sigmaY: 30,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: <Color>[
+              Color.alphaBlend(
+                Colors.white.withAlpha(
+                  tokens.isDark ? 50 : 90,
+                ),
+                baseFill,
+              ),
+              baseFill,
+              Color.alphaBlend(
+                accent.withAlpha(
+                  tokens.isDark ? 40 : 26,
+                ),
+                baseFill,
+              ),
+            ],
+          ),
+          border: Border.all(
+            color: Colors.white.withAlpha(
+              tokens.isDark ? 40 : 120,
+            ),
+            width: 1.2,
+          ),
+        ),
+        child: core,
+      ),
+    );
+  }
+
+  Widget _buildGlassSheen() {
+    return _fill(
+      DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.center,
+            colors: <Color>[
+              Colors.white.withAlpha(
+                tokens.isDark ? 24 : 90,
+              ),
+              Colors.transparent,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassTopEdge() {
+    return Positioned(
+      top: 0,
+      left: 18,
+      right: 18,
+      height: 1.5,
+      child: IgnorePointer(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: <Color>[
+                Colors.transparent,
+                Colors.white.withAlpha(
+                  tokens.isDark ? 70 : 200,
+                ),
+                Colors.transparent,
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _fill(Widget child) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: child,
+      ),
     );
   }
 }

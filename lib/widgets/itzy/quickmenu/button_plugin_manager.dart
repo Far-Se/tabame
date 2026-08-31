@@ -674,8 +674,8 @@ Build a plugin with your favorite AI coding assistant:
                 color: accent,
               ),
               decoration: InputDecoration(
-                hintText: ';',
-                hintStyle: TextStyle(color: text.withAlpha(90)),
+                // hintText: ';',
+                // hintStyle: TextStyle(color: text.withAlpha(90)),
                 counterText: '',
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),

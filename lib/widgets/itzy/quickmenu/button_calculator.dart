@@ -104,15 +104,10 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
     return result;
   }
 
-  // Matches a direct currency conversion like "100 usd to eur" / "$a ron to usd"
-  // (two 3-letter currency codes separated by to/in/into/->), no "/" prefix needed.
-  static final RegExp _directCurrencyRegExp =
-      RegExp(r'\b[a-z]{3}\s+(?:to|in|into|->)\s+[a-z]{3}\b', caseSensitive: false);
-
   bool _isDirectCurrency(String expression) {
     final String trimmed = expression.trim();
     if (trimmed.isEmpty || trimmed.startsWith('/')) return false;
-    return _directCurrencyRegExp.hasMatch(trimmed.toLowerCase());
+    return CurrencyConverterService.looksLikeConversionInput(trimmed, requireAmount: false);
   }
 
   Future<({double value, String display})?> _runConverter(String expression, Map<String, double> vars) async {

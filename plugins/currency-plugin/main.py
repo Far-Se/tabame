@@ -2,7 +2,7 @@
 """
 Currency Converter — Tabame launcher plugin.
 
-Usage in launcher:  fx 100 usd eur   |   fx usd gbp   |   fx eur
+Usage in launcher:  fx 100 usd eur   |   fx £100 to €   |   fx eur
 Data source: Frankfurter (frankfurter.app), free & keyless, ECB daily rates.
 NOTE: only daily (not intraday) history is available for free without an
 API key, so the timeframe tabs are 1W/1M/3M/1Y/5Y/All rather than 1D.
@@ -129,10 +129,56 @@ _RANGE_ALIASES = {
 }
 
 
+CURRENCY_SYMBOL_ALIASES = {
+    "US$": "USD",
+    "C$": "CAD",
+    "A$": "AUD",
+    "NZ$": "NZD",
+    "HK$": "HKD",
+    "S$": "SGD",
+    "R$": "BRL",
+    "€": "EUR",
+    "£": "GBP",
+    "₤": "GBP",
+    "₹": "INR",
+    "¥": "JPY",
+    "￥": "JPY",
+    "元": "CNY",
+    "₩": "KRW",
+    "₽": "RUB",
+    "₺": "TRY",
+    "₴": "UAH",
+    "₦": "NGN",
+    "₱": "PHP",
+    "฿": "THB",
+    "₪": "ILS",
+    "₫": "VND",
+    "₡": "CRC",
+    "₲": "PYG",
+    "₾": "GEL",
+    "₸": "KZT",
+    "₮": "MNT",
+    "₭": "LAK",
+    "₵": "GHS",
+    "₨": "INR",
+    "$": "USD",
+}
+
+
+def expand_currency_symbols(text):
+    expanded = text
+    for symbol, code in sorted(
+        CURRENCY_SYMBOL_ALIASES.items(), key=lambda item: len(item[0]), reverse=True
+    ):
+        expanded = re.sub(re.escape(symbol), f" {code} ", expanded, flags=re.IGNORECASE)
+    return expanded
+
+
 def parse_query(text):
     text = (text or "").strip()
     if not text:
         return None
+    text = expand_currency_symbols(text)
     amount = None
     codes = []
     range_key = None
@@ -149,7 +195,9 @@ def parse_query(text):
         except ValueError:
             pass
         if re.fullmatch(r"[A-Za-z]{3}", tok):
-            codes.append(tok.upper())
+            code = tok.upper()
+            if code not in codes:
+                codes.append(code)
     if not codes:
         return None
     frm = codes[0]

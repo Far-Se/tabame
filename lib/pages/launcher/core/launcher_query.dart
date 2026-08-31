@@ -46,13 +46,16 @@ class LauncherQuery {
   }
 
   static final RegExp _mediaCommandPrefixPattern = RegExp(r'^m[1-5]? ');
+  static final RegExp _dollarAmountPrefixPattern = RegExp(r'^\$\s*\d');
 
   static LauncherSearchMode _modeFor(String query) {
     if (query.startsWith('/')) return LauncherSearchMode.actionsOnly;
     if (query.startsWith('!')) return LauncherSearchMode.pluginsOnly;
     if (query == 'sp' || query.startsWith('sp ')) return LauncherSearchMode.spotifyCommand;
     if (_mediaCommandPrefixPattern.hasMatch(query)) return LauncherSearchMode.mediaCommand;
-    if (query.startsWith(r'$')) return LauncherSearchMode.functionCommand;
+    if (query.startsWith(r'$') && !_dollarAmountPrefixPattern.hasMatch(query)) {
+      return LauncherSearchMode.functionCommand;
+    }
     if (query.startsWith('.')) return LauncherSearchMode.windowsOnly;
     if (query.startsWith(',')) return LauncherSearchMode.browserTabsOnly;
     if (query.startsWith('d ')) return LauncherSearchMode.desktopOnly;
@@ -93,7 +96,7 @@ class LauncherQuery {
     if (query.startsWith('/') ||
         query.startsWith('.') ||
         query.startsWith(',') ||
-        query.startsWith(r'$') ||
+        (query.startsWith(r'$') && !_dollarAmountPrefixPattern.hasMatch(query)) ||
         query.startsWith('>') ||
         query.startsWith('?') ||
         query.startsWith(' ') ||

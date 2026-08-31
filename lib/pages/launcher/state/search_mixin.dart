@@ -7,7 +7,6 @@ part of '../../launcher.dart';
 // ---------------------------------------------------------------------------
 
 mixin _SearchMixin on _LauncherStateMembersMixin {
-  static RegExp get _currencyShorthandPattern => LauncherState._currencyShorthandPattern;
   static RegExp get _mathShorthandPattern => LauncherState._mathShorthandPattern;
   static RegExp get _mathOperatorPattern => LauncherState._mathOperatorPattern;
   static RegExp get _mathCurrencyShorthandPattern => LauncherState._mathCurrencyShorthandPattern;
@@ -262,7 +261,7 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
     );
   }
 
-  bool _isCurrencyShorthand(String query) => _currencyShorthandPattern.hasMatch(query.trim());
+  bool _isCurrencyShorthand(String query) => CurrencyConverterService.looksLikeConversionInput(query);
 
   /// Routes a bare-word currency shorthand query through the same handler as the
   /// `$cur` function command.
@@ -1357,7 +1356,7 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
         const LauncherSearchResultItem.info(LauncherInfoResult(
           id: 'function-currency-help',
           title: 'Convert currency',
-          subtitle: r'$cur 1 USD to EUR  •  Tip: just type 100 USD to EUR (no $cur needed)',
+          subtitle: r'$cur 1 USD to EUR  •  Tip: just type 100 USD to EUR or £100 to €',
           icon: Icons.currency_exchange_rounded,
         )),
       ];
