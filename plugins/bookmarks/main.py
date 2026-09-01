@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Tabame 'Bookmarks' plugin — links, files, and parameterized commands under categories."""
-import sys, json, os, re, uuid, threading, subprocess
+import sys, json, os, re, uuid, threading, subprocess, hashlib
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -12,11 +12,22 @@ VAR_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 TYPE_ICON = {"link": "link", "file": "file", "command": "terminal"}
 TYPE_LABEL = {"link": "Link", "file": "File", "command": "Command"}
 
+TABAME_CATEGORY_PREFIX = "tabame_category_"
+TABAME_BOOKMARK_PREFIX = "tabame_bookmark_"
+TABAME_SETTINGS_SIGNATURES = None
+TABAME_SETTINGS_PATH = None
+TABAME_SETTINGS_ERROR = None
+TABAME_CATEGORIES = []
+TABAME_BOOKMARKS = []
+
 # ---------------------------------------------------------------- protocol --
 
+OUTPUT_LOCK = threading.Lock()
+
 def send(frame):
-    sys.stdout.write(json.dumps(frame) + "\n")
-    sys.stdout.flush()
+    with OUTPUT_LOCK:
+        sys.stdout.write(json.dumps(frame) + "\n")
+        sys.stdout.flush()
 
 def log(*a):
     print(*a, file=sys.stderr, flush=True)
@@ -34,6 +45,8 @@ def load_data():
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 d = json.load(f)
+            if not isinstance(d, dict):
+                raise ValueError("bookmark data must be an object")
             d.setdefault("categories", [])
             d.setdefault("bookmarks", [])
             if not any(c.get("id") == "uncategorized" for c in d["categories"]):
@@ -44,20 +57,229 @@ def load_data():
     return default_data()
 
 def save_data():
+    payload = json.dumps(DATA, indent=2, ensure_ascii=False)
+    tmp = DATA_FILE + ".tmp"
     try:
-        tmp = DATA_FILE + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(DATA, f, indent=2, ensure_ascii=False)
-        os.replace(tmp, DATA_FILE)
+            f.write(payload)
+            f.flush()
+            os.fsync(f.fileno())
+        try:
+            os.replace(tmp, DATA_FILE)
+            return
+        except OSError as replace_error:
+            # Some Windows readers keep the destination open without delete
+            # sharing. Direct writes are still allowed, so fall back after
+            # staging the complete payload above.
+            log("atomic save unavailable, using direct write:", replace_error)
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            f.write(payload)
+            f.flush()
+            os.fsync(f.fileno())
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
     except Exception as e:
         log("save error:", e)
 
 DATA = load_data()
 
+def _decode_json_setting(value, default):
+    if value is None:
+        return default
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (TypeError, json.JSONDecodeError):
+            return default
+    return value
+
+def _tabame_settings_candidates():
+    candidates = []
+    override = os.environ.get("TABAME_SETTINGS_PATH", "").strip()
+    if override:
+        candidates.append(override)
+
+    local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
+    if not local_app_data:
+        local_app_data = os.path.join(os.path.expanduser("~"), "AppData", "Local")
+    tabame_root = os.path.join(local_app_data, "Tabame")
+    candidates.extend([
+        os.path.join(tabame_root, "settings", "settings.json"),
+        os.path.join(tabame_root, "settings", "debug", "settings.json"),
+        os.path.join(tabame_root, "settings.json"),
+    ])
+
+    unique = []
+    seen = set()
+    for candidate in candidates:
+        normalized = os.path.normcase(os.path.abspath(candidate))
+        if normalized not in seen:
+            seen.add(normalized)
+            unique.append(candidate)
+    return unique
+
+def _settings_file_signature(path):
+    try:
+        stat = os.stat(path)
+        return (path, stat.st_mtime_ns, stat.st_size)
+    except OSError:
+        return None
+
+def _stable_tabame_id(prefix, value):
+    digest = hashlib.sha1(value.encode("utf-8")).hexdigest()[:12]
+    return f"{prefix}{digest}"
+
+def _tabame_type(value):
+    # Use the same classification as quick-add, but keep this wrapper named
+    # separately so settings parsing remains explicit at the call site.
+    return detect_type(value)
+
+def _build_tabame_data(groups):
+    categories = []
+    bookmarks = []
+    category_ids = set()
+
+    for group_index, raw_group in enumerate(groups):
+        group = _decode_json_setting(raw_group, raw_group)
+        if not isinstance(group, dict):
+            continue
+        group_name = str(group.get("title") or "Uncategorized").strip() or "Uncategorized"
+        category_key = group_name
+        category_id = _stable_tabame_id(TABAME_CATEGORY_PREFIX, category_key)
+        if category_id in category_ids:
+            category_id = _stable_tabame_id(
+                TABAME_CATEGORY_PREFIX,
+                f"{category_key}\0{group_index}",
+            )
+        category_ids.add(category_id)
+        categories.append({
+            "id": category_id,
+            "name": f"Tabame / {group_name}",
+            "color": "#63A0EA",
+            "_source": "tabame",
+        })
+
+        raw_bookmarks = _decode_json_setting(group.get("projects"), [])
+        if not isinstance(raw_bookmarks, list):
+            continue
+        for bookmark_index, raw_bookmark in enumerate(raw_bookmarks):
+            bookmark = _decode_json_setting(raw_bookmark, raw_bookmark)
+            if not isinstance(bookmark, dict):
+                continue
+            value = str(bookmark.get("stringToExecute") or "").strip()
+            if not value:
+                continue
+            bookmark_type = _tabame_type(value)
+            name = str(bookmark.get("title") or "").strip() or derive_name(value, bookmark_type)
+            link_value = normalize_link(value) if bookmark_type == "link" else value
+            bookmark_id = _stable_tabame_id(
+                TABAME_BOOKMARK_PREFIX,
+                f"{group_name}\0{name}\0{value}\0{bookmark_index}",
+            )
+            bookmarks.append({
+                "id": bookmark_id,
+                "type": bookmark_type,
+                "name": name,
+                "categoryId": category_id,
+                "tags": [],
+                "url": link_value if bookmark_type == "link" else "",
+                "path": value if bookmark_type == "file" else "",
+                "command": value if bookmark_type == "command" else "",
+                "variables": [
+                    {"name": variable, "type": "text"}
+                    for variable in dict.fromkeys(VAR_RE.findall(value))
+                ] if bookmark_type == "command" else [],
+                "usedCount": 0,
+                "_source": "tabame",
+                "_source_group": group_name,
+                "emoji": str(bookmark.get("emoji") or ""),
+                "preferInputIcon": bool(bookmark.get("preferInputIcon", False)),
+            })
+    return categories, bookmarks
+
+def refresh_tabame_bookmarks(force=False):
+    global TABAME_SETTINGS_SIGNATURES, TABAME_SETTINGS_PATH, TABAME_SETTINGS_ERROR
+    global TABAME_CATEGORIES, TABAME_BOOKMARKS
+
+    candidates = _tabame_settings_candidates()
+    signatures = tuple(
+        signature for signature in (_settings_file_signature(path) for path in candidates)
+        if signature is not None
+    )
+    if not force and signatures == TABAME_SETTINGS_SIGNATURES:
+        return False
+
+    valid_sources = []
+    errors = []
+    for path in candidates:
+        signature = _settings_file_signature(path)
+        if signature is None:
+            continue
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                settings = json.load(f)
+            projects = _decode_json_setting(settings.get("flutter.projects"), None)
+            if isinstance(projects, list):
+                valid_sources.append((signature[1], path, projects))
+            else:
+                errors.append(f"{path}: flutter.projects is missing or invalid")
+        except Exception as error:
+            errors.append(f"{path}: {error}")
+
+    previous_category_ids = {c.get("id") for c in TABAME_CATEGORIES}
+    if valid_sources:
+        override = os.path.normcase(os.path.abspath(os.environ.get("TABAME_SETTINGS_PATH", "").strip()))
+        override_sources = [
+            source for source in valid_sources
+            if os.path.normcase(os.path.abspath(source[1])) == override
+        ] if override else []
+        _, source_path, groups = max(override_sources or valid_sources, key=lambda source: source[0])
+        categories, bookmarks = _build_tabame_data(groups)
+        TABAME_SETTINGS_PATH = source_path
+        TABAME_SETTINGS_ERROR = None
+        TABAME_CATEGORIES = categories
+        TABAME_BOOKMARKS = bookmarks
+    else:
+        TABAME_SETTINGS_PATH = None
+        TABAME_SETTINGS_ERROR = "; ".join(errors) if errors else "Tabame settings.json was not found"
+        TABAME_CATEGORIES = []
+        TABAME_BOOKMARKS = []
+        if errors:
+            log("Tabame bookmark load error:", TABAME_SETTINGS_ERROR)
+
+    TABAME_SETTINGS_SIGNATURES = signatures
+    if "STATE" in globals():
+        current_category_ids = {c.get("id") for c in TABAME_CATEGORIES}
+        for category_id in current_category_ids:
+            STATE["expanded"].add(category_id)
+        for category_id in previous_category_ids - current_category_ids:
+            STATE["expanded"].discard(category_id)
+    return True
+
+def all_categories():
+    return DATA["categories"] + TABAME_CATEGORIES
+
+def all_bookmarks():
+    return DATA["bookmarks"] + TABAME_BOOKMARKS
+
+def is_tabame_bookmark(bookmark):
+    return bookmark.get("_source") == "tabame"
+
+def is_tabame_category(category):
+    return category.get("_source") == "tabame"
+
 def new_id(prefix):
     return f"{prefix}_{uuid.uuid4().hex[:10]}"
 
 def cat_by_id(cid):
+    for c in all_categories():
+        if c["id"] == cid:
+            return c
+    return None
+
+def local_cat_by_id(cid):
     for c in DATA["categories"]:
         if c["id"] == cid:
             return c
@@ -68,15 +290,25 @@ def cat_name(cid):
     return c["name"] if c else "Uncategorized"
 
 def bm_by_id(bid):
-    for b in DATA["bookmarks"]:
+    for b in all_bookmarks():
         if b["id"] == bid:
             return b
     return None
 
 def bookmarks_in(cid):
-    return [b for b in DATA["bookmarks"] if b.get("categoryId") == cid]
+    return [b for b in all_bookmarks() if b.get("categoryId") == cid]
 
 def sorted_categories():
+    return sorted(
+        all_categories(),
+        key=lambda c: (
+            is_tabame_category(c),
+            c["id"] != "uncategorized",
+            c["name"].lower(),
+        ),
+    )
+
+def sorted_local_categories():
     return sorted(DATA["categories"], key=lambda c: (c["id"] != "uncategorized", c["name"].lower()))
 
 # ------------------------------------------------------------------- state --
@@ -95,6 +327,42 @@ STATE = {
     "last_query": "",
     "job": None,
 }
+
+TABAME_WATCH_INTERVAL = 1.0
+TABAME_WATCH_STOP = threading.Event()
+TABAME_WATCH_THREAD = None
+
+def render_after_tabame_refresh():
+    page_id = STATE.get("page_id")
+    if page_id == "bookmarks:categories":
+        render_categories_manage(0)
+        return
+    if page_id != "bookmarks:home":
+        return
+    if STATE.get("pending_quickadd") or STATE.get("pending_catadd"):
+        return
+    if STATE.get("quickadd_awaiting_new_category") or STATE.get("editing_id"):
+        return
+    query = STATE.get("last_query", "")
+    render_search(0, query) if query else render_home(0)
+
+def tabame_settings_watcher():
+    while not TABAME_WATCH_STOP.wait(TABAME_WATCH_INTERVAL):
+        try:
+            if refresh_tabame_bookmarks():
+                render_after_tabame_refresh()
+        except Exception as error:
+            log("Tabame bookmark watcher error:", repr(error))
+
+def start_tabame_settings_watcher():
+    global TABAME_WATCH_THREAD
+    if TABAME_WATCH_THREAD is None:
+        TABAME_WATCH_THREAD = threading.Thread(
+            target=tabame_settings_watcher,
+            name="tabame-bookmark-watcher",
+            daemon=True,
+        )
+        TABAME_WATCH_THREAD.start()
 
 def go(page_id):
     STATE["route_stack"].append(page_id)
@@ -150,6 +418,16 @@ def derive_name(value, vtype):
 
 # ---------------------------------------------------------- item / actions --
 
+def add_tabame_status(frame):
+    if TABAME_SETTINGS_ERROR:
+        frame["banners"] = [{
+            "id": "tabame-settings-error",
+            "style": "warning",
+            "title": "Tabame bookmarks unavailable",
+            "message": TABAME_SETTINGS_ERROR,
+            "dismissible": False,
+        }]
+
 def bookmark_subtitle(bm):
     if bm["type"] == "link":
         return bm.get("url", "")
@@ -159,6 +437,8 @@ def bookmark_subtitle(bm):
 
 def bookmark_preview_md(bm):
     lines = [f"## {bm['name']}", f"**Type:** {TYPE_LABEL[bm['type']]}", f"**Category:** {cat_name(bm.get('categoryId'))}"]
+    if is_tabame_bookmark(bm):
+        lines.append("**Source:** Live Tabame settings")
     if bm["type"] == "link":
         lines.append(f"**URL:** {bm.get('url', '')}")
     elif bm["type"] == "file":
@@ -190,6 +470,8 @@ def bookmark_actions(bm):
             {"id": "run_in_folder", "title": "Run in Folder…", "icon": "folder"},
             {"id": "copy_command", "title": "Copy Command", "icon": "code"},
         ]
+    if is_tabame_bookmark(bm):
+        return acts
     acts += [
         {"id": "edit", "title": "Edit", "icon": "edit"},
         {
@@ -197,7 +479,7 @@ def bookmark_actions(bm):
             "parameters": [{
                 "id": "category", "type": "dropdown", "label": "Category", "required": True,
                 "value": bm.get("categoryId", "uncategorized"),
-                "options": [{"value": c["id"], "label": c["name"]} for c in sorted_categories()],
+                "options": [{"value": c["id"], "label": c["name"]} for c in sorted_local_categories()],
             }],
         },
         {
@@ -214,6 +496,8 @@ def bookmark_item(bm, depth=None, subtitle_with_category=False):
     if len(sub) > 80:
         sub = sub[:77] + "…"
     accessories = []
+    if is_tabame_bookmark(bm):
+        accessories.append({"text": "LIVE", "icon": "sync"})
     if bm["type"] == "command" and bm.get("variables"):
         n = len(bm["variables"])
         accessories.append({"text": f"{n} var" + ("s" if n != 1 else ""), "icon": "tag"})
@@ -233,6 +517,8 @@ def bookmark_item(bm, depth=None, subtitle_with_category=False):
     return item
 
 def category_actions(cat):
+    if is_tabame_category(cat):
+        return []
     acts = [
         {"id": "add_here", "title": "Add Bookmark Here", "icon": "add"},
         {
@@ -266,6 +552,7 @@ def category_node(cat, expanded):
 # -------------------------------------------------------------------- home --
 
 def render_home(rev, history="none"):
+    refresh_tabame_bookmarks()
     items = []
     for c in sorted_categories():
         expanded = c["id"] in STATE["expanded"]
@@ -284,21 +571,24 @@ def render_home(rev, history="none"):
                 "parameters": [{"id": "name", "type": "text", "label": "Category name", "required": True}],
             },
             {"id": "manage_categories", "title": "Manage Categories", "icon": "list"},
+            {"id": "refresh_tabame", "title": "Refresh Tabame Bookmarks", "icon": "refresh"},
         ],
         "items": items,
     }
-    if not DATA["bookmarks"]:
+    if not all_bookmarks():
         frame["empty"] = {
             "icon": "bookmark", "title": "No bookmarks yet",
             "hint": 'Add your first link, file, or command',
             "action": {"id": "add", "title": "Add Bookmark", "icon": "add"},
         }
+    add_tabame_status(frame)
     send(frame)
     STATE["page_id"] = "bookmarks:home"
 
 # ------------------------------------------------------------------ search --
 
 def render_search(rev, text):
+    refresh_tabame_bookmarks()
     q = text.lower()
 
     def matches(b):
@@ -308,27 +598,31 @@ def render_search(rev, text):
         ]).lower()
         return q in hay
 
-    results = [b for b in DATA["bookmarks"] if matches(b)]
+    results = [b for b in all_bookmarks() if matches(b)]
     results.sort(key=lambda b: (not b["name"].lower().startswith(q), b["name"].lower()))
     items = [bookmark_item(b, depth=None, subtitle_with_category=True) for b in results]
-    send({
+    frame = {
         "type": "render", "rev": rev, "view": "list",
         "page": {"id": "bookmarks:search", "title": "Search", "history": "none"},
         "preview": {"enabled": True, "wide": False},
         "emptyText": f'No bookmarks match "{text}"',
+        "actions": [{"id": "refresh_tabame", "title": "Refresh Tabame Bookmarks", "icon": "refresh"}],
         "items": items,
-    })
+    }
+    add_tabame_status(frame)
+    send(frame)
     STATE["page_id"] = "bookmarks:home"  # search is a live filter, not a pushed page
 
 # --------------------------------------------------------------- quick add --
 
 def render_category_picker(rev):
+    refresh_tabame_bookmarks()
     pending = STATE.get("pending_quickadd")
     if not pending:
         render_home(rev)
         return
     name = pending["name"]
-    cats = sorted(DATA["categories"], key=lambda c: c["name"].lower())
+    cats = sorted_local_categories()
     items = []
     for c in cats:
         count = sum(1 for b in DATA["bookmarks"] if b.get("categoryId") == c["id"])
@@ -418,7 +712,7 @@ def commit_quick_add(category_id="uncategorized"):
     if not pending:
         render_home(0)
         return
-    if not cat_by_id(category_id):
+    if not local_cat_by_id(category_id):
         category_id = "uncategorized"
     bm = {
         "id": new_id("bm"), "type": pending["type"], "name": pending["name"],
@@ -493,6 +787,7 @@ def variables_from_command(cmd):
     return list(dict.fromkeys(VAR_RE.findall(cmd or "")))
 
 def render_form(rev, values=None, error=None, first=False):
+    refresh_tabame_bookmarks()
     values = values or {}
     editing_id = STATE.get("editing_id")
     bm = bm_by_id(editing_id) if editing_id else None
@@ -501,7 +796,7 @@ def render_form(rev, values=None, error=None, first=False):
     name_val = values["name"] if "name" in values else (bm["name"] if bm else "")
     cat_val = values["category"] if "category" in values else (
         bm.get("categoryId") if bm else STATE.get("form_prefill", {}).get("categoryId", "uncategorized"))
-    if not cat_by_id(cat_val):
+    if not local_cat_by_id(cat_val):
         cat_val = "uncategorized"
     url_val = values["url"] if "url" in values else (bm.get("url", "") if bm else "")
     path_val = values["path"] if "path" in values else (bm.get("path", "") if bm else "")
@@ -520,7 +815,7 @@ def render_form(rev, values=None, error=None, first=False):
         {"id": "name", "type": "text", "label": "Name", "value": name_val, "required": True, "placeholder": "My bookmark"},
         {
             "id": "category", "type": "dropdown", "label": "Category", "value": cat_val, "required": True,
-            "options": [{"value": c["id"], "label": c["name"]} for c in sorted_categories()],
+            "options": [{"value": c["id"], "label": c["name"]} for c in sorted_local_categories()],
         },
         {
             "id": "url", "type": "text", "label": "URL", "value": url_val, "placeholder": "https://example.com",
@@ -571,6 +866,7 @@ def render_form(rev, values=None, error=None, first=False):
     })
 
 def handle_form_submit(values):
+    refresh_tabame_bookmarks()
     vtype = values.get("type", "link")
     name = (values.get("name") or "").strip()
     category = values.get("category") or "uncategorized"
@@ -590,13 +886,18 @@ def handle_form_submit(values):
 
     editing_id = STATE.get("editing_id")
     bm = bm_by_id(editing_id) if editing_id else None
+    if bm and is_tabame_bookmark(bm):
+        STATE["editing_id"] = None
+        send({"type": "command", "command": "toast", "text": "Tabame bookmarks are read-only", "style": "info"})
+        render_home(0, history="replace")
+        return
     if bm is None:
         bm = {"id": new_id("bm"), "createdAt": datetime.now().isoformat(timespec="seconds"), "usedCount": 0}
         DATA["bookmarks"].append(bm)
 
     bm["type"] = vtype
     bm["name"] = name
-    bm["categoryId"] = category if cat_by_id(category) else "uncategorized"
+    bm["categoryId"] = category if local_cat_by_id(category) else "uncategorized"
     bm["tags"] = values.get("tags") or []
 
     url_val = (values.get("url") or "").strip()
@@ -659,6 +960,7 @@ def render_run_form(rev, bm, first=False, force_folder=False, error=None):
     })
 
 def handle_run_submit(values):
+    refresh_tabame_bookmarks()
     bm = bm_by_id(STATE.get("run_target"))
     if not bm:
         render_home(0, history="replace")
@@ -668,15 +970,16 @@ def handle_run_submit(values):
     if force_folder and not workdir:
         render_run_form(0, bm, first=False, force_folder=True, error="Choose a folder to run in.")
         return
-    if values.get("remember_workdir") and workdir:
+    if values.get("remember_workdir") and workdir and not is_tabame_bookmark(bm):
         bm["defaultWorkdir"] = workdir
         save_data()
 
     var_values = {v["name"]: values.get(f"var__{v['name']}", "") for v in bm.get("variables", [])}
     final_cmd = build_command(bm.get("command", ""), var_values)
-    bm["usedCount"] = bm.get("usedCount", 0) + 1
-    bm["lastUsedAt"] = datetime.now().isoformat(timespec="seconds")
-    save_data()
+    if not is_tabame_bookmark(bm):
+        bm["usedCount"] = bm.get("usedCount", 0) + 1
+        bm["lastUsedAt"] = datetime.now().isoformat(timespec="seconds")
+        save_data()
     start_job(bm, final_cmd, workdir or bm.get("defaultWorkdir") or None)
 
 def start_job(bm, command_str, workdir):
@@ -751,9 +1054,11 @@ def render_running(rev, job, first=False):
     send(frame)
 
 def open_bookmark(bm):
-    bm["usedCount"] = bm.get("usedCount", 0) + 1
-    bm["lastUsedAt"] = datetime.now().isoformat(timespec="seconds")
-    save_data()
+    refresh_tabame_bookmarks()
+    if not is_tabame_bookmark(bm):
+        bm["usedCount"] = bm.get("usedCount", 0) + 1
+        bm["lastUsedAt"] = datetime.now().isoformat(timespec="seconds")
+        save_data()
     if bm["type"] == "link":
         send({"type": "command", "command": "open", "url": bm.get("url", "")})
         send({"type": "command", "command": "hide"})
@@ -771,6 +1076,7 @@ def open_bookmark(bm):
 # ------------------------------------------------------------- categories --
 
 def render_categories_manage(rev, first=False):
+    refresh_tabame_bookmarks()
     items = []
     for c in sorted_categories():
         n = len(bookmarks_in(c["id"]))
@@ -779,16 +1085,18 @@ def render_categories_manage(rev, first=False):
             "subtitle": f"{n} bookmark{'s' if n != 1 else ''}",
             "icon": "folder", "actions": category_actions(c),
         })
-    send({
+    frame = {
         "type": "render", "rev": rev, "view": "list",
         "page": {"id": "bookmarks:categories", "title": "Categories", "history": "push" if first else "none"},
         "actions": [{
             "id": "new_category", "title": "New Category", "icon": "folder",
             "parameters": [{"id": "name", "type": "text", "label": "Category name", "required": True}],
-        }],
+        }, {"id": "refresh_tabame", "title": "Refresh Tabame Bookmarks", "icon": "refresh"}],
         "emptyText": "No categories",
         "items": items,
-    })
+    }
+    add_tabame_status(frame)
+    send(frame)
 
 # ------------------------------------------------------------------- back --
 
@@ -871,6 +1179,7 @@ def refresh_after_bookmark_change(page_id):
         render_home(0)
 
 def handle_action(msg):
+    refresh_tabame_bookmarks()
     item_id = msg.get("id", "")
     action = msg.get("action", "default")
     params = msg.get("parameters") or {}
@@ -921,6 +1230,18 @@ def handle_action(msg):
         elif action == "manage_categories":
             go("bookmarks:categories")
             render_categories_manage(0, first=True)
+        elif action == "refresh_tabame":
+            refresh_tabame_bookmarks(force=True)
+            if TABAME_SETTINGS_ERROR:
+                send({"type": "command", "command": "toast", "text": "Could not refresh Tabame bookmarks", "style": "error"})
+            else:
+                send({"type": "command", "command": "toast", "text": "Tabame bookmarks refreshed", "style": "info"})
+            if page_id == "bookmarks:categories":
+                render_categories_manage(0)
+            elif STATE.get("last_query"):
+                render_search(0, STATE["last_query"])
+            else:
+                render_home(0)
         elif action == "stop" and page_id == "bookmarks:running":
             job = STATE.get("job")
             if job and job.get("process") and job["process"].poll() is None:
@@ -946,6 +1267,12 @@ def handle_action(msg):
         cat = cat_by_id(cid)
         if not cat:
             refresh_after_category_change(source_page)
+            return
+        if is_tabame_category(cat) and (
+            action in ("add_here", "rename", "delete_category")
+            or (source_page == "bookmarks:categories" and action == "default")
+        ):
+            send({"type": "command", "command": "toast", "text": "Tabame categories are read-only", "style": "info"})
             return
         if action == "default":
             if source_page == "bookmarks:home":
@@ -993,6 +1320,9 @@ def handle_action(msg):
         if not bm:
             refresh_after_bookmark_change(page_id)
             return
+        if is_tabame_bookmark(bm) and action in ("edit", "delete", "move"):
+            send({"type": "command", "command": "toast", "text": "Tabame bookmarks are read-only", "style": "info"})
+            return
         if action == "default":
             open_bookmark(bm)
             return
@@ -1009,7 +1339,7 @@ def handle_action(msg):
             return
         if action == "move":
             cid = params.get("category") or "uncategorized"
-            bm["categoryId"] = cid if cat_by_id(cid) else "uncategorized"
+            bm["categoryId"] = cid if local_cat_by_id(cid) else "uncategorized"
             save_data()
             send({"type": "command", "command": "toast", "text": f"Moved to {cat_name(bm['categoryId'])}"})
             refresh_after_bookmark_change(page_id)
@@ -1037,50 +1367,54 @@ def handle_action(msg):
 # --------------------------------------------------------------------- main --
 
 def main():
-    for raw in sys.stdin:
-        raw = raw.strip()
-        if not raw:
-            continue
-        try:
-            msg = json.loads(raw)
-        except json.JSONDecodeError:
-            continue
-        t = msg.get("type")
-        try:
-            if t == "close":
-                break
-            elif t in ("init", "query"):
-                rev = msg.get("rev", 0)
-                text = msg.get("text", msg.get("query", ""))
-                route_query(rev, text)
-            elif t == "action":
-                handle_action(msg)
-            elif t == "submit":
-                values = msg.get("values", {})
-                page_id = STATE.get("page_id")
-                if page_id in ("bookmarks:add", "bookmarks:edit"):
-                    handle_form_submit(values)
-                elif page_id == "bookmarks:run":
-                    handle_run_submit(values)
-            elif t == "change":
-                values = msg.get("values")
-                if values is None:
-                    values = {k: v for k, v in msg.items() if k not in ("type", "id", "rev")}
-                if STATE.get("page_id") in ("bookmarks:add", "bookmarks:edit"):
-                    render_form(0, values=values, first=False)
-            elif t == "toggle":
-                handle_toggle(msg)
-            elif t == "back":
-                handle_back(msg)
-            elif t == "navigate":
-                handle_navigate(msg)
-            elif t == "select":
-                pass
-            elif t == "loadMore":
-                pass
-        except Exception as e:
-            log("error handling", t, repr(e))
-            send({"type": "render", "rev": 0, "view": "detail", "detail": {"markdown": f"# Error\n\n```\n{e}\n```"}})
+    try:
+        for raw in sys.stdin:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                msg = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            t = msg.get("type")
+            try:
+                if t == "close":
+                    break
+                elif t in ("init", "query"):
+                    rev = msg.get("rev", 0)
+                    text = msg.get("text", msg.get("query", ""))
+                    route_query(rev, text)
+                    start_tabame_settings_watcher()
+                elif t == "action":
+                    handle_action(msg)
+                elif t == "submit":
+                    values = msg.get("values", {})
+                    page_id = STATE.get("page_id")
+                    if page_id in ("bookmarks:add", "bookmarks:edit"):
+                        handle_form_submit(values)
+                    elif page_id == "bookmarks:run":
+                        handle_run_submit(values)
+                elif t == "change":
+                    values = msg.get("values")
+                    if values is None:
+                        values = {k: v for k, v in msg.items() if k not in ("type", "id", "rev")}
+                    if STATE.get("page_id") in ("bookmarks:add", "bookmarks:edit"):
+                        render_form(0, values=values, first=False)
+                elif t == "toggle":
+                    handle_toggle(msg)
+                elif t == "back":
+                    handle_back(msg)
+                elif t == "navigate":
+                    handle_navigate(msg)
+                elif t == "select":
+                    pass
+                elif t == "loadMore":
+                    pass
+            except Exception as e:
+                log("error handling", t, repr(e))
+                send({"type": "render", "rev": 0, "view": "detail", "detail": {"markdown": f"# Error\n\n```\n{e}\n```"}})
+    finally:
+        TABAME_WATCH_STOP.set()
 
 if __name__ == "__main__":
     main()

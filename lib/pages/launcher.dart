@@ -117,6 +117,7 @@ class Launcher extends StatefulWidget {
 
 class LauncherState extends State<Launcher>
     with
+        WindowListener,
         QuickMenuTriggers,
         SingleTickerProviderStateMixin,
         _LauncherStateMembersMixin,
@@ -209,6 +210,7 @@ class LauncherState extends State<Launcher>
   /// [_submitPluginItem] / [_onPluginFrame]).
   bool _pluginSubmitPending = false;
   bool _pluginWindowWidened = false;
+  bool _pluginWindowUserResized = false;
   Timer? _pluginWidthCollapseTimer;
   late final AnimationController _pluginWindowTransitionController;
   double _pluginWindowOpacity = 1;
@@ -448,6 +450,7 @@ class LauncherState extends State<Launcher>
     _pluginWindowTransitionController = AnimationController(vsync: this);
     _scrollController.addListener(_updateResultsSectionHeader);
     QuickMenuFunctions.addListener(this);
+    WindowManager.instance.addListener(this);
     _design = user.launcherDesign;
     _isFilePreviewVisible = Boxes.pref.getBool(_filePreviewVisiblePreferenceKey) ?? true;
     _previewWidthPercent = Boxes.pref.getDouble(_previewWidthPercentPreferenceKey)?.clamp(0.0, 100.0).toDouble();
@@ -509,6 +512,12 @@ class LauncherState extends State<Launcher>
   }
 
   @override
+  void onWindowResize() => _onPluginWindowResize();
+
+  @override
+  void onWindowResized() => _onPluginWindowResized();
+
+  @override
   Future<void> onQuickMenuSwitchedPage(QuickMenuPage newType, QuickMenuPage oldType, bool visible) async {
     if (oldType == QuickMenuPage.launcher && newType != QuickMenuPage.launcher) {
       _deactivatePlugin();
@@ -523,6 +532,7 @@ class LauncherState extends State<Launcher>
   @override
   void dispose() {
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
+    WindowManager.instance.removeListener(this);
     QuickMenuFunctions.removeListener(this);
     _searchToken.dispose();
     _pluginQueryDebounce?.cancel();

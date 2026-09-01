@@ -613,7 +613,47 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
     WinKeys.send("{#CONTROL}V{|}");
   }
 
+  /// A manual resize takes ownership of the current plugin window width. The
+  /// plugin may continue sending frames while the user drags the edge, so stop
+  /// any pending automatic collapse as soon as resizing begins.
+  void _onPluginWindowResize() {
+    if (!mounted || !Globals.isLauncherPluginActive || !_pluginWindowWidened) return;
+    _pluginWindowUserResized = true;
+    _pluginWidthCollapseTimer?.cancel();
+    _pluginWidthCollapseTimer = null;
+    _pluginWindowTransitionVersion++;
+    _pluginWindowTransitionController.stop();
+    if (_pluginWindowOpacity != 1) {
+      _pluginWindowOpacity = 1;
+      unawaited(WindowManager.instance.setOpacity(1));
+    }
+  }
+
+  /// The parent quick-menu intentionally ignores plugin resizes when updating
+  /// the saved launcher width. Persist only resizes that were identified as a
+  /// user drag so a plugin's automatic wide/narrow changes are never saved.
+  void _onPluginWindowResized() {
+    if (!mounted || !_pluginWindowUserResized) return;
+    unawaited(_persistPluginWindowWidth());
+  }
+
+  Future<void> _persistPluginWindowWidth() async {
+    try {
+      final Size size = await WindowManager.instance.getSize();
+      if (!mounted || !_pluginWindowUserResized || size.width <= 0) return;
+      Boxes.launcherSizeWidth = size.width;
+      await Boxes.updateSettings('launcherSizeWidth', size.width);
+    } catch (_) {
+      // The window may disappear while the resize event is being delivered.
+    }
+  }
+
   void _applyPluginWindowWidth(bool wide) {
+    if (_pluginWindowUserResized) {
+      _pluginWidthCollapseTimer?.cancel();
+      _pluginWidthCollapseTimer = null;
+      return;
+    }
     if (wide) {
       // A wide frame arrived: cancel any pending collapse so a transient narrow
       // frame (loading / detail) that's immediately followed by a wide one never
@@ -642,6 +682,10 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
     _pluginWidthCollapseTimer?.cancel();
     _pluginWidthCollapseTimer = null;
     if (!_pluginWindowWidened) return;
+    if (_pluginWindowUserResized) {
+      _pluginWindowWidened = false;
+      return;
+    }
     _pluginWindowWidened = false;
     if (!animate) {
       unawaited(_setPluginWindowWidth(Boxes.launcherSizeWidth, finalize: true));

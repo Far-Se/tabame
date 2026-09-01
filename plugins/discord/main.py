@@ -765,17 +765,17 @@ def message_actions(message, text):
                 }
             ],
         },
-        {
-            "id": "pin",
-            "title": "Pin message",
-            "icon": "pin",
-            "destructive": False,
-            "confirm": {
-                "title": "Pin this message?",
-                "message": "Pinned messages are visible to everyone with access to this channel.",
-                "confirmLabel": "Pin",
-            },
-        },
+        # {
+        #     "id": "pin",
+        #     "title": "Pin message",
+        #     "icon": "pin",
+        #     "destructive": False,
+        #     "confirm": {
+        #         "title": "Pin this message?",
+        #         "message": "Pinned messages are visible to everyone with access to this channel.",
+        #         "confirmLabel": "Pin",
+        #     },
+        # },
     ]
     links = []
     for embed in message.get("embeds") or []:

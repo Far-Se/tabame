@@ -98,6 +98,8 @@ mixin _LauncherStateMembersMixin on State<Launcher> {
   set _pluginSubmitPending(bool value);
   bool get _pluginWindowWidened;
   set _pluginWindowWidened(bool value);
+  bool get _pluginWindowUserResized;
+  set _pluginWindowUserResized(bool value);
   Timer? get _pluginWidthCollapseTimer;
   set _pluginWidthCollapseTimer(Timer? value);
   AnimationController get _pluginWindowTransitionController;
@@ -162,6 +164,8 @@ mixin _LauncherStateMembersMixin on State<Launcher> {
   void _setPluginQuery(String text);
   void _showPluginToast(String message, {String style = 'success', double? progress});
   Future<void> _pastePluginText(String text);
+  void _onPluginWindowResize();
+  void _onPluginWindowResized();
   void _applyPluginWindowWidth(bool wide);
   void _restorePluginWindowWidth({bool animate = true});
   Future<void> _animatePluginWindowWidth(double targetWidth);

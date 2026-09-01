@@ -15,6 +15,8 @@ abstract final class PluginIcons {
     'star': Icons.star_rounded,
     'favorite': Icons.favorite_rounded,
     'heart': Icons.favorite_rounded,
+    'pin': Icons.push_pin,
+    'reply': Icons.reply,
     'home': Icons.home_rounded,
     'settings': Icons.settings_rounded,
     'gear': Icons.settings_rounded,
