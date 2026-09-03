@@ -622,11 +622,14 @@ class LauncherState extends State<Launcher>
     // A plugin form owns focus while it is shown — the search field must not
     // steal keystrokes back from its inputs.
     if (_pluginOwnsFormFocus) return false;
-    // Plugin markdown (detail view or the split preview pane) is wrapped in a
-    // SelectionArea so users can select/copy text with the mouse. That widget
-    // grabs focus on tap-drag; auto-reclaiming focus for the search field
-    // would yank it away mid-selection and break Ctrl+C.
-    if (_activePlugin != null && (_pluginFrame?.view == PluginViewType.detail || (_pluginFrame?.hasPreview ?? false))) {
+    // Plugin text surfaces (detail, chat, or the split preview pane) are
+    // wrapped in a SelectionArea so users can select/copy text with the mouse.
+    // That widget grabs focus on tap-drag; auto-reclaiming focus for the search
+    // field would yank it away mid-selection and break Ctrl+C.
+    if (_activePlugin != null &&
+        (_pluginFrame?.view == PluginViewType.detail ||
+            _pluginFrame?.view == PluginViewType.chat ||
+            (_pluginFrame?.hasPreview ?? false))) {
       return false;
     }
     return true;

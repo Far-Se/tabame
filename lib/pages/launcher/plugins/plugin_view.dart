@@ -1142,39 +1142,44 @@ class _PluginViewState extends State<PluginView> {
           child: WindowsScrollView(
             controller: chatController,
             draggable: controller != null,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 4, 10, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  if (frame.hasMore) _loadMoreFooter(),
-                  for (int i = 0; i < frame.items.length; i++) ...<Widget>[
-                    if (frame.items[i].section != null &&
-                        (i == 0 || frame.items[i].section != frame.items[i - 1].section))
-                      _chatDateDivider(frame.items[i].section!),
-                    KeyedSubtree(
-                      key: _keyFor(frame, i),
-                      child: _PluginChatMessage(
-                        item: frame.items[i],
-                        grouped: i > 0 &&
-                            frame.items[i].section == frame.items[i - 1].section &&
-                            frame.items[i].title == frame.items[i - 1].title,
-                        onContentSizeChanged: () => _pinChatToEndIfFollowing(chatController),
-                        onAction: (PluginAction action) =>
-                            widget.onMetadataAction(_scopeFor(frame), frame.items[i].id, action),
+            child: _selectableContent(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 4, 10, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    if (frame.hasMore) _loadMoreFooter(),
+                    for (int i = 0; i < frame.items.length; i++) ...<Widget>[
+                      if (frame.items[i].section != null &&
+                          (i == 0 || frame.items[i].section != frame.items[i - 1].section))
+                        _chatDateDivider(frame.items[i].section!),
+                      KeyedSubtree(
+                        key: _keyFor(frame, i),
+                        child: _PluginChatMessage(
+                          item: frame.items[i],
+                          grouped: i > 0 &&
+                              frame.items[i].section == frame.items[i - 1].section &&
+                              frame.items[i].title == frame.items[i - 1].title,
+                          onContentSizeChanged: () => _pinChatToEndIfFollowing(chatController),
+                          onAction: (PluginAction action) =>
+                              widget.onMetadataAction(_scopeFor(frame), frame.items[i].id, action),
+                        ),
                       ),
-                    ),
+                    ],
+                    if (frame.typing != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(50, 5, 8, 0),
+                        child: Text(
+                          frame.typing!,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: Design.text.withAlpha(105),
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
                   ],
-                  if (frame.typing != null)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(50, 5, 8, 0),
-                      child: Text(
-                        frame.typing!,
-                        style:
-                            TextStyle(fontSize: 10.5, color: Design.text.withAlpha(105), fontStyle: FontStyle.italic),
-                      ),
-                    ),
-                ],
+                ),
               ),
             ),
           ),
@@ -2233,7 +2238,8 @@ class _PluginViewState extends State<PluginView> {
   }
 
   /// Keeps native selection/copy available while delegating launcher shortcuts
-  /// when [SelectionArea] becomes the primary focus after a mouse selection.
+  /// when selectable plugin content becomes the primary focus after a mouse
+  /// selection.
   Widget _selectableContent(Widget child) {
     return Focus(
       onKeyEvent: (_, KeyEvent event) => widget.onMarkdownKeyEvent?.call(event) ?? KeyEventResult.ignored,
@@ -2965,7 +2971,7 @@ class _PluginChatMessageState extends State<_PluginChatMessage> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: Design.baseFontSize + 0.5,
                                     fontWeight: FontWeight.w700,
                                     color: Design.text.withAlpha(230),
                                   ),
@@ -2976,7 +2982,7 @@ class _PluginChatMessageState extends State<_PluginChatMessage> {
                                 Text(
                                   accessory.text,
                                   style: TextStyle(
-                                    fontSize: accessory.icon == 'clock' ? 10 : 9.5,
+                                    fontSize: accessory.icon == 'clock' ? 10 : Design.baseFontSize,
                                     color: accessory.color ?? Design.text.withAlpha(105),
                                   ),
                                 ),
@@ -3177,7 +3183,8 @@ class _DiscordChatBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle bodyStyle = style ?? TextStyle(fontSize: 12, height: 1.4, color: Design.text.withAlpha(205));
+    final TextStyle bodyStyle =
+        style ?? TextStyle(fontSize: Design.baseFontSize + 0.5, height: 1.4, color: Design.text.withAlpha(205));
     final List<InlineSpan> spans = <InlineSpan>[];
     int offset = 0;
     for (final RegExpMatch match in _inlineToken.allMatches(text)) {

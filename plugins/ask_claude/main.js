@@ -522,7 +522,9 @@ function snippetForInput(text) {
 }
 
 function snippetPrefixForInput(text) {
-  const source = String(text || "").trim().toLowerCase();
+  const source = String(text || "")
+    .trim()
+    .toLowerCase();
   if (!source || /\s/.test(source)) return null;
 
   return (
@@ -774,8 +776,8 @@ function leaveSnippets() {
   const returnScreen = state.snippetsReturnScreen || "chat";
   const returningToAutocomplete = Boolean(
     returnScreen === "chat" &&
-      state.chatMode === "autocomplete" &&
-      state.draftText.trim(),
+    state.chatMode === "autocomplete" &&
+    state.draftText.trim(),
   );
   state.screen = returnScreen;
   state.snippetQuery = returningToAutocomplete ? state.draftText : "";
@@ -840,7 +842,7 @@ function openSnippetAutocomplete(snippet) {
   state.chatMode = "autocomplete";
   state.draftText = snippet.trigger;
   state.snippetQuery = snippet.trigger;
-  command("setQuery", { text: snippet.trigger });
+  command("setQuery", { text: `${snippet.trigger} ` });
   renderAutocompleteChat(0, snippet.trigger);
 }
 
@@ -884,6 +886,13 @@ const bridge = new BrowserBridge(() => {
   if (shuttingDown || !state.initialized) return;
   if (state.screen === "home") renderHome(0);
   else if (state.screen === "connection") renderConnection(0);
+
+  if (
+    bridge.connected &&
+    (state.screen === "home" || state.screen === "connection")
+  ) {
+    prewarmClaudeTab();
+  }
 });
 bridge.start();
 
@@ -1092,6 +1101,16 @@ function ensureTabOpen() {
   };
   void opening.then(clearOpening, clearOpening);
   return opening;
+}
+
+function prewarmClaudeTab() {
+  if (!bridge.connected) return;
+  void ensureTabOpen().catch((error) => {
+    log(
+      "Could not pre-open Claude:",
+      error instanceof Error ? error.message : error,
+    );
+  });
 }
 
 function openClaudeTab(rev) {
@@ -1346,8 +1365,7 @@ function renderCurrent(rev) {
   else if (state.screen === "chat") {
     if (state.chatMode === "autocomplete") renderAutocompleteChat(rev);
     else renderChat(rev);
-  }
-  else if (state.screen === "snippets") renderSnippets(rev);
+  } else if (state.screen === "snippets") renderSnippets(rev);
   else if (state.screen === "snippet_form") renderSnippetForm(rev);
   else renderConnection(rev);
 }
@@ -1375,6 +1393,10 @@ async function handleInit(rev, text) {
   } catch {
     /* handled by applyStatus/startError */
   }
+
+  // Start loading Claude while the launcher finishes preparing its home
+  // screen. Sending a message later reuses this same in-flight operation.
+  prewarmClaudeTab();
 
   await ensureSnippetsLoaded();
   if (shuttingDown) return;
@@ -1614,10 +1636,7 @@ async function handleHomeAction(id, action) {
     return;
   }
 
-  if (
-    id === "" &&
-    (action === "create_snippet" || action === "default")
-  ) {
+  if (id === "" && (action === "create_snippet" || action === "default")) {
     enterSnippetForm();
     return;
   }
@@ -1676,8 +1695,7 @@ async function handleAction(id, action) {
       if (bridge.connected) {
         if (state.screen === "connection") await openClaudeTab(0);
         else if (state.screen === "chat") {
-          if (state.chatMode === "autocomplete")
-            renderAutocompleteChat(0);
+          if (state.chatMode === "autocomplete") renderAutocompleteChat(0);
           else renderChat(0);
         } else renderCurrent(0);
       } else {
@@ -1695,8 +1713,7 @@ async function handleAction(id, action) {
       if (state.screen === "chat") {
         state.chatMode = "conversation";
         await openClaudeTab(0);
-      }
-      else renderConnection(0);
+      } else renderConnection(0);
       return;
     }
     if (action === "new_chat") {
@@ -1765,10 +1782,7 @@ async function handleLine(line) {
         } else {
           renderHome(rev);
         }
-      } else if (
-        state.screen === "chat" &&
-        state.chatMode === "autocomplete"
-      ) {
+      } else if (state.screen === "chat" && state.chatMode === "autocomplete") {
         if (text.trim()) {
           state.snippetQuery = text;
           renderAutocompleteChat(rev, text);
@@ -1816,7 +1830,7 @@ async function handleLine(line) {
         const snippet =
           snippetForInput(state.draftText) ||
           snippetPrefixForInput(state.draftText);
-        if (snippet) command("setQuery", { text: snippet.trigger });
+        if (snippet) command("setQuery", { text: `${snippet.trigger} ` });
       }
       break;
     }
