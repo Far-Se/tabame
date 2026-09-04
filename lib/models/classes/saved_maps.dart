@@ -499,7 +499,7 @@ class ThemeColors {
     this.panelOpacityBegin = 'Top Left',
     this.panelOpacityEnd = 'Bottom Right',
     this.borderRadius = 10.0,
-    this.baseFontSize = 10.0,
+    this.baseFontSize = 11.0,
   });
 
 // #region (collapsed) [ThemeColors]

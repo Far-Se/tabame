@@ -364,7 +364,7 @@ class Settings {
     int entryFontWeight = 700,
     bool entryFontItalic = false,
     double borderRadius = 10,
-    double baseFontSize = 10,
+    double baseFontSize = 11,
   }) {
     return ThemeColors(
       background: background,

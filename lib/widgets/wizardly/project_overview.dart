@@ -1580,7 +1580,7 @@ class LoadFromGitWidgetState extends State<LoadFromGitWidget> {
               onPressed: isDownloading ? null : _startDownload,
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
-                foregroundColor: Colors.white,
+                // foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               child: Text(downloadMessage, style: const TextStyle(fontWeight: FontWeight.bold)),

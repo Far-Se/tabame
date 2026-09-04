@@ -81,11 +81,11 @@ abstract final class _SereneTokens {
   static const double iconWellRadius = 7;
 
   // Typography
-  static const double titleSize = 13;
-  static const double subtitleSize = 11;
+  // static const double titleSize = 13;
+  // static const double subtitleSize = 11;
 
   // Badge
-  static const double badgeFontSize = 9;
+  // static const double badgeFontSize = 9;
   static const double badgeRadius = 5;
 
   // Selection fill opacity (0-255)
@@ -252,14 +252,14 @@ class LauncherResultRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             _titleText(RaycastTokens.ui(
-              fontSize: 14,
+              fontSize: Design.baseFontSize + 2,
               color: isSelected ? RaycastTokens.primary(isDark) : RaycastTokens.secondary(isDark),
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
               height: 1.15,
             )),
             if ((subtitle ?? '').isNotEmpty)
               _subtitleText(RaycastTokens.ui(
-                fontSize: 11,
+                fontSize: Design.baseFontSize + 0.5,
                 color: isSelected ? RaycastTokens.muted(isDark).withAlpha(210) : RaycastTokens.dim(isDark),
                 fontWeight: FontWeight.w400,
                 height: 1.1,
@@ -376,14 +376,14 @@ class LauncherResultRow extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               _titleText(RelayTokens.body(
-                                fontSize: Design.baseFontSize + 1.5,
+                                fontSize: Design.baseFontSize + 2,
                                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                                 color: foreground,
                                 height: 1.2,
                               )),
                               const SizedBox(height: 1),
                               _subtitleText(RelayTokens.body(
-                                fontSize: Design.baseFontSize - 0.5,
+                                fontSize: Design.baseFontSize + 0.5,
                                 fontWeight: FontWeight.w400,
                                 color: isSelected ? foreground.withAlpha(175) : dim,
                                 height: 1.2,
@@ -405,7 +405,7 @@ class LauncherResultRow extends StatelessWidget {
                           'LINK',
                           textAlign: TextAlign.right,
                           style: RelayTokens.channel(
-                            fontSize: Design.baseFontSize + 1,
+                            fontSize: Design.baseFontSize + 2,
                             fontWeight: FontWeight.w600,
                             color: accent,
                             letterSpacing: 1.1,
@@ -474,14 +474,14 @@ class LauncherResultRow extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           _titleText(SwitchboardTokens.body(
-                            fontSize: Design.baseFontSize + 1.5,
+                            fontSize: Design.baseFontSize + 2,
                             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                             color: foreground,
                             height: 1.15,
                           )),
                           const SizedBox(height: 2),
                           _subtitleText(SwitchboardTokens.body(
-                            fontSize: Design.baseFontSize - 0.5,
+                            fontSize: Design.baseFontSize + 0.5,
                             fontWeight: FontWeight.w400,
                             color: dim,
                             height: 1.15,
@@ -552,7 +552,7 @@ class LauncherResultRow extends StatelessWidget {
                           )),
                           const SizedBox(height: 1),
                           _subtitleText(NotionTokens.ui(
-                            fontSize: Design.baseFontSize,
+                            fontSize: Design.baseFontSize + 0.5,
                             fontWeight: FontWeight.w400,
                             color: NotionTokens.dim(isDark),
                             height: 1.2,
@@ -615,14 +615,14 @@ class LauncherResultRow extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               _titleText(Windows98Tokens.system(
-                                fontSize: Design.baseFontSize + 1,
+                                fontSize: Design.baseFontSize + 2,
                                 fontWeight: FontWeight.w400,
                                 color: rowText,
                                 height: 1.15,
                               )),
                               const SizedBox(height: 1),
                               _subtitleText(Windows98Tokens.system(
-                                fontSize: Design.baseFontSize - 0.5,
+                                fontSize: Design.baseFontSize + 0.5,
                                 color: rowDim,
                                 height: 1.15,
                               )),
@@ -700,7 +700,7 @@ class LauncherResultRow extends StatelessWidget {
                           )),
                           const SizedBox(height: 1),
                           _subtitleText(WindowsXpTokens.tahoma(
-                            fontSize: Design.baseFontSize,
+                            fontSize: Design.baseFontSize + 0.5,
                             fontWeight: FontWeight.w400,
                             color: rowDim,
                             height: 1.2,
@@ -900,7 +900,7 @@ class LauncherResultRow extends StatelessWidget {
                             letterSpacing: 0.1,
                           )),
                           _subtitleText(ManifestoTokens.body(
-                            fontSize: Design.baseFontSize - 0.5,
+                            fontSize: Design.baseFontSize + 0.5,
                             fontWeight: FontWeight.w400,
                             color: ManifestoTokens.dim(Theme.of(context).brightness == Brightness.dark),
                             height: 1.2,
@@ -977,7 +977,7 @@ class LauncherResultRow extends StatelessWidget {
                                   height: 1.25,
                                 )),
                                 _subtitleText(FluentTokens.segoe(
-                                  fontSize: Design.baseFontSize,
+                                  fontSize: Design.baseFontSize + 0.5,
                                   fontWeight: FontWeight.w400,
                                   color: FluentTokens.dim(isDark).withAlpha(isSelected ? 255 : 210),
                                   height: 1.2,
@@ -1091,7 +1091,7 @@ class LauncherResultRow extends StatelessWidget {
                                 height: 1.25,
                               )),
                               _subtitleText(TransitTokens.sign(
-                                fontSize: Design.baseFontSize - 0.5,
+                                fontSize: Design.baseFontSize + 0.5,
                                 fontWeight: FontWeight.w400,
                                 color: onSurface.withAlpha(isSelected ? 165 : 125),
                                 letterSpacing: 0.3,
@@ -1186,7 +1186,7 @@ class LauncherResultRow extends StatelessWidget {
                                 height: 1.2,
                               )),
                               _subtitleText(BlueprintTokens.tech(
-                                fontSize: Design.baseFontSize - 0.5,
+                                fontSize: Design.baseFontSize + 0.5,
                                 fontWeight: FontWeight.w400,
                                 color: onSurface.withAlpha(isSelected ? 255 : 190),
                                 letterSpacing: 0.3,
@@ -1284,7 +1284,7 @@ class LauncherResultRow extends StatelessWidget {
                           )),
                           const SizedBox(height: 1),
                           _subtitleText(GlassTokens.font(
-                            fontSize: Design.baseFontSize,
+                            fontSize: Design.baseFontSize + 0.5,
                             fontWeight: FontWeight.w400,
                             color: onSurface.withAlpha(isSelected ? 165 : 120),
                             height: 1.2,
@@ -1372,7 +1372,7 @@ class LauncherResultRow extends StatelessWidget {
                           )),
                           const SizedBox(height: 1),
                           _subtitleText(ZenTokens.soft(
-                            fontSize: Design.baseFontSize,
+                            fontSize: Design.baseFontSize + 0.5,
                             fontWeight: FontWeight.w400,
                             color: onSurface.withAlpha(isSelected ? 150 : 115),
                             height: 1.2,
@@ -1433,7 +1433,7 @@ class LauncherResultRow extends StatelessWidget {
                   child: Text(
                     isSelected ? '❯' : ' ',
                     style: TerminalTokens.mono(
-                      fontSize: Design.baseFontSize + 1,
+                      fontSize: Design.baseFontSize + 2,
                       color: accent.withAlpha(230),
                       fontWeight: FontWeight.w700,
                       height: 1,
@@ -1455,7 +1455,7 @@ class LauncherResultRow extends StatelessWidget {
                             height: 1.25,
                           )),
                           _subtitleText(TerminalTokens.mono(
-                            fontSize: Design.baseFontSize,
+                            fontSize: Design.baseFontSize + 0.5,
                             color: isSelected ? TerminalTokens.fg(isDark).withAlpha(190) : TerminalTokens.dim(isDark),
                             height: 1.2,
                           )),
@@ -1505,7 +1505,7 @@ class LauncherResultRow extends StatelessWidget {
                   child: Text(
                     isSelected ? '❯' : ' ',
                     style: Terminal2Tokens.mono(
-                      fontSize: Design.baseFontSize + 1,
+                      fontSize: Design.baseFontSize + 2,
                       color: accent.withAlpha(230),
                       fontWeight: FontWeight.w700,
                       height: 1.0,
@@ -1532,13 +1532,13 @@ class LauncherResultRow extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           _titleText(Terminal2Tokens.mono(
-                            fontSize: Design.baseFontSize + 1.5,
+                            fontSize: Design.baseFontSize + 2,
                             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                             color: isSelected ? accent : Terminal2Tokens.fg(isDark),
                             height: 1.2,
                           )),
                           _subtitleText(Terminal2Tokens.mono(
-                            fontSize: Design.baseFontSize - 0.5,
+                            fontSize: Design.baseFontSize + 0.5,
                             color: isSelected ? Terminal2Tokens.fg(isDark).withAlpha(190) : Terminal2Tokens.dim(isDark),
                             height: 1.2,
                           )),
@@ -1641,7 +1641,7 @@ class LauncherResultRow extends StatelessWidget {
                             )),
                             const SizedBox(height: 1),
                             _subtitleText(TextStyle(
-                              fontSize: Design.baseFontSize - 0.5,
+                              fontSize: Design.baseFontSize + 0.5,
                               letterSpacing: 0.1,
                               color: isSelected ? onSurface.withAlpha(160) : onSurface.withAlpha(110),
                             )),
@@ -1670,7 +1670,7 @@ class LauncherResultRow extends StatelessWidget {
                               child: Text(
                                 '↵',
                                 style: TextStyle(
-                                  fontSize: Design.baseFontSize + 1,
+                                  fontSize: Design.baseFontSize + 2,
                                   height: 1.0,
                                   fontWeight: FontWeight.w700,
                                   color: accent.withAlpha(220),
@@ -1736,7 +1736,7 @@ class LauncherResultRow extends StatelessWidget {
                               _titleText(entryStyle(isSelected, fontSize: Design.baseFontSize + 2)),
                               const SizedBox(height: 2),
                               _subtitleText(TextStyle(
-                                fontSize: Design.baseFontSize,
+                                fontSize: Design.baseFontSize + 0.5,
                                 color: isSelected ? onSurface.withAlpha(170) : onSurface.withAlpha(130),
                               )),
                             ],
@@ -1787,7 +1787,7 @@ class LauncherResultRow extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             _titleText(TextStyle(
-                              fontSize: _SereneTokens.titleSize,
+                              fontSize: Design.baseFontSize + 2,
                               fontWeight: FontWeight.w500,
                               color: isSelected ? onSurface : onSurface.withAlpha(210),
                               letterSpacing: -0.1,
@@ -1795,7 +1795,7 @@ class LauncherResultRow extends StatelessWidget {
                             )),
                             const SizedBox(height: 1),
                             _subtitleText(TextStyle(
-                              fontSize: _SereneTokens.subtitleSize,
+                              fontSize: Design.baseFontSize + 0.5,
                               color: isSelected ? onSurface.withAlpha(160) : onSurface.withAlpha(110),
                               height: 1.2,
                             )),
@@ -1894,7 +1894,7 @@ class LauncherKindBadge extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 8,
+              fontSize: Design.baseFontSize + 0.5,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.3,
               color: accent.withAlpha(200),
@@ -2078,7 +2078,7 @@ class LauncherSereneBadge extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: _SereneTokens.badgeFontSize,
+              fontSize: Design.baseFontSize + 0.5,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.2,
               color: color.withAlpha(190),

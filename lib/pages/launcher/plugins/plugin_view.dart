@@ -633,7 +633,8 @@ class _PluginViewState extends State<PluginView> {
                   ),
                   onPressed: () => widget.onFloatingAction(scope, action),
                   icon: Icon(PluginIcons.resolve(action.icon), size: 17),
-                  label: Text(action.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  label: Text(action.title,
+                      style: TextStyle(fontSize: Design.baseFontSize + 3.5, fontWeight: FontWeight.w600)),
                 ),
             ],
           ),
@@ -764,13 +765,15 @@ class _PluginViewState extends State<PluginView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(_pageDropActive ? 'Release to attach' : zone.label,
-                        style:
-                            TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Design.text.withAlpha(190))),
+                        style: TextStyle(
+                            fontSize: Design.baseFontSize + 1.5,
+                            fontWeight: FontWeight.w600,
+                            color: Design.text.withAlpha(190))),
                     if (zone.hint.isNotEmpty)
                       Text(zone.hint,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 9.5, color: Design.text.withAlpha(90))),
+                          style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(90))),
                   ]),
             ),
           ]),
@@ -808,8 +811,8 @@ class _PluginViewState extends State<PluginView> {
               onTap: () => widget.onNavigate(breadcrumbs[index].id),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                child:
-                    Text(breadcrumbs[index].label, style: TextStyle(fontSize: 10.5, color: Design.text.withAlpha(115))),
+                child: Text(breadcrumbs[index].label,
+                    style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(115))),
               ),
             ),
           ],
@@ -819,7 +822,10 @@ class _PluginViewState extends State<PluginView> {
               child: Text(page.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(190))),
+                  style: TextStyle(
+                      fontSize: Design.baseFontSize + 1,
+                      fontWeight: FontWeight.w700,
+                      color: Design.text.withAlpha(190))),
             ),
           ],
         ]),
@@ -951,7 +957,7 @@ class _PluginViewState extends State<PluginView> {
                 Expanded(
                   child: Text(panel.title,
                       style: TextStyle(
-                          fontSize: 10,
+                          fontSize: Design.baseFontSize + 1,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.7,
                           color: Design.text.withAlpha(140))),
@@ -998,7 +1004,7 @@ class _PluginViewState extends State<PluginView> {
                 child: Text(
                   caption,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: Design.text.withAlpha(150)),
+                  style: TextStyle(fontSize: Design.baseFontSize + 3.5, color: Design.text.withAlpha(150)),
                 ),
               ),
             ],
@@ -1009,7 +1015,8 @@ class _PluginViewState extends State<PluginView> {
     final PluginEmptyState? empty = frame.empty;
     if (empty == null) {
       return Center(
-        child: Text(frame.emptyText, style: TextStyle(fontSize: 13, color: Design.text.withAlpha(120))),
+        child: Text(frame.emptyText,
+            style: TextStyle(fontSize: Design.baseFontSize + 2.5, color: Design.text.withAlpha(120))),
       );
     }
     return Center(
@@ -1023,11 +1030,12 @@ class _PluginViewState extends State<PluginView> {
           if (empty.title.isNotEmpty)
             Text(
               empty.title,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Design.text.withAlpha(190)),
+              style: TextStyle(
+                  fontSize: Design.baseFontSize + 2.5, fontWeight: FontWeight.w600, color: Design.text.withAlpha(190)),
             ),
           if (empty.hint.isNotEmpty) ...<Widget>[
             const SizedBox(height: 3),
-            Text(empty.hint, style: TextStyle(fontSize: 11, color: Design.text.withAlpha(110))),
+            Text(empty.hint, style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(110))),
           ],
           if (empty.action != null) ...<Widget>[
             const SizedBox(height: 10),
@@ -1051,7 +1059,7 @@ class _PluginViewState extends State<PluginView> {
           Text(
             label.toUpperCase(),
             style: TextStyle(
-              fontSize: 9.5,
+              fontSize: Design.baseFontSize,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.8,
               color: Design.text.withAlpha(120),
@@ -1077,7 +1085,7 @@ class _PluginViewState extends State<PluginView> {
             child: CircularProgressIndicator(strokeWidth: 1.5, color: Design.accent.withAlpha(150)),
           ),
           const SizedBox(width: 8),
-          Text('Loading more…', style: TextStyle(fontSize: 10.5, color: Design.text.withAlpha(110))),
+          Text('Loading more…', style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(110))),
         ],
       ),
     );
@@ -1172,7 +1180,7 @@ class _PluginViewState extends State<PluginView> {
                         child: Text(
                           frame.typing!,
                           style: TextStyle(
-                            fontSize: 10.5,
+                            fontSize: Design.baseFontSize + 1,
                             color: Design.text.withAlpha(105),
                             fontStyle: FontStyle.italic,
                           ),
@@ -1213,7 +1221,8 @@ class _PluginViewState extends State<PluginView> {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Text(
               label,
-              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(115)),
+              style: TextStyle(
+                  fontSize: Design.baseFontSize, fontWeight: FontWeight.w700, color: Design.text.withAlpha(115)),
             ),
           ),
           Expanded(child: Container(height: 1, color: Design.text.withAlpha(20))),
@@ -1365,7 +1374,7 @@ class _PluginViewState extends State<PluginView> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 9,
+                        fontSize: Design.baseFontSize,
                         fontWeight: FontWeight.w700,
                         color: active ? Design.accent : Design.text.withAlpha(120),
                       ),
@@ -1407,7 +1416,7 @@ class _PluginViewState extends State<PluginView> {
             ? TextField(
                 controller: _editingController,
                 autofocus: true,
-                style: TextStyle(fontSize: 11.5, color: Design.text),
+                style: TextStyle(fontSize: Design.baseFontSize + 1.5, color: Design.text),
                 decoration: const InputDecoration(
                     isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 5)),
                 onSubmitted: (_) => _commitInlineEdit(frame, item.id, column.id),
@@ -1427,7 +1436,7 @@ class _PluginViewState extends State<PluginView> {
                         : column.align == 'center'
                             ? TextAlign.center
                             : TextAlign.left,
-                    style: TextStyle(fontSize: 11.5, color: Design.text.withAlpha(200)),
+                    style: TextStyle(fontSize: Design.baseFontSize + 1.5, color: Design.text.withAlpha(200)),
                   ),
                 ),
               ),
@@ -1535,7 +1544,7 @@ class _PluginViewState extends State<PluginView> {
             child: TextField(
               controller: _editingController,
               autofocus: true,
-              style: TextStyle(fontSize: 12, color: Design.text),
+              style: TextStyle(fontSize: Design.baseFontSize + 3.5, color: Design.text),
               decoration: InputDecoration(
                 isDense: true,
                 hintText: editableField == 'title' ? 'Title' : 'Subtitle',
@@ -1656,10 +1665,11 @@ class _PluginViewState extends State<PluginView> {
                           child: Text(frame.items[i].title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 12, color: Design.text.withAlpha(210)))),
+                              style:
+                                  TextStyle(fontSize: Design.baseFontSize + 3.5, color: Design.text.withAlpha(210)))),
                       if (frame.items[i].subtitle.isNotEmpty)
                         Text(frame.items[i].subtitle,
-                            style: TextStyle(fontSize: 10.5, color: Design.text.withAlpha(120))),
+                            style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(120))),
                     ]),
                   )),
             if (frame.hasMore) _loadMoreFooter(),
@@ -1762,11 +1772,13 @@ class _PluginViewState extends State<PluginView> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                  fontSize: 10.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(190))),
+                                  fontSize: Design.baseFontSize + 1,
+                                  fontWeight: FontWeight.w700,
+                                  color: Design.text.withAlpha(190))),
                         ),
                         Text(
                           column.limit == null ? '${cards.length}' : '${cards.length}/${column.limit}',
-                          style: TextStyle(fontSize: 9.5, color: Design.text.withAlpha(90)),
+                          style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(90)),
                         ),
                       ]),
                       const SizedBox(height: 6),
@@ -1847,8 +1859,9 @@ class _PluginViewState extends State<PluginView> {
   Widget _diffHeader(String label) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
         color: Design.text.withAlpha(10),
-        child:
-            Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Design.text.withAlpha(150))),
+        child: Text(label,
+            style: TextStyle(
+                fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: Design.text.withAlpha(150))),
       );
 
   Widget _buildLog(PluginRenderFrame frame, {ScrollController? controller}) {
@@ -1933,7 +1946,7 @@ class _PluginViewState extends State<PluginView> {
                   child: Text(
                     weekday.toUpperCase(),
                     style: TextStyle(
-                      fontSize: 8.5,
+                      fontSize: Design.baseFontSize - 0.5,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
                       color: Design.text.withAlpha(95),
@@ -2152,7 +2165,8 @@ class _PluginViewState extends State<PluginView> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
         child: !hasMarkdown && metadata.isEmpty
-            ? Text('No content', style: TextStyle(fontSize: 13, color: Design.text.withAlpha(120)))
+            ? Text('No content',
+                style: TextStyle(fontSize: Design.baseFontSize + 2.5, color: Design.text.withAlpha(120)))
             // Cap the measure in the widened window — full-width prose lines
             // are unreadable at 1080px.
             : Center(
@@ -2189,7 +2203,8 @@ class _PluginViewState extends State<PluginView> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
         child: !hasMarkdown && !hasDiff && item.previewImageUrl == null && item.previewMetadata.isEmpty
-            ? Text('No preview', style: TextStyle(fontSize: 12, color: Design.text.withAlpha(90)))
+            ? Text('No preview',
+                style: TextStyle(fontSize: Design.baseFontSize + 3.5, color: Design.text.withAlpha(90)))
             : _selectableContent(
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2319,7 +2334,7 @@ class _PluginViewState extends State<PluginView> {
 
     return MarkdownConfig(
       configs: <WidgetConfig>[
-        PConfig(textStyle: TextStyle(color: text, fontSize: 13, height: 1.5)),
+        PConfig(textStyle: TextStyle(color: text, fontSize: Design.baseFontSize + 2.5, height: 1.5)),
         heading(MarkdownTag.h1, 18,
             spacing: -0.2,
             divider: HeadingDivider(color: text.withAlpha(28), space: 6, height: 1),
@@ -2353,13 +2368,13 @@ class _PluginViewState extends State<PluginView> {
             color: accent,
             backgroundColor: accent.withAlpha(28),
             fontFamily: 'Consolas',
-            fontSize: 12.5,
+            fontSize: Design.baseFontSize + 3.5,
           ),
         ),
         // Fenced code blocks: theme-tinted syntax over a subtle panel, with a
         // hover copy button in the corner.
         PreConfig(
-          textStyle: const TextStyle(fontFamily: 'Consolas', fontSize: 12.5, height: 1.45),
+          textStyle: TextStyle(fontFamily: 'Consolas', fontSize: Design.baseFontSize + 3.5, height: 1.45),
           styleNotMatched: TextStyle(color: text),
           theme: codeTheme,
           decoration: BoxDecoration(
@@ -2381,8 +2396,8 @@ class _PluginViewState extends State<PluginView> {
         TableConfig(
           border: TableBorder.all(color: text.withAlpha(40)),
           headerRowDecoration: BoxDecoration(color: accent.withAlpha(18)),
-          headerStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: accent),
-          bodyStyle: TextStyle(fontSize: 12, color: text),
+          headerStyle: TextStyle(fontSize: Design.baseFontSize + 3.5, fontWeight: FontWeight.w700, color: accent),
+          bodyStyle: TextStyle(fontSize: Design.baseFontSize + 3.5, color: text),
           headPadding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
           bodyPadding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
         ),
@@ -2678,7 +2693,8 @@ class _EmptyActionButton extends StatelessWidget {
               ],
               Text(
                 action.title,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Design.accent),
+                style:
+                    TextStyle(fontSize: Design.baseFontSize + 3.5, fontWeight: FontWeight.w700, color: Design.accent),
               ),
             ],
           ),
@@ -2721,7 +2737,7 @@ Widget _mdListMarker(bool isOrdered, int depth, int index) {
       child: Text(
         '${index + 1}.',
         style: TextStyle(
-          fontSize: 12.5,
+          fontSize: Design.baseFontSize + 3.5,
           height: 1.5,
           fontWeight: FontWeight.w600,
           color: Design.accent.withAlpha(210),
@@ -2971,7 +2987,7 @@ class _PluginChatMessageState extends State<_PluginChatMessage> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: Design.baseFontSize + 0.5,
+                                    fontSize: Design.baseFontSize + 1,
                                     fontWeight: FontWeight.w700,
                                     color: Design.text.withAlpha(230),
                                   ),
@@ -3042,8 +3058,9 @@ class _PluginChatMessageState extends State<_PluginChatMessage> {
                                     ),
                                     child: Text(
                                       reaction.text,
-                                      style:
-                                          TextStyle(fontSize: 10, color: reaction.color ?? Design.text.withAlpha(175)),
+                                      style: TextStyle(
+                                          fontSize: Design.baseFontSize + 1,
+                                          color: reaction.color ?? Design.text.withAlpha(175)),
                                     ),
                                   ),
                               ],
@@ -3099,7 +3116,8 @@ class _PluginChatMessageState extends State<_PluginChatMessage> {
       alignment: Alignment.center,
       child: Text(
         initial,
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Design.accent.withAlpha(225)),
+        style: TextStyle(
+            fontSize: Design.baseFontSize + 3.5, fontWeight: FontWeight.w700, color: Design.accent.withAlpha(225)),
       ),
     );
   }
@@ -3145,7 +3163,7 @@ class _DiscordReplyPreview extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 10.5,
+                      fontSize: Design.baseFontSize + 1,
                       fontWeight: FontWeight.w700,
                       color: Design.accent.withAlpha(205),
                     ),
@@ -3153,7 +3171,8 @@ class _DiscordReplyPreview extends StatelessWidget {
                   _DiscordChatBody(
                     text: reply.text,
                     maxLines: 2,
-                    style: TextStyle(fontSize: 10.5, height: 1.25, color: Design.text.withAlpha(135)),
+                    style:
+                        TextStyle(fontSize: Design.baseFontSize + 1, height: 1.25, color: Design.text.withAlpha(135)),
                   ),
                 ],
               ),
@@ -3184,7 +3203,7 @@ class _DiscordChatBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextStyle bodyStyle =
-        style ?? TextStyle(fontSize: Design.baseFontSize + 0.5, height: 1.4, color: Design.text.withAlpha(205));
+        style ?? TextStyle(fontSize: Design.baseFontSize + 3.5, height: 1.4, color: Design.text.withAlpha(205));
     final List<InlineSpan> spans = <InlineSpan>[];
     int offset = 0;
     for (final RegExpMatch match in _inlineToken.allMatches(text)) {
@@ -3302,7 +3321,8 @@ class _PluginCalendarHeader extends StatelessWidget {
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Design.text.withAlpha(220)),
+            style: TextStyle(
+                fontSize: Design.baseFontSize + 3.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(220)),
           ),
         ),
         _PluginCalendarTextButton(label: 'Today', selected: false, onTap: onToday),
@@ -3371,7 +3391,7 @@ class _PluginCalendarTextButton extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 9.5,
+                fontSize: Design.baseFontSize,
                 fontWeight: FontWeight.w700,
                 color: selected ? Design.accent : Design.text.withAlpha(125),
               ),
@@ -3417,7 +3437,7 @@ class _PluginCalendarDayCell extends StatelessWidget {
               child: Text(
                 '${day.day}',
                 style: TextStyle(
-                  fontSize: 9.5,
+                  fontSize: Design.baseFontSize,
                   fontWeight: today ? FontWeight.w800 : FontWeight.w600,
                   color: today ? Colors.white : Design.text.withAlpha(inMonth ? 155 : 55),
                 ),
@@ -3431,7 +3451,8 @@ class _PluginCalendarDayCell extends StatelessWidget {
               child: Text(
                 '+${eventCount - visibleCount} more',
                 maxLines: 1,
-                style: TextStyle(fontSize: 8, fontWeight: FontWeight.w600, color: Design.text.withAlpha(85)),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize - 0.5, fontWeight: FontWeight.w600, color: Design.text.withAlpha(85)),
               ),
             ),
         ]),
@@ -3475,7 +3496,8 @@ class _PluginCalendarEventChip extends StatelessWidget {
             item.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w600, color: Design.text.withAlpha(190)),
+            style: TextStyle(
+                fontSize: Design.baseFontSize - 0.5, fontWeight: FontWeight.w600, color: Design.text.withAlpha(190)),
           ),
         ),
       ),
@@ -3494,7 +3516,7 @@ class _PluginAgendaDayHeader extends StatelessWidget {
         child: Text(
           '${_pluginWeekdayNames[date.weekday - 1]}, ${_pluginMonthNames[date.month - 1]} ${date.day}',
           style: TextStyle(
-            fontSize: 9.5,
+            fontSize: Design.baseFontSize,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.4,
             color: Design.text.withAlpha(120),
@@ -3548,7 +3570,8 @@ class _PluginAgendaEventRow extends StatelessWidget {
               width: 78,
               child: Text(
                 time,
-                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Design.text.withAlpha(100)),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize, fontWeight: FontWeight.w700, color: Design.text.withAlpha(100)),
               ),
             ),
             Expanded(
@@ -3557,14 +3580,17 @@ class _PluginAgendaEventRow extends StatelessWidget {
                   item.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(210)),
+                  style: TextStyle(
+                      fontSize: Design.baseFontSize + 1.5,
+                      fontWeight: FontWeight.w700,
+                      color: Design.text.withAlpha(210)),
                 ),
                 if (item.subtitle.isNotEmpty || calendar.location.isNotEmpty)
                   Text(
                     <String>[item.subtitle, calendar.location].where((String value) => value.isNotEmpty).join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 9.5, color: Design.text.withAlpha(105)),
+                    style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(105)),
                   ),
               ]),
             ),
@@ -3628,7 +3654,8 @@ class _PluginToolbarMenu extends StatelessWidget {
             control.multiple && activeCount > 0
                 ? '${control.label.isEmpty ? 'Filter' : control.label} ($activeCount)'
                 : selected.label,
-            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Design.text.withAlpha(185)),
+            style: TextStyle(
+                fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: Design.text.withAlpha(185)),
           ),
           const SizedBox(width: 4),
           Icon(Icons.expand_more_rounded, size: 13, color: Design.text.withAlpha(90)),
@@ -3721,9 +3748,14 @@ class _PluginBannerView extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
               if (banner.title.isNotEmpty)
                 Text(banner.title,
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(220))),
+                    style: TextStyle(
+                        fontSize: Design.baseFontSize + 1.5,
+                        fontWeight: FontWeight.w700,
+                        color: Design.text.withAlpha(220))),
               if (banner.message.isNotEmpty)
-                Text(banner.message, style: TextStyle(fontSize: 10.5, height: 1.3, color: Design.text.withAlpha(145))),
+                Text(banner.message,
+                    style:
+                        TextStyle(fontSize: Design.baseFontSize + 1, height: 1.3, color: Design.text.withAlpha(145))),
               if (banner.actions.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 5),
@@ -3738,8 +3770,8 @@ class _PluginBannerView extends StatelessWidget {
                             foregroundColor: action.destructive ? const Color(0xFFE5534B) : _color,
                           ),
                           onPressed: () => onAction(action),
-                          child:
-                              Text(action.title, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700)),
+                          child: Text(action.title,
+                              style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700)),
                         ),
                     ],
                   ),
@@ -3955,7 +3987,8 @@ class _PluginGalleryTile extends StatelessWidget {
                         decoration:
                             BoxDecoration(color: Colors.black.withAlpha(165), borderRadius: BorderRadius.circular(3)),
                         child: Text(media!.duration,
-                            style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                            style: TextStyle(
+                                fontSize: Design.baseFontSize - 0.5, fontWeight: FontWeight.w700, color: Colors.white)),
                       ),
                     ),
                   if (onPlayPause != null)
@@ -4019,7 +4052,7 @@ class _PluginGalleryTile extends StatelessWidget {
                           mediaError!,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 8.5, color: Colors.white),
+                          style: TextStyle(fontSize: Design.baseFontSize - 0.5, color: Colors.white),
                         ),
                       ),
                     ),
@@ -4048,14 +4081,16 @@ class _PluginGalleryTile extends StatelessWidget {
                     Text(item.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style:
-                            TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(205))),
+                        style: TextStyle(
+                            fontSize: Design.baseFontSize + 1,
+                            fontWeight: FontWeight.w700,
+                            color: Design.text.withAlpha(205))),
                   if (item.subtitle.isNotEmpty || meta.isNotEmpty)
                     Text(
                       item.subtitle.isNotEmpty ? item.subtitle : meta,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 8.8, color: Design.text.withAlpha(95)),
+                      style: TextStyle(fontSize: Design.baseFontSize - 0.5, color: Design.text.withAlpha(95)),
                     ),
                 ]),
               ),
@@ -4100,7 +4135,10 @@ class _PluginKanbanCard extends StatelessWidget {
                   child: Text(item.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Design.text.withAlpha(220))),
+                      style: TextStyle(
+                          fontSize: Design.baseFontSize + 1.5,
+                          fontWeight: FontWeight.w600,
+                          color: Design.text.withAlpha(220))),
                 ),
               ]),
               if (item.subtitle.isNotEmpty) ...<Widget>[
@@ -4108,7 +4146,8 @@ class _PluginKanbanCard extends StatelessWidget {
                 Text(item.subtitle,
                     maxLines: item.subtitleLines,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 10.5, height: 1.3, color: Design.text.withAlpha(125))),
+                    style:
+                        TextStyle(fontSize: Design.baseFontSize + 1, height: 1.3, color: Design.text.withAlpha(125))),
               ],
               if (item.accessories.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 6),
@@ -4119,7 +4158,9 @@ class _PluginKanbanCard extends StatelessWidget {
                     for (final PluginAccessory accessory in item.accessories)
                       Text(accessory.text,
                           style: TextStyle(
-                              fontSize: 9.5, fontWeight: FontWeight.w600, color: accessory.color ?? Design.accent)),
+                              fontSize: Design.baseFontSize,
+                              fontWeight: FontWeight.w600,
+                              color: accessory.color ?? Design.accent)),
                   ],
                 ),
               ],
@@ -4152,14 +4193,16 @@ class _PluginUnifiedDiffRow extends StatelessWidget {
           width: 42,
           child: Text(line.oldLine?.toString() ?? '',
               textAlign: TextAlign.right,
-              style: TextStyle(fontFamily: 'Consolas', fontSize: 10, color: Design.text.withAlpha(70))),
+              style: TextStyle(
+                  fontFamily: 'Consolas', fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(70))),
         ),
         const SizedBox(width: 8),
         SizedBox(
           width: 42,
           child: Text(line.newLine?.toString() ?? '',
               textAlign: TextAlign.right,
-              style: TextStyle(fontFamily: 'Consolas', fontSize: 10, color: Design.text.withAlpha(70))),
+              style: TextStyle(
+                  fontFamily: 'Consolas', fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(70))),
         ),
         const SizedBox(width: 8),
         Text(
@@ -4168,12 +4211,15 @@ class _PluginUnifiedDiffRow extends StatelessWidget {
                 : line.type == 'remove'
                     ? '-'
                     : ' ',
-            style: TextStyle(fontFamily: 'Consolas', fontSize: 11.5, color: tint)),
+            style: TextStyle(fontFamily: 'Consolas', fontSize: Design.baseFontSize + 1.5, color: tint)),
         const SizedBox(width: 5),
         Expanded(
           child: Text(line.text,
-              style:
-                  TextStyle(fontFamily: 'Consolas', fontSize: 11.5, height: 1.35, color: Design.text.withAlpha(205))),
+              style: TextStyle(
+                  fontFamily: 'Consolas',
+                  fontSize: Design.baseFontSize + 1.5,
+                  height: 1.35,
+                  color: Design.text.withAlpha(205))),
         ),
       ]),
     );
@@ -4207,13 +4253,17 @@ class _PluginSplitDiffRow extends StatelessWidget {
                 width: 34,
                 child: Text(lineNumber?.toString() ?? '',
                     textAlign: TextAlign.right,
-                    style: TextStyle(fontFamily: 'Consolas', fontSize: 10, color: Design.text.withAlpha(70))),
+                    style: TextStyle(
+                        fontFamily: 'Consolas', fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(70))),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(line.text,
                     style: TextStyle(
-                        fontFamily: 'Consolas', fontSize: 11, height: 1.35, color: Design.text.withAlpha(205))),
+                        fontFamily: 'Consolas',
+                        fontSize: Design.baseFontSize + 1,
+                        height: 1.35,
+                        color: Design.text.withAlpha(205))),
               ),
             ])
           : const SizedBox.shrink(),
@@ -4244,12 +4294,14 @@ class _PluginLogRow extends StatelessWidget {
             SizedBox(
               width: 82,
               child: Text(line.timestamp,
-                  style: TextStyle(fontFamily: 'Consolas', fontSize: 10, color: Design.text.withAlpha(80))),
+                  style: TextStyle(
+                      fontFamily: 'Consolas', fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(80))),
             ),
           SizedBox(
             width: 52,
             child: Text(line.level.toUpperCase(),
-                style: TextStyle(fontFamily: 'Consolas', fontSize: 9.5, fontWeight: FontWeight.w700, color: _tint)),
+                style: TextStyle(
+                    fontFamily: 'Consolas', fontSize: Design.baseFontSize, fontWeight: FontWeight.w700, color: _tint)),
           ),
           if (line.source.isNotEmpty)
             SizedBox(
@@ -4257,15 +4309,19 @@ class _PluginLogRow extends StatelessWidget {
               child: Text(line.source,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontFamily: 'Consolas', fontSize: 10, color: Design.text.withAlpha(105))),
+                  style: TextStyle(
+                      fontFamily: 'Consolas', fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(105))),
             ),
           Expanded(
             child: Text(line.text,
                 maxLines: wrap ? null : 1,
                 softWrap: wrap,
                 overflow: wrap ? TextOverflow.visible : TextOverflow.ellipsis,
-                style:
-                    TextStyle(fontFamily: 'Consolas', fontSize: 10.8, height: 1.35, color: Design.text.withAlpha(205))),
+                style: TextStyle(
+                    fontFamily: 'Consolas',
+                    fontSize: Design.baseFontSize + 1.8,
+                    height: 1.35,
+                    color: Design.text.withAlpha(205))),
           ),
         ]),
       );
@@ -4290,12 +4346,15 @@ class _PluginOperationBar extends StatelessWidget {
           Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
             Text(operation.title,
-                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Design.text.withAlpha(220))),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize + 1.5,
+                    fontWeight: FontWeight.w700,
+                    color: Design.text.withAlpha(220))),
             if (operation.detail.isNotEmpty)
               Text(operation.detail,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10, color: Design.text.withAlpha(130))),
+                  style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(130))),
           ])),
           if (operation.cancellable) TextButton(onPressed: onCancel, child: const Text('Cancel')),
         ]),
@@ -4368,7 +4427,8 @@ class _PluginTimelineRow extends StatelessWidget {
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
           SizedBox(
               width: 78,
-              child: Text(item.timestamp ?? '', style: TextStyle(fontSize: 10.5, color: Design.text.withAlpha(125)))),
+              child: Text(item.timestamp ?? '',
+                  style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(125)))),
           Column(children: <Widget>[
             Container(width: 9, height: 9, decoration: BoxDecoration(color: Design.accent, shape: BoxShape.circle)),
             Container(width: 1, height: 30, color: Design.text.withAlpha(35))
@@ -4377,12 +4437,13 @@ class _PluginTimelineRow extends StatelessWidget {
           Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
             Text(item.title,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Design.text.withAlpha(220))),
+                style: TextStyle(
+                    fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600, color: Design.text.withAlpha(220))),
             if (item.subtitle.isNotEmpty)
               Text(item.subtitle,
                   maxLines: item.subtitleLines,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, color: Design.text.withAlpha(145)))
+                  style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(145)))
           ])),
         ]),
       );
@@ -4431,20 +4492,22 @@ class _PluginChartState extends State<_PluginChart> {
       leftTitles: AxisTitles(
         axisNameWidget: widget.options.yTitle == null
             ? null
-            : Text(widget.options.yTitle!, style: TextStyle(fontSize: 9, color: Design.text.withAlpha(100))),
+            : Text(widget.options.yTitle!,
+                style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(100))),
         sideTitles: SideTitles(
           showTitles: show,
           reservedSize: 42,
           getTitlesWidget: (double value, TitleMeta meta) => Text(
             value.abs() >= 1000 ? value.toStringAsFixed(0) : value.toStringAsFixed(value.abs() < 10 ? 1 : 0),
-            style: TextStyle(fontSize: 9, color: Design.text.withAlpha(95)),
+            style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(95)),
           ),
         ),
       ),
       bottomTitles: AxisTitles(
         axisNameWidget: widget.options.xTitle == null
             ? null
-            : Text(widget.options.xTitle!, style: TextStyle(fontSize: 9, color: Design.text.withAlpha(100))),
+            : Text(widget.options.xTitle!,
+                style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(100))),
         sideTitles: SideTitles(
           showTitles: show,
           reservedSize: 28,
@@ -4458,7 +4521,7 @@ class _PluginChartState extends State<_PluginChart> {
               child: Text(
                 _xLabel(index),
                 maxLines: 1,
-                style: TextStyle(fontSize: 9, color: Design.text.withAlpha(95)),
+                style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(95)),
               ),
             );
           },
@@ -4500,7 +4563,10 @@ class _PluginChartState extends State<_PluginChart> {
             getTooltipItems: (List<LineBarSpot> spots) => spots
                 .map((LineBarSpot spot) => LineTooltipItem(
                       '${widget.series[spot.barIndex].label}\n${_xLabel(spot.x.round())}: ${spot.y}',
-                      TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _seriesColor(spot.barIndex)),
+                      TextStyle(
+                          fontSize: Design.baseFontSize + 1,
+                          fontWeight: FontWeight.w600,
+                          color: _seriesColor(spot.barIndex)),
                     ))
                 .toList(growable: false),
           ),
@@ -4544,7 +4610,8 @@ class _PluginChartState extends State<_PluginChart> {
               if (rodIndex >= widget.series.length) return null;
               return BarTooltipItem(
                 '${widget.series[rodIndex].label}\n${_xLabel(group.x)}: ${rod.toY}',
-                TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _seriesColor(rodIndex)),
+                TextStyle(
+                    fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: _seriesColor(rodIndex)),
               );
             },
           ),
@@ -4583,8 +4650,9 @@ class _PluginChartState extends State<_PluginChart> {
         if (widget.title != null)
           Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child:
-                  Text(widget.title!, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Design.text))),
+              child: Text(widget.title!,
+                  style:
+                      TextStyle(fontSize: Design.baseFontSize + 2.5, fontWeight: FontWeight.w700, color: Design.text))),
         Expanded(
           child: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) => GestureDetector(
@@ -4651,7 +4719,8 @@ class _PluginChartState extends State<_PluginChart> {
                 Container(
                     width: 8, height: 8, decoration: BoxDecoration(color: _seriesColor(index), shape: BoxShape.circle)),
                 const SizedBox(width: 5),
-                Text(widget.series[index].label, style: TextStyle(fontSize: 10.5, color: Design.text.withAlpha(145))),
+                Text(widget.series[index].label,
+                    style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(145))),
               ]),
           ]),
         ],
@@ -4789,7 +4858,7 @@ class _PluginMetadataPane extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: Design.baseFontSize + 1,
                           fontWeight: FontWeight.w600,
                           color: Design.text.withAlpha(120),
                           height: 1.35,
@@ -4811,7 +4880,7 @@ class _PluginMetadataPane extends StatelessWidget {
     final Widget text = Text(
       entry.text,
       style: TextStyle(
-        fontSize: 11.5,
+        fontSize: Design.baseFontSize + 1.5,
         fontWeight: FontWeight.w600,
         color: entry.url != null ? Design.accent : valueColor,
         decoration: entry.url != null ? TextDecoration.underline : null,
@@ -4922,7 +4991,8 @@ class _MetadataActionButton extends StatelessWidget {
                   Icon(PluginIcons.resolve(action.icon), size: 12, color: color),
                   const SizedBox(width: 5),
                 ],
-                Text(action.title, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+                Text(action.title,
+                    style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: color)),
               ],
             ),
           ),
@@ -5011,7 +5081,7 @@ class _PluginGridTile extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: Design.baseFontSize + 1,
               fontWeight: FontWeight.w600,
               color: isSelected ? labelColor : labelColor.withAlpha(210),
             ),
@@ -5022,7 +5092,7 @@ class _PluginGridTile extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 9, color: labelColor.withAlpha(130)),
+            style: TextStyle(fontSize: Design.baseFontSize, color: labelColor.withAlpha(130)),
           ),
       ],
     );

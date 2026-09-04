@@ -795,11 +795,25 @@ class LauncherPluginHost {
         _handleOAuthCommand(command);
         return true;
       case 'browserbridge':
-        if (!live) return true;
+        // A plugin can need one final browser request after receiving `close`
+        // (for example, closing a temporary tab it opened). The process is
+        // already detached from the launcher at this point, so only permit
+        // the narrow cleanup operation; frames and all other browser actions
+        // remain dropped once the plugin is no longer live.
+        if (!live && !_isShutdownBrowserTabClose(command)) return true;
         _handleBrowserBridgeCommand(command);
         return true;
     }
     return false;
+  }
+
+  bool _isShutdownBrowserTabClose(PluginCommand command) {
+    final Object? rawOp = command.data['op'];
+    final Object? rawMethod = command.data['method'];
+    return rawOp is String &&
+        rawOp.toLowerCase() == 'request' &&
+        rawMethod is String &&
+        rawMethod.toLowerCase() == 'tabs.close';
   }
 
   void _handleBrowserBridgeCommand(PluginCommand command) {

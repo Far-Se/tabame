@@ -185,19 +185,19 @@ class MainMenuSteamWidget extends StatelessWidget {
                       const SizedBox(height: 4),
 
                     // Library panel.
-                    DragToMoveArea(
-                      child: Container(
-                        margin: const EdgeInsets.fromLTRB(8, 7, 8, 4),
-                        decoration: BoxDecoration(
-                          color: t.panel.withValues(alpha: hasBackdrop ? 0.88 : 1.0),
-                          borderRadius: BorderRadius.circular((radius - 1).clamp(3.0, 8.0)),
-                          border: Border.all(color: t.panelStroke),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            Padding(
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(8, 7, 8, 4),
+                      decoration: BoxDecoration(
+                        color: t.panel.withValues(alpha: hasBackdrop ? 0.88 : 1.0),
+                        borderRadius: BorderRadius.circular((radius - 1).clamp(3.0, 8.0)),
+                        border: Border.all(color: t.panelStroke),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          DragToMoveArea(
+                            child: Padding(
                               padding: const EdgeInsets.fromLTRB(9, 4, 9, 0),
                               child: Row(
                                 children: <Widget>[
@@ -216,12 +216,12 @@ class MainMenuSteamWidget extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 2),
-                              child: TaskBar(),
-                            ),
-                          ],
-                        ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 2),
+                            child: TaskBar(),
+                          ),
+                        ],
                       ),
                     ),
 
