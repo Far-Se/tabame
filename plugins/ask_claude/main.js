@@ -7,7 +7,6 @@
 // Tabame's app-owned browser bridge. Every message you submit from the
 // launcher is typed into that tab, sent, and the plugin waits for Claude's
 // reply in-page before relaying the text back into the launcher's chat view.
-// The Claude tab used by this plugin is closed when the launcher sends close.
 // The browser exposes snapshots while that response is streaming, so the
 // plugin interpolates those snapshots into character-level chat frames instead
 // of showing each polling chunk as a jump.
@@ -407,7 +406,7 @@ const state = {
   screen: "home", // home | connection | chat | snippets | snippet_form
   chatMode: "conversation", // autocomplete | conversation
   tabId: null,
-  closeTabOnShutdown: false,
+  tabOwned: false,
   snippetFormMode: "create", // create | edit
   editingSnippetId: null,
   snippetQuery: "",
@@ -1074,7 +1073,7 @@ function ensureTabOpen() {
         return state.tabId;
       }
       state.tabId = null;
-      state.closeTabOnShutdown = false;
+      state.tabOwned = false;
     }
 
     const list = await bridge.request("tabs.list");
@@ -1083,17 +1082,14 @@ function ensureTabOpen() {
     );
     if (existing) {
       state.tabId = existing.id;
-      // Ask Claude owns the active browser session for this plugin run. This
-      // also makes cleanup reliable when a previous run left a Claude tab
-      // behind and the next run reuses it.
-      state.closeTabOnShutdown = true;
+      state.tabOwned = false;
     } else {
       const tab = await bridge.request("tabs.open", {
         url: CONFIG.claudeUrl,
         active: true,
       });
       state.tabId = tab.id;
-      state.closeTabOnShutdown = true;
+      state.tabOwned = true;
       await waitForTabReady(state.tabId);
     }
     return state.tabId;
@@ -1864,7 +1860,7 @@ async function handleLine(line) {
   }
 }
 
-async function closeClaudeTabOnShutdown() {
+async function closeOwnedClaudeTab() {
   // If shutdown races the initial tabs.open request, give it a brief chance
   // to return an id before releasing the bridge.
   if (state.tabId == null && tabOpenPromise) {
@@ -1874,11 +1870,11 @@ async function closeClaudeTabOnShutdown() {
     ]);
   }
 
-  if (!state.closeTabOnShutdown || state.tabId == null) return;
+  if (!state.tabOwned || state.tabId == null) return;
 
   const tabId = state.tabId;
   state.tabId = null;
-  state.closeTabOnShutdown = false;
+  state.tabOwned = false;
   if (!bridge.connected) {
     log(
       "Could not close the Claude tab because the browser bridge is offline.",
@@ -1902,7 +1898,7 @@ function shutdown() {
   shuttingDown = true;
   state.streamingMessageId = null;
   resetStreamingAnimation();
-  void closeClaudeTabOnShutdown()
+  void closeOwnedClaudeTab()
     .catch((error) => log("Claude tab cleanup failed:", error))
     .finally(() => {
       bridge.close();
