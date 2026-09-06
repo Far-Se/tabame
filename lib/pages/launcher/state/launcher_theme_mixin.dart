@@ -11,6 +11,30 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
     required Color accent,
   }) {
     return switch (_design) {
+      LauncherDesign.tui => _copyDesignTheme(
+          baseTheme,
+          surface: TuiTokens.background,
+          onSurface: TuiTokens.foreground,
+          primary: TuiTokens.accent,
+          highlightColor: TuiTokens.foreground,
+          textTheme: baseTheme.textTheme.apply(
+            fontFamily: 'Consolas',
+            fontFamilyFallback: const <String>['Lucida Console', 'monospace'],
+            bodyColor: TuiTokens.foreground,
+            displayColor: TuiTokens.foreground,
+          ),
+        ),
+      LauncherDesign.omarchy => _copyDesignTheme(
+          baseTheme,
+          surface: OmarchyTokens.bg(isDark),
+          onSurface: OmarchyTokens.fg(isDark),
+          primary: accent,
+          highlightColor: OmarchyTokens.selected(isDark),
+          textTheme: GoogleFonts.inconsolataTextTheme(baseTheme.textTheme).apply(
+            bodyColor: OmarchyTokens.fg(isDark),
+            displayColor: OmarchyTokens.fg(isDark),
+          ),
+        ),
       LauncherDesign.newCast => _copyDesignTheme(
           baseTheme,
           brightness: isDark ? Brightness.dark : Brightness.light,

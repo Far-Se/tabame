@@ -36,6 +36,7 @@ import 'design_switchboard.dart';
 import 'design_tech.dart';
 import 'design_terminal.dart';
 import 'design_terminal2.dart';
+import 'design_tui.dart';
 import 'design_vector.dart';
 import 'design_winamp.dart';
 import 'design_windows_98.dart';
@@ -116,6 +117,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.aurora => MainMenuAuroraWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.terminal => MainMenuTerminalWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.terminal2 => MainMenuTerminal2Widget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.tui => MainMenuTuiWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.cassette => MainMenuCassetteWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.fluent => MainMenuFluentWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.gazette => MainMenuGazetteWidget(key: ValueKey<int>(_refreshCounter)),

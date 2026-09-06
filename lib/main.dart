@@ -25,6 +25,7 @@ import 'pages/screen_recording.dart';
 import 'pages/screen_ruler.dart';
 import 'pages/spotlight.dart';
 import 'pages/run.dart';
+import 'test.dart';
 
 Future<void> main(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,6 +63,7 @@ Future<void> main(List<String> arguments) async {
       await AppStartup.finalizeStartup();
       PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
       await AppStartup.initialize();
+      await TimestampLogger.init();
       runApp(const Tabame());
     },
     (Object error, StackTrace stack) async {

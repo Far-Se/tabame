@@ -38,6 +38,8 @@ part 'launcher_designs/notion_launcher_design.dart';
 part 'launcher_designs/switchboard_launcher_design.dart';
 part 'launcher_designs/relay_launcher_design.dart';
 part 'launcher_designs/newcast_launcher_design.dart';
+part 'launcher_designs/omarchy_launcher_design.dart';
+part 'launcher_designs/tui_launcher_design.dart';
 
 // ---------------------------------------------------------------------------
 // Extension: per-design widget factories used by LauncherState
@@ -50,6 +52,13 @@ extension LauncherDesignBuilder on LauncherDesign {
     required Color accent,
   }) {
     switch (this) {
+      case LauncherDesign.tui:
+        return BoxDecoration(color: surface, border: Border.all(color: TuiTokens.border));
+      case LauncherDesign.omarchy:
+        return BoxDecoration(
+          color: surface,
+          border: Border.all(color: OmarchyTokens.border(surface.computeLuminance() < 0.5)),
+        );
       case LauncherDesign.classic:
         return BoxDecoration(
           borderRadius: BorderRadius.circular(Design.borderRadius),
@@ -558,6 +567,15 @@ extension LauncherDesignBuilder on LauncherDesign {
           trailingBadge: trailingBadge,
           isSearching: isSearching,
         );
+      case LauncherDesign.omarchy:
+        return _OmarchySearchBar(
+            dragHandle: dragHandle,
+            textField: textField,
+            trailingBadge: trailingBadge,
+            isSearching: isSearching,
+            accent: accent);
+      case LauncherDesign.tui:
+        return _TuiSearchBar(textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
       case LauncherDesign.terminal2:
         return _Terminal2SearchBar(
           accent: accent,
@@ -881,6 +899,13 @@ extension LauncherDesignBuilder on LauncherDesign {
         );
       case LauncherDesign.terminal2:
         return Terminal2LauncherHeader(label: label, accent: accent);
+      case LauncherDesign.omarchy:
+        return OmarchyLauncherHeader(label: label, accent: accent);
+      case LauncherDesign.tui:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+          child: Text(' $label', style: TuiTokens.mono(color: TuiTokens.dim)),
+        );
     }
   }
 }

@@ -237,6 +237,8 @@ class LauncherResultRow extends StatelessWidget {
       LauncherDesign.relay => _buildRelay(context),
       LauncherDesign.terminal2 => _buildTerminal2(context),
       LauncherDesign.newCast => _buildRaycast(context),
+      LauncherDesign.omarchy => _buildOmarchy(context),
+      LauncherDesign.tui => _buildTui(context),
     };
   }
 
@@ -1571,6 +1573,129 @@ class LauncherResultRow extends StatelessWidget {
     );
   }
 
+  Widget _buildOmarchy(BuildContext context) {
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final Color foreground = OmarchyTokens.fg(dark);
+    return Semantics(
+      selected: isSelected,
+      button: true,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+            decoration: BoxDecoration(
+              color: isSelected ? OmarchyTokens.selected(dark) : Colors.transparent,
+              border: Border.all(color: isSelected ? accent : Colors.transparent),
+            ),
+            child: Row(children: <Widget>[
+              SizedBox(
+                  width: 18,
+                  child: Text(isSelected ? '>' : ' ',
+                      style: OmarchyTokens.mono(fontSize: 18, color: accent, fontWeight: FontWeight.w600))),
+              SizedBox(width: 22, height: 22, child: Center(child: icon)),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: content ??
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          _titleText(OmarchyTokens.mono(
+                              fontSize: Design.baseFontSize + 3,
+                              fontWeight: FontWeight.w600,
+                              color: isSelected ? accent : foreground,
+                              height: 1.2)),
+                          _subtitleText(OmarchyTokens.mono(
+                              fontSize: Design.baseFontSize + 1, color: OmarchyTokens.dim(dark), height: 1.25)),
+                        ],
+                      )),
+              if (badge != null) Padding(padding: const EdgeInsets.only(left: 8), child: badge),
+              if (isSelected)
+                Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text('↵', style: OmarchyTokens.mono(fontSize: 18, color: accent))),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTui(BuildContext context) {
+    final bool customContent = content != null && title == null;
+    final Color ink = isSelected && !customContent ? TuiTokens.background : TuiTokens.foreground;
+    final TextStyle textStyle = TuiTokens.mono(color: ink);
+    return Semantics(
+      selected: isSelected,
+      button: true,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            color: isSelected
+                ? customContent
+                    ? Color.alphaBlend(TuiTokens.accent.withValues(alpha: 0.18), TuiTokens.background)
+                    : TuiTokens.foreground
+                : Colors.transparent,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+              Text(isSelected ? '> ' : '  ', style: textStyle),
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: Center(
+                  child: Opacity(
+                    opacity: 0.72,
+                    child: ColorFiltered(
+                      colorFilter: ColorFilter.mode(TuiTokens.dim, BlendMode.srcIn),
+                      child: icon,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: customContent
+                      ? content!
+                      : LayoutBuilder(
+                          builder: (BuildContext context, BoxConstraints constraints) {
+                            final Widget name = _titleText(textStyle);
+                            final Widget detail =
+                                _subtitleText(textStyle.copyWith(color: isSelected ? ink : TuiTokens.dim));
+                            if (subtitle == null || subtitle!.isEmpty) return name;
+                            if (constraints.maxWidth < 420) {
+                              return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[name, detail]);
+                            }
+                            return Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                              Expanded(flex: 5, child: name),
+                              const SizedBox(width: 16),
+                              Expanded(flex: 4, child: detail),
+                            ]);
+                          },
+                        )),
+              if (badge != null)
+                Padding(
+                    padding: const EdgeInsets.only(left: 8), child: DefaultTextStyle(style: textStyle, child: badge!)),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── Command ──────────────────────────────────────────────────────────────
   // A dense console row: a bright left rail + faint accent fill on selection,
   // a bordered square icon chip, and a trailing ↵ key on the active row.
@@ -1879,6 +2004,7 @@ class LauncherKindBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (user.launcherDesign == LauncherDesign.tui) return Text('[$label]');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       decoration: BoxDecoration(

@@ -49,3 +49,6 @@ analyzer:
     - plugins/**/build/**
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+    - windows/**
+    - macos/**
+    - linux/**

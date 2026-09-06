@@ -70,12 +70,14 @@ enum QuickMenuDesigns {
   switchboard,
   orbit,
   // familyGuy,
+  tui,
   ;
 
   String get displayName => switch (this) {
         QuickMenuDesigns.windowsXp => 'Windows XP',
         QuickMenuDesigns.windows98 => 'Windows 98',
         QuickMenuDesigns.commandDeck => 'Command Deck',
+        QuickMenuDesigns.tui => 'TUI',
         _ => name.toUpperCaseFirst(),
       };
 }
@@ -106,10 +108,13 @@ enum LauncherDesign {
   notion,
   switchboard,
   relay,
-  newCast;
+  newCast,
+  omarchy,
+  tui;
 
   String get displayName => switch (this) {
         LauncherDesign.windowsXp => 'Windows XP',
+        LauncherDesign.tui => 'TUI',
         LauncherDesign.windows98 => 'Windows 98',
         _ => name.toUpperCaseFirst(),
       };
@@ -480,6 +485,50 @@ class Settings {
           entryFontFamily: 'Fragment Mono',
           entryFontWeight: 600,
           borderRadius: 2,
+        ),
+      ),
+      LauncherDesign.omarchy.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFF5EEDC),
+          textColor: const Color(0xFF3C3836),
+          accentColor: const Color(0xFF596B32),
+          gradientAlpha: 0,
+          uiFontFamily: 'Inconsolata',
+          entryFontFamily: 'Inconsolata',
+          borderRadius: 0,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF282828),
+          textColor: const Color(0xFFD4BE98),
+          accentColor: const Color(0xFFA9B665),
+          gradientAlpha: 0,
+          uiFontFamily: 'Inconsolata',
+          entryFontFamily: 'Inconsolata',
+          borderRadius: 0,
+        ),
+      ),
+      LauncherDesign.tui.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFF2F2F2),
+          textColor: const Color(0xFF0C0C0C),
+          accentColor: const Color(0xFF0037DA),
+          gradientAlpha: 0,
+          uiFontFamily: 'Consolas',
+          entryFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontWeight: 400,
+          borderRadius: 0,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF0C0C0C),
+          textColor: const Color(0xFFCCCCCC),
+          accentColor: const Color(0xFFCCCCCC),
+          gradientAlpha: 0,
+          uiFontFamily: 'Consolas',
+          entryFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontWeight: 400,
+          borderRadius: 0,
         ),
       ),
       LauncherDesign.zen.displayName: LauncherDesignThemeSet(
@@ -874,6 +923,30 @@ class Settings {
           entryFontWeight: 600,
           borderRadius: 4,
           baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.tui.displayName: QMDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFF2F2F2),
+          textColor: const Color(0xFF0C0C0C),
+          accentColor: const Color(0xFF0037DA),
+          gradientAlpha: 0,
+          uiFontFamily: 'Consolas',
+          entryFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontWeight: 400,
+          borderRadius: 0,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF0C0C0C),
+          textColor: const Color(0xFFCCCCCC),
+          accentColor: const Color(0xFFCCCCCC),
+          gradientAlpha: 0,
+          uiFontFamily: 'Consolas',
+          entryFontFamily: 'Consolas',
+          uiFontWeight: 400,
+          entryFontWeight: 400,
+          borderRadius: 0,
         ),
       ),
       QuickMenuDesigns.cassette.displayName: QMDesignThemeSet(

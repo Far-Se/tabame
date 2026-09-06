@@ -825,7 +825,8 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
               children: <Widget>[
                 if (user.customSpash != "") Positioned(child: Image.file(File(user.customSpash), height: 30), left: 10),
                 Padding(
-                  padding: const EdgeInsets.all(10) + const EdgeInsets.only(top: 20),
+                  padding: const EdgeInsets.all(10) +
+                      EdgeInsets.only(top: Globals.quickMenuPage == QuickMenuPage.launcher ? 0 : 20),
                   child: DragToResizeArea(
                     resizeEdgeSize: 5,
                     enableResizeEdges: <ResizeEdge>[ResizeEdge.right],

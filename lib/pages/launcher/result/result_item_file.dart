@@ -103,6 +103,7 @@ class _FileKindBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (user.launcherDesign == LauncherDesign.tui) return Text(isDirectory ? '<DIR>' : '[FILE]');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       decoration: BoxDecoration(

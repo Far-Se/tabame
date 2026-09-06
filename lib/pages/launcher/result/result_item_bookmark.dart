@@ -165,6 +165,7 @@ class _KindBadge extends StatelessWidget {
         icon = Icons.apps_rounded;
         color = const Color(0xFF00523A);
     }
+    if (user.launcherDesign == LauncherDesign.tui) return Text('[$label]');
     return CustomTooltip(
       verticalOffset: 45,
       message: switch (kind) {

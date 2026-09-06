@@ -18,6 +18,7 @@ import '../../models/classes/music_server_manager.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/util/quickmenu_modal.dart';
+import '../../models/util/quickmenu_tui_theme.dart';
 import '../../models/win32/keys.dart';
 import '../../models/win32/mixed.dart';
 import '../../models/win32/win32.dart';
@@ -548,6 +549,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
   double _dragMovement = 0.0;
 
   bool get _terminalStyle => user.quickMenuDesign == QuickMenuDesigns.terminal2.index;
+  bool get _tuiStyle => user.quickMenuDesign == QuickMenuDesigns.tui.index;
 
   // bool get _isDark => userSettings.themeTypeMode == ThemeType.dark;
 
@@ -572,29 +574,39 @@ class _TaskBarItemState extends State<TaskBarItem> {
         widget.onHover?.call(null);
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+        duration: _tuiStyle ? Duration.zero : const Duration(milliseconds: 150),
         curve: Curves.easeOutCubic,
         height: height,
-        margin: _terminalStyle ? EdgeInsets.zero : EdgeInsets.symmetric(horizontal: 4, vertical: expanded ? 2 : 1),
+        margin: _terminalStyle || _tuiStyle
+            ? EdgeInsets.zero
+            : EdgeInsets.symmetric(horizontal: 4, vertical: expanded ? 2 : 1),
         decoration: BoxDecoration(
-          color: isSelected
-              ? accent.withAlpha(_terminalStyle ? 58 : (expanded ? 60 : 45))
-              : isHovered
-                  ? accent.withAlpha(_terminalStyle ? 24 : (expanded ? 40 : 20))
-                  : Colors.transparent,
-          borderRadius: _terminalStyle ? BorderRadius.zero : BorderRadius.circular(expanded ? 8 : 9),
-          border: _terminalStyle
-              ? Border(
-                  bottom: BorderSide(
-                    color: isSelected ? accent.withAlpha(110) : Design.text.withAlpha(20),
-                  ),
-                )
-              : Border.all(
-                  color: (isSelected && !expanded) ? accent.withAlpha(100) : Colors.transparent,
-                  width: 1,
-                ),
+          color: _tuiStyle && (isSelected || isHovered)
+              ? QuickMenuTuiTheme.foreground
+              : isSelected
+                  ? accent.withAlpha(_terminalStyle ? 58 : (expanded ? 60 : 45))
+                  : isHovered
+                      ? accent.withAlpha(_terminalStyle ? 24 : (expanded ? 40 : 20))
+                      : Colors.transparent,
+          borderRadius: _terminalStyle || _tuiStyle ? BorderRadius.zero : BorderRadius.circular(expanded ? 8 : 9),
+          border: _tuiStyle
+              ? null
+              : _terminalStyle
+                  ? Border(
+                      bottom: BorderSide(
+                        color: isSelected ? accent.withAlpha(110) : Design.text.withAlpha(20),
+                      ),
+                    )
+                  : Border.all(
+                      color: (isSelected && !expanded) ? accent.withAlpha(100) : Colors.transparent,
+                      width: 1,
+                    ),
         ),
-        child: expanded ? _buildExpandedContent() : _buildMainContent(),
+        child: _tuiStyle
+            ? _buildTuiContent()
+            : expanded
+                ? _buildExpandedContent()
+                : _buildMainContent(),
       ),
     );
   }
@@ -675,6 +687,80 @@ class _TaskBarItemState extends State<TaskBarItem> {
       ),
     );
   }
+
+  Widget _buildTuiContent() {
+    final bool highlighted = widget.isSelected || _isHovered;
+    final Color ink = highlighted ? QuickMenuTuiTheme.background : QuickMenuTuiTheme.foreground;
+    final TextStyle style = QuickMenuTuiTheme.text(color: ink);
+    final bool isAudioSource = Caches.audioMixerExes.contains(widget.window.process.exe) ||
+        Caches.audioMixer.contains(widget.window.process.pId) ||
+        Caches.audioMixer.contains(widget.window.process.mainPID);
+    return Semantics(
+        selected: widget.isSelected,
+        button: true,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _activateWindow,
+          onVerticalDragEnd: (_) => _activateWindow(),
+          onSecondaryTapUp: (TapUpDetails details) => _showContextMenu(context),
+          onTertiaryTapUp: (_) => _showZonesPicker(context),
+          onLongPress: () => Win32.forceActivateWindow(widget.window.hWnd),
+          onHorizontalDragUpdate: (DragUpdateDetails details) => _dragMovement += details.delta.dx,
+          onHorizontalDragEnd: _handleHorizontalDragEnd,
+          child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(children: <Widget>[
+                Text(highlighted ? '> ' : '  ', style: style),
+                SizedBox(width: 20, height: 20, child: _buildIcon()),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(widget.window.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+                    if (user.expandedTaskbar)
+                      Text(widget.window.process.exe,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: QuickMenuTuiTheme.text(
+                              color: highlighted ? ink : QuickMenuTuiTheme.dim, size: Design.baseFontSize + 2)),
+                  ],
+                )),
+                if (widget.window.isPinned) Tooltip(message: 'Pinned window', child: Text('[P]', style: style)),
+                if (widget.window.helpText.isNotEmpty)
+                  Tooltip(message: widget.window.helpText, child: Text('[?]', style: style)),
+                if (_isHovered) ...<Widget>[
+                  if (isAudioSource ||
+                      (user.mediaControlForApp && Boxes.mediaControls.contains(widget.window.process.exe)))
+                    _tuiControl('M', 'Mute / unmute', _muteWindow, ink),
+                  if (isAudioSource)
+                    GestureDetector(
+                        onSecondaryTap: () =>
+                            WindowWatcher.mediaControl(widget.index, button: AppCommand.mediaNexttrack),
+                        onTertiaryTapUp: (_) =>
+                            WindowWatcher.mediaControl(widget.index, button: AppCommand.mediaPrevioustrack),
+                        child: _tuiControl('>', 'Play / pause; right-click: next; middle-click: previous',
+                            () => WindowWatcher.mediaControl(widget.index), ink)),
+                  _tuiControl(
+                      'X', 'Close window; hold to force close', () => widget.onClose(widget.index, widget.window), ink,
+                      onLongPress: () => Win32.closeWindow(widget.window.hWnd, forced: true)),
+                ],
+              ])),
+        ));
+  }
+
+  Widget _tuiControl(String label, String tooltip, VoidCallback onTap, Color ink, {VoidCallback? onLongPress}) =>
+      Tooltip(
+        message: tooltip,
+        child: InkWell(
+            onTap: onTap,
+            onLongPress: onLongPress,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 5),
+              child: Text('[$label]', style: QuickMenuTuiTheme.text(color: ink, size: Design.baseFontSize + 2)),
+            )),
+      );
 
   Widget _buildExpandedTitle() {
     final Color onSurface = Design.text;

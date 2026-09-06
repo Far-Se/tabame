@@ -29,6 +29,24 @@ class LauncherModalTokens {
     final bool isDark = theme.brightness == Brightness.dark;
     final LauncherDesign design = user.launcherDesign;
     switch (design) {
+      case LauncherDesign.tui:
+        return LauncherModalTokens._(
+          design: design,
+          isDark: isDark,
+          surface: TuiTokens.background,
+          accent: TuiTokens.accent,
+          onSurface: TuiTokens.foreground,
+          dim: TuiTokens.dim,
+        );
+      case LauncherDesign.omarchy:
+        return LauncherModalTokens._(
+          design: design,
+          isDark: isDark,
+          surface: OmarchyTokens.bg(isDark),
+          accent: OmarchyTokens.accent(isDark),
+          onSurface: OmarchyTokens.fg(isDark),
+          dim: OmarchyTokens.dim(isDark),
+        );
       case LauncherDesign.terminal:
         return LauncherModalTokens._(
           design: design,
@@ -230,11 +248,15 @@ class LauncherModalTokens {
         LauncherDesign.relay => 3.0,
         LauncherDesign.terminal2 => 2.0,
         LauncherDesign.newCast => 8.0,
+        LauncherDesign.omarchy => 0.0,
+        LauncherDesign.tui => 0.0,
       };
 
   /// Designs whose controls carry a visible accent outline (console/drafting
   /// looks); the soft designs use borderless fills instead.
   bool get outlinedControls =>
+      design == LauncherDesign.tui ||
+      design == LauncherDesign.omarchy ||
       design == LauncherDesign.command ||
       design == LauncherDesign.terminal ||
       design == LauncherDesign.terminal2 ||
@@ -255,6 +277,10 @@ class LauncherModalTokens {
     double? height,
   }) {
     return switch (design) {
+      LauncherDesign.tui => TuiTokens.mono(
+          fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
+      LauncherDesign.omarchy => OmarchyTokens.mono(
+          fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       LauncherDesign.terminal => TerminalTokens.mono(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       LauncherDesign.terminal2 => Terminal2Tokens.mono(
@@ -370,6 +396,8 @@ class LauncherModalFrame extends StatelessWidget {
 
   Color _surfaceColor(BuildContext context) {
     return switch (design) {
+      LauncherDesign.omarchy => tokens.surface,
+      LauncherDesign.tui => tokens.surface,
       LauncherDesign.relay || LauncherDesign.newCast || LauncherDesign.notion => tokens.surface.withValues(alpha: 0.98),
       LauncherDesign.windows98 => Windows98Tokens.face,
       LauncherDesign.windowsXp => WindowsXpTokens.surface,

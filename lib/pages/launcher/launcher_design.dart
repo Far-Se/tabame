@@ -29,6 +29,49 @@ TextTheme launcherTextTheme(TextTheme designTextTheme) {
   }
 }
 
+/// Terminal colors derived from the active Launcher Design Colors.
+/// Read launcher settings directly so action dialogs use the same palette.
+abstract final class OmarchyTokens {
+  static Color bg(bool dark) => user.launcherThemeColors.background;
+  static Color fg(bool dark) => user.launcherThemeColors.text;
+  static Color dim(bool dark) => Color.alphaBlend(fg(dark).withValues(alpha: 0.72), bg(dark));
+  static Color accent(bool dark) => user.launcherThemeColors.accent;
+  static Color selected(bool dark) => Color.alphaBlend(accent(dark).withValues(alpha: 0.18), bg(dark));
+  static Color border(bool dark) => Color.alphaBlend(fg(dark).withValues(alpha: 0.42), bg(dark));
+
+  static TextStyle mono(
+          {double? fontSize, FontWeight? fontWeight, Color? color, double? letterSpacing, double? height}) =>
+      launcherTextStyle(GoogleFonts.inconsolata(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        letterSpacing: letterSpacing,
+        height: height,
+      ));
+}
+
+/// Native console lettering and user-configured console colors.
+abstract final class TuiTokens {
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: 0.7), background);
+  static Color get border => Color.alphaBlend(foreground.withValues(alpha: 0.4), background);
+  static double get fontSize => Design.baseFontSize + 6;
+
+  static TextStyle mono(
+          {double? fontSize, FontWeight? fontWeight, Color? color, double? letterSpacing, double? height}) =>
+      launcherTextStyle(TextStyle(
+        fontFamily: 'Consolas',
+        fontFamilyFallback: const <String>['Lucida Console', 'monospace'],
+        fontSize: fontSize ?? TuiTokens.fontSize,
+        fontWeight: fontWeight ?? FontWeight.w400,
+        color: color ?? foreground,
+        letterSpacing: letterSpacing ?? 0,
+        height: height ?? 1.125,
+      ));
+}
+
 /// Shared visual tokens for the original Terminal launcher design.
 abstract final class TerminalTokens {
   static const Color _bgDark = Color(0xFF0C0C0C);
@@ -849,6 +892,8 @@ class LauncherThemeData {
         LauncherDesign.relay => Icons.alt_route_rounded,
         LauncherDesign.terminal2 => Icons.terminal_rounded,
         LauncherDesign.newCast => Icons.chevron_right_rounded,
+        LauncherDesign.omarchy => Icons.drag_indicator,
+        LauncherDesign.tui => Icons.terminal,
       };
 
   double get searchIconSize => switch (design) {
@@ -878,6 +923,8 @@ class LauncherThemeData {
         LauncherDesign.relay => 18.0,
         LauncherDesign.terminal2 => 20.0,
         LauncherDesign.newCast => 18.0,
+        LauncherDesign.omarchy => 16.0,
+        LauncherDesign.tui => 16.0,
       };
 
   bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent || isNotion || isRaycast;
@@ -909,6 +956,8 @@ class LauncherThemeData {
         LauncherDesign.relay => 16.0,
         LauncherDesign.terminal2 => 14.0,
         LauncherDesign.newCast => 15.0,
+        LauncherDesign.omarchy => 16.0,
+        LauncherDesign.tui => TuiTokens.fontSize,
       };
   FontWeight? get searchFontWeight => switch (design) {
         LauncherDesign.serene => FontWeight.w400,
@@ -937,9 +986,15 @@ class LauncherThemeData {
         LauncherDesign.relay => FontWeight.w600,
         LauncherDesign.terminal2 => FontWeight.w500,
         LauncherDesign.newCast => FontWeight.w400,
+        LauncherDesign.omarchy => FontWeight.w500,
+        LauncherDesign.tui => FontWeight.w400,
       };
 
-  String? get searchHint => isRaycast ? 'Search apps, files, and commands...' : null;
+  String? get searchHint => design == LauncherDesign.tui
+      ? ''
+      : isRaycast
+          ? 'Search apps, files, and commands...'
+          : null;
 
   double get frameRadius => switch (design) {
         LauncherDesign.serene => 14.0,
@@ -968,9 +1023,12 @@ class LauncherThemeData {
         LauncherDesign.relay => 7.0,
         LauncherDesign.terminal2 => 2.0,
         LauncherDesign.newCast => 14.0,
+        LauncherDesign.omarchy => 0.0,
+        LauncherDesign.tui => 0.0,
       };
 
-  EdgeInsets get resultsListPadding => const EdgeInsets.all(8.0);
+  EdgeInsets get resultsListPadding =>
+      design == LauncherDesign.tui ? const EdgeInsets.symmetric(horizontal: 8, vertical: 2) : const EdgeInsets.all(8.0);
 
   @override
   bool operator ==(Object other) =>

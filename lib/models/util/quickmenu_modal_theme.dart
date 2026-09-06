@@ -12,6 +12,7 @@ import '../../pages/quickmenu_designs/design_winamp.dart';
 import '../classes/boxes.dart';
 import '../globals.dart';
 import '../settings.dart';
+import 'quickmenu_tui_theme.dart';
 
 /// Frame for QuickMenu modal popups (`showQuickMenuModal`) so they follow the
 /// active QuickMenu design, the same way the launcher's Ctrl+K actions modal
@@ -185,7 +186,7 @@ class QuickMenuModalFrame extends StatelessWidget {
     final Color text = Design.text;
     final bool isDark = bg.computeLuminance() < 0.5;
     final double intensity = (Design.gradientAlpha.clamp(0, 255)) / 255.0;
-    final double r = Design.borderRadius;
+    final double r = design == QuickMenuDesigns.tui ? 0 : Design.borderRadius;
     final Widget popupChild = design == QuickMenuDesigns.windowsXp || design == QuickMenuDesigns.windows98
         ? Theme(
             data: _legacyPopupTheme(
@@ -194,7 +195,9 @@ class QuickMenuModalFrame extends StatelessWidget {
             ),
             child: child,
           )
-        : child;
+        : design == QuickMenuDesigns.tui
+            ? Theme(data: QuickMenuTuiTheme.theme(inheritedTheme), child: child)
+            : child;
 
     // Aurora's signature asymmetric corners; every other design keeps its
     // regular panel radius.
@@ -208,6 +211,11 @@ class QuickMenuModalFrame extends StatelessWidget {
         : BorderRadius.circular(r);
 
     final _FrameSpec spec = switch (design) {
+      QuickMenuDesigns.tui => _FrameSpec(
+            decoration: BoxDecoration(
+          color: QuickMenuTuiTheme.background,
+          border: Border.all(color: QuickMenuTuiTheme.border),
+        )),
       QuickMenuDesigns.classic => _FrameSpec(
           decoration: BoxDecoration(
             borderRadius: radius,

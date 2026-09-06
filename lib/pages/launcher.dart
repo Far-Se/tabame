@@ -763,7 +763,10 @@ class LauncherState extends State<Launcher>
     );
     final bool isDark = baseTheme.brightness == Brightness.dark;
     final bool isTerminal = _design == LauncherDesign.terminal;
+    final bool isOmarchy = _design == LauncherDesign.omarchy;
+    final bool isTui = _design == LauncherDesign.tui;
     final bool isTerminal2 = _design == LauncherDesign.terminal2;
+    final bool usesBlockCursor = isTerminal2 || isOmarchy || isTui;
     final bool isZen = _design == LauncherDesign.zen;
     final bool isGlass = _design == LauncherDesign.glass;
     final bool isBlueprint = _design == LauncherDesign.blueprint;
@@ -786,6 +789,8 @@ class LauncherState extends State<Launcher>
     // Glass keeps the theme colors (its glass picks them up) and only forces
     // Inter for the iOS feel.
     final Color accent = switch (true) {
+      _ when isTui => TuiTokens.accent,
+      _ when _design == LauncherDesign.omarchy => OmarchyTokens.accent(isDark),
       _ when isZen => ZenTokens.accent(isDark),
       _ when isBlueprint => BlueprintTokens.accent(isDark),
       _ when isManifesto => ManifestoTokens.accent(isDark),
@@ -827,27 +832,46 @@ class LauncherState extends State<Launcher>
         controller: _controller,
         focusNode: _searchFocusNode,
         selectAllOnFocus: false,
-        cursorColor: isTerminal2 ? accent : null,
-        cursorWidth: isTerminal2 ? 7 : 2,
-        cursorHeight: isTerminal2 ? 18 : null,
-        cursorRadius: isTerminal2 ? Radius.zero : const Radius.circular(2),
+        cursorColor: isTui
+            ? onSurface
+            : usesBlockCursor
+                ? accent
+                : null,
+        cursorWidth: isTui
+            ? TuiTokens.fontSize * 0.55
+            : usesBlockCursor
+                ? 7
+                : 2,
+        cursorHeight: isTui
+            ? TuiTokens.fontSize
+            : usesBlockCursor
+                ? 18
+                : null,
+        cursorOpacityAnimates: !isTui,
+        cursorRadius: usesBlockCursor ? Radius.zero : const Radius.circular(2),
         style: theme.textTheme.bodyMedium?.copyWith(
           color: onSurface,
           fontSize: launcherTheme.searchFontSize,
           fontWeight: launcherTheme.searchFontWeight,
+          height: isTui ? 1.125 : null,
         ),
         decoration: InputDecoration(
           hintText: (_activePlugin != null ? _pluginFrame?.placeholder : null) ??
               launcherTheme.searchHint ??
               (isTerminal2 ? 'type a command or search the system...' : 'Search applications, files, bookmarks...'),
-          hintStyle: TextStyle(color: isRaycast ? RaycastTokens.muted(isDark) : onSurface.withAlpha(70)),
+          hintStyle: TextStyle(
+              color: isOmarchy
+                  ? OmarchyTokens.dim(isDark)
+                  : isRaycast
+                      ? RaycastTokens.muted(isDark)
+                      : onSurface.withAlpha(70)),
           border: InputBorder.none,
           isDense: true,
           contentPadding: EdgeInsets.only(
             left: 0,
-            top: 6,
-            bottom: 6,
-            right: (_infoText != null || _copiedFiles.isNotEmpty) ? 120 : 8,
+            top: isTui ? 0 : 6,
+            bottom: isTui ? 0 : 6,
+            right: !isOmarchy && !isTui && (_infoText != null || _copiedFiles.isNotEmpty) ? 120 : 8,
           ),
         ),
         onChanged: _onSearchChanged,
@@ -872,6 +896,21 @@ class LauncherState extends State<Launcher>
                 _buildResultsHeaderWithBadges(accent, onSurface),
               if (_activePlugin != null)
                 Expanded(child: _buildPluginBody())
+              else if (_results.isEmpty && isTui)
+                Expanded(
+                    child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                        _isSearching
+                            ? ''
+                            : hasInput
+                                ? 'No matching items.'
+                                : 'Type a name to begin.',
+                        style: TuiTokens.mono()),
+                  ),
+                ))
               else if (_results.isEmpty && isSwitchboard)
                 Expanded(
                   child: SwitchboardEmptyState(
@@ -891,7 +930,7 @@ class LauncherState extends State<Launcher>
               else
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: launcherTheme.resultsListPadding,
                     child: ValueListenableBuilder<int>(
                       valueListenable: _activeIndexNotifier,
                       builder: (BuildContext context, int activeIndex, Widget? child) {
@@ -1154,6 +1193,8 @@ class LauncherState extends State<Launcher>
       LauncherDesign.switchboard => SwitchboardLauncherFrame.new,
       LauncherDesign.relay => RelayLauncherFrame.new,
       LauncherDesign.newCast => RaycastLauncherFrame.new,
+      LauncherDesign.omarchy => OmarchyLauncherFrame.new,
+      LauncherDesign.tui => TuiLauncherFrame.new,
       LauncherDesign.terminal2 => Terminal2LauncherFrame.new,
     };
 
@@ -1166,6 +1207,8 @@ class LauncherState extends State<Launcher>
     );
 
     final bool usesDesignFont = isTerminal ||
+        isTui ||
+        isOmarchy ||
         isTerminal2 ||
         isZen ||
         isGlass ||
@@ -1267,7 +1310,7 @@ class LauncherState extends State<Launcher>
           // final Size size = await windowManager.getSize();
           final ({int height, int width}) size = Win32.getSize();
           final double nextHeight =
-              (_resultsMaxHeight + details.delta.dy).clamp(_minResultsHeight, size.height - 150).toDouble();
+              (_resultsMaxHeight + details.delta.dy).clamp(_minResultsHeight, size.height - 140).toDouble();
 
           if (nextHeight == _resultsMaxHeight) return;
 
