@@ -1,0 +1,12 @@
+{
+  "id": "yt-dlp",
+  "name": "yt-dlp Downloader",
+  "description": "Download video, audio, playlists, and search results with yt-dlp.",
+  "keyword": "ytdlp",
+  "category": "Media & Design",
+  "runtime": "python",
+  "version": "1.1.0",
+  "entry": "main.py",
+  "icon": "download",
+  "dev": false
+}

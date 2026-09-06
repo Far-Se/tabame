@@ -1328,6 +1328,23 @@
         "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/wojak-picker/main.py",
         "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/wojak-picker/README.md"
       }
+    },
+    {
+      "id": "yt-dlp",
+      "name": "yt-dlp Downloader",
+      "category": "Media & Design",
+      "keyword": "ytdlp",
+      "description": "Download video, audio, playlists, and search results with yt-dlp.",
+      "icon": "download",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.1.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/yt-dlp",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/yt-dlp/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/yt-dlp/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/yt-dlp/README.md"
+      }
     }
   ]
 }

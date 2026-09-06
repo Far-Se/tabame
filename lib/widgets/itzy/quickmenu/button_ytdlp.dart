@@ -261,7 +261,7 @@ class _YtDlpService {
     return null;
   }
 
-  static Future<ProcessResult> update() => Process.run(exe, <String>['-U'], runInShell: false);
+  static Future<ProcessResult> update() => Process.run(exe, <String>['--update'], runInShell: false);
 }
 
 /// Splits a raw argument string into tokens, honouring double quotes.
@@ -312,6 +312,7 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
   final List<YtDlpJob> _jobs = <YtDlpJob>[];
   int _activeJobIndex = -1;
   bool _downloading = false;
+  bool _updating = false;
 
   List<Map<String, dynamic>> _history = <Map<String, dynamic>>[];
 
@@ -370,7 +371,7 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
       Boxes.updateSettings(_kFfmpegPath, _ffmpegPathController.text.trim());
     });
 
-    unawaited(_detectVersion());
+    unawaited(_checkForUpdatesOnOpen());
     unawaited(_loadHistory());
   }
 
@@ -495,21 +496,32 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
     setState(() => _ytDlpVersion = v);
   }
 
+  Future<void> _checkForUpdatesOnOpen() async {
+    final String? version = await _YtDlpService.version();
+    if (!mounted) return;
+    setState(() => _ytDlpVersion = version);
+    if (version != null) await _updateYtDlp();
+  }
+
   Future<void> _updateYtDlp() async {
-    _flash('Updating yt-dlp…');
+    if (!mounted || _updating) return;
+    setState(() => _updating = true);
+    _flash('Checking for yt-dlp updates...');
     try {
       final ProcessResult r = await _YtDlpService.update();
-      final String out = (r.stdout ?? '').toString().trim();
-      final String err = (r.stderr ?? '').toString().trim();
+      final String output = <String>[(r.stdout ?? '').toString(), (r.stderr ?? '').toString()]
+          .where((String value) => value.trim().isNotEmpty)
+          .join('\n');
       _flash(
           r.exitCode == 0
-              ? (out.isEmpty ? 'yt-dlp is up to date' : out.split('\n').last)
-              : (err.isEmpty ? 'Update failed' : err.split('\n').last),
+              ? _lastProcessLine(output, fallback: 'yt-dlp is up to date')
+              : _lastProcessLine(output, fallback: 'Update failed'),
           error: r.exitCode != 0);
     } catch (_) {
-      _flash('Could not run yt-dlp -U. Check the path in Settings.', error: true);
+      _flash('Could not run yt-dlp --update. Check the path in Settings.', error: true);
     }
     await _detectVersion();
+    if (mounted) setState(() => _updating = false);
   }
 
   // ── Queue execution ─────────────────────────
@@ -630,6 +642,14 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
     final Iterable<String> errs = lines.where((String l) => l.toUpperCase().startsWith('ERROR'));
     final String pick = errs.isNotEmpty ? errs.last : (lines.isNotEmpty ? lines.last : 'Download failed');
     return pick.length > 300 ? pick.substring(0, 300) : pick;
+  }
+
+  String _lastProcessLine(String output, {required String fallback}) {
+    final List<String> lines =
+        output.split('\n').map((String s) => s.trim()).where((String s) => s.isNotEmpty).toList();
+    if (lines.isEmpty) return fallback;
+    final String line = lines.last;
+    return line.length > 300 ? line.substring(0, 300) : line;
   }
 
   Future<void> _killProcess(Process proc) async {
@@ -1419,7 +1439,7 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
           _buildActionRow(
               icon: Icons.system_update_alt_rounded,
               title: "Update yt-dlp",
-              subtitle: "yt-dlp -U",
+              subtitle: "yt-dlp --update",
               onTap: _updateYtDlp),
           _buildActionRow(
               icon: Icons.download_rounded,
@@ -1467,6 +1487,22 @@ class _YtDlpPanelState extends State<YtDlpPanel> {
               style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w700, color: Design.text),
             ),
           ),
+          if (_updating)
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Design.accent),
+              ),
+            )
+          else
+            _SmallButton(
+              icon: Icons.system_update_alt_rounded,
+              label: "Update",
+              onTap: () => unawaited(_updateYtDlp()),
+            ),
+          const SizedBox(width: 4),
           InkWell(
             borderRadius: BorderRadius.circular(99),
             onTap: () => unawaited(_detectVersion()),
