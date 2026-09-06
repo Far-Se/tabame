@@ -1,6 +1,7 @@
 #pragma once
 
 #define WIN32_LEAN_AND_MEAN
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -96,6 +97,11 @@ private:
   std::atomic<bool> active_{false};
   std::atomic<bool> isDragging_{false};
   std::atomic<bool> running_{false};
+
+  // Hook-thread-only ownership, retained across overlay activation changes.
+  // A release must follow the same route as its initial press.
+  enum class KeyRoute { Idle, Forwarded, Captured };
+  std::array<KeyRoute, 256> keyRoutes_{};
 
   // Directional states for diagonal movement
   std::atomic<bool> moveUp_{false};

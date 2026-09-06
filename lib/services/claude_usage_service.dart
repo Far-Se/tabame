@@ -56,17 +56,20 @@ class ClaudeUsageService {
   ClaudeUsageService._();
   static final ClaudeUsageService instance = ClaudeUsageService._();
 
-  static const Duration _apiCacheTtl = Duration(minutes: 5);
-  static const Duration _uiPollInterval = Duration(minutes: 1);
+  static const Duration _apiCacheTtl = Duration(minutes: 4);
+  static const Duration _uiPollInterval = Duration(minutes: 4);
   static const String _usageUrl = 'https://api.anthropic.com/api/oauth/usage';
   static const String _oauthBeta = 'oauth-2025-04-20';
 
   ClaudeUsageRecord? _record;
   Timer? _timer;
   bool _fetching = false;
+  DateTime? _lastAttempt;
+  String? _lastError;
   final List<void Function(ClaudeUsageRecord?)> _listeners = <void Function(ClaudeUsageRecord?)>[];
 
   ClaudeUsageRecord? get latest => _record;
+  String? get lastError => _lastError;
 
   void addListener(void Function(ClaudeUsageRecord?) listener) {
     _listeners.add(listener);
@@ -80,7 +83,7 @@ class ClaudeUsageService {
 
   void _start() {
     _timer?.cancel();
-    _timer = Timer.periodic(_uiPollInterval, (_) => _tick());
+    _timer = Timer.periodic(_uiPollInterval, (_) => _tick(force: true));
     _tick();
   }
 
@@ -99,6 +102,11 @@ class ClaudeUsageService {
 
   Future<void> _tick({bool force = false}) async {
     if (_fetching) return;
+    final DateTime now = DateTime.now();
+    if (_lastAttempt != null && now.difference(_lastAttempt!) < const Duration(minutes: 1)) {
+      _notify();
+      return;
+    }
 
     // If in-memory cache is fresh, just notify UI without hitting the API.
     if (!force && _record != null && DateTime.now().difference(_record!.fetchedAt) < _apiCacheTtl) {
@@ -120,7 +128,9 @@ class ClaudeUsageService {
         }
       }
 
+      _lastAttempt = DateTime.now();
       final ClaudeUsageRecord? fresh = await _fetchFromApi();
+      _lastError = fresh == null ? 'Could not refresh. Check your Claude Code sign-in.' : null;
       if (fresh != null) {
         _record = fresh;
         await _writeDiskCache(fresh);

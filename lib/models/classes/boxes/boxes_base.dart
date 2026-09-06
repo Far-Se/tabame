@@ -12,6 +12,7 @@ import '../../../logic/error_handler.dart';
 import '../../../pages/launcher/plugins/plugin_auto_updater.dart';
 import '../../../platform/app_paths.dart';
 import '../../../services/notification_coordinator.dart';
+import '../../../services/ai_coding_usage_service.dart';
 import '../../globals.dart';
 import '../../settings.dart';
 import '../../util/quick_action_list.dart';
@@ -189,6 +190,8 @@ class Boxes {
       ..musicPlayerInTaskbar = pref.getBool("showMusicPlayerInTaskbar") ?? user.musicPlayerInTaskbar
       ..trktivitySaveAllTitles = pref.getBool("trktivitySaveAllTitles") ?? user.trktivitySaveAllTitles
       ..mediaSessionsInTaskbar = pref.getBool("showMediaSessionsInTaskbar") ?? user.mediaSessionsInTaskbar
+      ..aiCodingUsageInTaskbar = pref.getBool("aiCodingUsageInTaskbar") ?? user.aiCodingUsageInTaskbar
+      ..aiCodingUsageAgents = pref.getStringList("aiCodingUsageAgents") ?? user.aiCodingUsageAgents
       ..quickMenuAtTaskbarLevel = pref.getBool("showQuickMenuAtTaskbarLevel") ?? user.quickMenuAtTaskbarLevel
       ..lightSwitchMode = LightSwitchMode.values[pref.getInt("lightSwitchMode") ?? 0]
       ..lightSwitchSunriseOffset = pref.getInt("lightSwitchSunriseOffset") ?? 0
@@ -322,6 +325,9 @@ class Boxes {
 
     checkThemeChange();
     if (user.previewTheme) return;
+    if (user.page == TPage.quickmenu) {
+      AiCodingUsageService.instance.configure(user.aiCodingUsageInTaskbar ? user.aiCodingUsageAgents : <String>[]);
+    }
     if (justLoad) return;
 
     if (user.page == TPage.quickmenu) {

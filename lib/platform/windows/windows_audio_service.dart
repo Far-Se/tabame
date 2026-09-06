@@ -339,7 +339,7 @@ class NativeWindowsAudioBackend implements WindowsAudioBackend, WindowsMediaBack
   }) async {
     if (!await _ensureAudio()) return false;
     try {
-      return native.Audio.switchDefaultDevice(
+      return await native.Audio.switchDefaultDevice(
         _nativeType(type),
         console: targeting.console,
         multimedia: targeting.multimedia,

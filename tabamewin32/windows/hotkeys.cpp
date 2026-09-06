@@ -3,6 +3,7 @@
 
 #include <ShellAPI.h>
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -360,7 +361,11 @@ void SendSyntheticAltModifiedKeyDown(const KBDLLHOOKSTRUCT &keyInfo) {
   INPUT inputs[2] = {};
 
   inputs[0].type = INPUT_KEYBOARD;
-  inputs[0].ki.wVk = VK_MENU;
+  // Replay the same Alt side that was suppressed. A generic Alt down becomes
+  // left Alt, which cannot be balanced by a physical right Alt release.
+  inputs[0].ki.wVk = static_cast<WORD>(doubleAltCandidateVk);
+  if (doubleAltCandidateVk == VK_RMENU)
+    inputs[0].ki.dwFlags = KEYEVENTF_EXTENDEDKEY;
 
   inputs[1].type = INPUT_KEYBOARD;
   inputs[1].ki.wVk = static_cast<WORD>(keyInfo.vkCode);
@@ -984,11 +989,43 @@ bool TryHandleStandaloneModifierHotkey(int nCode, WPARAM wParam, LPARAM lParam,
     return false;
 
   const std::wstring name(boundName);
-  if (!HasRegisteredHotkey(name))
-    return false;
-
   const bool keyDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
   const bool keyUp = (wParam == WM_KEYUP || wParam == WM_SYSKEYUP);
+
+  // Keep physical press ownership independent of freeHotkey/reset calls from
+  // Dart. Never capture an auto-repeat after forwarding the initial down.
+  enum class KeyRoute { Idle, Forwarded, Captured };
+  static std::array<KeyRoute, 256> keyRoutes{};
+  auto &route = keyRoutes[keyInfo.vkCode];
+  if (route == KeyRoute::Idle && !HasRegisteredHotkey(name))
+    return false;
+  if (keyUp) {
+    const bool captured = route == KeyRoute::Captured;
+    route = KeyRoute::Idle;
+    if (captured) {
+      const Hotkey *activeHotkey = GetActiveHotkey();
+      if (hotkeyPressed && activeHotkey != nullptr &&
+          activeHotkey->hotkey == name) {
+        HotKeyEvent(activeHotkey->name, "released");
+        ResetActiveHotkeyState();
+      }
+      result = -1;
+    } else {
+      result = CallNextHookEx(nullptr, nCode, wParam, lParam);
+    }
+    return true;
+  }
+  if (!keyDown)
+    return false;
+  if (route != KeyRoute::Idle) {
+    result = route == KeyRoute::Captured
+                 ? -1
+                 : CallNextHookEx(nullptr, nCode, wParam, lParam);
+    return true;
+  }
+  route = KeyRoute::Forwarded;
+  if (!HasRegisteredHotkey(name))
+    return false;
 
   if (keyDown) {
     if (!hotkeyPressed) {
@@ -996,6 +1033,7 @@ bool TryHandleStandaloneModifierHotkey(int nCode, WPARAM wParam, LPARAM lParam,
         if (!ShouldSuppressHotkey()) {
           const Hotkey *activeHotkey = GetActiveHotkey();
           if (activeHotkey != nullptr) {
+            route = KeyRoute::Captured;
             HotKeyEvent(activeHotkey->name, "pressed");
             result = -1;
             return true;
@@ -1006,16 +1044,7 @@ bool TryHandleStandaloneModifierHotkey(int nCode, WPARAM wParam, LPARAM lParam,
     } else {
       const Hotkey *activeHotkey = GetActiveHotkey();
       if (activeHotkey != nullptr && activeHotkey->hotkey == name) {
-        result = -1;
-        return true;
-      }
-    }
-  } else if (keyUp) {
-    if (hotkeyPressed) {
-      const Hotkey *activeHotkey = GetActiveHotkey();
-      if (activeHotkey != nullptr && activeHotkey->hotkey == name) {
-        HotKeyEvent(activeHotkey->name, "released");
-        ResetActiveHotkeyState();
+        route = KeyRoute::Captured;
         result = -1;
         return true;
       }

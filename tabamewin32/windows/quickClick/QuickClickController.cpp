@@ -54,6 +54,13 @@ void QuickClickController::UpdateConfig(QuickClickConfig config) {
 
 void QuickClickController::HookThreadProc() {
   hookThreadId_ = GetCurrentThreadId();
+  // Preserve keys already held when the hook starts. Do this outside the hook
+  // callback, where Windows has not yet updated asynchronous key state.
+  for (size_t vk = 0; vk < keyRoutes_.size(); ++vk) {
+    keyRoutes_[vk] = (GetAsyncKeyState(static_cast<int>(vk)) & 0x8000)
+                         ? KeyRoute::Forwarded
+                         : KeyRoute::Idle;
+  }
   hook_ = SetWindowsHookExW(WH_KEYBOARD_LL, LowLevelKeyboardProc, nullptr, 0);
 
   MSG msg{};
@@ -154,14 +161,37 @@ void QuickClickController::MovementThreadProc() {
 LRESULT CALLBACK QuickClickController::LowLevelKeyboardProc(int nCode,
                                                             WPARAM wParam,
                                                             LPARAM lParam) {
-  if (nCode < 0 || !s_instance || !s_instance->active_.load())
+  if (nCode != HC_ACTION || !s_instance)
     return CallNextHookEx(nullptr, nCode, wParam, lParam);
 
   const auto *kbs = reinterpret_cast<KBDLLHOOKSTRUCT *>(lParam);
   const bool keyDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
+  const bool keyUp = (wParam == WM_KEYUP || wParam == WM_SYSKEYUP);
+  if ((!keyDown && !keyUp) || (kbs->flags & LLKHF_INJECTED) ||
+      kbs->vkCode >= s_instance->keyRoutes_.size())
+    return CallNextHookEx(nullptr, nCode, wParam, lParam);
 
-  if (s_instance->HandleKey(kbs->vkCode, keyDown))
+  auto &route = s_instance->keyRoutes_[kbs->vkCode];
+  if (keyUp) {
+    const bool captured = route == KeyRoute::Captured;
+    route = KeyRoute::Idle;
+    if (captured) {
+      // Finish held mouse buttons / movement even after the overlay closes.
+      s_instance->HandleKey(kbs->vkCode, false);
+      return 1;
+    }
+    // In particular, let the global hotkey hook receive the opening Alt's up.
+  } else if (route == KeyRoute::Captured) {
+    if (s_instance->active_.load())
+      s_instance->HandleKey(kbs->vkCode, true);
     return 1;
+  } else if (route == KeyRoute::Idle) {
+    const bool captured = s_instance->active_.load() &&
+                          s_instance->HandleKey(kbs->vkCode, true);
+    route = captured ? KeyRoute::Captured : KeyRoute::Forwarded;
+    if (captured)
+      return 1;
+  }
 
   return CallNextHookEx(nullptr, nCode, wParam, lParam);
 }

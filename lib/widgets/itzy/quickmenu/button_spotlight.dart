@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
-import '../../../models/classes/boxes/quick_menu_box.dart';
 import '../../../models/classes/screen_draw_hotkeys.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';

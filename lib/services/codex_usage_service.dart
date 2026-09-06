@@ -47,13 +47,14 @@ class CodexUsageService {
 
   static final CodexUsageService instance = CodexUsageService._();
 
-  static const Duration _cacheTtl = Duration(minutes: 5);
-  static const Duration _pollInterval = Duration(minutes: 5);
+  static const Duration _cacheTtl = Duration(minutes: 4);
+  static const Duration _pollInterval = Duration(minutes: 4);
   static const String _usageCommand = 'codex-cli-usage';
 
   CodexUsageRecord? _record;
   Timer? _timer;
   bool _fetching = false;
+  DateTime? _lastAttempt;
   String? _appServerPlan;
   String? _lastError;
   final List<void Function(CodexUsageRecord?)> _listeners = <void Function(CodexUsageRecord?)>[];
@@ -75,7 +76,7 @@ class CodexUsageService {
 
   void _start() {
     _timer?.cancel();
-    _timer = Timer.periodic(_pollInterval, (_) => unawaited(_tick()));
+    _timer = Timer.periodic(_pollInterval, (_) => unawaited(_tick(force: true)));
     unawaited(_tick());
   }
 
@@ -92,12 +93,18 @@ class CodexUsageService {
 
   Future<void> _tick({bool force = false}) async {
     if (_fetching) return;
+    final DateTime now = DateTime.now();
+    if (_lastAttempt != null && now.difference(_lastAttempt!) < const Duration(minutes: 1)) {
+      _notify();
+      return;
+    }
     if (!force && _record != null && DateTime.now().difference(_record!.fetchedAt) < _cacheTtl) {
       _notify();
       return;
     }
 
     _fetching = true;
+    _lastAttempt = now;
     try {
       final CodexUsageRecord? fresh = await _loadUsage();
       if (fresh == null) {
@@ -124,7 +131,7 @@ class CodexUsageService {
 
         final dynamic data = jsonDecode(result.stdout.toString());
         final CodexUsageRecord? record = _normalizeUsage(data);
-        if (record != null) return _resolvePlan(record);
+        if (record != null) return await _resolvePlan(record);
       } on Object {
         // Try the next command candidate and then the on-disk fallback.
       }
@@ -137,8 +144,8 @@ class CodexUsageService {
       final File cacheFile = File('$home/.codex/usage-limits.json');
       if (!cacheFile.existsSync()) return null;
       final dynamic data = jsonDecode(await cacheFile.readAsString());
-      final CodexUsageRecord? record = _normalizeUsage(data);
-      return record == null ? null : _resolvePlan(record);
+      final CodexUsageRecord? record = _normalizeUsage(data, fetchedAt: await cacheFile.lastModified());
+      return record == null ? null : await _resolvePlan(record);
     } on Object {
       return null;
     }
@@ -215,7 +222,7 @@ class CodexUsageService {
     return Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
   }
 
-  static CodexUsageRecord? _normalizeUsage(dynamic data) {
+  static CodexUsageRecord? _normalizeUsage(dynamic data, {DateTime? fetchedAt}) {
     if (data is! Map) return null;
 
     final _CodexWindow session = _readWindow(
@@ -243,7 +250,7 @@ class CodexUsageService {
       fiveHourResetDateTime: session.resetDateTime,
       weeklyResetDateTime: weekly.resetDateTime,
       plan: plan,
-      fetchedAt: DateTime.now(),
+      fetchedAt: fetchedAt ?? DateTime.now(),
     );
   }
 

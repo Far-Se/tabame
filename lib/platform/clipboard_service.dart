@@ -52,7 +52,7 @@ abstract class ClipboardService {
       if (imagePath.isNotEmpty) {
         final File imageFile = File(imagePath);
         if (!await imageFile.exists()) return false;
-        return writeContent(
+        return await writeContent(
           PlatformClipboardContent(imageBytes: await imageFile.readAsBytes()),
         );
       }
@@ -62,7 +62,7 @@ abstract class ClipboardService {
       if (textPath.isNotEmpty) text = await File(textPath).readAsString();
       if (htmlPath.isNotEmpty) html = await File(htmlPath).readAsString();
       if (text.isEmpty && html.isEmpty) return false;
-      return writeContent(PlatformClipboardContent(text: text, html: html));
+      return await writeContent(PlatformClipboardContent(text: text, html: html));
     } catch (_) {
       return false;
     }

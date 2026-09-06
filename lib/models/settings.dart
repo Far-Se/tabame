@@ -244,6 +244,8 @@ class Settings {
   bool mediaControlForApp = true;
   bool musicPlayerInTaskbar = true;
   bool mediaSessionsInTaskbar = true;
+  bool aiCodingUsageInTaskbar = false;
+  List<String> aiCodingUsageAgents = <String>['codex', 'claude'];
   bool trktivitySaveAllTitles = false;
   bool quickMenuAtTaskbarLevel = true;
   // Rewindly (background "instant replay" DVR)

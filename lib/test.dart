@@ -17,7 +17,7 @@ class TimestampLogger {
   }
 
   static Future<void> init() async {
-    final file = File(filePath);
+    final File file = File(filePath);
 
     // Ensure the Tabame directory exists.
     await file.parent.create(recursive: true);
@@ -37,7 +37,7 @@ class TimestampLogger {
 
   static Future<void> _writeTimestamp() async {
     try {
-      final file = File(filePath);
+      final File file = File(filePath);
 
       await file.writeAsString(
         '${DateTime.now().toIso8601String()}\n',
