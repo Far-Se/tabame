@@ -3,6 +3,7 @@ import 'dart:io';
 import '../../../platform/file_picker_service.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import '../../../models/util/icon_from_code.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
@@ -921,8 +922,7 @@ class _BottomBarTabState extends State<_BottomBarTab> {
             child: Icon(Icons.drag_indicator_rounded, size: 18, color: theme.colorScheme.onSurface.withAlpha(60)),
           ),
           const SizedBox(width: 6),
-          // ignore: non_const_argument_for_const_parameter
-          Icon(IconData(button.iconCodePoint, fontFamily: 'MaterialIcons'), size: 16, color: theme.colorScheme.primary),
+          Icon(iconFromCode(button.iconCodePoint), size: 16, color: theme.colorScheme.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Column(

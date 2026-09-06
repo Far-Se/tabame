@@ -10,6 +10,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/app_opacity.dart';
+import '../../../models/util/icon_from_code.dart';
 import '../../widgets/mini_switch.dart';
 import '../../widgets/text_input.dart';
 import '../../widgets/windows_scroll.dart';
@@ -344,7 +345,7 @@ class _InterfaceQMAppAudioSettingsPageState extends State<InterfaceQMAppAudioSet
               ),
             )
           : Icon(
-              IconData(control.iconCodePoint, fontFamily: 'MaterialIcons'),
+              iconFromCode(control.iconCodePoint),
               size: 22,
               color: scheme.primary,
             ),
@@ -579,7 +580,7 @@ class _QMAppAudioEditState extends State<QMAppAudioEdit> {
                                         ),
                                       )
                                     : Icon(
-                                        IconData(widget.control.iconCodePoint, fontFamily: 'MaterialIcons'),
+                                        iconFromCode(widget.control.iconCodePoint),
                                         color: scheme.primary,
                                         size: 28,
                                       ),

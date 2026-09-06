@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../../../models/util/icon_from_code.dart';
 
 import '../../../platform/audio_system_service.dart';
 import '../../../models/classes/boxes.dart';
@@ -185,8 +186,7 @@ class _AppAudioButtonState extends State<AppAudioButton> {
       if (ctl.iconPath.isNotEmpty && File(ctl.iconPath).existsSync()) {
         content = Image.file(File(ctl.iconPath), width: 16, height: 16);
       } else {
-        // ignore: non_const_argument_for_const_parameter
-        content = Icon(IconData(ctl.iconCodePoint, fontFamily: 'MaterialIcons'), size: 16);
+        content = Icon(iconFromCode(ctl.iconCodePoint), size: 16);
       }
     }
 

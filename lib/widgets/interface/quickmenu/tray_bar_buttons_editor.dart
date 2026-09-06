@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
+import '../../../models/util/icon_from_code.dart';
 import '../../widgets/text_input.dart';
 
 /// Curated set of icons offered when picking a tray bar button's glyph.
@@ -89,8 +90,7 @@ class _TrayBarButtonEditDialogState extends State<_TrayBarButtonEditDialog> {
                                 : Design.text.withAlpha(20),
                           ),
                         ),
-                        // ignore: non_const_argument_for_const_parameter
-                        child: Icon(IconData(codePoint, fontFamily: 'MaterialIcons'), size: 18, color: Design.text),
+                        child: Icon(iconFromCode(codePoint), size: 18, color: Design.text),
                       ),
                     ),
                 ],

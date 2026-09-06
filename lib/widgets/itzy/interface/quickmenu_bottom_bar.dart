@@ -4,6 +4,7 @@ import 'dart:io';
 import '../../../platform/file_picker_service.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import '../../../models/util/icon_from_code.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../models/classes/boxes.dart';
@@ -459,9 +460,7 @@ class QMBottomBarState extends State<QMBottomBar> {
                 size: 18, color: Theme.of(context).colorScheme.onSurface.withAlpha(60)),
           ),
           const SizedBox(width: 8),
-          // ignore: non_const_argument_for_const_parameter
-          Icon(IconData(button.iconCodePoint, fontFamily: 'MaterialIcons'),
-              size: 18, color: Theme.of(context).colorScheme.primary),
+          Icon(iconFromCode(button.iconCodePoint), size: 18, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

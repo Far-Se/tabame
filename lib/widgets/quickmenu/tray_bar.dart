@@ -13,6 +13,7 @@ import '../../models/classes/boxes.dart';
 import '../../models/classes/saved_maps.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
+import '../../models/util/icon_from_code.dart';
 import '../../models/tray_watcher.dart';
 import '../../models/win32/keys.dart';
 import '../../models/win32/win_utils.dart';
@@ -216,8 +217,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
               child: CustomTooltip(
                 message: button.name,
                 child: Icon(
-                  // ignore: non_const_argument_for_const_parameter
-                  IconData(button.iconCodePoint, fontFamily: 'MaterialIcons'),
+                  iconFromCode(button.iconCodePoint),
                   size: 16,
                   color: Design.text,
                 ),

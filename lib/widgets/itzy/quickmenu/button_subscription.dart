@@ -11,6 +11,7 @@ import '../../../models/classes/authenticator_entry.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/subscription_models.dart';
 import '../../../models/settings.dart';
+import '../../../models/util/icon_from_code.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/modern_dropdown.dart';
@@ -935,7 +936,7 @@ class _SubscriptionInsightsViewState extends State<SubscriptionInsightsView> {
                 title: Text(s.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: onSurface)),
                 subtitle: Row(
                   children: <Widget>[
-                    Icon(IconData(cat.iconCodePoint, fontFamily: cat.fontFamily), size: 10, color: cat.color),
+                    Icon(iconFromCode(cat.iconCodePoint, fontFamily: cat.fontFamily), size: 10, color: cat.color),
                     const SizedBox(width: 4),
                     Text(cat.name,
                         style: TextStyle(fontSize: Design.baseFontSize, color: onSurface.withValues(alpha: 0.6))),

@@ -13,13 +13,66 @@ class _TuiSearchBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
         Row(crossAxisAlignment: CrossAxisAlignment.center, children: <Widget>[
-          Text(r'C:\Tabame>', style: TuiTokens.mono()),
+          DragToMoveArea(child: Text(r'C:\Tabame>', style: TuiTokens.mono())),
           Expanded(child: textField),
+          if (isSearching) const Padding(padding: EdgeInsets.only(left: 8), child: _TuiSearchSpinner()),
         ]),
-        if (isSearching)
-          Semantics(liveRegion: true, child: Text('Searching...', style: TuiTokens.mono(color: TuiTokens.dim))),
         if (trailingBadge != null) Padding(padding: const EdgeInsets.only(top: 4), child: trailingBadge!),
       ]),
+    );
+  }
+}
+
+class _TuiSearchSpinner extends StatefulWidget {
+  const _TuiSearchSpinner();
+
+  @override
+  State<_TuiSearchSpinner> createState() => _TuiSearchSpinnerState();
+}
+
+class _TuiSearchSpinnerState extends State<_TuiSearchSpinner> with SingleTickerProviderStateMixin {
+  static const List<String> _frames = <String>['⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷'];
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 480),
+  );
+  late final Animation<int> _frame = StepTween(begin: 0, end: _frames.length).animate(_controller);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
+      _controller.stop();
+      _controller.value = 0;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      label: 'Searching...',
+      child: ExcludeSemantics(
+        child: SizedBox(
+          width: 16,
+          child: AnimatedBuilder(
+            animation: _frame,
+            builder: (BuildContext context, Widget? child) => Text(
+              _frames[_frame.value % _frames.length],
+              textAlign: TextAlign.center,
+              style: TuiTokens.mono(color: TuiTokens.dim),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
