@@ -56,7 +56,11 @@ class _MergedPinnedTray extends StatelessWidget {
 }
 
 class PinnedAndTrayList extends StatelessWidget {
-  const PinnedAndTrayList({super.key});
+  const PinnedAndTrayList({super.key, this.includeQuickActions = true});
+
+  /// Designs with a dedicated action surface can retain the pinned/tray layout
+  /// without also mounting the same actions in this bar.
+  final bool includeQuickActions;
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +80,8 @@ class PinnedAndTrayList extends StatelessWidget {
             //   bottomBarOnTop     -> fuse logo + quick actions + pinned/tray into one combined row.
             //   quickActionsAtBottom -> the quick-actions bar lives here (else it stays in the TopBar).
             //   mergePinnedTray    -> pinned apps + tray render as one gradient scroll bar.
-            children: user.bottomBarOnTop ? _combinedRow(context, constraints) : _splitRow(context),
+            children:
+                user.bottomBarOnTop && includeQuickActions ? _combinedRow(context, constraints) : _splitRow(context),
           );
         }),
       ),
@@ -124,7 +129,7 @@ class PinnedAndTrayList extends StatelessWidget {
   // quick-actions bar (otherwise it grabs the full width and hides quick actions);
   // when it is alone on the row it is centred across the full width instead.
   List<Widget> _splitRow(BuildContext context) {
-    final bool showQuickActions = user.quickActionsAtBottom;
+    final bool showQuickActions = includeQuickActions && user.quickActionsAtBottom;
     final List<Widget> children = <Widget>[
       if (showQuickActions) const Expanded(flex: 5, child: BarWithQuickActions()),
     ];

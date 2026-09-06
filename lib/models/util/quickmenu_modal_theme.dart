@@ -920,6 +920,20 @@ class QuickMenuModalFrame extends StatelessWidget {
             ),
           ],
         ),
+      QuickMenuDesigns.switchboard => _FrameSpec(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: radius,
+            border: Border.all(color: text.withAlpha(36)),
+          ),
+        ),
+      QuickMenuDesigns.orbit => _FrameSpec(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: radius,
+            border: Border.all(color: accent.withAlpha(isDark ? 62 : 48)),
+          ),
+        ),
       // QuickMenuDesigns.familyGuy => _FrameSpec(
       //     decoration: BoxDecoration(
       //       borderRadius: radius,

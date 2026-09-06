@@ -25,12 +25,14 @@ import 'design_matrix.dart';
 import 'design_manifesto.dart';
 import 'design_modern.dart';
 import 'design_notion.dart';
+import 'design_orbit.dart';
 import 'design_outrun.dart';
 import 'design_outrun2.dart';
 import 'design_player.dart';
 import 'design_rundown.dart';
 import 'design_serene.dart';
 import 'design_steam.dart';
+import 'design_switchboard.dart';
 import 'design_tech.dart';
 import 'design_terminal.dart';
 import 'design_terminal2.dart';
@@ -78,12 +80,12 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       } else {
         await windowManager.setMinimumSize(Size(Globals.quickMenuSize.width, Globals.quickMenuSize.height));
       }
-    } else if (design == QuickMenuDesigns.commandDeck) {
-      const double commandDeckWidth = 430;
+    } else if (design == QuickMenuDesigns.commandDeck || design == QuickMenuDesigns.switchboard) {
+      const double controlPanelWidth = 430;
       final Size size = await windowManager.getSize();
-      await windowManager.setMinimumSize(Size(commandDeckWidth, Globals.quickMenuSize.height));
-      if (size.width < commandDeckWidth) {
-        await windowManager.setSize(Size(commandDeckWidth, size.height));
+      await windowManager.setMinimumSize(Size(controlPanelWidth, Globals.quickMenuSize.height));
+      if (size.width < controlPanelWidth) {
+        await windowManager.setSize(Size(controlPanelWidth, size.height));
       }
     } else {
       await windowManager.setMinimumSize(Size(Globals.quickMenuSize.width, Globals.quickMenuSize.height));
@@ -139,6 +141,8 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.notion => MainMenuNotionWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.rundown => MainMenuRundownWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.commandDeck => MainMenuCommandDeckWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.switchboard => MainMenuSwitchboardWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.orbit => MainMenuOrbitWidget(key: ValueKey<int>(_refreshCounter)),
       // QuickMenuDesigns.familyGuy => MainMenuFamilyGuyWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }
