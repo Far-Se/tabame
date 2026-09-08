@@ -1,42 +1,30 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../../models/classes/boxes.dart';
-import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
-import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../widgets/panel_header.dart';
 import '../../widgets/quick_actions_item.dart';
 
-enum _MemoMode { library, editor, preview }
-
-bool _memoWidthTry = false;
-
-class MemosButton extends StatelessWidget {
-  const MemosButton({super.key});
+class NotesButton extends StatelessWidget {
+  const NotesButton({super.key});
 
   @override
   Widget build(BuildContext context) => QuickActionItem(
-        message: "Memos",
+        message: 'Notes',
         icon: const Icon(Icons.note_alt_outlined),
-        hoverColor: Theme.of(context).colorScheme.primary,
-        onTap: () {
-          final ({int height, int width}) size = Win32.getSize();
-          if (_memoWidthTry == false && (Globals.quickMenuPage == QuickMenuPage.quickMenu || size.width < 640)) {
-            _memoWidthTry = true;
-            QuickMenuFunctions.openQuickMenuWithAction("memos", center: true);
-            return;
-          }
-          _memoWidthTry = false;
-          showQuickMenuModal(
-            context: context,
-            heightFactor: 0.9,
-            child: const MemosWidget(),
-          );
-        },
+        onTap: () => showQuickMenuModal(context: context, maxWidth: 820, child: const MemosWidget()),
       );
+}
+
+// Keep existing pinned actions and launcher integrations working.
+class MemosButton extends NotesButton {
+  const MemosButton({super.key});
 }
 
 class MemosWidget extends StatefulWidget {
@@ -47,681 +35,660 @@ class MemosWidget extends StatefulWidget {
 }
 
 class _MemosWidgetState extends State<MemosWidget> {
-  static const String _generalCategory = 'General';
+  static const String _general = 'General';
+  List<List<String>> _notes = <List<String>>[];
+  List<String> _categories = <String>[_general];
+  final TextEditingController _search = TextEditingController();
+  final TextEditingController _title = TextEditingController();
+  final TextEditingController _body = TextEditingController();
+  final TextEditingController _categoryName = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  final FocusNode _titleFocus = FocusNode();
+  int? _selected;
+  String? _filter;
+  String _category = _general;
+  String? _renaming;
+  String? _error;
+  bool _opened = false;
+  bool _preview = false;
+  bool _managing = false;
+  bool _busy = false;
+  bool _loadFailed = false;
+  bool _confirmDelete = false;
+  bool _askingDiscard = false;
 
-  late final List<List<String>> _memos;
-  late final List<String> _categories;
-  final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _bodyController = TextEditingController();
-  final TextEditingController _categoryController = TextEditingController();
-  final FocusNode _titleFocusNode = FocusNode();
-
-  _MemoMode _mode = _MemoMode.library;
-  int? _selectedIndex;
-  int? _editingIndex;
-  String? _selectedCategory;
-  String _editingCategory = _generalCategory;
-  bool _confirmingDelete = false;
+  bool get _dirty {
+    if (!_opened) return false;
+    final List<String>? saved = _selected == null ? null : _notes[_selected!];
+    return saved == null
+        ? _title.text.isNotEmpty || _body.text.isNotEmpty
+        : _title.text != saved[0] || _body.text != saved[1] || _category != saved[2];
+  }
 
   @override
   void initState() {
     super.initState();
-    _memos = Boxes().runMemos.map(_normalizeMemo).toList();
-    _categories = _normaliseCategories(Boxes().runMemoCategories);
-    for (final List<String> memo in _memos) {
-      if (!_categories.contains(memo[2])) _categories.add(memo[2]);
+    _load();
+    _search.addListener(_refresh);
+    _title.addListener(_refresh);
+    _body.addListener(_refresh);
+  }
+
+  void _load() {
+    try {
+      _notes = Boxes().runMemos.map((List<String> note) => List<String>.from(note)).toList();
+      _categories = <String>{
+        _general,
+        ...Boxes().runMemoCategories.where((String c) => c.trim().isNotEmpty),
+        ..._notes.map((List<String> n) => n[2])
+      }.toList();
+      _loadFailed = false;
+      _error = null;
+    } catch (_) {
+      _loadFailed = true;
+      _error = 'Could not load your notes. Close and reopen to try again.';
     }
-    if (_memos.isNotEmpty) _selectedIndex = 0;
-    _searchController.addListener(_refresh);
+  }
+
+  void _refresh() {
+    if (mounted) setState(() => _confirmDelete = false);
   }
 
   @override
   void dispose() {
-    _searchController
-      ..removeListener(_refresh)
-      ..dispose();
-    _titleController.dispose();
-    _bodyController.dispose();
-    _categoryController.dispose();
-    _titleFocusNode.dispose();
+    for (final TextEditingController controller in <TextEditingController>[_search, _title, _body, _categoryName]) {
+      controller.dispose();
+    }
+    _searchFocus.dispose();
+    _titleFocus.dispose();
     super.dispose();
   }
 
-  List<String> _normalizeMemo(List<String> memo) => <String>[
-        memo.isNotEmpty ? memo[0] : '',
-        memo.length > 1 ? memo[1] : '',
-        memo.length > 2 && memo[2].trim().isNotEmpty ? memo[2].trim() : _generalCategory,
-      ];
-
-  List<String> _normaliseCategories(List<String> saved) {
-    final List<String> categories = <String>[_generalCategory];
-    for (final String category in saved) {
-      final String trimmed = category.trim();
-      if (trimmed.isNotEmpty && !categories.contains(trimmed)) categories.add(trimmed);
-    }
-    return categories;
-  }
-
-  void _refresh() {
-    if (mounted) {
-      setState(() {
-        if (_mode == _MemoMode.preview) _mode = _MemoMode.library;
-      });
-    }
-  }
-
-  void _persist() {
-    Boxes()
-      ..runMemos = _memos.map((List<String> memo) => List<String>.from(memo)).toList()
-      ..runMemoCategories = List<String>.from(_categories);
-  }
-
-  List<int> get _visibleIndexes {
-    final String query = _searchController.text.trim().toLowerCase();
+  List<int> get _visible {
+    final List<String> terms = _search.text.trim().toLowerCase().split(RegExp(r'\s+'));
     return <int>[
-      for (int index = 0; index < _memos.length; index++)
-        if ((_selectedCategory == null || _memos[index][2] == _selectedCategory) &&
-            (query.isEmpty ||
-                _memos[index][0].toLowerCase().contains(query) ||
-                _memos[index][1].toLowerCase().contains(query)))
-          index,
+      for (int i = 0; i < _notes.length; i++)
+        if ((_filter == null || _notes[i][2] == _filter) &&
+            terms.every((String term) => _notes[i].join(' ').toLowerCase().contains(term)))
+          i,
     ];
   }
 
-  void _selectCategory(String? category) {
-    final List<int> visible = _visibleIndexesFor(category);
-    setState(() {
-      _selectedCategory = category;
-      _selectedIndex = visible.isEmpty ? null : visible.first;
-      _mode = _MemoMode.library;
-    });
-  }
-
-  List<int> _visibleIndexesFor(String? category) => <int>[
-        for (int index = 0; index < _memos.length; index++)
-          if (category == null || _memos[index][2] == category) index,
-      ];
-
-  void _createMemo() {
-    _titleController.clear();
-    _bodyController.clear();
-    setState(() {
-      _editingIndex = null;
-      _editingCategory = _selectedCategory ?? _generalCategory;
-      _confirmingDelete = false;
-      _mode = _MemoMode.editor;
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _titleFocusNode.requestFocus());
-  }
-
-  void _openPreview(int index) {
-    final List<String> memo = _memos[index];
-    _titleController.text = memo[0];
-    _bodyController.text = memo[1];
-    setState(() {
-      _selectedIndex = index;
-      _editingIndex = index;
-      _editingCategory = memo[2];
-      _confirmingDelete = false;
-      _mode = _MemoMode.preview;
-    });
-  }
-
-  void _previewDraft() => setState(() => _mode = _MemoMode.preview);
-
-  void _save() {
-    final String title = _titleController.text.trim();
-    final String body = _bodyController.text.trimRight();
-    if (title.isEmpty && body.isEmpty) {
-      _cancelEditing();
-      return;
-    }
-    final List<String> memo = <String>[title, body, _editingCategory];
-    setState(() {
-      if (_editingIndex == null) {
-        _memos.insert(0, memo);
-        _selectedIndex = 0;
-      } else {
-        _memos[_editingIndex!] = memo;
-        _selectedIndex = _editingIndex;
-      }
-      _selectedCategory = _editingCategory;
-      _editingIndex = null;
-      _mode = _MemoMode.library;
-    });
-    _persist();
-  }
-
-  void _cancelEditing() => setState(() {
-        _editingIndex = null;
-        _confirmingDelete = false;
-        _mode = _MemoMode.library;
-      });
-
-  void _deleteEditing() {
-    final int? index = _editingIndex;
-    if (index == null) {
-      _cancelEditing();
-      return;
-    }
-    if (!_confirmingDelete) return setState(() => _confirmingDelete = true);
-    setState(() {
-      _memos.removeAt(index);
-      final List<int> visible = _visibleIndexes;
-      _selectedIndex = visible.isEmpty ? null : visible.first;
-      _editingIndex = null;
-      _confirmingDelete = false;
-      _mode = _MemoMode.library;
-    });
-    _persist();
-  }
-
-  Future<void> _addCategory() async {
-    _categoryController.clear();
-    final String? category = await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: const Text('New memo category'),
-        content: TextField(
-          controller: _categoryController,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(labelText: 'Category name'),
-          onSubmitted: (String value) => Navigator.of(context).pop(value),
-        ),
-        actions: <Widget>[
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.of(context).pop(_categoryController.text), child: const Text('Add')),
-        ],
-      ),
-    );
-    final String name = category?.trim() ?? '';
-    if (name.isEmpty || _categories.contains(name)) return;
-    setState(() => _categories.add(name));
-    _persist();
-  }
-
-  void _deleteCategory(String category) {
-    if (category == _generalCategory) return;
-    setState(() {
-      for (final List<String> memo in _memos) {
-        if (memo[2] == category) memo[2] = _generalCategory;
-      }
-      _categories.remove(category);
-      if (_selectedCategory == category) _selectedCategory = _generalCategory;
-      final List<int> visible = _visibleIndexes;
-      _selectedIndex = visible.isEmpty ? null : visible.first;
-    });
-    _persist();
-  }
-
-  Future<void> _openLink(String text, String? href, String title) async {
-    if (href != null) WinUtils.open(href);
-  }
-
-  @override
-  Widget build(BuildContext context) => ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 560, maxWidth: 820),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            PanelHeader(
-              title: switch (_mode) {
-                _MemoMode.library => 'Notes & Memos',
-                _MemoMode.editor => _editingIndex == null ? 'New memo' : 'Edit memo',
-                _MemoMode.preview => (_editingIndex != null)
-                    ? "${_memos[_editingIndex!][1]} (${_memos[_editingIndex!][2]})"
-                    : 'Memo preview',
-              },
-              icon: _mode == _MemoMode.library ? Icons.notes_rounded : Icons.edit_note_rounded,
-              buttonIcon: switch (_mode) {
-                _MemoMode.library => Icons.add_rounded,
-                _MemoMode.editor => Icons.check_rounded,
-                _MemoMode.preview => Icons.edit_rounded,
-              },
-              buttonTooltip: switch (_mode) {
-                _MemoMode.library => 'New memo',
-                _MemoMode.editor => 'Save memo',
-                _MemoMode.preview => 'Edit memo',
-              },
-              buttonPressed: switch (_mode) {
-                _MemoMode.library => _createMemo,
-                _MemoMode.editor => _save,
-                _MemoMode.preview => () => setState(() => _mode = _MemoMode.editor),
-              },
-              extraActions: _mode == _MemoMode.library
-                  ? null
-                  : _mode == _MemoMode.editor
-                      ? <Widget>[
-                          IconButton(
-                            tooltip: 'Preview memo',
-                            onPressed: _previewDraft,
-                            icon: const Icon(Icons.visibility_outlined, size: 18),
-                          ),
-                          IconButton(
-                            tooltip: 'Discard changes',
-                            onPressed: _cancelEditing,
-                            icon: const Icon(Icons.close_rounded, size: 18),
-                          ),
-                        ]
-                      : <Widget>[
-                          IconButton(
-                            tooltip: 'Back to memos',
-                            onPressed: _cancelEditing,
-                            icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                          ),
-                          IconButton(
-                            tooltip: _confirmingDelete ? 'Click again to delete' : 'Delete memo',
-                            onPressed: _deleteEditing,
-                            icon: Icon(
-                              _confirmingDelete ? Icons.warning_amber_rounded : Icons.delete_outline_rounded,
-                              size: 18,
-                              color: Colors.redAccent,
-                            ),
-                          ),
-                        ],
-            ),
-            Flexible(
-              child: Material(
-                type: MaterialType.transparency,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 160),
-                  child: switch (_mode) {
-                    _MemoMode.library => _buildLibrary(),
-                    _MemoMode.editor => _buildEditor(),
-                    _MemoMode.preview => _buildPreview(),
-                  },
-                ),
-              ),
-            ),
+  Future<void> _navigate(VoidCallback action) async {
+    if (_busy || _askingDiscard) return;
+    if (_dirty) {
+      _askingDiscard = true;
+      final bool? discard = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext dialogContext) => AlertDialog(
+          title: const Text('Discard unsaved changes?'),
+          content: const Text('Your changes have not been saved.'),
+          actions: <Widget>[
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Keep editing')),
+            TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Discard')),
           ],
         ),
       );
-
-  Widget _buildLibrary() => Padding(
-        key: const ValueKey<String>('library'),
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-        child: Row(children: <Widget>[
-          SizedBox(width: 250, child: _buildSidebar()),
-          const SizedBox(width: 8),
-          Expanded(child: _buildMemoList()),
-        ]),
-      );
-
-  Widget _buildSidebar() => Container(
-        decoration: _surfaceDecoration(),
-        child: Column(children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
-            child: TextField(
-              controller: _searchController,
-              style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text),
-              decoration: _fieldDecoration('Search memos', Icons.search_rounded),
-            ),
-          ),
-          _sidebarHeading('CATEGORIES', Icons.folder_outlined, onAdd: _addCategory),
-          _CategoryRow(
-            label: 'All memos',
-            icon: Icons.library_books_outlined,
-            count: _memos.length,
-            selected: _selectedCategory == null,
-            onTap: () => _selectCategory(null),
-          ),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(6, 2, 6, 6),
-              itemCount: _categories.length,
-              itemBuilder: (BuildContext context, int index) {
-                final String category = _categories[index];
-                return _CategoryRow(
-                  label: category,
-                  icon: category == _generalCategory ? Icons.inbox_outlined : Icons.folder_outlined,
-                  count: _memos.where((List<String> memo) => memo[2] == category).length,
-                  selected: _selectedCategory == category,
-                  onTap: () => _selectCategory(category),
-                  onDelete: category == _generalCategory ? null : () => _deleteCategory(category),
-                );
-              },
-            ),
-          ),
-        ]),
-      );
-
-  Widget _buildMemoList() {
-    final List<int> visible = _visibleIndexes;
-    return Container(
-      decoration: _surfaceDecoration(active: true),
-      child: Column(children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 10, 7),
-          child: Row(children: <Widget>[
-            Icon(Icons.notes_rounded, size: 14, color: Design.accent),
-            const SizedBox(width: 6),
-            Expanded(child: Text((_selectedCategory ?? 'ALL MEMOS').toUpperCase(), style: _sectionStyle())),
-            _countChip(visible.length),
-          ]),
-        ),
-        Expanded(
-          child: visible.isEmpty
-              ? Center(child: Text('No memos here', style: TextStyle(color: Design.text.withAlpha(120))))
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-                  itemCount: visible.length,
-                  itemBuilder: (BuildContext context, int listIndex) => _MemoListItem(
-                    memo: _memos[visible[listIndex]],
-                    selected: _selectedIndex == visible[listIndex],
-                    onTap: () => _openPreview(visible[listIndex]),
-                  ),
-                ),
-        ),
-      ]),
-    );
+      _askingDiscard = false;
+      if (!mounted || discard != true) return;
+    }
+    if (mounted) action();
   }
 
-  Widget _buildEditor() => Padding(
-        key: const ValueKey<String>('editor'),
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-        child: Container(
-          decoration: _surfaceDecoration(active: true),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
-              child: TextField(
-                  controller: _titleController,
-                  focusNode: _titleFocusNode,
-                  style: _titleStyle(),
-                  decoration: _fieldDecoration('Memo title', Icons.title_rounded)),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-              child: DropdownButtonFormField<String>(
-                initialValue: _editingCategory,
-                isExpanded: true,
-                decoration: _fieldDecoration('Category', Icons.folder_outlined),
-                items: _categories
-                    .map((String category) => DropdownMenuItem<String>(value: category, child: Text(category)))
-                    .toList(),
-                onChanged: (String? category) => category == null ? null : setState(() => _editingCategory = category),
+  void _open([int? index]) {
+    _navigate(() {
+      final List<String>? note = index == null ? null : _notes[index];
+      setState(() {
+        _opened = false;
+        _selected = index;
+        _title.text = note?[0] ?? '';
+        _body.text = note?[1] ?? '';
+        _category = note?[2] ?? _filter ?? _general;
+        _opened = true;
+        _preview = index != null;
+        _managing = false;
+        _confirmDelete = false;
+        _error = null;
+      });
+      if (index == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _titleFocus.requestFocus();
+        });
+      }
+    });
+  }
+
+  // Commit first; only replace the panel's in-memory data after persistence succeeds.
+  Future<bool> _commit(List<List<String>> notes, List<String> categories) async {
+    if (_busy || _loadFailed) return false;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await Boxes.updateSettings('runMemoCategories', jsonEncode(categories));
+      await Boxes.updateSettings('runMemos', jsonEncode(notes));
+      if (!mounted) return false;
+      setState(() {
+        _notes = notes;
+        _categories = categories;
+      });
+      return true;
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not save. Your changes are still here; please try again.');
+      return false;
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _save() async {
+    if (!_opened || _busy) return;
+    if (_title.text.trim().isEmpty && _body.text.trim().isEmpty) {
+      setState(() => _error = 'Add a title or some text before saving.');
+      return;
+    }
+    final List<List<String>> next = List<List<String>>.from(_notes);
+    final List<String> note = <String>[_title.text, _body.text, _category];
+    final int index = _selected ?? 0;
+    if (_selected == null) {
+      next.insert(0, note);
+    } else {
+      next[index] = note;
+    }
+    if (await _commit(next, List<String>.from(_categories))) {
+      setState(() {
+        _selected = index;
+        _confirmDelete = false;
+      });
+    }
+  }
+
+  Future<void> _delete() async {
+    if (_selected == null || _busy) return;
+    final List<List<String>> next = List<List<String>>.from(_notes)..removeAt(_selected!);
+    // Avoid comparing the draft with an index that may no longer exist during the commit.
+    final int index = _selected!;
+    setState(() {
+      _opened = false;
+      _selected = null;
+    });
+    if (await _commit(next, List<String>.from(_categories))) {
+      setState(() => _confirmDelete = false);
+    } else if (mounted) {
+      setState(() {
+        _opened = true;
+        _selected = index;
+      });
+    }
+  }
+
+  Future<void> _saveCategory() async {
+    final String name = _categoryName.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = 'Enter a category name.');
+      return;
+    }
+    if (_categories.any((String c) => c != _renaming && c.toLowerCase() == name.toLowerCase())) {
+      setState(() => _error = 'A category with that name already exists.');
+      return;
+    }
+    final String? old = _renaming;
+    final List<String> categories = <String>[for (final String c in _categories) c == old ? name : c];
+    if (old == null) categories.add(name);
+    final List<List<String>> notes = <List<String>>[
+      for (final List<String> n in _notes) <String>[n[0], n[1], n[2] == old ? name : n[2]],
+    ];
+    if (await _commit(notes, categories)) {
+      setState(() {
+        if (old != null && _filter == old) _filter = name;
+        _renaming = null;
+        _categoryName.clear();
+      });
+    }
+  }
+
+  Future<void> _removeCategory(String category) async {
+    final List<List<String>> notes = <List<String>>[
+      for (final List<String> n in _notes) <String>[n[0], n[1], n[2] == category ? _general : n[2]],
+    ];
+    if (await _commit(notes, List<String>.from(_categories)..remove(category))) {
+      setState(() {
+        if (_filter == category) _filter = _general;
+        if (_renaming == category) {
+          _renaming = null;
+          _categoryName.clear();
+        }
+      });
+    }
+  }
+
+  void _back() => _navigate(() => setState(() {
+        _opened = false;
+        _managing = false;
+        _confirmDelete = false;
+      }));
+
+  @override
+  Widget build(BuildContext context) => PopScope<void>(
+        canPop: !_dirty && !_busy,
+        onPopInvokedWithResult: (bool didPop, _) {
+          if (!didPop && !_busy) {
+            _navigate(() {
+              setState(() => _opened = false);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) Navigator.of(context).pop();
+              });
+            });
+          }
+        },
+        child: CallbackShortcuts(
+          bindings: <ShortcutActivator, VoidCallback>{
+            const SingleActivator(LogicalKeyboardKey.keyS, control: true): _save,
+            const SingleActivator(LogicalKeyboardKey.keyN, control: true): () {
+              if (!_loadFailed) _open();
+            },
+            const SingleActivator(LogicalKeyboardKey.keyF, control: true): () => _navigate(() {
+                  setState(() {
+                    _opened = false;
+                    _managing = false;
+                  });
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) _searchFocus.requestFocus();
+                  });
+                }),
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              PanelHeader(
+                title: _managing ? 'Notes / Categories' : 'Notes',
+                icon: Icons.note_alt_outlined,
+                buttonIcon: _managing ? Icons.arrow_back_rounded : Icons.create_new_folder_outlined,
+                buttonTooltip: _managing ? 'Back to notes' : 'Manage categories',
+                buttonPressed: _loadFailed || _busy
+                    ? null
+                    : () => _navigate(() => setState(() {
+                          _opened = false;
+                          _managing = !_managing;
+                          _error = null;
+                        })),
               ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-                child: TextField(
-                  controller: _bodyController,
-                  expands: true,
-                  maxLines: null,
-                  minLines: null,
-                  textAlignVertical: TextAlignVertical.top,
-                  keyboardType: TextInputType.multiline,
-                  style: TextStyle(fontSize: Design.baseFontSize + 1, height: 1.45, color: Design.text),
-                  decoration: _fieldDecoration('Write a memo… Markdown is supported', Icons.notes_rounded)
-                      .copyWith(alignLabelWithHint: true),
+              Flexible(
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: Column(children: <Widget>[
+                    if (_busy) LinearProgressIndicator(minHeight: 2, color: Design.accent),
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(_error!, style: TextStyle(color: Design.text, fontSize: Design.baseFontSize)),
+                      ),
+                    Expanded(
+                        child: AbsorbPointer(
+                      absorbing: _busy || _loadFailed,
+                      child: _managing
+                          ? _categoryManager()
+                          : LayoutBuilder(
+                              builder: (BuildContext context, BoxConstraints constraints) {
+                                final bool wide = constraints.maxWidth >= 620;
+                                return Padding(
+                                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+                                  child: wide
+                                      ? Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+                                          SizedBox(width: 235, child: _library()),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                              child: _opened
+                                                  ? _detail()
+                                                  : _empty(
+                                                      'A place for your thoughts', 'Select a note or start a new one.',
+                                                      action: true)),
+                                        ])
+                                      : _opened
+                                          ? _detail()
+                                          : _library(),
+                                );
+                              },
+                            ),
+                    )),
+                  ]),
                 ),
               ),
-            ),
-            _editorBar(),
-          ]),
-        ),
-      );
-
-  Widget _buildPreview() => Padding(
-        key: const ValueKey<String>('preview'),
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-        child: Container(
-          decoration: _surfaceDecoration(active: true),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
-            // Padding(
-            //   padding: const EdgeInsets.fromLTRB(14, 12, 10, 4),
-            //   child: Row(children: <Widget>[
-            //     Expanded(child: Text(_displayTitle(_titleController.text), style: _titleStyle())),
-            //     _DetailAction(
-            //       icon: Icons.edit_outlined,
-            //       tooltip: 'Edit memo',
-            //       onTap: () => setState(() => _mode = _MemoMode.editor),
-            //     ),
-            //     _DetailAction(icon: Icons.delete_outline_rounded, tooltip: 'Delete memo', onTap: _deleteEditing),
-            //   ]),
-            // ),
-            // Padding(
-            //   padding: const EdgeInsets.symmetric(horizontal: 14),
-            //   child: _metaLabel(Icons.folder_outlined, _editingCategory),
-            // ),
-            // Padding(
-            //   padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-            //   child: Divider(height: 1, color: Design.text.withAlpha(22)),
-            // ),
-            Expanded(child: _memoBody(_bodyController.text)),
-          ]),
-        ),
-      );
-
-  Widget _editorBar() => Container(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        decoration: BoxDecoration(border: Border(top: BorderSide(color: Design.text.withAlpha(18)))),
-        child: Row(children: <Widget>[
-          Text('Markdown supported',
-              style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(110))),
-          const Spacer(),
-          if (_editingIndex != null)
-            TextButton.icon(
-              onPressed: _deleteEditing,
-              icon: Icon(_confirmingDelete ? Icons.warning_amber_rounded : Icons.delete_outline_rounded, size: 16),
-              label: Text(_confirmingDelete ? 'Confirm delete' : 'Delete'),
-              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-            ),
-          const SizedBox(width: 6),
-          TextButton(
-              onPressed: _mode == _MemoMode.editor ? _previewDraft : () => setState(() => _mode = _MemoMode.editor),
-              child: Text(_mode == _MemoMode.editor ? 'Preview' : 'Edit')),
-          const SizedBox(width: 6),
-          _PrimaryAction(label: 'Save memo', icon: Icons.check_rounded, onTap: _save),
-        ]),
-      );
-
-  Widget _memoBody(String body) => body.trim().isEmpty
-      ? Center(child: Text('This memo is empty.', style: TextStyle(color: Design.text.withAlpha(130))))
-      : ListView(padding: const EdgeInsets.fromLTRB(14, 12, 14, 18), children: <Widget>[_markdown(body)]);
-
-  Widget _sidebarHeading(String label, IconData icon, {required VoidCallback onAdd}) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 6, 5),
-        child: Row(children: <Widget>[
-          Icon(icon, size: 14, color: Design.accent),
-          const SizedBox(width: 6),
-          Expanded(child: Text(label, style: _sectionStyle())),
-          TextButton.icon(
-            onPressed: onAdd,
-            icon: const Icon(Icons.add_rounded, size: 15),
-            label: const Text('New'),
-            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+            ],
           ),
-        ]),
-      );
-
-  Widget _markdown(String body) => MarkdownBody(
-        data: body,
-        selectable: true,
-        onTapLink: _openLink,
-        styleSheet: MarkdownStyleSheet(
-          p: TextStyle(fontSize: Design.baseFontSize + 2, height: 1.45, color: Design.text),
-          a: TextStyle(fontSize: Design.baseFontSize + 2, color: Design.accent, decoration: TextDecoration.underline),
-          h1: TextStyle(fontSize: Design.baseFontSize + 7, fontWeight: FontWeight.w700, color: Design.text),
-          h2: TextStyle(fontSize: Design.baseFontSize + 5, fontWeight: FontWeight.w700, color: Design.text),
-          h3: TextStyle(fontSize: Design.baseFontSize + 3, fontWeight: FontWeight.w600, color: Design.text),
-          code: TextStyle(
-              fontSize: Design.baseFontSize, color: Design.accent, backgroundColor: Design.accent.withAlpha(18)),
         ),
       );
 
-  InputDecoration _fieldDecoration(String hint, IconData icon) => InputDecoration(
+  Widget _library() {
+    final List<int> visible = _visible;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+      Row(children: <Widget>[
+        Expanded(child: Text('LIBRARY', style: _labelStyle)),
+        _action('New note', Icons.add_rounded, () => _open(), primary: true),
+      ]),
+      const SizedBox(height: 8),
+      TextField(
+        controller: _search,
+        focusNode: _searchFocus,
+        style: _textStyle,
+        decoration: _input('Search notes', icon: Icons.search_rounded).copyWith(
+          suffixIcon: _search.text.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Clear search', onPressed: _search.clear, icon: const Icon(Icons.close_rounded, size: 15)),
+        ),
+      ),
+      const SizedBox(height: 6),
+      DropdownButtonFormField<String>(
+        key: ValueKey<String?>(_filter),
+        initialValue: _filter ?? '',
+        isExpanded: true,
+        style: _textStyle,
+        decoration: _input('Category', icon: Icons.folder_outlined),
+        items: <DropdownMenuItem<String>>[
+          DropdownMenuItem<String>(value: '', child: Text('All notes · ${_notes.length}')),
+          for (final String c in _categories)
+            DropdownMenuItem<String>(
+                value: c,
+                child: Text('$c · ${_notes.where((List<String> n) => n[2] == c).length}',
+                    overflow: TextOverflow.ellipsis)),
+        ],
+        onChanged: (String? value) => setState(() => _filter = value == '' ? null : value),
+      ),
+      Padding(
+          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 2),
+          child: Text('${visible.length} ${visible.length == 1 ? 'NOTE' : 'NOTES'}', style: _labelStyle)),
+      Expanded(
+          child: visible.isEmpty
+              ? _empty(_search.text.isNotEmpty ? 'No matches' : 'No notes yet',
+                  _search.text.isNotEmpty ? 'Try another search or category.' : 'Capture an idea with New note.')
+              : ListView.separated(
+                  itemCount: visible.length,
+                  padding: EdgeInsets.zero,
+                  separatorBuilder: (_, __) => const SizedBox(height: 4),
+                  itemBuilder: (BuildContext context, int position) {
+                    final int index = visible[position];
+                    final List<String> note = _notes[index];
+                    final bool selected = _opened && _selected == index;
+                    return Material(
+                      color: selected ? Design.accent.withAlpha(18) : Design.text.withAlpha(7),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: selected ? Design.accent.withAlpha(80) : Design.text.withAlpha(16))),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => _open(index),
+                        hoverColor: Design.accent.withAlpha(18),
+                        child: Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                              Text(note[0].trim().isEmpty ? 'Untitled note' : note[0],
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: _textStyle.copyWith(fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 4),
+                              Text(note[1].trim().isEmpty ? 'No text' : note[1].replaceAll(RegExp(r'\s+'), ' '),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: _textStyle.copyWith(color: Design.text.withAlpha(155), height: 1.4)),
+                              const SizedBox(height: 7),
+                              Text(note[2],
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: _labelStyle.copyWith(color: Design.accent)),
+                            ])),
+                      ),
+                    );
+                  },
+                )),
+    ]);
+  }
+
+  Widget _detail() => Container(
+        decoration: BoxDecoration(
+            border: Border.all(color: Design.text.withAlpha(18)), borderRadius: BorderRadius.circular(10)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+          Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+              child: Row(children: <Widget>[
+                _icon('Back to notes', Icons.arrow_back_rounded, _back),
+                Expanded(
+                    child: Text(
+                        _dirty
+                            ? 'UNSAVED CHANGES'
+                            : _selected == null
+                                ? 'NEW NOTE'
+                                : 'SAVED',
+                        style: _labelStyle)),
+                _icon(
+                    _preview ? 'Edit note' : 'Preview Markdown',
+                    _preview ? Icons.edit_outlined : Icons.visibility_outlined,
+                    () => setState(() => _preview = !_preview)),
+                if (_selected != null)
+                  _icon('Delete note', Icons.delete_outline_rounded,
+                      () => setState(() => _confirmDelete = !_confirmDelete)),
+              ])),
+          if (_confirmDelete)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              color: Design.accent.withAlpha(12),
+              child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 6, children: <Widget>[
+                Text('Delete this note permanently?', style: _textStyle),
+                _action('Cancel', Icons.close_rounded, () => setState(() => _confirmDelete = false)),
+                _action('Delete', Icons.delete_outline_rounded, _delete, primary: true),
+              ]),
+            ),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: _preview
+                  ? SelectableText(_title.text.trim().isEmpty ? 'Untitled note' : _title.text,
+                      maxLines: 2,
+                      style: _textStyle.copyWith(fontSize: Design.baseFontSize + 5, fontWeight: FontWeight.w700))
+                  : TextField(
+                      controller: _title,
+                      focusNode: _titleFocus,
+                      maxLines: 1,
+                      style: _textStyle.copyWith(fontSize: Design.baseFontSize + 5, fontWeight: FontWeight.w700),
+                      decoration: InputDecoration(
+                          hintText: 'Untitled note',
+                          border: InputBorder.none,
+                          hintStyle: TextStyle(color: Design.text.withAlpha(100))))),
+          Padding(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+              child: _preview
+                  ? Text(_category, style: _labelStyle.copyWith(color: Design.accent))
+                  : DropdownButtonFormField<String>(
+                      key: ValueKey<String>(_category),
+                      initialValue: _category,
+                      isExpanded: true,
+                      style: _textStyle,
+                      decoration: _input('Category', icon: Icons.folder_outlined),
+                      items: _categories
+                          .map((String c) =>
+                              DropdownMenuItem<String>(value: c, child: Text(c, overflow: TextOverflow.ellipsis)))
+                          .toList(),
+                      onChanged: (String? c) {
+                        if (c != null)
+                          setState(() {
+                            _category = c;
+                            _confirmDelete = false;
+                          });
+                      },
+                    )),
+          Divider(height: 1, color: Design.text.withAlpha(18)),
+          Expanded(
+              child: _preview
+                  ? _body.text.trim().isEmpty
+                      ? _empty('No text in this note', 'Use Edit to start writing.')
+                      : ListView(padding: const EdgeInsets.all(12), children: <Widget>[
+                          MarkdownBody(
+                              data: _body.text,
+                              selectable: true,
+                              onTapLink: (String text, String? href, String title) {
+                                if (href == null) return;
+                                _navigate(() {
+                                  WinUtils.open(href);
+                                  QuickMenuFunctions.hideQuickMenu();
+                                });
+                              },
+                              styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                                p: _textStyle.copyWith(height: 1.6),
+                                a: _textStyle.copyWith(color: Design.accent),
+                                code: _textStyle.copyWith(
+                                    fontFamily: 'monospace', backgroundColor: Design.text.withAlpha(8)),
+                              )),
+                        ])
+                  : TextField(
+                      controller: _body,
+                      expands: true,
+                      maxLines: null,
+                      minLines: null,
+                      textAlignVertical: TextAlignVertical.top,
+                      keyboardType: TextInputType.multiline,
+                      style: _textStyle.copyWith(height: 1.6),
+                      decoration: InputDecoration(
+                          hintText: 'Write something worth keeping…',
+                          hintStyle: _textStyle.copyWith(color: Design.text.withAlpha(100)),
+                          contentPadding: const EdgeInsets.all(12),
+                          border: InputBorder.none))),
+          Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(border: Border(top: BorderSide(color: Design.text.withAlpha(18)))),
+              child: Row(children: <Widget>[
+                Expanded(
+                    child: Text(
+                        _preview
+                            ? '${_body.text.trim().isEmpty ? 0 : _body.text.trim().split(RegExp(r'\s+')).length} words'
+                            : 'Markdown · Ctrl+S to save',
+                        style: _labelStyle)),
+                _action('Save', Icons.check_rounded, _save, primary: true),
+              ])),
+        ]),
+      );
+
+  Widget _categoryManager() => Padding(
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+          Text('Keep related notes together', style: _textStyle.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text('Removing a category moves its notes to General.',
+              style: _textStyle.copyWith(color: Design.text.withAlpha(155))),
+          const SizedBox(height: 10),
+          Row(children: <Widget>[
+            Expanded(
+                child: TextField(
+                    controller: _categoryName,
+                    style: _textStyle,
+                    decoration: _input(_renaming == null ? 'New category name' : 'Rename category',
+                        icon: Icons.folder_outlined),
+                    onSubmitted: (_) => _saveCategory())),
+            const SizedBox(width: 6),
+            _action(_renaming == null ? 'Add' : 'Save', _renaming == null ? Icons.add_rounded : Icons.check_rounded,
+                _saveCategory,
+                primary: true),
+            if (_renaming != null)
+              _icon(
+                  'Cancel rename',
+                  Icons.close_rounded,
+                  () => setState(() {
+                        _renaming = null;
+                        _categoryName.clear();
+                        _error = null;
+                      })),
+          ]),
+          const SizedBox(height: 10),
+          Expanded(
+              child: ListView.separated(
+            itemCount: _categories.length,
+            separatorBuilder: (_, __) => Divider(height: 1, color: Design.text.withAlpha(16)),
+            itemBuilder: (BuildContext context, int index) {
+              final String c = _categories[index];
+              return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(children: <Widget>[
+                    Icon(c == _general ? Icons.inbox_outlined : Icons.folder_outlined, size: 16, color: Design.accent),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(c, overflow: TextOverflow.ellipsis, style: _textStyle)),
+                    Text('${_notes.where((List<String> n) => n[2] == c).length}', style: _labelStyle),
+                    if (c != _general) ...<Widget>[
+                      _icon(
+                          'Rename category',
+                          Icons.edit_outlined,
+                          () => setState(() {
+                                _renaming = c;
+                                _categoryName.text = c;
+                              })),
+                      _icon('Remove category; keep its notes', Icons.delete_outline_rounded, () => _removeCategory(c)),
+                    ] else
+                      const SizedBox(width: 64),
+                  ]));
+            },
+          )),
+        ]),
+      );
+
+  Widget _empty(String title, String hint, {bool action = false}) => Center(
+        child: ListView(shrinkWrap: true, padding: const EdgeInsets.all(16), children: <Widget>[
+          Icon(Icons.notes_rounded, size: 28, color: Design.accent.withAlpha(150)),
+          const SizedBox(height: 10),
+          Text(title, textAlign: TextAlign.center, style: _textStyle.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(hint, textAlign: TextAlign.center, style: _textStyle.copyWith(color: Design.text.withAlpha(145))),
+          if (action)
+            Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: Center(child: _action('New note', Icons.add_rounded, () => _open(), primary: true))),
+        ]),
+      );
+
+  TextStyle get _textStyle => TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text);
+  TextStyle get _labelStyle => TextStyle(
+      fontSize: Design.baseFontSize - 1,
+      color: Design.text.withAlpha(145),
+      fontWeight: FontWeight.w600,
+      letterSpacing: .4);
+
+  InputDecoration _input(String hint, {required IconData icon}) => InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(105)),
-        prefixIcon: Icon(icon, size: 17, color: Design.accent.withAlpha(190)),
+        hintStyle: _textStyle.copyWith(color: Design.text.withAlpha(120)),
+        prefixIcon: Icon(icon, size: 16, color: Design.accent),
         isDense: true,
         filled: true,
         fillColor: Design.text.withAlpha(7),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
         enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Design.text.withAlpha(18))),
         focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Design.accent.withAlpha(100))),
+            borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Design.accent.withAlpha(90))),
       );
 
-  BoxDecoration _surfaceDecoration({bool active = false}) => BoxDecoration(
-        color: active ? Design.accent.withAlpha(8) : Design.text.withAlpha(7),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: active ? Design.accent.withAlpha(48) : Design.text.withAlpha(16)),
+  Widget _icon(String tooltip, IconData icon, VoidCallback onTap) => IconButton(
+        tooltip: tooltip,
+        onPressed: onTap,
+        icon: Icon(icon, size: 16, color: Design.text.withAlpha(180)),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 32, height: 30),
+        visualDensity: VisualDensity.compact,
       );
 
-  TextStyle _sectionStyle() => TextStyle(
-      fontSize: Design.baseFontSize - .5,
-      fontWeight: FontWeight.w700,
-      letterSpacing: .5,
-      color: Design.text.withAlpha(185));
-  TextStyle _titleStyle() =>
-      TextStyle(fontSize: Design.baseFontSize + 3, fontWeight: FontWeight.w700, color: Design.text);
-  Widget _countChip(int count) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: Design.accent.withAlpha(22), borderRadius: BorderRadius.circular(99)),
-      child: Text('$count',
-          style: TextStyle(fontSize: Design.baseFontSize - 1, fontWeight: FontWeight.w700, color: Design.accent)));
-  // Widget _metaLabel(IconData icon, String label) => Row(
-  //       mainAxisSize: MainAxisSize.min,
-  //       children: <Widget>[
-  //         Icon(icon, size: 13, color: Design.text.withAlpha(105)),
-  //         const SizedBox(width: 4),
-  //         Text(label,
-  //             overflow: TextOverflow.ellipsis,
-  //             style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(115))),
-  //       ],
-  //     );
-
-  // String _displayTitle(String title) => title.trim().isEmpty ? 'Untitled memo' : title.trim();
-}
-
-class _CategoryRow extends StatelessWidget {
-  const _CategoryRow(
-      {required this.label,
-      required this.icon,
-      required this.count,
-      required this.selected,
-      required this.onTap,
-      this.onDelete});
-  final String label;
-  final IconData icon;
-  final int count;
-  final bool selected;
-  final VoidCallback onTap;
-  final VoidCallback? onDelete;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(7),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
-          decoration: BoxDecoration(
-              color: selected ? Design.accent.withAlpha(18) : Colors.transparent,
-              borderRadius: BorderRadius.circular(7)),
-          child: Row(children: <Widget>[
-            Icon(icon, size: 14, color: selected ? Design.accent : Design.text.withAlpha(130)),
-            const SizedBox(width: 6),
-            Expanded(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: Design.baseFontSize,
-                        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                        color: Design.text))),
-            Text('$count', style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(120))),
-            if (onDelete != null)
-              IconButton(
-                  tooltip: 'Delete category and move its memos to General',
-                  onPressed: onDelete,
-                  icon: Icon(Icons.close_rounded, size: 13, color: Design.text.withAlpha(115)),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints.tightFor(width: 20, height: 20)),
-          ]),
-        ),
+  Widget _action(String label, IconData icon, VoidCallback onTap, {bool primary = false}) => Material(
+        color: primary ? Design.accent.withAlpha(22) : Colors.transparent,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(7),
+            side: BorderSide(color: primary ? Design.accent.withAlpha(80) : Design.text.withAlpha(18))),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+            onTap: onTap,
+            hoverColor: Design.accent.withAlpha(18),
+            child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+                child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                  Icon(icon, size: 14, color: primary ? Design.accent : Design.text),
+                  const SizedBox(width: 5),
+                  Text(label,
+                      style: _textStyle.copyWith(
+                          fontWeight: FontWeight.w600, color: primary ? Design.accent : Design.text)),
+                ]))),
       );
-}
-
-class _MemoListItem extends StatelessWidget {
-  const _MemoListItem({required this.memo, required this.selected, required this.onTap});
-  final List<String> memo;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final String title = memo[0].trim().isEmpty ? 'Untitled memo' : memo[0].trim();
-    final String preview = memo[1].replaceAll(RegExp(r'\s+'), ' ').trim();
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 3),
-        padding: const EdgeInsets.fromLTRB(9, 8, 8, 8),
-        decoration: BoxDecoration(
-            color: selected ? Design.accent.withAlpha(22) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: Border(
-                left: BorderSide(color: selected ? Design.accent.withAlpha(180) : Colors.transparent, width: 2))),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-          Text(title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: Design.baseFontSize + 1,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                  color: Design.text)),
-          const SizedBox(height: 2),
-          Text(preview.isEmpty ? 'Empty memo' : preview,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: Design.baseFontSize - 1, height: 1.25, color: Design.text.withAlpha(125))),
-        ]),
-      ),
-    );
-  }
-}
-
-// class _DetailAction extends StatelessWidget {
-//   const _DetailAction({required this.icon, required this.tooltip, required this.onTap});
-//   final IconData icon;
-//   final String tooltip;
-//   final VoidCallback onTap;
-//   @override
-//   Widget build(BuildContext context) => IconButton(
-//       tooltip: tooltip,
-//       onPressed: onTap,
-//       icon: Icon(icon, size: 17, color: Design.text.withAlpha(170)),
-//       visualDensity: VisualDensity.compact);
-// }
-
-class _PrimaryAction extends StatelessWidget {
-  const _PrimaryAction({required this.label, required this.icon, required this.onTap});
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-          decoration: BoxDecoration(
-              color: Design.accent.withAlpha(25),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Design.accent.withAlpha(85))),
-          child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
-            Icon(icon, size: 16, color: Design.accent),
-            const SizedBox(width: 6),
-            Text(label,
-                style: TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w700, color: Design.accent))
-          ])));
 }

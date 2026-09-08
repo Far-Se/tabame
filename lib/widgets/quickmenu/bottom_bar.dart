@@ -179,7 +179,12 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
   @override
   Future<void> refreshQuickMenu() async {
     if (mounted) {
-      setState(() {});
+      setState(() {
+        showWidgets = <Widget>[
+          for (final String name in Boxes().topBarWidgets.takeWhile((String name) => name != 'Deactivated:'))
+            if (quickActionsMap[name]?.isVisible ?? false) quickActionsMap[name]!.widget(),
+        ];
+      });
     } else {}
   }
 

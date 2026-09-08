@@ -326,7 +326,7 @@ class Boxes {
     checkThemeChange();
     if (user.previewTheme) return;
     if (user.page == TPage.quickmenu) {
-      AiCodingUsageService.instance.configure(user.aiCodingUsageInTaskbar ? user.aiCodingUsageAgents : <String>[]);
+      AiCodingUsageService.instance.configureTopBar(Boxes().topBarWidgets);
     }
     if (justLoad) return;
 
@@ -487,6 +487,9 @@ class Boxes {
       throw ("No associated type $value");
     }
     pref = await SaveSettings.getInstance();
+    if (key == 'topBarWidgets' && user.page == TPage.quickmenu && !user.previewTheme) {
+      AiCodingUsageService.instance.configureTopBar(Boxes().topBarWidgets);
+    }
   }
 
   static Future<void> saveActiveQuickMenuThemes({bool notify = false}) async {
@@ -767,7 +770,14 @@ class Boxes {
   }
 
   List<String> get topBarWidgets {
-    final List<String> defaultWidgets = quickActionsMap.keys.toList()..add("Deactivated:");
+    const Map<String, String> usageButtons = <String, String>{
+      'CodexUsageButton': 'codex',
+      'ClaudeUsageButton': 'claude',
+    };
+    final List<String> defaultWidgets = <String>[
+      ...quickActionsMap.keys.where((String name) => !usageButtons.containsKey(name)),
+      'Deactivated:',
+    ];
     final List<String> configuredWidgets = pref.getStringList("topBarWidgets") ?? defaultWidgets;
 
     // Remove duplicates while preserving order
@@ -780,7 +790,17 @@ class Boxes {
         defaultWidgets.where((String widgetName) => !configuredWidgets.contains(widgetName));
     final int deactivatedMarkerIndex =
         configuredWidgets.indexWhere((String widgetName) => widgetName == "Deactivated:");
-    configuredWidgets.insertAll(deactivatedMarkerIndex, missingWidgets);
+    configuredWidgets.insertAll(
+        deactivatedMarkerIndex < 0 ? configuredWidgets.length : deactivatedMarkerIndex, missingWidgets);
+    for (final MapEntry<String, String> button in usageButtons.entries) {
+      if (configuredWidgets.contains(button.key)) continue;
+      // Preserve providers previously enabled in the taskbar on first migration.
+      if (user.aiCodingUsageInTaskbar && user.aiCodingUsageAgents.contains(button.value)) {
+        configuredWidgets.insert(configuredWidgets.indexOf('Deactivated:'), button.key);
+      } else {
+        configuredWidgets.add(button.key);
+      }
+    }
     pref.setStringList("topBarWidgets", configuredWidgets);
     return configuredWidgets;
   }

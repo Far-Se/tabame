@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import '../../../services/ai_coding_usage_service.dart';
 import '../../../platform/file_picker_service.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -294,15 +293,6 @@ class _TaskbarTab extends StatefulWidget {
 }
 
 class _TaskbarTabState extends State<_TaskbarTab> {
-  Future<void> _saveAiUsage() async {
-    AiCodingUsageService.instance.configure(user.aiCodingUsageInTaskbar ? user.aiCodingUsageAgents : <String>[]);
-    await Boxes.updateSettings('aiCodingUsageInTaskbar', user.aiCodingUsageInTaskbar);
-    await Boxes.updateSettings('aiCodingUsageAgents', user.aiCodingUsageAgents);
-    if (!mounted) return;
-    setState(() {});
-    QuickMenuFunctions.refreshQuickMenu();
-  }
-
   @override
   Widget build(BuildContext context) {
     return WindowsScrollView(
@@ -391,49 +381,6 @@ class _TaskbarTabState extends State<_TaskbarTab> {
                 QuickMenuFunctions.refreshQuickMenu();
               },
             ),
-            _toggle(
-              context: context,
-              title: 'Ai Coding Usage',
-              subtitle: 'Show 5-hour and weekly limits. Refreshes every 4 minutes.',
-              value: user.aiCodingUsageInTaskbar,
-              onChanged: (bool value) {
-                user.aiCodingUsageInTaskbar = value;
-                return _saveAiUsage();
-              },
-            ),
-            if (user.aiCodingUsageInTaskbar) ...<Widget>[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                child: Wrap(
-                  spacing: 8,
-                  children: <String>['codex', 'claude'].map((String agent) {
-                    return FilterChip(
-                      label: Text(agent == 'codex' ? 'Codex' : 'Claude'),
-                      selected: user.aiCodingUsageAgents.contains(agent),
-                      selectedColor: Design.accent.withAlpha(18),
-                      visualDensity: VisualDensity.compact,
-                      labelStyle: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text),
-                      onSelected: (bool selected) {
-                        user.aiCodingUsageAgents = <String>[
-                          ...user.aiCodingUsageAgents.where((String item) => item != agent),
-                          if (selected) agent,
-                        ];
-                        _saveAiUsage();
-                      },
-                    );
-                  }).toList(),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-                child: Text(
-                  user.aiCodingUsageAgents.isEmpty
-                      ? 'Select an agent to show its usage.'
-                      : 'Uses local Claude Code sign-in and codex-cli-usage. Opening QuickMenu also refreshes, at most once a minute.',
-                  style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(170)),
-                ),
-              ),
-            ],
             _sectionLabel(context, "DISPLAY PREFERENCE"),
             const SizedBox(height: 4),
             ...TaskBarAppsStyle.values.map((TaskBarAppsStyle style) => _buildStyleTile(context, style)),

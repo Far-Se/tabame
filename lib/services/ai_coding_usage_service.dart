@@ -8,7 +8,7 @@ import 'claude_usage_service.dart';
 import 'codex_usage_service.dart';
 
 /// Keeps selected providers subscribed even while the menu is hidden or its
-/// carousel has scrolled out of view. Provider services own polling and throttles.
+/// buttons have scrolled out of view. Provider services own polling and throttles.
 class AiCodingUsageService extends ChangeNotifier with QuickMenuTriggers {
   AiCodingUsageService._();
 
@@ -16,6 +16,14 @@ class AiCodingUsageService extends ChangeNotifier with QuickMenuTriggers {
   Set<String> _agents = <String>{};
   bool codexLoading = false;
   bool claudeLoading = false;
+
+  void configureTopBar(List<String> widgets) {
+    final Set<String> active = widgets.takeWhile((String name) => name != 'Deactivated:').toSet();
+    configure(<String>[
+      if (active.contains('CodexUsageButton')) 'codex',
+      if (active.contains('ClaudeUsageButton')) 'claude',
+    ]);
+  }
 
   void configure(List<String> agents) {
     final Set<String> selected = agents.where((String agent) => agent == 'codex' || agent == 'claude').toSet();

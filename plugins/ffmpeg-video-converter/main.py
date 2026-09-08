@@ -14,6 +14,10 @@ from typing import Any
 
 PLUGIN_NAME = "FFmpeg Video Converter"
 BACKGROUND_GRACE_SECONDS = 300
+SETTINGS_KEY = "conversion-settings"
+SETTINGS_REQUEST_ID = "load-conversion-settings"
+SETTINGS_REQUESTED = False
+SETTINGS_LOADED = False
 
 SEND_LOCK = threading.Lock()
 JOB_LOCK = threading.Lock()
@@ -43,6 +47,11 @@ def log(message: str) -> None:
 
 def command(name: str, **fields: Any) -> None:
     send({"type": "command", "command": name, **fields})
+
+
+def save_settings(values: dict[str, Any]) -> None:
+    LAST_FORM_VALUES.update(values)
+    command("storage", op="set", key=SETTINGS_KEY, value=LAST_FORM_VALUES)
 
 
 def page(page_id: str, title: str, history: str = "none") -> dict[str, Any]:
@@ -162,12 +171,27 @@ def render_missing_ffmpeg(rev: int = 0) -> None:
 
 
 def render_form(rev: int = 0, error: str | None = None, history: str = "none") -> None:
+    global SETTINGS_REQUESTED
+    if not SETTINGS_LOADED:
+        send({
+            "type": "render",
+            "rev": rev,
+            "view": "list",
+            "loading": True,
+            "loadingText": "Loading saved settings…",
+            "items": [],
+        })
+        if not SETTINGS_REQUESTED:
+            SETTINGS_REQUESTED = True
+            command("storage", op="get", key=SETTINGS_KEY, requestId=SETTINGS_REQUEST_ID)
+        return
+
     detect_tools()
     if not FFMPEG_PATH:
         render_missing_ffmpeg(rev)
         return
 
-    values = {
+    defaults = {
         "input": "",
         "output_dir": "",
         "output_name": "",
@@ -180,7 +204,11 @@ def render_form(rev: int = 0, error: str | None = None, history: str = "none") -
         "remove_audio": False,
         "overwrite": False,
         "open_when_done": False,
-        **LAST_FORM_VALUES,
+    }
+    values = {
+        key: LAST_FORM_VALUES.get(key, default)
+        if isinstance(LAST_FORM_VALUES.get(key, default), type(default)) else default
+        for key, default in defaults.items()
     }
 
     video_presets = [
@@ -352,6 +380,14 @@ def render_form(rev: int = 0, error: str | None = None, history: str = "none") -
             },
         ],
     }
+    for field in form["fields"]:
+        field["watch"] = True
+        if field["type"] == "dropdown":
+            options = [option["value"] if isinstance(option, dict) else option for option in field["options"]]
+            if field["value"] not in options:
+                field["value"] = defaults[field["id"]]
+    LAST_FORM_VALUES.clear()
+    LAST_FORM_VALUES.update({field["id"]: field["value"] for field in form["fields"]})
     if error:
         form["error"] = error
 
@@ -1007,7 +1043,9 @@ def show_tool_details() -> None:
 
 
 def start_conversion(values: dict[str, Any]) -> None:
-    global CURRENT_JOB, LAST_FORM_VALUES
+    global CURRENT_JOB
+    save_settings(values)
+    values = dict(LAST_FORM_VALUES)
     detect_tools()
     if not FFMPEG_PATH:
         render_missing_ffmpeg()
@@ -1018,7 +1056,6 @@ def start_conversion(values: dict[str, Any]) -> None:
             send(operation_frame(CURRENT_JOB))
             return
 
-    LAST_FORM_VALUES = dict(values)
     input_text = str(values.get("input") or "").strip()
     if not input_text:
         render_form(error="Choose an input media file.")
@@ -1136,7 +1173,7 @@ def handle_action(message: dict[str, Any]) -> None:
 
 
 def handle_message(message: dict[str, Any]) -> bool:
-    global UI_CLOSED
+    global UI_CLOSED, SETTINGS_LOADED
     msg_type = message.get("type")
 
     if msg_type == "close":
@@ -1144,7 +1181,19 @@ def handle_message(message: dict[str, Any]) -> bool:
         # A non-daemon worker keeps the process alive during the requested background grace.
         return False
 
-    if msg_type in {"init", "query"}:
+    if msg_type == "storage":
+        if message.get("requestId") == SETTINGS_REQUEST_ID and not SETTINGS_LOADED:
+            stored = message.get("value")
+            if isinstance(stored, dict):
+                LAST_FORM_VALUES.update(stored)
+            SETTINGS_LOADED = True
+            if not UI_CLOSED:
+                render_form()
+    elif msg_type == "change":
+        values = message.get("values")
+        if SETTINGS_LOADED and isinstance(values, dict):
+            save_settings(values)
+    elif msg_type in {"init", "query"}:
         UI_CLOSED = False
         rev = int(message.get("rev") or 0)
         with JOB_LOCK:

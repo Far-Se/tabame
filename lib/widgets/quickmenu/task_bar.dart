@@ -31,7 +31,6 @@ import '../widgets/extracted_icon.dart';
 import '../widgets/zoomed_button.dart';
 import 'context_menu.dart';
 import 'quick_snap_picker.dart';
-import 'task_bar_ai_usage.dart';
 
 // --- CONSTANTS ---
 const double kTaskBarItemHeight = 28.0;
@@ -432,7 +431,6 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        if (user.aiCodingUsageInTaskbar) TaskBarAiUsageCarousel(agents: user.aiCodingUsageAgents),
                         if (user.mediaSessionsInTaskbar || user.musicPlayerInTaskbar) const TaskBarMediaCarousel(),
                       ],
                     );

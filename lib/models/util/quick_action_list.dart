@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../../widgets/itzy/quickmenu/button_adb.dart';
+import '../../widgets/itzy/quickmenu/button_ai_coding_usage.dart';
 import '../../widgets/itzy/quickmenu/button_always_awake.dart';
 import '../../widgets/itzy/quickmenu/button_app_audio.dart';
 import '../../widgets/itzy/quickmenu/button_apps.dart';
@@ -175,6 +176,16 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.bar_chart_rounded,
     widget: () => const AiUsageButton(),
   ),
+  "ClaudeUsageButton": QuickAction(
+    name: 'Claude Usage',
+    icon: Icons.auto_awesome_rounded,
+    widget: () => const ClaudeUsageButton(),
+  ),
+  "CodexUsageButton": QuickAction(
+    name: 'Codex Usage',
+    icon: Icons.code_rounded,
+    widget: () => const CodexUsageButton(),
+  ),
   "CliBookButton": QuickAction(
     icon: Icons.note_alt_outlined,
     widget: () => const CliBookButton(),
@@ -268,8 +279,13 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     widget: () => const MediaControlButton(),
   ),
   "MemosButton": QuickAction(
+    name: 'Notes',
     icon: Icons.note_alt_outlined,
     widget: () => const MemosButton(),
+  ),
+  "NotesButton": QuickAction(
+    icon: Icons.note_alt_outlined,
+    widget: () => const NotesButton(),
   ),
   "MicMuteButton": QuickAction(
     icon: Icons.mic,

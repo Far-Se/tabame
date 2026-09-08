@@ -14,6 +14,8 @@ creating GIFs, and remuxing media without re-encoding.
 - Native cancellation with partial-output cleanup
 - Result page with before/after sizes, open/copy/delete actions, and error diagnostics
 - Optional automatic opening of the completed file
+- Automatically saves every form field as you edit and restores it when reopened,
+  including file paths, encoding options, and output behavior (even without starting a conversion)
 - Up to 5 minutes of background grace after the launcher closes
 
 ## Requirements
@@ -48,6 +50,8 @@ Tabame rescans the plugins directory whenever the launcher opens.
 
 ## Notes
 
+- Settings use Tabame's per-plugin storage (`.tabame-store.json` in the installed plugin folder).
+- If a saved encoder is no longer available, the converter selects an available default.
 - Available hardware presets depend on the encoders compiled into your FFmpeg build.
 - Hardware encoder availability does not guarantee that the matching GPU/driver is usable;
   FFmpeg will show the underlying error on the result page if initialization fails.

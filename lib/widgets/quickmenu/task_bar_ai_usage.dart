@@ -67,7 +67,7 @@ class _TaskBarAiUsageCarouselState extends State<TaskBarAiUsageCarousel> {
     final double lineHeight = (MediaQuery.textScalerOf(context).scale(_usageFontSize) * _lineHeight).ceilToDouble();
     // Two usage lines, a header (including its 14px icon), padding, border,
     // header spacing, and a small allowance for pixel rounding.
-    final double cardHeight = lineHeight * 2 + lineHeight.clamp(14.0, double.infinity) + 13;
+    final double cardHeight = lineHeight * 2 + lineHeight.clamp(14.0, double.infinity) + 2;
     return Padding(
       padding: const EdgeInsets.fromLTRB(5, 3, 5, 1),
       child: Column(
@@ -129,108 +129,123 @@ class _TaskBarAiUsageCarouselState extends State<TaskBarAiUsageCarousel> {
     final bool loading =
         codex ? AiCodingUsageService.instance.codexLoading : AiCodingUsageService.instance.claudeLoading;
     final String? error = codex ? CodexUsageService.instance.lastError : ClaudeUsageService.instance.lastError;
-    final bool stale =
-        fetchedAt != null && (error != null || DateTime.now().difference(fetchedAt) > const Duration(minutes: 5));
+    // final bool stale =
+    //     fetchedAt != null && (error != null || DateTime.now().difference(fetchedAt) > const Duration(minutes: 5));
     final String name = codex ? 'Codex' : 'Claude';
-    final String status = fetchedAt == null ? (loading ? 'Loading…' : 'Unavailable') : (stale ? 'Cached' : 'Live');
+    // final String status = fetchedAt == null ? (loading ? 'Loading…' : 'Unavailable') : (stale ? 'Cached' : 'Live');
     final TextStyle detail =
         TextStyle(fontSize: Design.baseFontSize, height: _lineHeight, color: Design.text.withAlpha(175));
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
         color: Design.text.withAlpha(7),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Design.text.withAlpha(16)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Stack(
         children: <Widget>[
-          if (fetchedAt == null)
-            Expanded(
-                child: Center(
-                    child: Text(
-              loading
-                  ? 'Fetching usage…'
-                  : (codex
-                      ? 'Install or run codex-cli-usage\nto make usage available.'
-                      : 'Sign in to Claude Code\nto make usage available.'),
-              textAlign: TextAlign.center,
-              style: detail,
-            )))
-          else
-            Row(
-              children: <Widget>[
-                CustomTooltip(
-                  message: '5h: ${_percent(five)} left',
-                  child: SizedBox.square(
-                    dimension: MediaQuery.textScalerOf(context).scale(Design.baseFontSize) * 2.6 * 1.3,
-                    child: Padding(
-                      padding: const EdgeInsets.all(2),
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween<double>(begin: 0, end: (five ?? 0).clamp(0, 100) / 100),
-                        duration: const Duration(milliseconds: 450),
-                        builder: (BuildContext context, double value, Widget? child) => Stack(
-                          fit: StackFit.expand,
-                          alignment: Alignment.center,
-                          children: <Widget>[
-                            CircularProgressIndicator(
-                              value: value,
-                              strokeWidth: 3,
-                              strokeCap: StrokeCap.round,
-                              backgroundColor: Design.text.withAlpha(20),
-                              color: Design.accent,
-                              semanticsLabel: '$name 5-hour remaining',
-                              semanticsValue: _percent(five),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(4),
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  _percent(five),
-                                  style: TextStyle(
-                                    fontSize: Design.baseFontSize,
-                                    fontWeight: FontWeight.w600,
-                                    color: Design.text,
-                                  ),
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  if (fetchedAt == null)
+                    Expanded(
+                        child: Center(
+                            child: Text(
+                      loading
+                          ? 'Fetching usage…'
+                          : (codex
+                              ? 'Install or run codex-cli-usage\nto make usage available.'
+                              : 'Sign in to Claude Code\nto make usage available.'),
+                      textAlign: TextAlign.center,
+                      style: detail,
+                    )))
+                  else
+                    Row(
+                      children: <Widget>[
+                        CustomTooltip(
+                          message: '5h: ${_percent(five)} left',
+                          child: SizedBox.square(
+                            dimension: MediaQuery.textScalerOf(context).scale(Design.baseFontSize) * 2.6 * 1.3,
+                            child: Padding(
+                              padding: const EdgeInsets.all(2),
+                              child: TweenAnimationBuilder<double>(
+                                tween: Tween<double>(begin: 0, end: (five ?? 0).clamp(0, 100) / 100),
+                                duration: const Duration(milliseconds: 450),
+                                builder: (BuildContext context, double value, Widget? child) => Stack(
+                                  fit: StackFit.expand,
+                                  alignment: Alignment.center,
+                                  children: <Widget>[
+                                    CircularProgressIndicator(
+                                      value: value,
+                                      strokeWidth: 3,
+                                      strokeCap: StrokeCap.round,
+                                      backgroundColor: Design.text.withAlpha(20),
+                                      color: Design.accent,
+                                      semanticsLabel: '$name 5-hour remaining',
+                                      semanticsValue: _percent(five),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(4),
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          _percent(five),
+                                          style: TextStyle(
+                                            fontSize: Design.baseFontSize,
+                                            fontWeight: FontWeight.w600,
+                                            color: Design.text,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      Row(children: <Widget>[
-                        Icon(codex ? Icons.code_rounded : Icons.auto_awesome_rounded, size: 14, color: Design.accent),
                         const SizedBox(width: 6),
                         Expanded(
-                            child: Text(name,
-                                style: TextStyle(
-                                    fontSize: _usageFontSize,
-                                    height: _lineHeight,
-                                    fontWeight: FontWeight.w600,
-                                    color: Design.text))),
-                        CustomTooltip(
-                          message:
-                              '${error == null ? '' : '$error\n'}Updated ${DateFormat('MMM d, HH:mm').format(fetchedAt.toLocal())}',
-                          child: Text(status, style: detail),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              _usageLine('5h', five, fiveReset, codex ? codexRecord?.fiveHourResetAt : null),
+                              _usageLine('Weekly', week, weekReset, codex ? codexRecord?.weeklyResetAt : null),
+                            ],
+                          ),
                         ),
-                      ]),
-                      const SizedBox(height: 3),
-                      _usageLine('5h', five, fiveReset, codex ? codexRecord?.fiveHourResetAt : null),
-                      _usageLine('Weekly', week, weekReset, codex ? codexRecord?.weeklyResetAt : null),
-                    ],
-                  ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ),
+          if (fetchedAt != null)
+            Positioned(
+              top: 0,
+              right: 8,
+              child: CustomTooltip(
+                message:
+                    '${error == null ? '' : '$error\n'}Updated ${DateFormat('MMM d, HH:mm').format(fetchedAt.toLocal())}',
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(codex ? Icons.code_rounded : Icons.auto_awesome_rounded, size: 14, color: Design.accent),
+                    const SizedBox(width: 6),
+                    Text(name,
+                        style: TextStyle(
+                            fontSize: Design.baseFontSize - 1,
+                            height: _lineHeight,
+                            fontWeight: FontWeight.w600,
+                            color: Design.text)),
+                  ],
                 ),
-              ],
+              ),
             ),
         ],
       ),
