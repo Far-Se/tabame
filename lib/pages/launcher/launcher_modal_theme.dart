@@ -48,6 +48,14 @@ class LauncherModalTokens {
           onSurface: LiquidMetalTokens.foreground,
           dim: LiquidMetalTokens.dim,
         );
+      case LauncherDesign.crt:
+        return LauncherModalTokens._(
+            design: LauncherDesign.crt,
+            isDark: CrtTokens.isDark,
+            surface: CrtTokens.background,
+            accent: CrtTokens.accent,
+            onSurface: CrtTokens.foreground,
+            dim: CrtTokens.dim);
       case LauncherDesign.phosphor:
         return const LauncherModalTokens._(
             design: LauncherDesign.phosphor,
@@ -295,6 +303,7 @@ class LauncherModalTokens {
         LauncherDesign.newCast => 8.0,
         LauncherDesign.omarchy => 0.0,
         LauncherDesign.aurora => 10.0,
+        LauncherDesign.crt => 2.0,
         LauncherDesign.phosphor => 0.0,
         LauncherDesign.strata => 8.0,
         LauncherDesign.tui => 0.0,
@@ -303,6 +312,7 @@ class LauncherModalTokens {
   /// Designs whose controls carry a visible accent outline (console/drafting
   /// looks); the soft designs use borderless fills instead.
   bool get outlinedControls =>
+      design == LauncherDesign.crt ||
       design == LauncherDesign.tui ||
       design == LauncherDesign.omarchy ||
       design == LauncherDesign.command ||
@@ -325,6 +335,8 @@ class LauncherModalTokens {
     double? height,
   }) {
     return switch (design) {
+      LauncherDesign.crt => CrtTokens.font(size: fontSize ?? 14, color: color ?? onSurface, spacing: letterSpacing)
+          .copyWith(fontWeight: fontWeight, height: height),
       LauncherDesign.opticalGlass => OpticalGlassTokens.font(
               size: fontSize ?? 14,
               weight: fontWeight ?? FontWeight.w500,

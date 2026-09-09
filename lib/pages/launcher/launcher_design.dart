@@ -922,7 +922,7 @@ class LauncherThemeData {
         LauncherDesign.newCast => Icons.chevron_right_rounded,
         LauncherDesign.omarchy => Icons.drag_indicator,
         LauncherDesign.aurora => Icons.search_rounded,
-        LauncherDesign.phosphor => Icons.search_rounded,
+        LauncherDesign.crt || LauncherDesign.phosphor => Icons.search_rounded,
         LauncherDesign.strata => Icons.search_rounded,
         LauncherDesign.tui => Icons.terminal,
       };
@@ -958,7 +958,7 @@ class LauncherThemeData {
         LauncherDesign.newCast => 18.0,
         LauncherDesign.omarchy => 16.0,
         LauncherDesign.aurora => 28.0,
-        LauncherDesign.phosphor => 20.0,
+        LauncherDesign.crt || LauncherDesign.phosphor => 20.0,
         LauncherDesign.strata => 28.0,
         LauncherDesign.tui => 16.0,
       };
@@ -996,7 +996,7 @@ class LauncherThemeData {
         LauncherDesign.newCast => 15.0,
         LauncherDesign.omarchy => 16.0,
         LauncherDesign.aurora => 23.0,
-        LauncherDesign.phosphor => 23.0,
+        LauncherDesign.crt || LauncherDesign.phosphor => 23.0,
         LauncherDesign.strata => 23.0,
         LauncherDesign.tui => TuiTokens.fontSize,
       };
@@ -1031,7 +1031,7 @@ class LauncherThemeData {
         LauncherDesign.newCast => FontWeight.w400,
         LauncherDesign.omarchy => FontWeight.w500,
         LauncherDesign.aurora => FontWeight.w400,
-        LauncherDesign.phosphor => FontWeight.w400,
+        LauncherDesign.crt || LauncherDesign.phosphor => FontWeight.w400,
         LauncherDesign.strata => FontWeight.w400,
         LauncherDesign.tui => FontWeight.w400,
       };
@@ -1073,6 +1073,7 @@ class LauncherThemeData {
         LauncherDesign.newCast => 14.0,
         LauncherDesign.omarchy => 0.0,
         LauncherDesign.aurora => 18.0,
+        LauncherDesign.crt => 18.0,
         LauncherDesign.phosphor => 0.0,
         LauncherDesign.strata => 12.0,
         LauncherDesign.tui => 0.0,
@@ -1153,4 +1154,18 @@ abstract final class PhosphorTokens {
       color: color,
       letterSpacing: spacing,
       height: 1.3));
+}
+
+/// CRT colors follow the active Launcher Colors, including derived chrome.
+abstract final class CrtTokens {
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: 0.7), background);
+  static Color get border => Color.alphaBlend(accent.withValues(alpha: 0.38), background);
+  static Color get bezel => Color.alphaBlend(accent.withValues(alpha: 0.12), background);
+  static Color get selected => Color.alphaBlend(accent.withValues(alpha: 0.16), background);
+  static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+  static TextStyle font({double size = 13, Color? color, double? spacing}) =>
+      PhosphorTokens.font(size: size, color: color ?? foreground, spacing: spacing);
 }

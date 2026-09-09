@@ -74,6 +74,8 @@ flutter:
   uses-material-design: true
 
   shaders:
+    - resources/shaders/crt.frag
+    - resources/shaders/crt_persistence.frag
     - resources/shaders/liquid_metal.frag
     - resources/shaders/optical_glass.frag
 

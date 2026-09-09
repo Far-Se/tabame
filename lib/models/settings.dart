@@ -115,9 +115,11 @@ enum LauncherDesign {
   strata,
   phosphor,
   liquidMetal,
-  opticalGlass;
+  opticalGlass,
+  crt;
 
   String get displayName => switch (this) {
+        LauncherDesign.crt => 'CRT',
         LauncherDesign.liquidMetal => 'Liquid Metal',
         LauncherDesign.opticalGlass => 'Optical Glass',
         LauncherDesign.windowsXp => 'Windows XP',
@@ -748,6 +750,26 @@ class Settings {
           entryFontWeight: 500,
           borderRadius: 16,
         ),
+      ),
+      LauncherDesign.crt.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+            background: const Color(0xFF130F09),
+            textColor: const Color(0xFFFFDDA0),
+            accentColor: const Color(0xFFFFBE62),
+            gradientAlpha: 0,
+            uiFontFamily: 'Consolas',
+            entryFontFamily: 'Consolas',
+            entryFontWeight: 400,
+            borderRadius: 18),
+        darkTheme: _defaultThemeColors(
+            background: const Color(0xFF130F09),
+            textColor: const Color(0xFFFFDDA0),
+            accentColor: const Color(0xFFFFBE62),
+            gradientAlpha: 0,
+            uiFontFamily: 'Consolas',
+            entryFontFamily: 'Consolas',
+            entryFontWeight: 400,
+            borderRadius: 18),
       ),
       LauncherDesign.phosphor.displayName: LauncherDesignThemeSet(
         lightTheme: _defaultThemeColors(

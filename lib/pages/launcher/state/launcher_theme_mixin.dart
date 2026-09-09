@@ -29,6 +29,15 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
           highlightColor: LiquidMetalTokens.accent.withAlpha(30),
           textTheme: GoogleFonts.barlowTextTheme(baseTheme.textTheme)
               .apply(bodyColor: LiquidMetalTokens.foreground, displayColor: LiquidMetalTokens.foreground)),
+      LauncherDesign.crt => _copyDesignTheme(baseTheme,
+          brightness: CrtTokens.isDark ? Brightness.dark : Brightness.light,
+          colorSchemeBrightness: CrtTokens.isDark ? Brightness.dark : Brightness.light,
+          surface: CrtTokens.background,
+          onSurface: CrtTokens.foreground,
+          primary: CrtTokens.accent,
+          highlightColor: CrtTokens.accent.withAlpha(30),
+          textTheme: baseTheme.textTheme
+              .apply(fontFamily: 'Consolas', bodyColor: CrtTokens.foreground, displayColor: CrtTokens.foreground)),
       LauncherDesign.phosphor => _copyDesignTheme(baseTheme,
           brightness: Brightness.dark,
           colorSchemeBrightness: Brightness.dark,

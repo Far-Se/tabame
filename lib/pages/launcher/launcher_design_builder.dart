@@ -12,6 +12,7 @@ import '../../widgets/widgets/date_time_widget.dart';
 import '../quickmenu_designs/design_backdrop_stable.dart';
 import 'launcher_design.dart';
 import 'widgets/liquid_metal_surface.dart';
+import 'widgets/crt_surface.dart';
 
 part 'launcher_designs/manifesto_launcher_design.dart';
 part 'launcher_designs/classic_launcher_design.dart';
@@ -44,6 +45,7 @@ part 'launcher_designs/tui_launcher_design.dart';
 part 'launcher_designs/aurora_launcher_design.dart';
 part 'launcher_designs/strata_launcher_design.dart';
 part 'launcher_designs/phosphor_launcher_design.dart';
+part 'launcher_designs/crt_launcher_design.dart';
 part 'launcher_designs/liquid_metal_launcher_design.dart';
 part 'launcher_designs/optical_glass_launcher_design.dart';
 
@@ -66,6 +68,11 @@ extension LauncherDesignBuilder on LauncherDesign {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: LiquidMetalTokens.border),
         );
+      case LauncherDesign.crt:
+        return BoxDecoration(
+            color: CrtTokens.background,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: CrtTokens.border));
       case LauncherDesign.phosphor:
         return BoxDecoration(
             color: PhosphorTokens.background,
@@ -389,6 +396,9 @@ extension LauncherDesignBuilder on LauncherDesign {
       case LauncherDesign.liquidMetal:
         return LiquidMetalSearchBar(
             dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
+      case LauncherDesign.crt:
+        return CrtSearchBar(
+            dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
       case LauncherDesign.phosphor:
         return PhosphorSearchBar(
             dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
@@ -646,6 +656,7 @@ extension LauncherDesignBuilder on LauncherDesign {
           child: Text(label.toUpperCase(),
               style: LiquidMetalTokens.font(size: 10, color: LiquidMetalTokens.dim, spacing: 1.5)),
         );
+      case LauncherDesign.crt:
       case LauncherDesign.phosphor:
         return const SizedBox.shrink();
       case LauncherDesign.strata:
