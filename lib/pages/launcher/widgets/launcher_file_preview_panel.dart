@@ -281,16 +281,17 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
                     style: StrataTokens.font(size: 12, color: StrataTokens.dim)),
               ])),
               PopupMenuButton<String>(
-                tooltip: 'File actions', icon: const Icon(Icons.more_horiz, color: StrataTokens.dim),
+                tooltip: 'File actions',
+                icon: const Icon(Icons.more_horiz, color: StrataTokens.dim),
                 onSelected: (String action) async {
-                  if (action == 'open') widget.onOpen();
+                  if (action == 'open') widget.onOpen?.call();
                   if (action == 'copy') await Clipboard.setData(ClipboardData(text: widget.entity.path));
                   if (action == 'reveal') await ClipboardService.instance.revealFile(widget.entity.path);
                 },
                 itemBuilder: (BuildContext context) => const <PopupMenuEntry<String>>[
-                  PopupMenuItem(value: 'open', child: Text('Open')),
-                  PopupMenuItem(value: 'copy', child: Text('Copy path')),
-                  PopupMenuItem(value: 'reveal', child: Text('Reveal in Explorer')),
+                  PopupMenuItem<String>(value: 'open', child: Text('Open')),
+                  PopupMenuItem<String>(value: 'copy', child: Text('Copy path')),
+                  PopupMenuItem<String>(value: 'reveal', child: Text('Reveal in Explorer')),
                 ],
               ),
             ])),
@@ -338,7 +339,6 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
                               _strataInformation(data),
                           ]));
                 })),
-
       ]),
     );
   }
@@ -352,7 +352,6 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: StrataTokens.border)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
-
         for (final MapEntry<String, String> entry in <String, String>{
           'Type': _fileKind(data.stat),
           'Size': _formatBytes(data.stat?.size),

@@ -1085,12 +1085,12 @@ abstract final class AuroraTokens {
 
 /// Slate surfaces and cyan outlines from the Strata reference.
 abstract final class StrataTokens {
-  static const background = Color(0xFF0C151A);
-  static const panel = Color(0xFF101A20);
-  static const accent = Color(0xFF20DFE3);
-  static const foreground = Color(0xFFEEF3F7);
-  static const dim = Color(0xFFA8BECE);
-  static const border = Color(0xFF22343F);
+  static const Color background = Color(0xFF0C151A);
+  static const Color panel = Color(0xFF101A20);
+  static const Color accent = Color(0xFF20DFE3);
+  static const Color foreground = Color(0xFFEEF3F7);
+  static const Color dim = Color(0xFFA8BECE);
+  static const Color border = Color(0xFF22343F);
   static TextStyle font({double size = 13, Color color = foreground, double? spacing}) =>
       launcherTextStyle(TextStyle(fontFamily: 'Segoe UI', fontSize: size, color: color, letterSpacing: spacing));
 }

@@ -34,7 +34,7 @@ class _AuroraControls extends StatelessWidget {
       (label: 'Commands', prefix: '/', icon: Icons.terminal_rounded, mode: LauncherSearchMode.actionsOnly),
     ];
     return Padding(
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        padding: const EdgeInsets.fromLTRB(6, 0, 6, 12),
         child: Row(children: <Widget>[
           Expanded(
               child: SingleChildScrollView(

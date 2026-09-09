@@ -260,10 +260,13 @@ class LauncherResultRow extends StatelessWidget {
             color: isSelected ? const Color(0xFF15323C) : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: isSelected ? StrataTokens.accent : StrataTokens.border.withAlpha(120)),
-
           ),
           child: Row(children: <Widget>[
-            Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFF183547), borderRadius: BorderRadius.circular(6)), child: Center(child: icon)),
+            Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: const Color(0xFF183547), borderRadius: BorderRadius.circular(6)),
+                child: Center(child: icon)),
             const SizedBox(width: 15),
             Expanded(
                 child: content ??
@@ -273,8 +276,7 @@ class LauncherResultRow extends StatelessWidget {
                         children: <Widget>[
                           _titleText(StrataTokens.font(size: 15)),
                           if ((subtitle ?? '').isNotEmpty)
-                            _subtitleText(StrataTokens.font(
-                                size: 12, color: StrataTokens.dim)),
+                            _subtitleText(StrataTokens.font(size: 12, color: StrataTokens.dim)),
                         ])),
             if (badge != null) Padding(padding: const EdgeInsets.only(left: 10), child: badge),
             if (isSelected)

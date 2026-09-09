@@ -55,7 +55,10 @@ extension LauncherDesignBuilder on LauncherDesign {
   }) {
     switch (this) {
       case LauncherDesign.strata:
-        return BoxDecoration(color: StrataTokens.background, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF205563)));
+        return BoxDecoration(
+            color: StrataTokens.background,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF205563)));
       case LauncherDesign.aurora:
         return BoxDecoration(
             color: AuroraTokens.background,
@@ -364,9 +367,8 @@ extension LauncherDesignBuilder on LauncherDesign {
   }) {
     switch (this) {
       case LauncherDesign.strata:
-        return StrataSearchBar(dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
-      case LauncherDesign.strata:
-        return StrataSearchBar(dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
+        return StrataSearchBar(
+            dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
       case LauncherDesign.aurora:
         return AuroraSearchBar(
             dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
@@ -608,9 +610,9 @@ extension LauncherDesignBuilder on LauncherDesign {
   Widget buildSectionHeader({required String label, required Color accent}) {
     switch (this) {
       case LauncherDesign.strata:
-        return Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 8), child: Text(label, style: StrataTokens.font(color: StrataTokens.dim)));
-      case LauncherDesign.strata:
-        return Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 8), child: Text(label, style: StrataTokens.font(color: StrataTokens.dim)));
+        return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Text(label, style: StrataTokens.font(color: StrataTokens.dim)));
       case LauncherDesign.aurora:
         return Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 5),

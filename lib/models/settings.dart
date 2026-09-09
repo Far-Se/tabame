@@ -700,6 +700,26 @@ class Settings {
           borderRadius: 7,
         ),
       ),
+      LauncherDesign.strata.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+            background: const Color(0xFF0C151A),
+            textColor: const Color(0xFFEEF3F7),
+            accentColor: const Color(0xFF20DFE3),
+            gradientAlpha: 0,
+            uiFontFamily: 'Segoe UI',
+            entryFontFamily: 'Segoe UI',
+            entryFontWeight: 400,
+            borderRadius: 12),
+        darkTheme: _defaultThemeColors(
+            background: const Color(0xFF0C151A),
+            textColor: const Color(0xFFEEF3F7),
+            accentColor: const Color(0xFF20DFE3),
+            gradientAlpha: 0,
+            uiFontFamily: 'Segoe UI',
+            entryFontFamily: 'Segoe UI',
+            entryFontWeight: 400,
+            borderRadius: 12),
+      ),
       LauncherDesign.aurora.displayName: LauncherDesignThemeSet(
         lightTheme: _defaultThemeColors(
             background: const Color(0xFF031722),

@@ -796,7 +796,6 @@ class LauncherState extends State<Launcher>
     final Color accent = switch (true) {
       _ when _design == LauncherDesign.aurora => AuroraTokens.accent,
       _ when _design == LauncherDesign.strata => StrataTokens.accent,
-      _ when _design == LauncherDesign.strata => StrataTokens.accent,
       _ when isTui => TuiTokens.accent,
       _ when _design == LauncherDesign.omarchy => OmarchyTokens.accent(isDark),
       _ when isZen => ZenTokens.accent(isDark),
@@ -1163,7 +1162,8 @@ class LauncherState extends State<Launcher>
         //     },
         //     onOpen: () => _onSubmitted(_controller.text)),
         if (_design == LauncherDesign.strata)
-          Flexible(fit: FlexFit.loose, child: Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 12), child: resultsContent))
+          Flexible(
+              fit: FlexFit.loose, child: Padding(padding: const EdgeInsets.fromLTRB(3, 0, 3, 6), child: resultsContent))
         else if (_design == LauncherDesign.aurora)
           Flexible(
             fit: FlexFit.loose,
@@ -1200,7 +1200,6 @@ class LauncherState extends State<Launcher>
       LauncherDesign.serene => SereneLauncherFrame.new,
       LauncherDesign.classic => ClassicLauncherFrame.new,
       LauncherDesign.aurora => AuroraLauncherFrame.new,
-      LauncherDesign.strata => StrataLauncherFrame.new,
       LauncherDesign.strata => StrataLauncherFrame.new,
       LauncherDesign.command => CommandLauncherFrame.new,
       LauncherDesign.terminal => TerminalLauncherFrame.new,
@@ -1261,7 +1260,8 @@ class LauncherState extends State<Launcher>
       child: innerContent,
     );
 
-    final bool usesDesignFont = _design == LauncherDesign.strata || _design == LauncherDesign.aurora ||
+    final bool usesDesignFont = _design == LauncherDesign.strata ||
+        _design == LauncherDesign.aurora ||
         isTerminal ||
         isTui ||
         isOmarchy ||
