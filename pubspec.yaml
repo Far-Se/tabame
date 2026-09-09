@@ -84,6 +84,7 @@ flutter:
     - resources/launcher1.webp
     - resources/launcher2.webp
     - resources/launcher3.webp
+    - resources/images/aurora_launcher.png
     - resources/gradient/
     - resources/logos/
     - resources/devtools.png

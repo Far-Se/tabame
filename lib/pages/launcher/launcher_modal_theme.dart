@@ -29,6 +29,22 @@ class LauncherModalTokens {
     final bool isDark = theme.brightness == Brightness.dark;
     final LauncherDesign design = user.launcherDesign;
     switch (design) {
+      case LauncherDesign.strata:
+        return const LauncherModalTokens._(
+            design: LauncherDesign.strata,
+            isDark: true,
+            surface: StrataTokens.background,
+            accent: StrataTokens.accent,
+            onSurface: StrataTokens.foreground,
+            dim: StrataTokens.dim);
+      case LauncherDesign.aurora:
+        return const LauncherModalTokens._(
+            design: LauncherDesign.aurora,
+            isDark: true,
+            surface: AuroraTokens.background,
+            accent: AuroraTokens.accent,
+            onSurface: AuroraTokens.foreground,
+            dim: AuroraTokens.dim);
       case LauncherDesign.tui:
         return LauncherModalTokens._(
           design: design,
@@ -249,6 +265,8 @@ class LauncherModalTokens {
         LauncherDesign.terminal2 => 2.0,
         LauncherDesign.newCast => 8.0,
         LauncherDesign.omarchy => 0.0,
+        LauncherDesign.aurora => 10.0,
+        LauncherDesign.strata => 8.0,
         LauncherDesign.tui => 0.0,
       };
 

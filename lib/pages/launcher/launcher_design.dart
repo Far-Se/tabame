@@ -893,6 +893,8 @@ class LauncherThemeData {
         LauncherDesign.terminal2 => Icons.terminal_rounded,
         LauncherDesign.newCast => Icons.chevron_right_rounded,
         LauncherDesign.omarchy => Icons.drag_indicator,
+        LauncherDesign.aurora => Icons.search_rounded,
+        LauncherDesign.strata => Icons.search_rounded,
         LauncherDesign.tui => Icons.terminal,
       };
 
@@ -924,6 +926,8 @@ class LauncherThemeData {
         LauncherDesign.terminal2 => 20.0,
         LauncherDesign.newCast => 18.0,
         LauncherDesign.omarchy => 16.0,
+        LauncherDesign.aurora => 28.0,
+        LauncherDesign.strata => 28.0,
         LauncherDesign.tui => 16.0,
       };
 
@@ -957,6 +961,8 @@ class LauncherThemeData {
         LauncherDesign.terminal2 => 14.0,
         LauncherDesign.newCast => 15.0,
         LauncherDesign.omarchy => 16.0,
+        LauncherDesign.aurora => 23.0,
+        LauncherDesign.strata => 23.0,
         LauncherDesign.tui => TuiTokens.fontSize,
       };
   FontWeight? get searchFontWeight => switch (design) {
@@ -987,6 +993,8 @@ class LauncherThemeData {
         LauncherDesign.terminal2 => FontWeight.w500,
         LauncherDesign.newCast => FontWeight.w400,
         LauncherDesign.omarchy => FontWeight.w500,
+        LauncherDesign.aurora => FontWeight.w400,
+        LauncherDesign.strata => FontWeight.w400,
         LauncherDesign.tui => FontWeight.w400,
       };
 
@@ -1024,6 +1032,8 @@ class LauncherThemeData {
         LauncherDesign.terminal2 => 2.0,
         LauncherDesign.newCast => 14.0,
         LauncherDesign.omarchy => 0.0,
+        LauncherDesign.aurora => 18.0,
+        LauncherDesign.strata => 12.0,
         LauncherDesign.tui => 0.0,
       };
 
@@ -1059,4 +1069,28 @@ class LauncherTheme extends InheritedWidget {
 
   @override
   bool updateShouldNotify(LauncherTheme oldWidget) => data != oldWidget.data;
+}
+
+/// Reference palette for the Aurora night landscape design.
+abstract final class AuroraTokens {
+  static const Color background = Color(0xFF031722);
+  static const Color panel = Color(0xD9081B27);
+  static const Color accent = Color(0xFF00E5F5);
+  static const Color foreground = Color(0xFFE4F5FF);
+  static const Color dim = Color(0xFF8BBAD7);
+  static const Color border = Color(0xFF16556A);
+  static TextStyle font({double size = 13, Color color = foreground, double? spacing}) =>
+      launcherTextStyle(TextStyle(fontFamily: 'Segoe UI', fontSize: size, color: color, letterSpacing: spacing));
+}
+
+/// Slate surfaces and cyan outlines from the Strata reference.
+abstract final class StrataTokens {
+  static const background = Color(0xFF0C151A);
+  static const panel = Color(0xFF101A20);
+  static const accent = Color(0xFF20DFE3);
+  static const foreground = Color(0xFFEEF3F7);
+  static const dim = Color(0xFFA8BECE);
+  static const border = Color(0xFF22343F);
+  static TextStyle font({double size = 13, Color color = foreground, double? spacing}) =>
+      launcherTextStyle(TextStyle(fontFamily: 'Segoe UI', fontSize: size, color: color, letterSpacing: spacing));
 }

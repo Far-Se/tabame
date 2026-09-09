@@ -211,6 +211,8 @@ class LauncherResultRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final LauncherDesign design = LauncherTheme.maybeOf(context)?.design ?? user.launcherDesign;
     return switch (design) {
+      LauncherDesign.aurora => _buildAurora(context),
+      LauncherDesign.strata => _buildStrata(context),
       LauncherDesign.serene => _buildSerene(context),
       LauncherDesign.command => _buildCommand(context),
       LauncherDesign.terminal => _buildTerminal(context),
@@ -240,6 +242,93 @@ class LauncherResultRow extends StatelessWidget {
       LauncherDesign.omarchy => _buildOmarchy(context),
       LauncherDesign.tui => _buildTui(context),
     };
+  }
+
+  Widget _buildStrata(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onHover: (PointerHoverEvent event) {
+        if (event.delta != Offset.zero) onHover();
+      },
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF15323C) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: isSelected ? StrataTokens.accent : StrataTokens.border.withAlpha(120)),
+
+          ),
+          child: Row(children: <Widget>[
+            Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFF183547), borderRadius: BorderRadius.circular(6)), child: Center(child: icon)),
+            const SizedBox(width: 15),
+            Expanded(
+                child: content ??
+                    Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          _titleText(StrataTokens.font(size: 15)),
+                          if ((subtitle ?? '').isNotEmpty)
+                            _subtitleText(StrataTokens.font(
+                                size: 12, color: StrataTokens.dim)),
+                        ])),
+            if (badge != null) Padding(padding: const EdgeInsets.only(left: 10), child: badge),
+            if (isSelected)
+              const Padding(
+                  padding: EdgeInsets.only(left: 16),
+                  child: Icon(Icons.keyboard_return_rounded, color: StrataTokens.accent, size: 21)),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAurora(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onHover: (PointerHoverEvent event) {
+        if (event.delta != Offset.zero) onHover();
+      },
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          decoration: BoxDecoration(
+            color: isSelected ? AuroraTokens.background.withAlpha(225) : Colors.transparent,
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(color: isSelected ? AuroraTokens.accent : Colors.transparent),
+            boxShadow:
+                isSelected ? <BoxShadow>[BoxShadow(color: AuroraTokens.accent.withAlpha(45), blurRadius: 10)] : null,
+          ),
+          child: Row(children: <Widget>[
+            SizedBox(width: 30, height: 32, child: Center(child: icon)),
+            const SizedBox(width: 15),
+            Expanded(
+                child: content ??
+                    Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          _titleText(AuroraTokens.font(size: 14)),
+                          if ((subtitle ?? '').isNotEmpty)
+                            _subtitleText(AuroraTokens.font(
+                                size: 11, color: isSelected ? AuroraTokens.accent : AuroraTokens.dim)),
+                        ])),
+            if (badge != null) Padding(padding: const EdgeInsets.only(left: 10), child: badge),
+            if (isSelected)
+              const Padding(
+                  padding: EdgeInsets.only(left: 16),
+                  child: Icon(Icons.keyboard_return_rounded, color: AuroraTokens.accent, size: 21)),
+          ]),
+        ),
+      ),
+    );
   }
 
   Widget _buildRaycast(BuildContext context) {

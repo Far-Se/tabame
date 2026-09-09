@@ -11,6 +11,24 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
     required Color accent,
   }) {
     return switch (_design) {
+      LauncherDesign.strata => _copyDesignTheme(baseTheme,
+          brightness: Brightness.dark,
+          colorSchemeBrightness: Brightness.dark,
+          surface: StrataTokens.background,
+          onSurface: StrataTokens.foreground,
+          primary: StrataTokens.accent,
+          highlightColor: StrataTokens.accent.withAlpha(30),
+          textTheme: baseTheme.textTheme.apply(
+              fontFamily: 'Segoe UI', bodyColor: StrataTokens.foreground, displayColor: StrataTokens.foreground)),
+      LauncherDesign.aurora => _copyDesignTheme(baseTheme,
+          brightness: Brightness.dark,
+          colorSchemeBrightness: Brightness.dark,
+          surface: AuroraTokens.background,
+          onSurface: AuroraTokens.foreground,
+          primary: AuroraTokens.accent,
+          highlightColor: AuroraTokens.accent.withAlpha(30),
+          textTheme: baseTheme.textTheme.apply(
+              fontFamily: 'Segoe UI', bodyColor: AuroraTokens.foreground, displayColor: AuroraTokens.foreground)),
       LauncherDesign.tui => _copyDesignTheme(
           baseTheme,
           surface: TuiTokens.background,

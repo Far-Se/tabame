@@ -81,6 +81,7 @@ import 'launcher/services/windows_terminal_service.dart';
 
 export 'launcher/result/result_item_bookmark.dart' show BookmarkSearchResult, BookmarkResultKind;
 part 'launcher/launcher_helpers.dart';
+part 'launcher/widgets/aurora_launcher_controls.dart';
 part 'launcher/state/launcher_theme_mixin.dart';
 part 'launcher/widgets/launcher_window_preview_panel.dart';
 part 'launcher/widgets/launcher_file_preview_panel.dart';
@@ -129,6 +130,8 @@ class LauncherState extends State<Launcher>
         _ResultRowBuildersMixin {
   static const double _minResultsHeight = 300;
   static const double _maxResultsHeight = 454;
+  // Preserve the existing saved-height scale; the results panel excludes this inset.
+  static const double _resultsHeightInset = 27;
   static const double _designResultExtent = 52;
   static const double _minPreviewAppWidth = 500;
   static const double _minPreviewPanelWidth = 180;
@@ -144,6 +147,7 @@ class LauncherState extends State<Launcher>
   final FocusNode _resultsFocusNode = FocusNode(debugLabel: 'Launcher results');
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _resultsViewportKey = GlobalKey();
+  final GlobalKey _resultsHeightKey = GlobalKey();
   final GlobalKey _pluginsSectionHeaderKey = GlobalKey();
   final ValueNotifier<int> _activeIndexNotifier = ValueNotifier<int>(0);
   final ValueNotifier<bool> _isRepeatingKey = ValueNotifier<bool>(false);
@@ -165,6 +169,7 @@ class LauncherState extends State<Launcher>
   double _resultsMaxHeight = _maxResultsHeight;
   bool _isResizeHandleHovered = false;
   bool _isResizingResults = false;
+  ({double pointerY, double height})? _heightResizeStart;
   bool _isFilePreviewVisible = true;
   double? _previewWidthPercent;
   bool _isPluginsSectionActive = false;
@@ -789,6 +794,9 @@ class LauncherState extends State<Launcher>
     // Glass keeps the theme colors (its glass picks them up) and only forces
     // Inter for the iOS feel.
     final Color accent = switch (true) {
+      _ when _design == LauncherDesign.aurora => AuroraTokens.accent,
+      _ when _design == LauncherDesign.strata => StrataTokens.accent,
+      _ when _design == LauncherDesign.strata => StrataTokens.accent,
       _ when isTui => TuiTokens.accent,
       _ when _design == LauncherDesign.omarchy => OmarchyTokens.accent(isDark),
       _ when isZen => ZenTokens.accent(isDark),
@@ -881,14 +889,16 @@ class LauncherState extends State<Launcher>
       isSearching: _isSearching,
     );
     final ({int height, int width}) size = Win32.getSize();
+    final double resultsHeight =
+        math.max(0, math.min(_resultsMaxHeight - _resultsHeightInset, size.height.toDouble() - _resultsHeightInset));
     final Widget resultsContent = Focus(
       focusNode: _resultsFocusNode,
       skipTraversal: true,
       child: Material(
         type: MaterialType.transparency,
         child: ConstrainedBox(
-          constraints:
-              BoxConstraints(minHeight: 260, maxHeight: math.min(_resultsMaxHeight - 27, size.height.toDouble() - 27)),
+          key: _resultsHeightKey,
+          constraints: BoxConstraints(minHeight: math.min(260, resultsHeight), maxHeight: resultsHeight),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -955,7 +965,7 @@ class LauncherState extends State<Launcher>
                                 final double minPreviewWidth =
                                     _minPreviewPanelWidth.clamp(0, maxPreviewWidth).toDouble();
                                 final double preferredPreviewWidth = _previewWidthPercent == null
-                                    ? constraints.maxWidth * 0.40
+                                    ? constraints.maxWidth * (_design == LauncherDesign.strata ? 0.45 : 0.40)
                                     : appWidth * _previewWidthPercent! / 100;
                                 final double previewWidth =
                                     preferredPreviewWidth.clamp(minPreviewWidth, maxPreviewWidth).toDouble();
@@ -1042,7 +1052,19 @@ class LauncherState extends State<Launcher>
                                                       _selectResultFromPointerHover(event, index),
                                                   child: Stack(
                                                     alignment: Alignment.centerRight,
-                                                    children: <Widget>[resultWithDivider],
+                                                    children: <Widget>[
+                                                      if (_design == LauncherDesign.aurora &&
+                                                          (index == 0 ||
+                                                              _auroraResultGroup(_results[index - 1]) !=
+                                                                  _auroraResultGroup(result)))
+                                                        Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                                                          _design.buildSectionHeader(
+                                                              label: _auroraResultGroup(result), accent: accent),
+                                                          resultWithDivider,
+                                                        ])
+                                                      else
+                                                        resultWithDivider,
+                                                    ],
                                                   ),
                                                 ),
                                               ),
@@ -1061,6 +1083,7 @@ class LauncherState extends State<Launcher>
                                             ? _LauncherFilePreviewPanel(
                                                 key: ValueKey<String>(previewEntity.path),
                                                 entity: previewEntity,
+                                                onOpen: () => _onSubmitted(_controller.text),
                                                 design: _design,
                                                 accent: accent,
                                                 onSurface: onSurface,
@@ -1125,7 +1148,36 @@ class LauncherState extends State<Launcher>
     );
     final Widget layoutContent = Column(
       mainAxisSize: MainAxisSize.min,
-      children: <Widget>[searchContent, resultsContent],
+      children: <Widget>[
+        searchContent,
+        // if (_design == LauncherDesign.aurora && _activePlugin == null)
+        // _AuroraControls(
+        //     query: _controller.text,
+        //     results: _results,
+        //     isSearching: _isSearching,
+        //     onQuery: (String value) {
+        //       _controller.text = value;
+        //       _controller.selection = TextSelection.collapsed(offset: value.length);
+        //       _onSearchChanged(value);
+        //       _searchFocusNode.requestFocus();
+        //     },
+        //     onOpen: () => _onSubmitted(_controller.text)),
+        if (_design == LauncherDesign.strata)
+          Flexible(fit: FlexFit.loose, child: Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 12), child: resultsContent))
+        else if (_design == LauncherDesign.aurora)
+          Flexible(
+            fit: FlexFit.loose,
+            child: Container(
+                margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                decoration: BoxDecoration(
+                    color: AuroraTokens.background.withAlpha(70),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AuroraTokens.border)),
+                child: resultsContent),
+          )
+        else
+          resultsContent,
+      ],
     );
     final Widget innerContent = Stack(
       children: <Widget>[
@@ -1147,6 +1199,9 @@ class LauncherState extends State<Launcher>
     final LauncherFrameBuilder frameBuilder = switch (_design) {
       LauncherDesign.serene => SereneLauncherFrame.new,
       LauncherDesign.classic => ClassicLauncherFrame.new,
+      LauncherDesign.aurora => AuroraLauncherFrame.new,
+      LauncherDesign.strata => StrataLauncherFrame.new,
+      LauncherDesign.strata => StrataLauncherFrame.new,
       LauncherDesign.command => CommandLauncherFrame.new,
       LauncherDesign.terminal => TerminalLauncherFrame.new,
       LauncherDesign.zen => ZenLauncherFrame.new,
@@ -1206,7 +1261,8 @@ class LauncherState extends State<Launcher>
       child: innerContent,
     );
 
-    final bool usesDesignFont = isTerminal ||
+    final bool usesDesignFont = _design == LauncherDesign.strata || _design == LauncherDesign.aurora ||
+        isTerminal ||
         isTui ||
         isOmarchy ||
         isTerminal2 ||
@@ -1295,22 +1351,48 @@ class LauncherState extends State<Launcher>
       },
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onVerticalDragStart: (_) {
+        onVerticalDragStart: (DragStartDetails details) {
+          final RenderObject? resultsObject = _resultsHeightKey.currentContext?.findRenderObject();
+          if (resultsObject is! RenderBox || !resultsObject.hasSize) return;
+          _heightResizeStart = (
+            pointerY: details.globalPosition.dy,
+            height: math.min(_resultsMaxHeight, resultsObject.size.height + _resultsHeightInset),
+          );
           if (!_isResizingResults) setState(() => _isResizingResults = true);
         },
         onVerticalDragEnd: (_) {
+          _heightResizeStart = null;
           if (_isResizingResults) setState(() => _isResizingResults = false);
           unawaited(Boxes.updateSettings('launcherResultsHeight', _resultsMaxHeight));
         },
         onVerticalDragCancel: () {
+          _heightResizeStart = null;
           if (_isResizingResults) setState(() => _isResizingResults = false);
           unawaited(Boxes.updateSettings('launcherResultsHeight', _resultsMaxHeight));
         },
         onVerticalDragUpdate: (DragUpdateDetails details) {
-          // final Size size = await windowManager.getSize();
-          final ({int height, int width}) size = Win32.getSize();
+          final ({double pointerY, double height})? start = _heightResizeStart;
+          if (start == null) return;
+          final RenderObject? frameObject = context.findRenderObject();
+          final RenderObject? resultsObject = _resultsHeightKey.currentContext?.findRenderObject();
+          if (frameObject is! RenderBox ||
+              resultsObject is! RenderBox ||
+              !frameObject.hasSize ||
+              !resultsObject.hasSize ||
+              !frameObject.constraints.hasBoundedHeight) return;
+
+          // Measure all theme chrome (including footer, borders and controls),
+          // and use the parent's logical-pixel limit, which already excludes
+          // outer window padding. No per-theme or screen-size allowance needed.
+          final double chromeHeight = math.max(0, frameObject.size.height - resultsObject.size.height);
+          final double maxHeight =
+              math.max(_resultsHeightInset, frameObject.constraints.maxHeight - chromeHeight + _resultsHeightInset);
+          final double minHeight = math.min(_minResultsHeight, maxHeight);
+          // Anchor to the visible height once per gesture. Reading it on every
+          // update loses movement when several pointer events precede layout.
+          // Global displacement also stays stable as the handle itself moves.
           final double nextHeight =
-              (_resultsMaxHeight + details.delta.dy).clamp(_minResultsHeight, size.height - 140).toDouble();
+              (start.height + details.globalPosition.dy - start.pointerY).clamp(minHeight, maxHeight).toDouble();
 
           if (nextHeight == _resultsMaxHeight) return;
 

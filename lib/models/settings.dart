@@ -110,7 +110,9 @@ enum LauncherDesign {
   relay,
   newCast,
   omarchy,
-  tui;
+  tui,
+  aurora,
+  strata;
 
   String get displayName => switch (this) {
         LauncherDesign.windowsXp => 'Windows XP',
@@ -697,6 +699,26 @@ class Settings {
           entryFontWeight: 600,
           borderRadius: 7,
         ),
+      ),
+      LauncherDesign.aurora.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+            background: const Color(0xFF031722),
+            textColor: const Color(0xFFE4F5FF),
+            accentColor: const Color(0xFF00E5F5),
+            gradientAlpha: 0,
+            uiFontFamily: 'Segoe UI',
+            entryFontFamily: 'Segoe UI',
+            entryFontWeight: 400,
+            borderRadius: 18),
+        darkTheme: _defaultThemeColors(
+            background: const Color(0xFF031722),
+            textColor: const Color(0xFFE4F5FF),
+            accentColor: const Color(0xFF00E5F5),
+            gradientAlpha: 0,
+            uiFontFamily: 'Segoe UI',
+            entryFontFamily: 'Segoe UI',
+            entryFontWeight: 400,
+            borderRadius: 18),
       ),
       LauncherDesign.newCast.displayName: LauncherDesignThemeSet(
         lightTheme: _defaultThemeColors(

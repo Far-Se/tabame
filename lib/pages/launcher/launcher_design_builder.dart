@@ -40,6 +40,8 @@ part 'launcher_designs/relay_launcher_design.dart';
 part 'launcher_designs/newcast_launcher_design.dart';
 part 'launcher_designs/omarchy_launcher_design.dart';
 part 'launcher_designs/tui_launcher_design.dart';
+part 'launcher_designs/aurora_launcher_design.dart';
+part 'launcher_designs/strata_launcher_design.dart';
 
 // ---------------------------------------------------------------------------
 // Extension: per-design widget factories used by LauncherState
@@ -52,6 +54,13 @@ extension LauncherDesignBuilder on LauncherDesign {
     required Color accent,
   }) {
     switch (this) {
+      case LauncherDesign.strata:
+        return BoxDecoration(color: StrataTokens.background, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF205563)));
+      case LauncherDesign.aurora:
+        return BoxDecoration(
+            color: AuroraTokens.background,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AuroraTokens.border));
       case LauncherDesign.tui:
         return BoxDecoration(color: surface, border: Border.all(color: TuiTokens.border));
       case LauncherDesign.omarchy:
@@ -354,6 +363,14 @@ extension LauncherDesignBuilder on LauncherDesign {
     required bool isSearching,
   }) {
     switch (this) {
+      case LauncherDesign.strata:
+        return StrataSearchBar(dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
+      case LauncherDesign.strata:
+        return StrataSearchBar(dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
+      case LauncherDesign.aurora:
+        return AuroraSearchBar(
+            dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
+
       case LauncherDesign.classic:
         return _ClassicSearchBar(
           surface: surface,
@@ -590,6 +607,19 @@ extension LauncherDesignBuilder on LauncherDesign {
   /// Returns the section-header label widget.
   Widget buildSectionHeader({required String label, required Color accent}) {
     switch (this) {
+      case LauncherDesign.strata:
+        return Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 8), child: Text(label, style: StrataTokens.font(color: StrataTokens.dim)));
+      case LauncherDesign.strata:
+        return Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 8), child: Text(label, style: StrataTokens.font(color: StrataTokens.dim)));
+      case LauncherDesign.aurora:
+        return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 5),
+            child: Row(children: <Widget>[
+              Text(label.toUpperCase(), style: AuroraTokens.font(size: 11, color: AuroraTokens.dim, spacing: 1.8)),
+              const SizedBox(width: 12),
+              const Expanded(child: Divider(color: AuroraTokens.border, height: 1)),
+            ]));
+
       case LauncherDesign.classic:
         return Padding(
           padding: const EdgeInsets.only(left: 16, top: 12, bottom: 4),

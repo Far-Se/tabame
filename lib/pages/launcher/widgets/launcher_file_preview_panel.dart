@@ -23,8 +23,10 @@ class _LauncherFilePreviewPanel extends StatefulWidget {
     required this.design,
     required this.accent,
     required this.onSurface,
+    this.onOpen,
   });
 
+  final VoidCallback? onOpen;
   final FileSystemEntity entity;
   final LauncherDesign design;
   final Color accent;
@@ -102,6 +104,9 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
   };
 
   late Future<_LauncherFilePreviewData> _previewData;
+  bool _auroraDetails = false;
+  bool _strataDetails = false;
+  bool _auroraCopied = false;
 
   @override
   void initState() {
@@ -212,6 +217,8 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    if (widget.design == LauncherDesign.strata) return _buildStrataPanel(theme);
+    if (widget.design == LauncherDesign.aurora) return _buildAuroraPanel(theme);
     final double radius = math.min(LauncherThemeData(design: widget.design).frameRadius, 10);
     final Color panelColor = Color.alphaBlend(widget.onSurface.withAlpha(12), theme.colorScheme.surface);
 
@@ -246,6 +253,278 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStrataPanel(ThemeData theme) {
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+          color: StrataTokens.panel,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: StrataTokens.border)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+        Padding(
+            padding: const EdgeInsets.fromLTRB(15, 16, 15, 10),
+            child: Row(children: <Widget>[
+              Icon(widget.entity is Directory ? Icons.folder_rounded : Icons.description_rounded,
+                  color: const Color(0xFF41BFFA), size: 48),
+              const SizedBox(width: 14),
+              Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                Text(p.basename(widget.entity.path),
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: StrataTokens.font(size: 18)),
+                const SizedBox(height: 5),
+                Text(widget.entity.path,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: StrataTokens.font(size: 12, color: StrataTokens.dim)),
+              ])),
+              PopupMenuButton<String>(
+                tooltip: 'File actions', icon: const Icon(Icons.more_horiz, color: StrataTokens.dim),
+                onSelected: (String action) async {
+                  if (action == 'open') widget.onOpen();
+                  if (action == 'copy') await Clipboard.setData(ClipboardData(text: widget.entity.path));
+                  if (action == 'reveal') await ClipboardService.instance.revealFile(widget.entity.path);
+                },
+                itemBuilder: (BuildContext context) => const <PopupMenuEntry<String>>[
+                  PopupMenuItem(value: 'open', child: Text('Open')),
+                  PopupMenuItem(value: 'copy', child: Text('Copy path')),
+                  PopupMenuItem(value: 'reveal', child: Text('Reveal in Explorer')),
+                ],
+              ),
+            ])),
+        Row(children: <Widget>[
+          for (final bool details in <bool>[false, true])
+            Expanded(
+                child: InkWell(
+              onTap: () => setState(() => _strataDetails = details),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    border: Border(
+                        bottom: BorderSide(
+                            color: _strataDetails == details ? StrataTokens.accent : StrataTokens.border,
+                            width: _strataDetails == details ? 2 : 1))),
+                child: Text(details ? 'Details' : 'Preview',
+                    style: StrataTokens.font(
+                        size: 14, color: _strataDetails == details ? StrataTokens.accent : StrataTokens.dim)),
+              ),
+            )),
+        ]),
+        Expanded(
+            child: FutureBuilder<_LauncherFilePreviewData>(
+                future: _previewData,
+                builder: (BuildContext context, AsyncSnapshot<_LauncherFilePreviewData> snapshot) {
+                  if (!snapshot.hasData)
+                    return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: StrataTokens.accent));
+                  final _LauncherFilePreviewData data = snapshot.data!;
+                  return LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints constraints) => Column(children: <Widget>[
+                            if (!_strataDetails)
+                              Expanded(
+                                  child: Container(
+                                      margin: const EdgeInsets.all(12),
+                                      clipBehavior: Clip.antiAlias,
+                                      decoration: BoxDecoration(
+                                          color: StrataTokens.background.withAlpha(180),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: StrataTokens.border)),
+                                      child: _buildContentPreview(theme, data))),
+                            if (_strataDetails)
+                              Expanded(child: SingleChildScrollView(child: _strataInformation(data)))
+                            else if (constraints.maxHeight >= 350)
+                              _strataInformation(data),
+                          ]));
+                })),
+
+      ]),
+    );
+  }
+
+  Widget _strataInformation(_LauncherFilePreviewData data) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+          color: StrataTokens.background.withAlpha(130),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: StrataTokens.border)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+
+        for (final MapEntry<String, String> entry in <String, String>{
+          'Type': _fileKind(data.stat),
+          'Size': _formatBytes(data.stat?.size),
+          'Modified': _formatDate(data.stat?.modified),
+          'Location': p.dirname(widget.entity.path)
+        }.entries)
+          Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                SizedBox(
+                    width: 84, child: Text(entry.key, style: StrataTokens.font(size: 12, color: StrataTokens.dim))),
+                Expanded(
+                    child: Text(entry.value,
+                        style: StrataTokens.font(size: 12, color: StrataTokens.dim),
+                        maxLines: entry.key == 'Path' ? 3 : 2,
+                        overflow: TextOverflow.ellipsis)),
+              ])),
+      ]),
+    );
+  }
+
+  Widget _buildAuroraPanel(ThemeData theme) {
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+          color: AuroraTokens.panel,
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: AuroraTokens.border)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+        Padding(
+            padding: const EdgeInsets.fromLTRB(15, 16, 15, 10),
+            child: Row(children: <Widget>[
+              Icon(widget.entity is Directory ? Icons.folder_rounded : Icons.description_rounded,
+                  color: const Color(0xFF41BFFA), size: 36),
+              const SizedBox(width: 14),
+              Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                Text(p.basename(widget.entity.path),
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: AuroraTokens.font(size: 18)),
+                const SizedBox(height: 5),
+                Text(widget.entity.path,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AuroraTokens.font(size: 11, color: AuroraTokens.dim)),
+              ])),
+            ])),
+        Row(children: <Widget>[
+          for (final bool details in <bool>[false, true])
+            Expanded(
+                child: InkWell(
+              onTap: () => setState(() => _auroraDetails = details),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    border: Border(
+                        bottom: BorderSide(
+                            color: _auroraDetails == details ? AuroraTokens.accent : AuroraTokens.border,
+                            width: _auroraDetails == details ? 2 : 1))),
+                child: Text(details ? 'Details' : 'Preview',
+                    style: AuroraTokens.font(
+                        size: 12, color: _auroraDetails == details ? AuroraTokens.foreground : AuroraTokens.dim)),
+              ),
+            )),
+        ]),
+        Expanded(
+            child: FutureBuilder<_LauncherFilePreviewData>(
+                future: _previewData,
+                builder: (BuildContext context, AsyncSnapshot<_LauncherFilePreviewData> snapshot) {
+                  if (!snapshot.hasData)
+                    return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AuroraTokens.accent));
+                  final _LauncherFilePreviewData data = snapshot.data!;
+                  return LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints constraints) => Column(children: <Widget>[
+                            if (!_auroraDetails)
+                              Expanded(
+                                  child: Container(
+                                      margin: const EdgeInsets.all(12),
+                                      clipBehavior: Clip.antiAlias,
+                                      decoration: BoxDecoration(
+                                          color: AuroraTokens.background.withAlpha(180),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: AuroraTokens.border)),
+                                      child: _buildContentPreview(theme, data))),
+                            if (_auroraDetails)
+                              Expanded(child: SingleChildScrollView(child: _auroraInformation(data)))
+                            else if (constraints.maxHeight >= 350)
+                              _auroraInformation(data),
+                          ]));
+                })),
+        Padding(
+            padding: const EdgeInsets.all(12),
+            child: LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
+              final bool wide = constraints.maxWidth >= 330;
+              return Row(children: <Widget>[
+                Expanded(
+                    child: FilledButton.icon(
+                        onPressed: widget.onOpen,
+                        style: FilledButton.styleFrom(
+                            backgroundColor: AuroraTokens.accent,
+                            foregroundColor: AuroraTokens.background,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 15),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                        icon: const Icon(Icons.folder_open_outlined, size: 18),
+                        label: const Text('Open'))),
+                const SizedBox(width: 6),
+                Tooltip(
+                    message: 'Open in Explorer',
+                    child: OutlinedButton(
+                        onPressed: () async {
+                          final bool opened = await ClipboardService.instance.revealFile(widget.entity.path);
+                          if (!opened && mounted)
+                            ScaffoldMessenger.maybeOf(context)
+                                ?.showSnackBar(const SnackBar(content: Text('Could not open this location.')));
+                        },
+                        style: OutlinedButton.styleFrom(
+                            foregroundColor: AuroraTokens.foreground,
+                            side: const BorderSide(color: AuroraTokens.border),
+                            minimumSize: const Size(36, 44),
+                            padding: const EdgeInsets.symmetric(horizontal: 10)),
+                        child: wide ? const Text('Explorer') : const Icon(Icons.folder_outlined, size: 18))),
+                const SizedBox(width: 6),
+                Tooltip(
+                    message: _auroraCopied ? 'Path copied' : 'Copy path',
+                    child: OutlinedButton(
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: widget.entity.path));
+                          if (mounted) setState(() => _auroraCopied = true);
+                        },
+                        style: OutlinedButton.styleFrom(
+                            foregroundColor: AuroraTokens.foreground,
+                            side: const BorderSide(color: AuroraTokens.border),
+                            minimumSize: const Size(36, 44),
+                            padding: const EdgeInsets.symmetric(horizontal: 10)),
+                        child: wide
+                            ? Text(_auroraCopied ? 'Copied' : 'Copy path')
+                            : Icon(_auroraCopied ? Icons.check : Icons.copy_outlined, size: 18))),
+              ]);
+            })),
+      ]),
+    );
+  }
+
+  Widget _auroraInformation(_LauncherFilePreviewData data) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+          color: AuroraTokens.background.withAlpha(130),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AuroraTokens.border)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+        Text('File Information', style: AuroraTokens.font(size: 12)),
+        const SizedBox(height: 12),
+        for (final MapEntry<String, String> entry in <String, String>{
+          'Type': _fileKind(data.stat),
+          'Size': _formatBytes(data.stat?.size),
+          'Modified': _formatDate(data.stat?.modified),
+          'Path': widget.entity.path
+        }.entries)
+          Padding(
+              padding: const EdgeInsets.only(bottom: 7),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                SizedBox(
+                    width: 64, child: Text(entry.key, style: AuroraTokens.font(size: 10, color: AuroraTokens.dim))),
+                Expanded(
+                    child: Text(entry.value,
+                        style: AuroraTokens.font(size: 11),
+                        maxLines: entry.key == 'Path' ? 3 : 2,
+                        overflow: TextOverflow.ellipsis)),
+              ])),
+      ]),
     );
   }
 

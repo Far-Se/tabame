@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../models/settings.dart';
 import '../../../services/ai_coding_usage_service.dart';
 import '../../../services/claude_usage_service.dart';
 import '../../../services/codex_usage_service.dart';
+import '../../widgets/custom_tooltip.dart';
 import '../../widgets/quick_actions_item.dart';
 
 class ClaudeUsageButton extends StatelessWidget {
@@ -35,9 +35,12 @@ class _UsageButton extends StatelessWidget {
         final _UsageSnapshot usage = _UsageSnapshot(codex);
         return Tooltip(
           key: tooltipKey,
+          ignorePointer: false,
+          enableTapToDismiss: false,
           preferBelow: !user.quickActionsAtBottom,
           verticalOffset: 14,
           waitDuration: const Duration(milliseconds: 110),
+          exitDuration: const Duration(milliseconds: 500),
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
@@ -96,6 +99,7 @@ class _UsageDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final _UsageSnapshot usage = _UsageSnapshot(codex);
+    final bool alertEnabled = AiCodingUsageService.instance.resetAlertEnabled(codex);
     return SizedBox(
       width: 250,
       child: DefaultTextStyle(
@@ -104,14 +108,41 @@ class _UsageDetails extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text('${usage.name} usage', style: const TextStyle(fontWeight: FontWeight.w600)),
+            Row(
+              children: <Widget>[
+                Expanded(child: Text('${usage.name} usage', style: const TextStyle(fontWeight: FontWeight.w600))),
+                Material(
+                  type: MaterialType.transparency,
+                  child: Semantics(
+                    toggled: alertEnabled,
+                    label:
+                        alertEnabled ? 'Disable recurring 5-hour reset alerts' : 'Enable recurring 5-hour reset alerts',
+                    child: CustomTooltip(
+                      message: alertEnabled
+                          ? 'Disable recurring 5-hour reset alerts'
+                          : 'Enable recurring 5-hour reset alerts',
+                      child: IconButton(
+                        // A nested Tooltip would dismiss the enclosing usage overlay on hover.
+                        onPressed: () => AiCodingUsageService.instance.toggleResetAlert(codex),
+                        constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+                        padding: EdgeInsets.zero,
+                        iconSize: 16,
+                        color: alertEnabled ? Design.accent : Design.text.withAlpha(175),
+                        icon:
+                            Icon(alertEnabled ? Icons.notifications_active_outlined : Icons.notifications_none_rounded),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             if (usage.fetchedAt != null) ...<Widget>[
               _limit('5-hour limit', usage.five, usage.fiveReset, usage.fiveFallback),
               const SizedBox(height: 8),
               _limit('Weekly limit', usage.week, usage.weekReset, usage.weekFallback),
               const SizedBox(height: 8),
-              Text('Fetched ${_date(usage.fetchedAt!)}',
+              Text('Fetched ${_timeAgo(usage.fetchedAt!)}',
                   style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(160))),
             ] else
               Text(usage.loading
@@ -148,7 +179,7 @@ class _UsageDetails extends StatelessWidget {
           backgroundColor: Design.text.withAlpha(20),
         ),
         const SizedBox(height: 3),
-        Text(reset != null ? 'Resets ${_date(reset)}' : 'Resets ${fallback ?? 'unavailable'}',
+        Text(reset != null ? 'Resets in ${_timeUntil(reset)}' : 'Resets ${fallback ?? 'unavailable'}',
             style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(175))),
       ],
     );
@@ -157,7 +188,21 @@ class _UsageDetails extends StatelessWidget {
 
 String _percent(double? value) => value == null ? '—' : '${value.clamp(0, 100).round()}%';
 
-String _date(DateTime date) => DateFormat('MMM d, yyyy · HH:mm:ss').format(date.toLocal());
+String _timeAgo(DateTime date) {
+  final Duration elapsed = DateTime.now().difference(date);
+  if (elapsed.inMinutes < 1) return 'now';
+  if (elapsed.inDays > 0) return '${elapsed.inDays}d ago';
+  if (elapsed.inHours > 0) return '${elapsed.inHours}h ago';
+  return '${elapsed.inMinutes}m ago';
+}
+
+String _timeUntil(DateTime reset) {
+  final Duration remaining = reset.difference(DateTime.now());
+  if (remaining.isNegative || remaining == Duration.zero) return '0m';
+  if (remaining.inDays > 0) return '${remaining.inDays}d';
+  if (remaining.inHours > 0) return '${remaining.inHours}h';
+  return '${remaining.inMinutes.clamp(1, 59)}m';
+}
 
 class _UsageSnapshot {
   _UsageSnapshot(this.codex);
