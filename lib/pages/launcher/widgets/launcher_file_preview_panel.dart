@@ -217,6 +217,7 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    if (widget.design == LauncherDesign.phosphor) return _buildPhosphorPanel(theme);
     if (widget.design == LauncherDesign.strata) return _buildStrataPanel(theme);
     if (widget.design == LauncherDesign.aurora) return _buildAuroraPanel(theme);
     final double radius = math.min(LauncherThemeData(design: widget.design).frameRadius, 10);
@@ -255,6 +256,116 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
       ),
     );
   }
+
+  Widget _buildPhosphorPanel(ThemeData theme) => Container(
+        decoration: BoxDecoration(color: PhosphorTokens.background, border: Border.all(color: PhosphorTokens.border)),
+        padding: const EdgeInsets.all(12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+          Padding(
+              padding: const EdgeInsets.fromLTRB(6, 2, 6, 14),
+              child: Row(children: <Widget>[
+                Icon(widget.entity is Directory ? Icons.folder_outlined : Icons.description_outlined,
+                    color: widget.entity is Directory ? PhosphorTokens.yellow : PhosphorTokens.cyan, size: 36),
+                const SizedBox(width: 20),
+                Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                  Text(p.basename(widget.entity.path),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: PhosphorTokens.font(size: 21, color: PhosphorTokens.accent)),
+                  const SizedBox(height: 5),
+                  Text(widget.entity.path,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: PhosphorTokens.font(size: 12, color: PhosphorTokens.dim)),
+                ])),
+              ])),
+          const Divider(height: 1, color: PhosphorTokens.border),
+          Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(children: <Widget>[
+                    _phosphorAction('Open', widget.onOpen, primary: true),
+                    _phosphorAction('Open folder', () {
+                      ClipboardService.instance.revealFile(widget.entity.path);
+                    }),
+                    _phosphorAction(_auroraCopied ? 'Copied' : 'Copy path', () async {
+                      await Clipboard.setData(ClipboardData(text: widget.entity.path));
+                      if (mounted) setState(() => _auroraCopied = true);
+                    }),
+                  ]))),
+          Expanded(
+              child: FutureBuilder<_LauncherFilePreviewData>(
+                  future: _previewData,
+                  builder: (BuildContext context, AsyncSnapshot<_LauncherFilePreviewData> snapshot) {
+                    if (!snapshot.hasData)
+                      return const Center(
+                          child: CircularProgressIndicator(strokeWidth: 1.5, color: PhosphorTokens.accent));
+                    final _LauncherFilePreviewData data = snapshot.data!;
+                    return LayoutBuilder(
+                        builder: (BuildContext context, BoxConstraints constraints) => Column(children: <Widget>[
+                              Expanded(
+                                  child: Container(
+                                      decoration: BoxDecoration(border: Border.all(color: PhosphorTokens.border)),
+                                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+                                        Padding(
+                                            padding: const EdgeInsets.all(10),
+                                            child: Row(children: <Widget>[
+                                              Expanded(
+                                                  child: Text(
+                                                      '--- Preview (${_codeLanguage(data.text ?? '', p.extension(widget.entity.path).toLowerCase()) ?? 'file'}) ---',
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: PhosphorTokens.font(size: 12, color: PhosphorTokens.dim))),
+                                              if (data.text != null)
+                                                Text(
+                                                    '${data.textTruncated ? '? ' : ''}${'\n'.allMatches(data.text!).length + 1} lines',
+                                                    style: PhosphorTokens.font(size: 11, color: PhosphorTokens.dim)),
+                                            ])),
+                                        Expanded(child: _buildContentPreview(theme, data)),
+                                      ]))),
+                              if (constraints.maxHeight >= 260) ...<Widget>[
+                                const SizedBox(height: 12),
+                                const Divider(height: 1, color: PhosphorTokens.border),
+                                const SizedBox(height: 10),
+                                for (final MapEntry<String, String> entry in <String, String>{
+                                  'Type': _fileKind(data.stat),
+                                  'Size': _formatBytes(data.stat?.size),
+                                  'Modified': _formatDate(data.stat?.modified),
+                                  'Location': p.dirname(widget.entity.path),
+                                }.entries)
+                                  Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 3),
+                                      child: Row(children: <Widget>[
+                                        SizedBox(
+                                            width: 88,
+                                            child: Text(entry.key,
+                                                style: PhosphorTokens.font(size: 12, color: PhosphorTokens.dim))),
+                                        Text(':   ', style: PhosphorTokens.font(size: 12, color: PhosphorTokens.dim)),
+                                        Expanded(
+                                            child: Text(entry.value,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: PhosphorTokens.font(size: 12))),
+                                      ])),
+                              ],
+                            ]));
+                  })),
+        ]),
+      );
+
+  Widget _phosphorAction(String label, VoidCallback? onPressed, {bool primary = false}) => Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: TextButton(
+          onPressed: onPressed,
+          style: TextButton.styleFrom(
+              shape: const RoundedRectangleBorder(),
+              backgroundColor: primary ? PhosphorTokens.accent : Colors.transparent,
+              foregroundColor: primary ? PhosphorTokens.background : PhosphorTokens.foreground,
+              textStyle: PhosphorTokens.font(size: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10)),
+          child: Text('[  $label  ]')));
 
   Widget _buildStrataPanel(ThemeData theme) {
     return Container(
@@ -661,6 +772,16 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
 
     final String? language = _codeLanguage(text, extension);
     if (language != null) {
+      if (widget.design == LauncherDesign.phosphor) {
+        return Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+          Padding(
+              padding: const EdgeInsets.only(top: 7, right: 12),
+              child: Text(List<String>.generate('\n'.allMatches(text).length + 1, (int index) => '${index + 1}').join('\n'),
+                  textAlign: TextAlign.right,
+                  style: PhosphorTokens.font(size: 12, color: PhosphorTokens.dim).copyWith(height: 1.4))),
+          Expanded(child: MarkdownBlock(data: _fencedCode(text, language), config: _markdownConfig(theme))),
+        ]);
+      }
       return MarkdownBlock(data: _fencedCode(text, language), config: _markdownConfig(theme));
     }
 
@@ -705,14 +826,15 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
   MarkdownConfig _markdownConfig(ThemeData theme) {
     final Color text = widget.onSurface;
     final Color accent = widget.accent;
-    final Color coolTone = Color.lerp(accent, text, 0.35)!;
-    final Color warmTone = Color.lerp(accent, const Color(0xFFE3A85B), 0.42)!;
+    final bool phosphor = widget.design == LauncherDesign.phosphor;
+    final Color coolTone = phosphor ? PhosphorTokens.cyan : Color.lerp(accent, text, 0.35)!;
+    final Color warmTone = phosphor ? PhosphorTokens.accent : Color.lerp(accent, const Color(0xFFE3A85B), 0.42)!;
     final Map<String, TextStyle> codeTheme = <String, TextStyle>{
       'root': TextStyle(color: text, backgroundColor: Colors.transparent),
       'comment': TextStyle(color: text.withAlpha(105), fontStyle: FontStyle.italic),
       'quote': TextStyle(color: text.withAlpha(105), fontStyle: FontStyle.italic),
       'meta': TextStyle(color: text.withAlpha(155)),
-      'keyword': TextStyle(color: accent),
+      'keyword': TextStyle(color: phosphor ? PhosphorTokens.cyan : accent),
       'selector-tag': TextStyle(color: accent),
       'built_in': TextStyle(color: accent),
       'tag': TextStyle(color: accent),
@@ -763,13 +885,13 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
           ),
         ),
         PreConfig(
-          textStyle: const TextStyle(fontFamily: 'Consolas', fontSize: 9.5, height: 1.4),
+          textStyle: TextStyle(fontFamily: 'Consolas', fontSize: phosphor ? 12 : 9.5, height: 1.4),
           styleNotMatched: TextStyle(color: text.withAlpha(205)),
           theme: codeTheme,
           decoration: BoxDecoration(
-            color: text.withAlpha(10),
-            border: Border.all(color: accent.withAlpha(38)),
-            borderRadius: BorderRadius.circular(4),
+            color: phosphor ? Colors.transparent : text.withAlpha(10),
+            border: phosphor ? null : Border.all(color: accent.withAlpha(38)),
+            borderRadius: BorderRadius.circular(phosphor ? 0 : 4),
           ),
           padding: const EdgeInsets.all(7),
         ),

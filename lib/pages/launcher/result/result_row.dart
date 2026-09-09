@@ -213,6 +213,7 @@ class LauncherResultRow extends StatelessWidget {
     return switch (design) {
       LauncherDesign.aurora => _buildAurora(context),
       LauncherDesign.strata => _buildStrata(context),
+      LauncherDesign.phosphor => _buildPhosphor(context),
       LauncherDesign.serene => _buildSerene(context),
       LauncherDesign.command => _buildCommand(context),
       LauncherDesign.terminal => _buildTerminal(context),
@@ -243,6 +244,45 @@ class LauncherResultRow extends StatelessWidget {
       LauncherDesign.tui => _buildTui(context),
     };
   }
+
+  Widget _buildPhosphor(BuildContext context) => MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 68),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFF10281B) : Colors.transparent,
+                border: isSelected
+                    ? Border.all(color: PhosphorTokens.accent)
+                    : const Border(bottom: BorderSide(color: Color(0xFF20382F)))),
+            child: Row(children: <Widget>[
+              SizedBox(
+                  width: 22,
+                  child:
+                      Text(isSelected ? '>' : '', style: PhosphorTokens.font(size: 19, color: PhosphorTokens.accent))),
+              SizedBox(width: 38, height: 34, child: Center(child: icon)),
+              const SizedBox(width: 16),
+              Expanded(
+                  child: content ??
+                      Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                        _titleText(PhosphorTokens.font(
+                            size: 17, color: isSelected ? PhosphorTokens.accent : PhosphorTokens.foreground)),
+                        if ((subtitle ?? '').isNotEmpty) ...<Widget>[
+                          const SizedBox(height: 4),
+                          _subtitleText(PhosphorTokens.font(size: 12, color: PhosphorTokens.dim)),
+                        ],
+                      ])),
+              if (badge != null) Padding(padding: const EdgeInsets.only(left: 10), child: badge),
+            ]),
+          ),
+        ),
+      );
 
   Widget _buildStrata(BuildContext context) {
     return MouseRegion(
@@ -2139,6 +2179,8 @@ class LauncherKindBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (user.launcherDesign == LauncherDesign.phosphor)
+      return Text('[$label]', style: PhosphorTokens.font(size: 11, color: PhosphorTokens.dim));
     if (user.launcherDesign == LauncherDesign.tui) return Text('[$label]');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),

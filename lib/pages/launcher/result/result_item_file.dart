@@ -6,6 +6,7 @@ import '../../../models/classes/saved_maps.dart';
 import '../../../models/settings.dart';
 import '../../../widgets/itzy/quickmenu/bookmark_icon.dart';
 import 'result_row.dart';
+import '../launcher_design.dart';
 
 // ---------------------------------------------------------------------------
 // File icon helper
@@ -72,15 +73,18 @@ class LauncherListItem extends StatelessWidget {
       onSurface: onSurface,
       onTap: onTap,
       onHover: onHover,
-      icon: SizedBox(
-        width: 20,
-        height: 20,
-        child: FileResultIcon(path: path),
-      ),
+      icon: user.launcherDesign == LauncherDesign.phosphor
+          ? Icon(entity is Directory ? Icons.folder_outlined : Icons.description_outlined,
+              size: 28, color: entity is Directory ? PhosphorTokens.yellow : PhosphorTokens.cyan)
+          : SizedBox(
+              width: 20,
+              height: 20,
+              child: FileResultIcon(path: path),
+            ),
       title: name.replaceFirst('.lnk', ''),
       subtitle: path,
       badge: _FileKindBadge(
-        isDirectory: entity.path.split('.').length != 2,
+        isDirectory: entity is Directory,
         accent: Design.accent,
         onSurface: onSurface,
       ),
@@ -103,6 +107,8 @@ class _FileKindBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (user.launcherDesign == LauncherDesign.phosphor)
+      return Text(isDirectory ? '[FOLDER]' : '[FILE]', style: PhosphorTokens.font(size: 11, color: PhosphorTokens.dim));
     if (user.launcherDesign == LauncherDesign.tui) return Text(isDirectory ? '<DIR>' : '[FILE]');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),

@@ -112,7 +112,8 @@ enum LauncherDesign {
   omarchy,
   tui,
   aurora,
-  strata;
+  strata,
+  phosphor;
 
   String get displayName => switch (this) {
         LauncherDesign.windowsXp => 'Windows XP',
@@ -699,6 +700,26 @@ class Settings {
           entryFontWeight: 600,
           borderRadius: 7,
         ),
+      ),
+      LauncherDesign.phosphor.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+            background: const Color(0xFF090F0E),
+            textColor: const Color(0xFFDCE3DF),
+            accentColor: const Color(0xFF58EF92),
+            gradientAlpha: 0,
+            uiFontFamily: 'Consolas',
+            entryFontFamily: 'Consolas',
+            entryFontWeight: 400,
+            borderRadius: 0),
+        darkTheme: _defaultThemeColors(
+            background: const Color(0xFF090F0E),
+            textColor: const Color(0xFFDCE3DF),
+            accentColor: const Color(0xFF58EF92),
+            gradientAlpha: 0,
+            uiFontFamily: 'Consolas',
+            entryFontFamily: 'Consolas',
+            entryFontWeight: 400,
+            borderRadius: 0),
       ),
       LauncherDesign.strata.displayName: LauncherDesignThemeSet(
         lightTheme: _defaultThemeColors(

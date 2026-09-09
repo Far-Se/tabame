@@ -42,6 +42,7 @@ part 'launcher_designs/omarchy_launcher_design.dart';
 part 'launcher_designs/tui_launcher_design.dart';
 part 'launcher_designs/aurora_launcher_design.dart';
 part 'launcher_designs/strata_launcher_design.dart';
+part 'launcher_designs/phosphor_launcher_design.dart';
 
 // ---------------------------------------------------------------------------
 // Extension: per-design widget factories used by LauncherState
@@ -54,6 +55,11 @@ extension LauncherDesignBuilder on LauncherDesign {
     required Color accent,
   }) {
     switch (this) {
+      case LauncherDesign.phosphor:
+        return BoxDecoration(
+            color: PhosphorTokens.background,
+            borderRadius: BorderRadius.zero,
+            border: Border.all(color: PhosphorTokens.border));
       case LauncherDesign.strata:
         return BoxDecoration(
             color: StrataTokens.background,
@@ -366,6 +372,9 @@ extension LauncherDesignBuilder on LauncherDesign {
     required bool isSearching,
   }) {
     switch (this) {
+      case LauncherDesign.phosphor:
+        return PhosphorSearchBar(
+            dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
       case LauncherDesign.strata:
         return StrataSearchBar(
             dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
@@ -609,6 +618,8 @@ extension LauncherDesignBuilder on LauncherDesign {
   /// Returns the section-header label widget.
   Widget buildSectionHeader({required String label, required Color accent}) {
     switch (this) {
+      case LauncherDesign.phosphor:
+        return const SizedBox.shrink();
       case LauncherDesign.strata:
         return Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),

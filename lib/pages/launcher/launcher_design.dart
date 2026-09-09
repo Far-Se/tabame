@@ -894,6 +894,7 @@ class LauncherThemeData {
         LauncherDesign.newCast => Icons.chevron_right_rounded,
         LauncherDesign.omarchy => Icons.drag_indicator,
         LauncherDesign.aurora => Icons.search_rounded,
+        LauncherDesign.phosphor => Icons.search_rounded,
         LauncherDesign.strata => Icons.search_rounded,
         LauncherDesign.tui => Icons.terminal,
       };
@@ -927,6 +928,7 @@ class LauncherThemeData {
         LauncherDesign.newCast => 18.0,
         LauncherDesign.omarchy => 16.0,
         LauncherDesign.aurora => 28.0,
+        LauncherDesign.phosphor => 20.0,
         LauncherDesign.strata => 28.0,
         LauncherDesign.tui => 16.0,
       };
@@ -962,6 +964,7 @@ class LauncherThemeData {
         LauncherDesign.newCast => 15.0,
         LauncherDesign.omarchy => 16.0,
         LauncherDesign.aurora => 23.0,
+        LauncherDesign.phosphor => 23.0,
         LauncherDesign.strata => 23.0,
         LauncherDesign.tui => TuiTokens.fontSize,
       };
@@ -994,6 +997,7 @@ class LauncherThemeData {
         LauncherDesign.newCast => FontWeight.w400,
         LauncherDesign.omarchy => FontWeight.w500,
         LauncherDesign.aurora => FontWeight.w400,
+        LauncherDesign.phosphor => FontWeight.w400,
         LauncherDesign.strata => FontWeight.w400,
         LauncherDesign.tui => FontWeight.w400,
       };
@@ -1033,6 +1037,7 @@ class LauncherThemeData {
         LauncherDesign.newCast => 14.0,
         LauncherDesign.omarchy => 0.0,
         LauncherDesign.aurora => 18.0,
+        LauncherDesign.phosphor => 0.0,
         LauncherDesign.strata => 12.0,
         LauncherDesign.tui => 0.0,
       };
@@ -1093,4 +1098,23 @@ abstract final class StrataTokens {
   static const Color border = Color(0xFF22343F);
   static TextStyle font({double size = 13, Color color = foreground, double? spacing}) =>
       launcherTextStyle(TextStyle(fontFamily: 'Segoe UI', fontSize: size, color: color, letterSpacing: spacing));
+}
+
+/// The green console palette from the Phosphor reference.
+abstract final class PhosphorTokens {
+  static const Color background = Color(0xFF090F0E);
+  static const Color panel = Color(0xFF0B1210);
+  static const Color accent = Color(0xFF58EF92);
+  static const Color foreground = Color(0xFFDCE3DF);
+  static const Color dim = Color(0xFF8BA3AE);
+  static const Color border = Color(0xFF345F56);
+  static const Color cyan = Color(0xFF51BCD5);
+  static const Color yellow = Color(0xFFE6C85C);
+  static TextStyle font({double size = 13, Color color = foreground, double? spacing}) => launcherTextStyle(TextStyle(
+      fontFamily: 'Consolas',
+      fontFamilyFallback: const <String>['Cascadia Mono', 'monospace'],
+      fontSize: size,
+      color: color,
+      letterSpacing: spacing,
+      height: 1.3));
 }

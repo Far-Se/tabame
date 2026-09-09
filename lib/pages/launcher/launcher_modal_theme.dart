@@ -29,6 +29,14 @@ class LauncherModalTokens {
     final bool isDark = theme.brightness == Brightness.dark;
     final LauncherDesign design = user.launcherDesign;
     switch (design) {
+      case LauncherDesign.phosphor:
+        return const LauncherModalTokens._(
+            design: LauncherDesign.phosphor,
+            isDark: true,
+            surface: PhosphorTokens.background,
+            accent: PhosphorTokens.accent,
+            onSurface: PhosphorTokens.foreground,
+            dim: PhosphorTokens.dim);
       case LauncherDesign.strata:
         return const LauncherModalTokens._(
             design: LauncherDesign.strata,
@@ -266,6 +274,7 @@ class LauncherModalTokens {
         LauncherDesign.newCast => 8.0,
         LauncherDesign.omarchy => 0.0,
         LauncherDesign.aurora => 10.0,
+        LauncherDesign.phosphor => 0.0,
         LauncherDesign.strata => 8.0,
         LauncherDesign.tui => 0.0,
       };

@@ -795,6 +795,7 @@ class LauncherState extends State<Launcher>
     // Inter for the iOS feel.
     final Color accent = switch (true) {
       _ when _design == LauncherDesign.aurora => AuroraTokens.accent,
+      _ when _design == LauncherDesign.phosphor => PhosphorTokens.accent,
       _ when _design == LauncherDesign.strata => StrataTokens.accent,
       _ when isTui => TuiTokens.accent,
       _ when _design == LauncherDesign.omarchy => OmarchyTokens.accent(isDark),
@@ -964,7 +965,10 @@ class LauncherState extends State<Launcher>
                                 final double minPreviewWidth =
                                     _minPreviewPanelWidth.clamp(0, maxPreviewWidth).toDouble();
                                 final double preferredPreviewWidth = _previewWidthPercent == null
-                                    ? constraints.maxWidth * (_design == LauncherDesign.strata ? 0.45 : 0.40)
+                                    ? constraints.maxWidth *
+                                        ((_design == LauncherDesign.strata || _design == LauncherDesign.phosphor)
+                                            ? 0.45
+                                            : 0.40)
                                     : appWidth * _previewWidthPercent! / 100;
                                 final double previewWidth =
                                     preferredPreviewWidth.clamp(minPreviewWidth, maxPreviewWidth).toDouble();
@@ -976,100 +980,103 @@ class LauncherState extends State<Launcher>
                                         padding: EdgeInsets.only(
                                           right: showPreview ? previewWidth + _previewResizeHandleWidth : 0,
                                         ),
-                                        child: ListView.builder(
-                                          controller: _scrollController,
-                                          shrinkWrap: true,
-                                          itemCount: _results.length,
-                                          itemBuilder: (BuildContext context, int index) {
-                                            final LauncherSearchResultItem result = _results[index];
-                                            final bool isSelected = index == activeIndex;
-                                            late final Widget resultWidget;
-                                            if (result.isShortcut) {
-                                              resultWidget = _buildShortcutResult(
-                                                  context, theme, result.shortcut!, index, isSelected, isRepeatingKey);
-                                            } else if (result.isFile) {
-                                              resultWidget = _buildFileResult(context, theme, result.entity!,
-                                                  result.nodeId, index, isSelected, isRepeatingKey);
-                                            } else if (result.isApp) {
-                                              resultWidget = _buildAppResult(context, theme, result.appResult!,
-                                                  result.nodeId, index, isSelected, isRepeatingKey);
-                                            } else if (result.isWindow) {
-                                              resultWidget = _buildWindowResult(
-                                                  context, theme, result.window!, index, isSelected, isRepeatingKey);
-                                            } else if (result.isBrowserTab) {
-                                              resultWidget = _buildBrowserTabResult(context, theme, result.browserTab!,
-                                                  index, isSelected, isRepeatingKey);
-                                            } else if (result.isBookmark) {
-                                              resultWidget = _buildBookmarkResult(context, theme,
-                                                  result.bookmarkResult!, index, isSelected, isRepeatingKey);
-                                            } else if (result.isNotion) {
-                                              resultWidget = _buildNotionResult(context, theme, result.notionResult!,
-                                                  index, isSelected, isRepeatingKey);
-                                            } else if (result.isObsidian) {
-                                              resultWidget = _buildObsidianResult(context, theme,
-                                                  result.obsidianResult!, index, isSelected, isRepeatingKey);
-                                            } else if (result.isSteam) {
-                                              resultWidget = _buildSteamResult(context, theme, result.steamResult!,
-                                                  index, isSelected, isRepeatingKey);
-                                            } else if (result.isInfo) {
-                                              resultWidget = _buildInfoResult(context, theme, result.infoResult!, index,
-                                                  isSelected, isRepeatingKey);
-                                            } else {
-                                              resultWidget = _buildQuickActionResult(context, theme,
-                                                  result.quickAction!, index, isSelected, isRepeatingKey);
-                                            }
-                                            final Widget resultWithDivider = result.shortcut?.showDividerBefore == true
-                                                ? Column(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: <Widget>[
-                                                      // if (_design == LauncherDesign.newCast)
-                                                      Padding(
-                                                        key: _pluginsSectionHeaderKey,
-                                                        padding: EdgeInsets.zero,
-                                                        child: _design.buildSectionHeader(
-                                                          label: 'Plugins',
-                                                          accent: accent,
-                                                        ),
+                                        child: PhosphorResultsPanel(
+                                            enabled: _design == LauncherDesign.phosphor,
+                                            child: ListView.builder(
+                                              controller: _scrollController,
+                                              shrinkWrap: true,
+                                              itemCount: _results.length,
+                                              itemBuilder: (BuildContext context, int index) {
+                                                final LauncherSearchResultItem result = _results[index];
+                                                final bool isSelected = index == activeIndex;
+                                                late final Widget resultWidget;
+                                                if (result.isShortcut) {
+                                                  resultWidget = _buildShortcutResult(context, theme, result.shortcut!,
+                                                      index, isSelected, isRepeatingKey);
+                                                } else if (result.isFile) {
+                                                  resultWidget = _buildFileResult(context, theme, result.entity!,
+                                                      result.nodeId, index, isSelected, isRepeatingKey);
+                                                } else if (result.isApp) {
+                                                  resultWidget = _buildAppResult(context, theme, result.appResult!,
+                                                      result.nodeId, index, isSelected, isRepeatingKey);
+                                                } else if (result.isWindow) {
+                                                  resultWidget = _buildWindowResult(context, theme, result.window!,
+                                                      index, isSelected, isRepeatingKey);
+                                                } else if (result.isBrowserTab) {
+                                                  resultWidget = _buildBrowserTabResult(context, theme,
+                                                      result.browserTab!, index, isSelected, isRepeatingKey);
+                                                } else if (result.isBookmark) {
+                                                  resultWidget = _buildBookmarkResult(context, theme,
+                                                      result.bookmarkResult!, index, isSelected, isRepeatingKey);
+                                                } else if (result.isNotion) {
+                                                  resultWidget = _buildNotionResult(context, theme,
+                                                      result.notionResult!, index, isSelected, isRepeatingKey);
+                                                } else if (result.isObsidian) {
+                                                  resultWidget = _buildObsidianResult(context, theme,
+                                                      result.obsidianResult!, index, isSelected, isRepeatingKey);
+                                                } else if (result.isSteam) {
+                                                  resultWidget = _buildSteamResult(context, theme, result.steamResult!,
+                                                      index, isSelected, isRepeatingKey);
+                                                } else if (result.isInfo) {
+                                                  resultWidget = _buildInfoResult(context, theme, result.infoResult!,
+                                                      index, isSelected, isRepeatingKey);
+                                                } else {
+                                                  resultWidget = _buildQuickActionResult(context, theme,
+                                                      result.quickAction!, index, isSelected, isRepeatingKey);
+                                                }
+                                                final Widget resultWithDivider =
+                                                    result.shortcut?.showDividerBefore == true
+                                                        ? Column(
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: <Widget>[
+                                                              // if (_design == LauncherDesign.newCast)
+                                                              Padding(
+                                                                key: _pluginsSectionHeaderKey,
+                                                                padding: EdgeInsets.zero,
+                                                                child: _design.buildSectionHeader(
+                                                                  label: 'Plugins',
+                                                                  accent: accent,
+                                                                ),
+                                                              ),
+                                                              Divider(
+                                                                height: 17,
+                                                                thickness: 1,
+                                                                indent: 12,
+                                                                endIndent: 12,
+                                                                color: theme.colorScheme.outlineVariant.withAlpha(150),
+                                                              ),
+                                                              resultWidget,
+                                                            ],
+                                                          )
+                                                        : resultWidget;
+                                                return KeyedSubtree(
+                                                  key: _resultKeys[_resultKeyId(result, index)],
+                                                  child: LauncherRaycastResultIndex(
+                                                    index: index,
+                                                    child: MouseRegion(
+                                                      onHover: (PointerHoverEvent event) =>
+                                                          _selectResultFromPointerHover(event, index),
+                                                      child: Stack(
+                                                        alignment: Alignment.centerRight,
+                                                        children: <Widget>[
+                                                          if (_design == LauncherDesign.aurora &&
+                                                              (index == 0 ||
+                                                                  _auroraResultGroup(_results[index - 1]) !=
+                                                                      _auroraResultGroup(result)))
+                                                            Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                                                              _design.buildSectionHeader(
+                                                                  label: _auroraResultGroup(result), accent: accent),
+                                                              resultWithDivider,
+                                                            ])
+                                                          else
+                                                            resultWithDivider,
+                                                        ],
                                                       ),
-                                                      Divider(
-                                                        height: 17,
-                                                        thickness: 1,
-                                                        indent: 12,
-                                                        endIndent: 12,
-                                                        color: theme.colorScheme.outlineVariant.withAlpha(150),
-                                                      ),
-                                                      resultWidget,
-                                                    ],
-                                                  )
-                                                : resultWidget;
-                                            return KeyedSubtree(
-                                              key: _resultKeys[_resultKeyId(result, index)],
-                                              child: LauncherRaycastResultIndex(
-                                                index: index,
-                                                child: MouseRegion(
-                                                  onHover: (PointerHoverEvent event) =>
-                                                      _selectResultFromPointerHover(event, index),
-                                                  child: Stack(
-                                                    alignment: Alignment.centerRight,
-                                                    children: <Widget>[
-                                                      if (_design == LauncherDesign.aurora &&
-                                                          (index == 0 ||
-                                                              _auroraResultGroup(_results[index - 1]) !=
-                                                                  _auroraResultGroup(result)))
-                                                        Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-                                                          _design.buildSectionHeader(
-                                                              label: _auroraResultGroup(result), accent: accent),
-                                                          resultWithDivider,
-                                                        ])
-                                                      else
-                                                        resultWithDivider,
-                                                    ],
+                                                    ),
                                                   ),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
+                                                );
+                                              },
+                                            )),
                                       ),
                                     ),
                                     if (showPreview)
@@ -1161,7 +1168,21 @@ class LauncherState extends State<Launcher>
         //       _searchFocusNode.requestFocus();
         //     },
         //     onOpen: () => _onSubmitted(_controller.text)),
-        if (_design == LauncherDesign.strata)
+        if (_design == LauncherDesign.phosphor && _activePlugin == null)
+          _PhosphorControls(
+              query: _controller.text,
+              results: _results,
+              onQuery: (String value) {
+                _controller.text = value;
+                _controller.selection = TextSelection.collapsed(offset: value.length);
+                _onSearchChanged(value);
+                _searchFocusNode.requestFocus();
+              }),
+        if (_design == LauncherDesign.phosphor)
+          Flexible(
+              fit: FlexFit.loose,
+              child: Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), child: resultsContent))
+        else if (_design == LauncherDesign.strata)
           Flexible(
               fit: FlexFit.loose, child: Padding(padding: const EdgeInsets.fromLTRB(3, 0, 3, 6), child: resultsContent))
         else if (_design == LauncherDesign.aurora)
@@ -1201,6 +1222,7 @@ class LauncherState extends State<Launcher>
       LauncherDesign.classic => ClassicLauncherFrame.new,
       LauncherDesign.aurora => AuroraLauncherFrame.new,
       LauncherDesign.strata => StrataLauncherFrame.new,
+      LauncherDesign.phosphor => PhosphorLauncherFrame.new,
       LauncherDesign.command => CommandLauncherFrame.new,
       LauncherDesign.terminal => TerminalLauncherFrame.new,
       LauncherDesign.zen => ZenLauncherFrame.new,
@@ -1260,7 +1282,8 @@ class LauncherState extends State<Launcher>
       child: innerContent,
     );
 
-    final bool usesDesignFont = _design == LauncherDesign.strata ||
+    final bool usesDesignFont = _design == LauncherDesign.phosphor ||
+        _design == LauncherDesign.strata ||
         _design == LauncherDesign.aurora ||
         isTerminal ||
         isTui ||

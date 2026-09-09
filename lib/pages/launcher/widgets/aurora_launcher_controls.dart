@@ -93,3 +93,41 @@ class _AuroraControls extends StatelessWidget {
         ]));
   }
 }
+
+class _PhosphorControls extends StatelessWidget {
+  const _PhosphorControls({required this.query, required this.results, required this.onQuery});
+  final String query;
+  final List<LauncherSearchResultItem> results;
+  final ValueChanged<String> onQuery;
+  @override
+  Widget build(BuildContext context) {
+    final LauncherQuery parsed = LauncherQuery.parse(query);
+    const List<({String label, String prefix, LauncherSearchMode mode})> filters = <({String label, String prefix, LauncherSearchMode mode})>[
+      (label: 'All', prefix: '', mode: LauncherSearchMode.mixed),
+      (label: 'Files', prefix: '>', mode: LauncherSearchMode.filesOnly),
+      (label: 'Apps', prefix: 'app ', mode: LauncherSearchMode.appsOnly),
+      (label: 'Web', prefix: 'b ', mode: LauncherSearchMode.bookmarkOnly),
+      (label: 'Actions', prefix: '/', mode: LauncherSearchMode.actionsOnly),
+    ];
+    return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: <Widget>[
+              for (final ({String label, String prefix, LauncherSearchMode mode}) filter in filters)
+                Padding(
+                    padding: const EdgeInsets.only(right: 14),
+                    child: TextButton(
+                      onPressed: () => onQuery('${filter.prefix}${parsed.normalized}'),
+                      style: TextButton.styleFrom(
+                          minimumSize: const Size(0, 28),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                          shape: const RoundedRectangleBorder(),
+                          backgroundColor: parsed.mode == filter.mode ? PhosphorTokens.accent : Colors.transparent,
+                          foregroundColor: parsed.mode == filter.mode ? PhosphorTokens.background : PhosphorTokens.dim,
+                          textStyle: PhosphorTokens.font(size: 14)),
+                      child: Text('[ ${filter.label}${parsed.mode == filter.mode ? ' (${results.length})' : ''} ]'),
+                    )),
+            ])));
+  }
+}

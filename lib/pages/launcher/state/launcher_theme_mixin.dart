@@ -11,6 +11,15 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
     required Color accent,
   }) {
     return switch (_design) {
+      LauncherDesign.phosphor => _copyDesignTheme(baseTheme,
+          brightness: Brightness.dark,
+          colorSchemeBrightness: Brightness.dark,
+          surface: PhosphorTokens.background,
+          onSurface: PhosphorTokens.foreground,
+          primary: PhosphorTokens.accent,
+          highlightColor: PhosphorTokens.accent.withAlpha(30),
+          textTheme: baseTheme.textTheme.apply(
+              fontFamily: 'Consolas', bodyColor: PhosphorTokens.foreground, displayColor: PhosphorTokens.foreground)),
       LauncherDesign.strata => _copyDesignTheme(baseTheme,
           brightness: Brightness.dark,
           colorSchemeBrightness: Brightness.dark,

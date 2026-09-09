@@ -98,6 +98,8 @@ class AiCodingUsageService extends ChangeNotifier with QuickMenuTriggers {
 
   void _restoreAlerts() {
     if (_alerts.isNotEmpty) return;
+    final DateTime now = DateTime.now();
+    bool discardedExpiredTarget = false;
     for (final String agent in <String>['codex', 'claude']) {
       final _ResetAlert alert = _ResetAlert();
       try {
@@ -110,9 +112,15 @@ class AiCodingUsageService extends ChangeNotifier with QuickMenuTriggers {
       } on FormatException {
         // Ignore malformed saved alarm data.
       }
+      // Resets that elapsed while Tabame was closed should not speak on launch.
+      if (alert.target != null && !alert.target!.isAfter(now)) {
+        alert.target = null;
+        discardedExpiredTarget = true;
+      }
       _alerts[agent] = alert;
       if (alert.enabled && alert.target != null) _scheduleAlert(agent, alert);
     }
+    if (discardedExpiredTarget) _saveAlerts();
   }
 
   void _saveAlerts() {
