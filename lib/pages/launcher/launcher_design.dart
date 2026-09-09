@@ -3,6 +3,32 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/settings.dart';
 
+abstract final class OpticalGlassTokens {
+  static const Color background = Color(0xFFE5EAF2);
+  static const Color foreground = Color(0xFF202D45);
+  static const Color accent = Color(0xFF435B91);
+  static const Color dim = Color(0xFF52617A);
+  static const Color border = Color(0x809AAAC7);
+
+  static TextStyle font(
+          {double size = 14, Color color = foreground, double spacing = 0, FontWeight weight = FontWeight.w500}) =>
+      launcherTextStyle(
+          GoogleFonts.mulish(fontSize: size, color: color, letterSpacing: spacing, fontWeight: weight, height: 1.3));
+}
+
+abstract final class LiquidMetalTokens {
+  static const Color background = Color(0xFF12151A);
+  static const Color foreground = Color(0xFFECEAE4);
+  static const Color accent = Color(0xFFCEC5AF);
+  static const Color dim = Color(0xFFA6A8AA);
+  static const Color border = Color(0xFF45484C);
+
+  static TextStyle font(
+          {double size = 14, Color color = foreground, double spacing = 0, FontWeight weight = FontWeight.w500}) =>
+      launcherTextStyle(
+          GoogleFonts.barlow(fontSize: size, color: color, letterSpacing: spacing, fontWeight: weight, height: 1.25));
+}
+
 TextStyle launcherTextStyle(TextStyle designStyle) {
   if (!Design.useCustomFont) return designStyle;
 
@@ -866,6 +892,8 @@ class LauncherThemeData {
   /// consoles, a leaf for Zen, a drafting compass for Blueprint, a radar scope
   /// for Orbit, a magnifier otherwise.
   IconData get searchIcon => switch (design) {
+        LauncherDesign.liquidMetal => Icons.search_rounded,
+        LauncherDesign.opticalGlass => Icons.search_rounded,
         LauncherDesign.command => Icons.chevron_right_rounded,
         LauncherDesign.terminal => Icons.chevron_right_rounded,
         LauncherDesign.zen => Icons.eco_rounded,
@@ -900,6 +928,8 @@ class LauncherThemeData {
       };
 
   double get searchIconSize => switch (design) {
+        LauncherDesign.liquidMetal => 22.0,
+        LauncherDesign.opticalGlass => 22.0,
         LauncherDesign.serene => 22.0,
         LauncherDesign.command => 22.0,
         LauncherDesign.terminal => 20.0,
@@ -936,6 +966,8 @@ class LauncherThemeData {
   bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent || isNotion || isRaycast;
 
   double get searchFontSize => switch (design) {
+        LauncherDesign.liquidMetal => 20.0,
+        LauncherDesign.opticalGlass => 20.0,
         LauncherDesign.serene => 16.0,
         LauncherDesign.command => 15.0,
         LauncherDesign.terminal => 14.0,
@@ -969,6 +1001,8 @@ class LauncherThemeData {
         LauncherDesign.tui => TuiTokens.fontSize,
       };
   FontWeight? get searchFontWeight => switch (design) {
+        LauncherDesign.liquidMetal => FontWeight.w500,
+        LauncherDesign.opticalGlass => FontWeight.w500,
         LauncherDesign.serene => FontWeight.w400,
         LauncherDesign.command => FontWeight.w500,
         LauncherDesign.terminal => FontWeight.w500,
@@ -1009,6 +1043,8 @@ class LauncherThemeData {
           : null;
 
   double get frameRadius => switch (design) {
+        LauncherDesign.liquidMetal => 16.0,
+        LauncherDesign.opticalGlass => 24.0,
         LauncherDesign.serene => 14.0,
         LauncherDesign.command => 12.0,
         LauncherDesign.terminal => 6.0,

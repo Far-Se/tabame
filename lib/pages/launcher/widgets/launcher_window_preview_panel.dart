@@ -78,10 +78,12 @@ class _LauncherWindowPreviewPanelState extends State<_LauncherWindowPreviewPanel
     final double radius = math.min(LauncherThemeData(design: widget.design).frameRadius, 10);
     final Color panelColor = Color.alphaBlend(widget.onSurface.withAlpha(12), theme.colorScheme.surface);
 
-    return Container(
+    final Widget panel = Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: panelColor,
+        color: (widget.design == LauncherDesign.liquidMetal || widget.design == LauncherDesign.opticalGlass)
+            ? null
+            : panelColor,
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: widget.accent.withAlpha(65)),
       ),
@@ -106,6 +108,8 @@ class _LauncherWindowPreviewPanelState extends State<_LauncherWindowPreviewPanel
         ],
       ),
     );
+    if (widget.design == LauncherDesign.opticalGlass) return OpticalGlassSurface(radius: radius, child: panel);
+    return widget.design == LauncherDesign.liquidMetal ? LiquidMetalSurface(child: panel) : panel;
   }
 
   Widget _buildHeader(ThemeData theme) {

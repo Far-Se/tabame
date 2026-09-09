@@ -113,9 +113,13 @@ enum LauncherDesign {
   tui,
   aurora,
   strata,
-  phosphor;
+  phosphor,
+  liquidMetal,
+  opticalGlass;
 
   String get displayName => switch (this) {
+        LauncherDesign.liquidMetal => 'Liquid Metal',
+        LauncherDesign.opticalGlass => 'Optical Glass',
         LauncherDesign.windowsXp => 'Windows XP',
         LauncherDesign.tui => 'TUI',
         LauncherDesign.windows98 => 'Windows 98',
@@ -699,6 +703,50 @@ class Settings {
           entryFontFamily: 'Encode Sans',
           entryFontWeight: 600,
           borderRadius: 7,
+        ),
+      ),
+      LauncherDesign.opticalGlass.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFFE5EAF2),
+          textColor: const Color(0xFF202D45),
+          accentColor: const Color(0xFF435B91),
+          gradientAlpha: 0,
+          uiFontFamily: 'Mulish',
+          entryFontFamily: 'Mulish',
+          entryFontWeight: 500,
+          borderRadius: 24,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFFE5EAF2),
+          textColor: const Color(0xFF202D45),
+          accentColor: const Color(0xFF435B91),
+          gradientAlpha: 0,
+          uiFontFamily: 'Mulish',
+          entryFontFamily: 'Mulish',
+          entryFontWeight: 500,
+          borderRadius: 24,
+        ),
+      ),
+      LauncherDesign.liquidMetal.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFF12151A),
+          textColor: const Color(0xFFECEAE4),
+          accentColor: const Color(0xFFCEC5AF),
+          gradientAlpha: 0,
+          uiFontFamily: 'Barlow',
+          entryFontFamily: 'Barlow',
+          entryFontWeight: 500,
+          borderRadius: 16,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF12151A),
+          textColor: const Color(0xFFECEAE4),
+          accentColor: const Color(0xFFCEC5AF),
+          gradientAlpha: 0,
+          uiFontFamily: 'Barlow',
+          entryFontFamily: 'Barlow',
+          entryFontWeight: 500,
+          borderRadius: 16,
         ),
       ),
       LauncherDesign.phosphor.displayName: LauncherDesignThemeSet(

@@ -11,6 +11,24 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
     required Color accent,
   }) {
     return switch (_design) {
+      LauncherDesign.opticalGlass => _copyDesignTheme(baseTheme,
+          brightness: Brightness.light,
+          colorSchemeBrightness: Brightness.light,
+          surface: OpticalGlassTokens.background,
+          onSurface: OpticalGlassTokens.foreground,
+          primary: OpticalGlassTokens.accent,
+          highlightColor: OpticalGlassTokens.accent.withAlpha(30),
+          textTheme: GoogleFonts.mulishTextTheme(baseTheme.textTheme)
+              .apply(bodyColor: OpticalGlassTokens.foreground, displayColor: OpticalGlassTokens.foreground)),
+      LauncherDesign.liquidMetal => _copyDesignTheme(baseTheme,
+          brightness: Brightness.dark,
+          colorSchemeBrightness: Brightness.dark,
+          surface: LiquidMetalTokens.background,
+          onSurface: LiquidMetalTokens.foreground,
+          primary: LiquidMetalTokens.accent,
+          highlightColor: LiquidMetalTokens.accent.withAlpha(30),
+          textTheme: GoogleFonts.barlowTextTheme(baseTheme.textTheme)
+              .apply(bodyColor: LiquidMetalTokens.foreground, displayColor: LiquidMetalTokens.foreground)),
       LauncherDesign.phosphor => _copyDesignTheme(baseTheme,
           brightness: Brightness.dark,
           colorSchemeBrightness: Brightness.dark,

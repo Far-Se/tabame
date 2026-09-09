@@ -73,6 +73,10 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  shaders:
+    - resources/shaders/liquid_metal.frag
+    - resources/shaders/optical_glass.frag
+
   assets:
     # - resources/logo.png
     - resources/logo_light.png

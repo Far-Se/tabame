@@ -11,6 +11,7 @@ import '../../models/win32/win_utils.dart';
 import '../../widgets/widgets/date_time_widget.dart';
 import '../quickmenu_designs/design_backdrop_stable.dart';
 import 'launcher_design.dart';
+import 'widgets/liquid_metal_surface.dart';
 
 part 'launcher_designs/manifesto_launcher_design.dart';
 part 'launcher_designs/classic_launcher_design.dart';
@@ -43,6 +44,8 @@ part 'launcher_designs/tui_launcher_design.dart';
 part 'launcher_designs/aurora_launcher_design.dart';
 part 'launcher_designs/strata_launcher_design.dart';
 part 'launcher_designs/phosphor_launcher_design.dart';
+part 'launcher_designs/liquid_metal_launcher_design.dart';
+part 'launcher_designs/optical_glass_launcher_design.dart';
 
 // ---------------------------------------------------------------------------
 // Extension: per-design widget factories used by LauncherState
@@ -55,6 +58,14 @@ extension LauncherDesignBuilder on LauncherDesign {
     required Color accent,
   }) {
     switch (this) {
+      case LauncherDesign.opticalGlass:
+        return BoxDecoration(
+            borderRadius: BorderRadius.circular(24), border: Border.all(color: OpticalGlassTokens.border));
+      case LauncherDesign.liquidMetal:
+        return BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: LiquidMetalTokens.border),
+        );
       case LauncherDesign.phosphor:
         return BoxDecoration(
             color: PhosphorTokens.background,
@@ -372,6 +383,12 @@ extension LauncherDesignBuilder on LauncherDesign {
     required bool isSearching,
   }) {
     switch (this) {
+      case LauncherDesign.opticalGlass:
+        return OpticalGlassSearchBar(
+            dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
+      case LauncherDesign.liquidMetal:
+        return LiquidMetalSearchBar(
+            dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
       case LauncherDesign.phosphor:
         return PhosphorSearchBar(
             dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
@@ -618,6 +635,17 @@ extension LauncherDesignBuilder on LauncherDesign {
   /// Returns the section-header label widget.
   Widget buildSectionHeader({required String label, required Color accent}) {
     switch (this) {
+      case LauncherDesign.opticalGlass:
+        return Padding(
+            padding: const EdgeInsets.fromLTRB(18, 10, 18, 6),
+            child: Text(label,
+                style: OpticalGlassTokens.font(size: 11, weight: FontWeight.w600, color: OpticalGlassTokens.dim)));
+      case LauncherDesign.liquidMetal:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+          child: Text(label.toUpperCase(),
+              style: LiquidMetalTokens.font(size: 10, color: LiquidMetalTokens.dim, spacing: 1.5)),
+        );
       case LauncherDesign.phosphor:
         return const SizedBox.shrink();
       case LauncherDesign.strata:

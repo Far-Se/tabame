@@ -65,6 +65,7 @@ import 'launcher/search/search_utils.dart';
 import 'launcher/search/windows_search_handler.dart';
 import 'launcher_search_models.dart';
 import 'launcher/launcher_design.dart';
+import 'launcher/widgets/liquid_metal_surface.dart';
 
 import 'launcher/launcher_design_builder.dart';
 import 'launcher/core/launcher_result_executor.dart';
@@ -794,6 +795,8 @@ class LauncherState extends State<Launcher>
     // Glass keeps the theme colors (its glass picks them up) and only forces
     // Inter for the iOS feel.
     final Color accent = switch (true) {
+      _ when _design == LauncherDesign.liquidMetal => LiquidMetalTokens.accent,
+      _ when _design == LauncherDesign.opticalGlass => OpticalGlassTokens.accent,
       _ when _design == LauncherDesign.aurora => AuroraTokens.accent,
       _ when _design == LauncherDesign.phosphor => PhosphorTokens.accent,
       _ when _design == LauncherDesign.strata => StrataTokens.accent,
@@ -1218,6 +1221,8 @@ class LauncherState extends State<Launcher>
     final Color surface = theme.colorScheme.surface;
     final int resultCount = _results.length;
     final LauncherFrameBuilder frameBuilder = switch (_design) {
+      LauncherDesign.liquidMetal => LiquidMetalLauncherFrame.new,
+      LauncherDesign.opticalGlass => OpticalGlassLauncherFrame.new,
       LauncherDesign.serene => SereneLauncherFrame.new,
       LauncherDesign.classic => ClassicLauncherFrame.new,
       LauncherDesign.aurora => AuroraLauncherFrame.new,
@@ -1282,7 +1287,9 @@ class LauncherState extends State<Launcher>
       child: innerContent,
     );
 
-    final bool usesDesignFont = _design == LauncherDesign.phosphor ||
+    final bool usesDesignFont = _design == LauncherDesign.liquidMetal ||
+        _design == LauncherDesign.opticalGlass ||
+        _design == LauncherDesign.phosphor ||
         _design == LauncherDesign.strata ||
         _design == LauncherDesign.aurora ||
         isTerminal ||

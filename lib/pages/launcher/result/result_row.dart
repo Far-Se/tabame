@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../../models/settings.dart';
 import '../launcher_design.dart';
+import '../widgets/liquid_metal_surface.dart';
 import 'inline_markup.dart';
 
 /// Title/subtitle text that optionally renders the markdown-lite subset
@@ -211,6 +212,8 @@ class LauncherResultRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final LauncherDesign design = LauncherTheme.maybeOf(context)?.design ?? user.launcherDesign;
     return switch (design) {
+      LauncherDesign.liquidMetal => _buildLiquidMetal(context),
+      LauncherDesign.opticalGlass => _buildOpticalGlass(context),
       LauncherDesign.aurora => _buildAurora(context),
       LauncherDesign.strata => _buildStrata(context),
       LauncherDesign.phosphor => _buildPhosphor(context),
@@ -245,6 +248,110 @@ class LauncherResultRow extends StatelessWidget {
     };
   }
 
+  Widget _buildOpticalGlass(BuildContext context) => MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: OpticalGlassSurface(
+              selected: isSelected,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 60),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                      color: isSelected ? OpticalGlassTokens.accent : OpticalGlassTokens.border.withAlpha(85)),
+                ),
+                child: Row(children: <Widget>[
+                  OpticalGlassSurface(
+                      radius: 17,
+                      selected: isSelected,
+                      child: SizedBox(width: 34, height: 34, child: Center(child: icon))),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: content ??
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              _titleText(OpticalGlassTokens.font(
+                                  size: 15, weight: isSelected ? FontWeight.w600 : FontWeight.w500)),
+                              if ((subtitle ?? '').isNotEmpty) ...<Widget>[
+                                const SizedBox(height: 3),
+                                _subtitleText(OpticalGlassTokens.font(size: 12, color: OpticalGlassTokens.dim)),
+                              ],
+                            ],
+                          )),
+                  if (badge != null) Padding(padding: const EdgeInsets.only(left: 8), child: badge),
+                  if (isSelected)
+                    const Padding(
+                        padding: EdgeInsets.only(left: 10),
+                        child: Icon(Icons.arrow_outward_rounded, size: 16, color: OpticalGlassTokens.accent)),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      );
+
+  Widget _buildLiquidMetal(BuildContext context) => MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: LiquidMetalSurface(
+              selected: isSelected,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 58),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border:
+                      Border.all(color: isSelected ? LiquidMetalTokens.accent : LiquidMetalTokens.border.withAlpha(85)),
+                ),
+                child: Row(children: <Widget>[
+                  LiquidMetalSurface(
+                      radius: 7,
+                      selected: isSelected,
+                      child: SizedBox(width: 34, height: 34, child: Center(child: icon))),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: content ??
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              _titleText(LiquidMetalTokens.font(
+                                  size: 15, weight: isSelected ? FontWeight.w600 : FontWeight.w500)),
+                              if ((subtitle ?? '').isNotEmpty) ...<Widget>[
+                                const SizedBox(height: 3),
+                                _subtitleText(LiquidMetalTokens.font(size: 12, color: LiquidMetalTokens.dim)),
+                              ],
+                            ],
+                          )),
+                  if (badge != null) Padding(padding: const EdgeInsets.only(left: 8), child: badge),
+                  if (isSelected)
+                    const Padding(
+                        padding: EdgeInsets.only(left: 10),
+                        child: Icon(Icons.keyboard_return_rounded, size: 16, color: LiquidMetalTokens.accent)),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      );
+
   Widget _buildPhosphor(BuildContext context) => MouseRegion(
         cursor: SystemMouseCursors.click,
         onHover: (PointerHoverEvent event) {
@@ -270,14 +377,17 @@ class LauncherResultRow extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                   child: content ??
-                      Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-                        _titleText(PhosphorTokens.font(
-                            size: 17, color: isSelected ? PhosphorTokens.accent : PhosphorTokens.foreground)),
-                        if ((subtitle ?? '').isNotEmpty) ...<Widget>[
-                          const SizedBox(height: 4),
-                          _subtitleText(PhosphorTokens.font(size: 12, color: PhosphorTokens.dim)),
-                        ],
-                      ])),
+                      Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            _titleText(PhosphorTokens.font(
+                                size: 17, color: isSelected ? PhosphorTokens.accent : PhosphorTokens.foreground)),
+                            if ((subtitle ?? '').isNotEmpty) ...<Widget>[
+                              const SizedBox(height: 4),
+                              _subtitleText(PhosphorTokens.font(size: 12, color: PhosphorTokens.dim)),
+                            ],
+                          ])),
               if (badge != null) Padding(padding: const EdgeInsets.only(left: 10), child: badge),
             ]),
           ),

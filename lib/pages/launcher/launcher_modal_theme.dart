@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../models/settings.dart';
 import 'launcher_design.dart';
 import 'launcher_design_builder.dart';
+import 'widgets/liquid_metal_surface.dart';
 
 /// Resolved visual tokens for the Ctrl+K actions modal so it follows the
 /// active launcher design.
@@ -29,6 +30,24 @@ class LauncherModalTokens {
     final bool isDark = theme.brightness == Brightness.dark;
     final LauncherDesign design = user.launcherDesign;
     switch (design) {
+      case LauncherDesign.opticalGlass:
+        return const LauncherModalTokens._(
+          design: LauncherDesign.opticalGlass,
+          isDark: false,
+          surface: OpticalGlassTokens.background,
+          accent: OpticalGlassTokens.accent,
+          onSurface: OpticalGlassTokens.foreground,
+          dim: OpticalGlassTokens.dim,
+        );
+      case LauncherDesign.liquidMetal:
+        return const LauncherModalTokens._(
+          design: LauncherDesign.liquidMetal,
+          isDark: true,
+          surface: LiquidMetalTokens.background,
+          accent: LiquidMetalTokens.accent,
+          onSurface: LiquidMetalTokens.foreground,
+          dim: LiquidMetalTokens.dim,
+        );
       case LauncherDesign.phosphor:
         return const LauncherModalTokens._(
             design: LauncherDesign.phosphor,
@@ -246,6 +265,8 @@ class LauncherModalTokens {
 
   /// Radius for inner controls (search field, chips).
   double get controlRadius => switch (design) {
+        LauncherDesign.opticalGlass => 12.0,
+        LauncherDesign.liquidMetal => 8.0,
         LauncherDesign.terminal => 3.0,
         LauncherDesign.blueprint => 2.0,
         LauncherDesign.command => 6.0,
@@ -304,6 +325,18 @@ class LauncherModalTokens {
     double? height,
   }) {
     return switch (design) {
+      LauncherDesign.opticalGlass => OpticalGlassTokens.font(
+              size: fontSize ?? 14,
+              weight: fontWeight ?? FontWeight.w500,
+              color: color ?? onSurface,
+              spacing: letterSpacing ?? 0)
+          .copyWith(height: height),
+      LauncherDesign.liquidMetal => LiquidMetalTokens.font(
+              size: fontSize ?? 14,
+              weight: fontWeight ?? FontWeight.w500,
+              color: color ?? onSurface,
+              spacing: letterSpacing ?? 0)
+          .copyWith(height: height),
       LauncherDesign.tui => TuiTokens.mono(
           fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing, height: height),
       LauncherDesign.omarchy => OmarchyTokens.mono(
@@ -385,6 +418,23 @@ class LauncherModalFrame extends StatelessWidget {
 
     core = _applyBackdropEffect(core);
 
+    if (design == LauncherDesign.opticalGlass) {
+      core = LiquidMetalMotion(
+          child: OpticalGlassSurface(
+        raised: false,
+        radius: tokens.frameRadius,
+        child: OpticalGlassSurface(overlay: true, radius: tokens.frameRadius, child: core),
+      ));
+    }
+
+    if (design == LauncherDesign.liquidMetal) {
+      core = LiquidMetalMotion(
+          child: LiquidMetalSurface(
+        radius: tokens.frameRadius,
+        child: LiquidMetalSurface(overlay: true, radius: tokens.frameRadius, child: core),
+      ));
+    }
+
     return Container(
       width: width,
       constraints: constraints ?? BoxConstraints(maxHeight: maxHeight),
@@ -423,6 +473,8 @@ class LauncherModalFrame extends StatelessWidget {
 
   Color _surfaceColor(BuildContext context) {
     return switch (design) {
+      LauncherDesign.opticalGlass => Colors.transparent,
+      LauncherDesign.liquidMetal => Colors.transparent,
       LauncherDesign.omarchy => tokens.surface,
       LauncherDesign.tui => tokens.surface,
       LauncherDesign.relay || LauncherDesign.newCast || LauncherDesign.notion => tokens.surface.withValues(alpha: 0.98),

@@ -223,10 +223,12 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
     final double radius = math.min(LauncherThemeData(design: widget.design).frameRadius, 10);
     final Color panelColor = Color.alphaBlend(widget.onSurface.withAlpha(12), theme.colorScheme.surface);
 
-    return Container(
+    final Widget panel = Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: panelColor,
+        color: (widget.design == LauncherDesign.liquidMetal || widget.design == LauncherDesign.opticalGlass)
+            ? null
+            : panelColor,
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: widget.accent.withAlpha(65)),
       ),
@@ -255,6 +257,8 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
         ],
       ),
     );
+    if (widget.design == LauncherDesign.opticalGlass) return OpticalGlassSurface(radius: radius, child: panel);
+    return widget.design == LauncherDesign.liquidMetal ? LiquidMetalSurface(child: panel) : panel;
   }
 
   Widget _buildPhosphorPanel(ThemeData theme) => Container(
@@ -776,7 +780,8 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
         return Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
           Padding(
               padding: const EdgeInsets.only(top: 7, right: 12),
-              child: Text(List<String>.generate('\n'.allMatches(text).length + 1, (int index) => '${index + 1}').join('\n'),
+              child: Text(
+                  List<String>.generate('\n'.allMatches(text).length + 1, (int index) => '${index + 1}').join('\n'),
                   textAlign: TextAlign.right,
                   style: PhosphorTokens.font(size: 12, color: PhosphorTokens.dim).copyWith(height: 1.4))),
           Expanded(child: MarkdownBlock(data: _fencedCode(text, language), config: _markdownConfig(theme))),
