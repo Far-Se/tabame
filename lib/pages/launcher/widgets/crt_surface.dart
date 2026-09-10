@@ -7,16 +7,46 @@ import 'package:window_manager/window_manager.dart';
 
 /// Captures live content on the GPU; hit testing remains on the widget tree.
 class CrtSurface extends StatefulWidget {
-  const CrtSurface({super.key, required this.child});
+  const CrtSurface({
+    super.key,
+    required this.child,
+    this.shaderAsset = 'resources/shaders/crt.frag',
+    this.pixelSize = 0,
+    this.persistenceRate = 9,
+    this.effectName = 'CRT',
+    this.background,
+    this.accent,
+  });
   final Widget child;
+  final String shaderAsset;
+  final double pixelSize;
+  final double persistenceRate;
+  final String effectName;
+  final Color? background;
+  final Color? accent;
 
   @override
   State<CrtSurface> createState() => _CrtSurfaceState();
 }
 
+/// The stronger arcade pass used by the Retro launcher design.
+class RetroSurface extends CrtSurface {
+  const RetroSurface({
+    super.key,
+    required super.child,
+    super.background,
+    super.accent,
+  }) : super(
+          shaderAsset: 'resources/shaders/retro.frag',
+          pixelSize: 0.32,
+          persistenceRate: 11.7,
+          effectName: 'Retro',
+        );
+}
+
 class _CrtSurfaceState extends State<CrtSurface>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver, WindowListener {
-  static Future<List<ui.FragmentProgram>>? _programs;
+  static final Map<String, Future<List<ui.FragmentProgram>>> _programs = <String, Future<List<ui.FragmentProgram>>>{};
   late final AnimationController _clock = AnimationController(vsync: this, duration: const Duration(hours: 1));
   ui.FragmentProgram? _screen;
   ui.FragmentProgram? _persistence;
@@ -34,10 +64,14 @@ class _CrtSurfaceState extends State<CrtSurface>
 
   Future<void> _load() async {
     try {
-      final List<ui.FragmentProgram> programs = await (_programs ??= Future.wait(<Future<ui.FragmentProgram>>[
-        ui.FragmentProgram.fromAsset('resources/shaders/crt.frag'),
-        ui.FragmentProgram.fromAsset('resources/shaders/crt_persistence.frag'),
-      ]));
+      final Future<List<ui.FragmentProgram>> loading = _programs.putIfAbsent(
+        widget.shaderAsset,
+        () => Future.wait(<Future<ui.FragmentProgram>>[
+          ui.FragmentProgram.fromAsset(widget.shaderAsset),
+          ui.FragmentProgram.fromAsset('resources/shaders/crt_persistence.frag'),
+        ]),
+      );
+      final List<ui.FragmentProgram> programs = await loading;
       if (!mounted) return;
       setState(() {
         _screen = programs[0];
@@ -45,8 +79,8 @@ class _CrtSurfaceState extends State<CrtSurface>
       });
       _sync();
     } catch (error) {
-      _programs = null;
-      debugPrint('CRT shaders unavailable; using static launcher: $error');
+      _programs.remove(widget.shaderAsset);
+      debugPrint('${widget.effectName} shaders unavailable; using static launcher: $error');
     }
   }
 
@@ -103,8 +137,10 @@ class _CrtSurfaceState extends State<CrtSurface>
           persistence: _persistence!,
           clock: _clock,
           motion: _motion,
-          background: Theme.of(context).colorScheme.surface,
-          accent: Theme.of(context).colorScheme.primary,
+          background: widget.background ?? Theme.of(context).colorScheme.surface,
+          accent: widget.accent ?? Theme.of(context).colorScheme.primary,
+          pixelSize: widget.pixelSize,
+          persistenceRate: widget.persistenceRate,
           pixelRatio: MediaQuery.devicePixelRatioOf(context).clamp(1.0, 2.0),
           child: widget.child);
 }
@@ -118,6 +154,8 @@ class _CrtSampler extends SingleChildRenderObjectWidget {
       required this.pixelRatio,
       required this.background,
       required this.accent,
+      required this.pixelSize,
+      required this.persistenceRate,
       required super.child});
   final ui.FragmentProgram screen;
   final ui.FragmentProgram persistence;
@@ -126,18 +164,21 @@ class _CrtSampler extends SingleChildRenderObjectWidget {
   final double pixelRatio;
   final Color background;
   final Color accent;
+  final double pixelSize;
+  final double persistenceRate;
 
   @override
   RenderObject createRenderObject(BuildContext context) =>
-      _RenderCrt(screen, persistence, clock, motion, pixelRatio, background, accent);
+      _RenderCrt(screen, persistence, clock, motion, pixelRatio, background, accent, pixelSize, persistenceRate);
   @override
   void updateRenderObject(BuildContext context, covariant _RenderCrt renderObject) {
-    renderObject.configure(motion, pixelRatio, background, accent);
+    renderObject.configure(motion, pixelRatio, background, accent, pixelSize, persistenceRate);
   }
 }
 
 class _RenderCrt extends RenderProxyBox {
-  _RenderCrt(this.screen, this.persistence, this.clock, this.motion, this.pixelRatio, this.background, this.accent);
+  _RenderCrt(this.screen, this.persistence, this.clock, this.motion, this.pixelRatio, this.background, this.accent,
+      this.pixelSize, this.persistenceRate);
   final ui.FragmentProgram screen;
   final ui.FragmentProgram persistence;
   final Animation<double> clock;
@@ -145,12 +186,17 @@ class _RenderCrt extends RenderProxyBox {
   double pixelRatio;
   Color background;
   Color accent;
+  double pixelSize;
+  double persistenceRate;
 
-  void configure(bool nextMotion, double nextRatio, Color nextBackground, Color nextAccent) {
+  void configure(bool nextMotion, double nextRatio, Color nextBackground, Color nextAccent, double nextPixelSize,
+      double nextPersistenceRate) {
     background = nextBackground;
     accent = nextAccent;
     motion = nextMotion;
     pixelRatio = nextRatio;
+    pixelSize = nextPixelSize;
+    persistenceRate = nextPersistenceRate;
     markNeedsCompositedLayerUpdate();
   }
 
@@ -179,7 +225,7 @@ class _RenderCrt extends RenderProxyBox {
   @override
   OffsetLayer updateCompositedLayer({covariant _CrtLayer? oldLayer}) {
     final _CrtLayer result = oldLayer ?? _CrtLayer(screen.fragmentShader(), persistence.fragmentShader());
-    result.configure(size, pixelRatio, clock.value * 3600, motion, background, accent);
+    result.configure(size, pixelRatio, clock.value * 3600, motion, background, accent, pixelSize, persistenceRate);
     return result;
   }
 
@@ -215,9 +261,18 @@ class _CrtLayer extends OffsetLayer {
   bool failed = false;
   Color _background = Colors.black;
   Color _accent = Colors.white;
+  double _pixelSize = 0;
+  double _persistenceRate = 9;
 
-  void configure(Size size, double ratio, double time, bool motion, Color background, Color accent) {
-    if (_size != size || _ratio != ratio || _motion != motion || _background != background || _accent != accent) {
+  void configure(Size size, double ratio, double time, bool motion, Color background, Color accent, double pixelSize,
+      double persistenceRate) {
+    if (_size != size ||
+        _ratio != ratio ||
+        _motion != motion ||
+        _background != background ||
+        _accent != accent ||
+        _pixelSize != pixelSize ||
+        _persistenceRate != persistenceRate) {
       _history?.dispose();
       _history = null;
       _lastTime = null;
@@ -228,6 +283,8 @@ class _CrtLayer extends OffsetLayer {
     _ratio = ratio;
     _time = time;
     _motion = motion;
+    _pixelSize = pixelSize;
+    _persistenceRate = persistenceRate;
     markNeedsAddToScene();
   }
 
@@ -258,7 +315,7 @@ class _CrtLayer extends OffsetLayer {
       final double now = _elapsed.elapsedMicroseconds / 1000000;
       final double elapsed = _lastTime == null ? 1 : now - _lastTime!;
       // No stale trails after pause/resume, resize or reduced-motion changes.
-      final double decay = _motion && elapsed >= 0 && elapsed < 0.5 ? math.exp(-elapsed * 9) : 0;
+      final double decay = _motion && elapsed >= 0 && elapsed < 0.5 ? math.exp(-elapsed * _persistenceRate) : 0;
       persistence
         ..setFloat(0, _size.width)
         ..setFloat(1, _size.height)
@@ -286,6 +343,7 @@ class _CrtLayer extends OffsetLayer {
         ..setFloat(8, _accent.g)
         ..setFloat(9, _accent.b)
         ..setImageSampler(0, next);
+      if (_pixelSize > 0) screen.setFloat(10, _pixelSize);
       final ui.PictureRecorder recorder = ui.PictureRecorder();
       Canvas(recorder).drawRect(Offset.zero & _size, Paint()..shader = screen);
       final ui.Picture picture = recorder.endRecording();

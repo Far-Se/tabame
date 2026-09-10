@@ -217,6 +217,7 @@ class LauncherResultRow extends StatelessWidget {
       LauncherDesign.aurora => _buildAurora(context),
       LauncherDesign.strata => _buildStrata(context),
       LauncherDesign.crt => _buildCrt(context),
+      LauncherDesign.retro => _buildRetro(context),
       LauncherDesign.phosphor => _buildPhosphor(context),
       LauncherDesign.serene => _buildSerene(context),
       LauncherDesign.command => _buildCommand(context),
@@ -390,6 +391,74 @@ class LauncherResultRow extends StatelessWidget {
                           ])),
               if (badge != null) Padding(padding: const EdgeInsets.only(left: 10), child: badge),
             ]),
+          ),
+        ),
+      );
+
+  Widget _buildRetro(BuildContext context) => RepaintBoundary(
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onHover: (PointerHoverEvent event) {
+            if (event.delta != Offset.zero) onHover();
+          },
+          child: GestureDetector(
+            onTap: onTap,
+            behavior: HitTestBehavior.opaque,
+            child: AnimatedContainer(
+              duration: Duration(milliseconds: isRepeating ? 40 : 120),
+              curve: Curves.easeOut,
+              margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+              padding: const EdgeInsets.fromLTRB(7, 6, 8, 6),
+              decoration: BoxDecoration(
+                color: isSelected ? RetroTokens.selected : Colors.transparent,
+                border: Border.all(
+                  color: isSelected ? RetroTokens.accent : RetroTokens.border.withAlpha(100),
+                ),
+              ),
+              child: Row(
+                children: <Widget>[
+                  SizedBox(
+                    width: 22,
+                    child: Text(
+                      isSelected ? '>' : '',
+                      style: RetroTokens.label(size: 10, color: RetroTokens.accent),
+                    ),
+                  ),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: RetroTokens.panel,
+                      border: Border.all(color: isSelected ? RetroTokens.cyan : RetroTokens.border),
+                    ),
+                    child: icon,
+                  ),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: content ??
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            _titleText(RetroTokens.pixel(
+                              size: 20,
+                              color: isSelected ? RetroTokens.accent : RetroTokens.foreground,
+                            )),
+                            if ((subtitle ?? '').isNotEmpty)
+                              _subtitleText(RetroTokens.pixel(size: 15, color: RetroTokens.dim)),
+                          ],
+                        ),
+                  ),
+                  if (badge != null) Padding(padding: const EdgeInsets.only(left: 8), child: badge),
+                  if (isSelected)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 10),
+                      child: Text('A', style: RetroTokens.label(size: 8, color: RetroTokens.cyan)),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       );
@@ -2333,6 +2402,8 @@ class LauncherKindBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (user.launcherDesign == LauncherDesign.phosphor)
       return Text('[$label]', style: PhosphorTokens.font(size: 11, color: PhosphorTokens.dim));
+    if (user.launcherDesign == LauncherDesign.retro)
+      return Text(label.toUpperCase(), style: RetroTokens.label(size: 7, color: RetroTokens.cyan));
     if (user.launcherDesign == LauncherDesign.tui) return Text('[$label]');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),

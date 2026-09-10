@@ -76,6 +76,7 @@ flutter:
   shaders:
     - resources/shaders/crt.frag
     - resources/shaders/crt_persistence.frag
+    - resources/shaders/retro.frag
     - resources/shaders/liquid_metal.frag
     - resources/shaders/optical_glass.frag
 

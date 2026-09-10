@@ -116,10 +116,13 @@ enum LauncherDesign {
   phosphor,
   liquidMetal,
   opticalGlass,
-  crt;
+  crt,
+  // Persisted by index: new designs must remain append-only.
+  retro;
 
   String get displayName => switch (this) {
         LauncherDesign.crt => 'CRT',
+        LauncherDesign.retro => 'Retro',
         LauncherDesign.liquidMetal => 'Liquid Metal',
         LauncherDesign.opticalGlass => 'Optical Glass',
         LauncherDesign.windowsXp => 'Windows XP',
@@ -770,6 +773,28 @@ class Settings {
             entryFontFamily: 'Consolas',
             entryFontWeight: 400,
             borderRadius: 18),
+      ),
+      LauncherDesign.retro.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFF090B1A),
+          textColor: const Color(0xFFFFF0C6),
+          accentColor: const Color(0xFFFF4F9A),
+          gradientAlpha: 0,
+          uiFontFamily: 'Press Start 2P',
+          entryFontFamily: 'VT323',
+          entryFontWeight: 400,
+          borderRadius: 8,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF090B1A),
+          textColor: const Color(0xFFFFF0C6),
+          accentColor: const Color(0xFFFF4F9A),
+          gradientAlpha: 0,
+          uiFontFamily: 'Press Start 2P',
+          entryFontFamily: 'VT323',
+          entryFontWeight: 400,
+          borderRadius: 8,
+        ),
       ),
       LauncherDesign.phosphor.displayName: LauncherDesignThemeSet(
         lightTheme: _defaultThemeColors(

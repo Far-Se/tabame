@@ -876,6 +876,7 @@ class LauncherThemeData {
   bool get isSwitchboard => design == LauncherDesign.switchboard;
   bool get isRelay => design == LauncherDesign.relay;
   bool get isRaycast => design == LauncherDesign.newCast;
+  bool get isRetro => design == LauncherDesign.retro;
   bool get isQuickMenuInspired => switch (design) {
         LauncherDesign.tech ||
         LauncherDesign.vector ||
@@ -923,6 +924,7 @@ class LauncherThemeData {
         LauncherDesign.omarchy => Icons.drag_indicator,
         LauncherDesign.aurora => Icons.search_rounded,
         LauncherDesign.crt || LauncherDesign.phosphor => Icons.search_rounded,
+        LauncherDesign.retro => Icons.videogame_asset_rounded,
         LauncherDesign.strata => Icons.search_rounded,
         LauncherDesign.tui => Icons.terminal,
       };
@@ -959,6 +961,7 @@ class LauncherThemeData {
         LauncherDesign.omarchy => 16.0,
         LauncherDesign.aurora => 28.0,
         LauncherDesign.crt || LauncherDesign.phosphor => 20.0,
+        LauncherDesign.retro => 20.0,
         LauncherDesign.strata => 28.0,
         LauncherDesign.tui => 16.0,
       };
@@ -997,6 +1000,7 @@ class LauncherThemeData {
         LauncherDesign.omarchy => 16.0,
         LauncherDesign.aurora => 23.0,
         LauncherDesign.crt || LauncherDesign.phosphor => 23.0,
+        LauncherDesign.retro => 20.0,
         LauncherDesign.strata => 23.0,
         LauncherDesign.tui => TuiTokens.fontSize,
       };
@@ -1032,6 +1036,7 @@ class LauncherThemeData {
         LauncherDesign.omarchy => FontWeight.w500,
         LauncherDesign.aurora => FontWeight.w400,
         LauncherDesign.crt || LauncherDesign.phosphor => FontWeight.w400,
+        LauncherDesign.retro => FontWeight.w400,
         LauncherDesign.strata => FontWeight.w400,
         LauncherDesign.tui => FontWeight.w400,
       };
@@ -1040,7 +1045,9 @@ class LauncherThemeData {
       ? ''
       : isRaycast
           ? 'Search apps, files, and commands...'
-          : null;
+          : isRetro
+              ? 'TYPE TO SEARCH...'
+              : null;
 
   double get frameRadius => switch (design) {
         LauncherDesign.liquidMetal => 16.0,
@@ -1074,13 +1081,17 @@ class LauncherThemeData {
         LauncherDesign.omarchy => 0.0,
         LauncherDesign.aurora => 18.0,
         LauncherDesign.crt => 18.0,
+        LauncherDesign.retro => 8.0,
         LauncherDesign.phosphor => 0.0,
         LauncherDesign.strata => 12.0,
         LauncherDesign.tui => 0.0,
       };
 
-  EdgeInsets get resultsListPadding =>
-      design == LauncherDesign.tui ? const EdgeInsets.symmetric(horizontal: 8, vertical: 2) : const EdgeInsets.all(8.0);
+  EdgeInsets get resultsListPadding => design == LauncherDesign.tui
+      ? const EdgeInsets.symmetric(horizontal: 8, vertical: 2)
+      : design == LauncherDesign.retro
+          ? const EdgeInsets.symmetric(horizontal: 4, vertical: 6)
+          : const EdgeInsets.all(8.0);
 
   @override
   bool operator ==(Object other) =>
@@ -1168,4 +1179,56 @@ abstract final class CrtTokens {
   static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
   static TextStyle font({double size = 13, Color? color, double? spacing}) =>
       PhosphorTokens.font(size: size, color: color ?? foreground, spacing: spacing);
+}
+
+/// Arcade cabinet tokens and pixel-era typography for the Retro launcher.
+///
+/// The three base colors follow the active Launcher Design settings. The
+/// remaining tones are derived from them so custom palettes stay coherent.
+/// VT323 keeps result rows readable at a compact size; Press Start 2P is
+/// reserved for the short labels that should feel printed on a game cabinet.
+abstract final class RetroTokens {
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static Color get panel => Color.alphaBlend(foreground.withValues(alpha: 0.06), background);
+  static Color get bezel => Color.alphaBlend(accent.withValues(alpha: 0.12), background);
+  static Color get cyan => Color.lerp(accent, foreground, 0.45)!;
+  static Color get yellow => Color.lerp(accent, foreground, 0.72)!;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: 0.7), background);
+  static Color get border => Color.alphaBlend(accent.withValues(alpha: 0.38), background);
+  static Color get selected => Color.alphaBlend(accent.withValues(alpha: 0.16), background);
+  static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+
+  static TextStyle pixel({
+    double size = 18,
+    Color? color,
+    double? spacing,
+    FontWeight weight = FontWeight.w400,
+    double? height,
+  }) {
+    return launcherTextStyle(GoogleFonts.vt323(
+      fontSize: size,
+      color: color ?? foreground,
+      letterSpacing: spacing,
+      fontWeight: weight,
+      height: height ?? 1.05,
+    ));
+  }
+
+  static TextStyle label({
+    double size = 9,
+    Color? color,
+    double? spacing,
+    FontWeight weight = FontWeight.w400,
+    double? height,
+  }) {
+    return launcherTextStyle(GoogleFonts.pressStart2p(
+      fontSize: size,
+      color: color ?? foreground,
+      letterSpacing: spacing,
+      fontWeight: weight,
+      height: height ?? 1.35,
+    ));
+  }
 }

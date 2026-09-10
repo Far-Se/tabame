@@ -38,6 +38,19 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
           highlightColor: CrtTokens.accent.withAlpha(30),
           textTheme: baseTheme.textTheme
               .apply(fontFamily: 'Consolas', bodyColor: CrtTokens.foreground, displayColor: CrtTokens.foreground)),
+      LauncherDesign.retro => _copyDesignTheme(
+          baseTheme,
+          brightness: RetroTokens.isDark ? Brightness.dark : Brightness.light,
+          colorSchemeBrightness: RetroTokens.isDark ? Brightness.dark : Brightness.light,
+          surface: RetroTokens.background,
+          onSurface: RetroTokens.foreground,
+          primary: RetroTokens.accent,
+          highlightColor: RetroTokens.accent.withAlpha(30),
+          textTheme: GoogleFonts.vt323TextTheme(baseTheme.textTheme).apply(
+            bodyColor: RetroTokens.foreground,
+            displayColor: RetroTokens.foreground,
+          ),
+        ),
       LauncherDesign.phosphor => _copyDesignTheme(baseTheme,
           brightness: Brightness.dark,
           colorSchemeBrightness: Brightness.dark,

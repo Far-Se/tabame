@@ -7,6 +7,7 @@ import '../../models/settings.dart';
 import 'launcher_design.dart';
 import 'launcher_design_builder.dart';
 import 'widgets/liquid_metal_surface.dart';
+import 'widgets/crt_surface.dart';
 
 /// Resolved visual tokens for the Ctrl+K actions modal so it follows the
 /// active launcher design.
@@ -56,6 +57,15 @@ class LauncherModalTokens {
             accent: CrtTokens.accent,
             onSurface: CrtTokens.foreground,
             dim: CrtTokens.dim);
+      case LauncherDesign.retro:
+        return LauncherModalTokens._(
+          design: LauncherDesign.retro,
+          isDark: RetroTokens.isDark,
+          surface: RetroTokens.background,
+          accent: RetroTokens.accent,
+          onSurface: RetroTokens.foreground,
+          dim: RetroTokens.dim,
+        );
       case LauncherDesign.phosphor:
         return const LauncherModalTokens._(
             design: LauncherDesign.phosphor,
@@ -304,6 +314,7 @@ class LauncherModalTokens {
         LauncherDesign.omarchy => 0.0,
         LauncherDesign.aurora => 10.0,
         LauncherDesign.crt => 2.0,
+        LauncherDesign.retro => 0.0,
         LauncherDesign.phosphor => 0.0,
         LauncherDesign.strata => 8.0,
         LauncherDesign.tui => 0.0,
@@ -313,6 +324,7 @@ class LauncherModalTokens {
   /// looks); the soft designs use borderless fills instead.
   bool get outlinedControls =>
       design == LauncherDesign.crt ||
+      design == LauncherDesign.retro ||
       design == LauncherDesign.tui ||
       design == LauncherDesign.omarchy ||
       design == LauncherDesign.command ||
@@ -337,6 +349,13 @@ class LauncherModalTokens {
     return switch (design) {
       LauncherDesign.crt => CrtTokens.font(size: fontSize ?? 14, color: color ?? onSurface, spacing: letterSpacing)
           .copyWith(fontWeight: fontWeight, height: height),
+      LauncherDesign.retro => RetroTokens.pixel(
+          size: fontSize ?? 18,
+          color: color ?? onSurface,
+          spacing: letterSpacing,
+          weight: fontWeight ?? FontWeight.w400,
+          height: height,
+        ),
       LauncherDesign.opticalGlass => OpticalGlassTokens.font(
               size: fontSize ?? 14,
               weight: fontWeight ?? FontWeight.w500,
@@ -447,6 +466,14 @@ class LauncherModalFrame extends StatelessWidget {
       ));
     }
 
+    if (design == LauncherDesign.retro) {
+      core = RetroSurface(
+        background: tokens.surface,
+        accent: tokens.accent,
+        child: core,
+      );
+    }
+
     return Container(
       width: width,
       constraints: constraints ?? BoxConstraints(maxHeight: maxHeight),
@@ -489,6 +516,7 @@ class LauncherModalFrame extends StatelessWidget {
       LauncherDesign.liquidMetal => Colors.transparent,
       LauncherDesign.omarchy => tokens.surface,
       LauncherDesign.tui => tokens.surface,
+      LauncherDesign.retro => tokens.surface,
       LauncherDesign.relay || LauncherDesign.newCast || LauncherDesign.notion => tokens.surface.withValues(alpha: 0.98),
       LauncherDesign.windows98 => Windows98Tokens.face,
       LauncherDesign.windowsXp => WindowsXpTokens.surface,
@@ -743,6 +771,10 @@ class LauncherModalHeader extends StatelessWidget {
           borderRadius: BorderRadius.circular(3),
           border: Border.all(color: accent.withAlpha(60)),
         ),
+      LauncherDesign.retro => BoxDecoration(
+          color: RetroTokens.panel,
+          border: Border.all(color: RetroTokens.cyan.withAlpha(150)),
+        ),
       LauncherDesign.terminal2 => BoxDecoration(
           color: Terminal2Tokens.raised(tokens.isDark),
           borderRadius: BorderRadius.circular(2),
@@ -827,6 +859,7 @@ class LauncherModalHeader extends StatelessWidget {
       tokens.design == LauncherDesign.blueprint ||
       tokens.design == LauncherDesign.command ||
       tokens.design == LauncherDesign.terminal2 ||
+      tokens.design == LauncherDesign.retro ||
       tokens.design == LauncherDesign.orbit ||
       tokens.design == LauncherDesign.manifesto ||
       tokens.design == LauncherDesign.switchboard ||
@@ -928,6 +961,7 @@ class LauncherModalFooter extends StatelessWidget {
     final Color lineColor = switch (tokens.design) {
       LauncherDesign.terminal => tokens.accent.withAlpha(40),
       LauncherDesign.terminal2 => tokens.dim.withAlpha(72),
+      LauncherDesign.retro => tokens.accent.withAlpha(100),
       LauncherDesign.blueprint => tokens.accent.withAlpha(80),
       LauncherDesign.transit => tokens.accent.withAlpha(90),
       LauncherDesign.orbit => tokens.accent.withAlpha(50),
@@ -946,19 +980,21 @@ class LauncherModalFooter extends StatelessWidget {
             ? TerminalTokens.chrome(tokens.isDark)
             : tokens.design == LauncherDesign.terminal2
                 ? Terminal2Tokens.chrome(tokens.isDark)
-                : tokens.design == LauncherDesign.transit
-                    ? TransitTokens.chrome(tokens.isDark)
-                    : tokens.design == LauncherDesign.fluent
-                        ? FluentTokens.chrome(tokens.isDark)
-                        : tokens.design == LauncherDesign.orbit
-                            ? OrbitTokens.chrome(tokens.isDark)
-                            : tokens.design == LauncherDesign.notion
-                                ? NotionTokens.sidebar(tokens.isDark)
-                                : tokens.design == LauncherDesign.switchboard
-                                    ? SwitchboardTokens.panel(tokens.isDark)
-                                    : tokens.design == LauncherDesign.relay
-                                        ? RelayTokens.panel(tokens.isDark, tokens.accent)
-                                        : null,
+                : tokens.design == LauncherDesign.retro
+                    ? RetroTokens.panel
+                    : tokens.design == LauncherDesign.transit
+                        ? TransitTokens.chrome(tokens.isDark)
+                        : tokens.design == LauncherDesign.fluent
+                            ? FluentTokens.chrome(tokens.isDark)
+                            : tokens.design == LauncherDesign.orbit
+                                ? OrbitTokens.chrome(tokens.isDark)
+                                : tokens.design == LauncherDesign.notion
+                                    ? NotionTokens.sidebar(tokens.isDark)
+                                    : tokens.design == LauncherDesign.switchboard
+                                        ? SwitchboardTokens.panel(tokens.isDark)
+                                        : tokens.design == LauncherDesign.relay
+                                            ? RelayTokens.panel(tokens.isDark, tokens.accent)
+                                            : null,
         border: Border(top: BorderSide(color: lineColor)),
       ),
       child: Row(

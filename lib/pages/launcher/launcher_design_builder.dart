@@ -46,6 +46,7 @@ part 'launcher_designs/aurora_launcher_design.dart';
 part 'launcher_designs/strata_launcher_design.dart';
 part 'launcher_designs/phosphor_launcher_design.dart';
 part 'launcher_designs/crt_launcher_design.dart';
+part 'launcher_designs/retro_launcher_design.dart';
 part 'launcher_designs/liquid_metal_launcher_design.dart';
 part 'launcher_designs/optical_glass_launcher_design.dart';
 
@@ -73,6 +74,19 @@ extension LauncherDesignBuilder on LauncherDesign {
             color: CrtTokens.background,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: CrtTokens.border));
+      case LauncherDesign.retro:
+        return BoxDecoration(
+          color: RetroTokens.bezel,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: RetroTokens.accent.withAlpha(180), width: 1.5),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: const Color(0xAA02030B),
+              blurRadius: 0,
+              offset: const Offset(6, 6),
+            ),
+          ],
+        );
       case LauncherDesign.phosphor:
         return BoxDecoration(
             color: PhosphorTokens.background,
@@ -399,6 +413,13 @@ extension LauncherDesignBuilder on LauncherDesign {
       case LauncherDesign.crt:
         return CrtSearchBar(
             dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
+      case LauncherDesign.retro:
+        return RetroSearchBar(
+          dragHandle: dragHandle,
+          textField: textField,
+          trailingBadge: trailingBadge,
+          isSearching: isSearching,
+        );
       case LauncherDesign.phosphor:
         return PhosphorSearchBar(
             dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
@@ -659,6 +680,8 @@ extension LauncherDesignBuilder on LauncherDesign {
       case LauncherDesign.crt:
       case LauncherDesign.phosphor:
         return const SizedBox.shrink();
+      case LauncherDesign.retro:
+        return RetroSectionHeader(label: label, accent: accent);
       case LauncherDesign.strata:
         return Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),

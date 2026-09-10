@@ -772,7 +772,8 @@ class LauncherState extends State<Launcher>
     final bool isOmarchy = _design == LauncherDesign.omarchy;
     final bool isTui = _design == LauncherDesign.tui;
     final bool isTerminal2 = _design == LauncherDesign.terminal2;
-    final bool usesBlockCursor = isTerminal2 || isOmarchy || isTui;
+    final bool isRetro = _design == LauncherDesign.retro;
+    final bool usesBlockCursor = isTerminal2 || isOmarchy || isTui || isRetro;
     final bool isZen = _design == LauncherDesign.zen;
     final bool isGlass = _design == LauncherDesign.glass;
     final bool isBlueprint = _design == LauncherDesign.blueprint;
@@ -799,6 +800,7 @@ class LauncherState extends State<Launcher>
       _ when _design == LauncherDesign.opticalGlass => OpticalGlassTokens.accent,
       _ when _design == LauncherDesign.aurora => AuroraTokens.accent,
       _ when _design == LauncherDesign.crt => CrtTokens.accent,
+      _ when isRetro => RetroTokens.accent,
       _ when _design == LauncherDesign.phosphor => PhosphorTokens.accent,
       _ when _design == LauncherDesign.strata => StrataTokens.accent,
       _ when isTui => TuiTokens.accent,
@@ -972,7 +974,8 @@ class LauncherState extends State<Launcher>
                                     ? constraints.maxWidth *
                                         ((_design == LauncherDesign.strata ||
                                                 _design == LauncherDesign.phosphor ||
-                                                _design == LauncherDesign.crt)
+                                                _design == LauncherDesign.crt ||
+                                                isRetro)
                                             ? 0.45
                                             : 0.40)
                                     : appWidth * _previewWidthPercent! / 100;
@@ -1184,7 +1187,7 @@ class LauncherState extends State<Launcher>
                 _onSearchChanged(value);
                 _searchFocusNode.requestFocus();
               }),
-        if (_design == LauncherDesign.phosphor || _design == LauncherDesign.crt)
+        if (_design == LauncherDesign.phosphor || _design == LauncherDesign.crt || isRetro)
           Flexible(
               fit: FlexFit.loose,
               child: Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), child: resultsContent))
@@ -1231,6 +1234,7 @@ class LauncherState extends State<Launcher>
       LauncherDesign.aurora => AuroraLauncherFrame.new,
       LauncherDesign.strata => StrataLauncherFrame.new,
       LauncherDesign.crt => CrtLauncherFrame.new,
+      LauncherDesign.retro => RetroLauncherFrame.new,
       LauncherDesign.phosphor => PhosphorLauncherFrame.new,
       LauncherDesign.command => CommandLauncherFrame.new,
       LauncherDesign.terminal => TerminalLauncherFrame.new,
@@ -1295,6 +1299,7 @@ class LauncherState extends State<Launcher>
         _design == LauncherDesign.opticalGlass ||
         _design == LauncherDesign.phosphor ||
         _design == LauncherDesign.crt ||
+        isRetro ||
         _design == LauncherDesign.strata ||
         _design == LauncherDesign.aurora ||
         isTerminal ||
