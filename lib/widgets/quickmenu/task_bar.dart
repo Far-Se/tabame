@@ -787,7 +787,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
                 )
               : GoogleFonts.getFont(
                   Design.entryFontFamily,
-                  fontSize: Design.baseFontSize + 2,
+                  fontSize: Design.baseFontSize + (Design.arcadeTypography ? 1 : 2),
                   color: highlighted ? onSurface : onSurface.withAlpha(200),
                   fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
                   fontWeight: widget.isSelected
@@ -1027,7 +1027,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
             )
           : GoogleFonts.getFont(
               Design.entryFontFamily,
-              fontSize: 13,
+              fontSize: Design.arcadeTypography ? Design.baseFontSize + 1 : 13,
               letterSpacing: 0.3,
               fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
               fontWeight: widget.isSelected

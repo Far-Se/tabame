@@ -217,6 +217,7 @@ class LauncherResultRow extends StatelessWidget {
       LauncherDesign.aurora => _buildAurora(context),
       LauncherDesign.strata => _buildStrata(context),
       LauncherDesign.crt => _buildCrt(context),
+      LauncherDesign.toon => _buildToon(context),
       LauncherDesign.retro => _buildRetro(context),
       LauncherDesign.phosphor => _buildPhosphor(context),
       LauncherDesign.serene => _buildSerene(context),
@@ -395,6 +396,80 @@ class LauncherResultRow extends StatelessWidget {
         ),
       );
 
+  Widget _buildToon(BuildContext context) => MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: isRepeating ? 40 : 120),
+            curve: Curves.easeOutQuart,
+            margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            constraints: const BoxConstraints(minHeight: 58),
+            padding: const EdgeInsets.fromLTRB(9, 8, 10, 8),
+            decoration: BoxDecoration(
+              color: isSelected ? ToonTokens.selected : Colors.transparent,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: isSelected ? ToonTokens.cream : ToonTokens.orange.withAlpha(80),
+              ),
+            ),
+            child: Row(
+              children: <Widget>[
+                SizedBox(
+                  width: 20,
+                  child: Text(
+                    isSelected ? '>' : '',
+                    style: ToonTokens.font(size: 19, color: ToonTokens.orange, weight: FontWeight.w800),
+                  ),
+                ),
+                Container(
+                  width: 34,
+                  height: 34,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: const Color(0x7130281F),
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(
+                      color: isSelected ? ToonTokens.orange : ToonTokens.red.withAlpha(150),
+                    ),
+                  ),
+                  child: icon,
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: content ??
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          _titleText(ToonTokens.font(
+                            size: 16,
+                            color: isSelected ? ToonTokens.cream : ToonTokens.foreground,
+                            weight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                          )),
+                          if ((subtitle ?? '').isNotEmpty) ...<Widget>[
+                            const SizedBox(height: 3),
+                            _subtitleText(ToonTokens.font(size: 12, color: ToonTokens.dim)),
+                          ],
+                        ],
+                      ),
+                ),
+                if (badge != null) Padding(padding: const EdgeInsets.only(left: 8), child: badge),
+                if (isSelected)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 10),
+                    child: Icon(Icons.keyboard_return_rounded, size: 16, color: ToonTokens.orange),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+
   Widget _buildRetro(BuildContext context) => RepaintBoundary(
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -442,11 +517,12 @@ class LauncherResultRow extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             _titleText(RetroTokens.pixel(
-                              size: 20,
+                              size: RetroTokens.resultTitleSize,
                               color: isSelected ? RetroTokens.accent : RetroTokens.foreground,
                             )),
                             if ((subtitle ?? '').isNotEmpty)
-                              _subtitleText(RetroTokens.pixel(size: 15, color: RetroTokens.dim)),
+                              _subtitleText(
+                                  RetroTokens.pixel(size: RetroTokens.resultSubtitleSize, color: RetroTokens.dim)),
                           ],
                         ),
                   ),

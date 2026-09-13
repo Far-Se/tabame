@@ -38,6 +38,21 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
           highlightColor: CrtTokens.accent.withAlpha(30),
           textTheme: baseTheme.textTheme
               .apply(fontFamily: 'Consolas', bodyColor: CrtTokens.foreground, displayColor: CrtTokens.foreground)),
+      LauncherDesign.toon => _copyDesignTheme(
+          baseTheme,
+          brightness: Brightness.dark,
+          colorSchemeBrightness: Brightness.dark,
+          surface: ToonTokens.background,
+          onSurface: ToonTokens.foreground,
+          primary: ToonTokens.accent,
+          highlightColor: ToonTokens.orange.withAlpha(42),
+          textTheme: baseTheme.textTheme.apply(
+            fontFamily: 'Barlow Condensed',
+            fontFamilyFallback: const <String>['Segoe UI'],
+            bodyColor: ToonTokens.foreground,
+            displayColor: ToonTokens.foreground,
+          ),
+        ),
       LauncherDesign.retro => _copyDesignTheme(
           baseTheme,
           brightness: RetroTokens.isDark ? Brightness.dark : Brightness.light,
@@ -46,10 +61,7 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
           onSurface: RetroTokens.foreground,
           primary: RetroTokens.accent,
           highlightColor: RetroTokens.accent.withAlpha(30),
-          textTheme: GoogleFonts.vt323TextTheme(baseTheme.textTheme).apply(
-            bodyColor: RetroTokens.foreground,
-            displayColor: RetroTokens.foreground,
-          ),
+          textTheme: RetroTokens.resultTextTheme(baseTheme.textTheme),
         ),
       LauncherDesign.phosphor => _copyDesignTheme(baseTheme,
           brightness: Brightness.dark,

@@ -49,6 +49,7 @@ part 'launcher_designs/crt_launcher_design.dart';
 part 'launcher_designs/retro_launcher_design.dart';
 part 'launcher_designs/liquid_metal_launcher_design.dart';
 part 'launcher_designs/optical_glass_launcher_design.dart';
+part 'launcher_designs/toon_launcher_design.dart';
 
 // ---------------------------------------------------------------------------
 // Extension: per-design widget factories used by LauncherState
@@ -74,6 +75,19 @@ extension LauncherDesignBuilder on LauncherDesign {
             color: CrtTokens.background,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: CrtTokens.border));
+      case LauncherDesign.toon:
+        return BoxDecoration(
+          color: ToonTokens.background,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: ToonTokens.orange.withAlpha(180), width: 1.5),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: ToonTokens.ink.withAlpha(220),
+              blurRadius: 0,
+              offset: const Offset(5, 5),
+            ),
+          ],
+        );
       case LauncherDesign.retro:
         return BoxDecoration(
           color: RetroTokens.bezel,
@@ -413,6 +427,13 @@ extension LauncherDesignBuilder on LauncherDesign {
       case LauncherDesign.crt:
         return CrtSearchBar(
             dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
+      case LauncherDesign.toon:
+        return ToonSearchBar(
+          dragHandle: dragHandle,
+          textField: textField,
+          trailingBadge: trailingBadge,
+          isSearching: isSearching,
+        );
       case LauncherDesign.retro:
         return RetroSearchBar(
           dragHandle: dragHandle,
@@ -680,6 +701,24 @@ extension LauncherDesignBuilder on LauncherDesign {
       case LauncherDesign.crt:
       case LauncherDesign.phosphor:
         return const SizedBox.shrink();
+      case LauncherDesign.toon:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 9, 16, 5),
+          child: Row(
+            children: <Widget>[
+              const Icon(Icons.bolt_rounded, size: 15, color: ToonTokens.orange),
+              const SizedBox(width: 7),
+              Text(
+                label.toUpperCase(),
+                style: ToonTokens.font(size: 11, color: ToonTokens.cream, spacing: 1.4, weight: FontWeight.w700),
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: Container(height: 2, color: ToonTokens.orange.withAlpha(90))),
+              const SizedBox(width: 8),
+              Text('INK', style: ToonTokens.font(size: 10, color: ToonTokens.red, spacing: 1.1)),
+            ],
+          ),
+        );
       case LauncherDesign.retro:
         return RetroSectionHeader(label: label, accent: accent);
       case LauncherDesign.strata:

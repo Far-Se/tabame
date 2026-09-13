@@ -1,3 +1,4 @@
+import '../../pages/launcher/widgets/crt_surface.dart';
 // ignore_for_file: unused_import, unused_element
 
 import 'dart:async';
@@ -197,7 +198,20 @@ class QuickMenuModalFrame extends StatelessWidget {
           )
         : design == QuickMenuDesigns.tui
             ? Theme(data: QuickMenuTuiTheme.theme(inheritedTheme), child: child)
-            : child;
+            : design == QuickMenuDesigns.crt
+                ? CrtSurface(background: bg, accent: accent, child: ColoredBox(color: bg, child: child))
+                : design == QuickMenuDesigns.retro
+                    ? RetroSurface(background: bg, accent: accent, child: ColoredBox(color: bg, child: child))
+                    : design == QuickMenuDesigns.superMario
+                        ? CrtSurface(
+                            shaderAsset: 'resources/shaders/super_mario.frag',
+                            pixelSize: 1,
+                            persistenceRate: 30,
+                            effectName: 'SuperMario',
+                            background: bg,
+                            accent: accent,
+                            child: ColoredBox(color: bg, child: child))
+                        : child;
 
     // Aurora's signature asymmetric corners; every other design keeps its
     // regular panel radius.
@@ -211,6 +225,12 @@ class QuickMenuModalFrame extends StatelessWidget {
         : BorderRadius.circular(r);
 
     final _FrameSpec spec = switch (design) {
+      QuickMenuDesigns.crt || QuickMenuDesigns.retro || QuickMenuDesigns.superMario => _FrameSpec(
+          decoration: BoxDecoration(
+              color: bg,
+              borderRadius: radius,
+              border: Border.all(color: accent.withAlpha(140), width: design == QuickMenuDesigns.crt ? 1 : 2)),
+        ),
       QuickMenuDesigns.tui => _FrameSpec(
             decoration: BoxDecoration(
           color: QuickMenuTuiTheme.background,

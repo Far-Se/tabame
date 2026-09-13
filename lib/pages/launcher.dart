@@ -1187,7 +1187,10 @@ class LauncherState extends State<Launcher>
                 _onSearchChanged(value);
                 _searchFocusNode.requestFocus();
               }),
-        if (_design == LauncherDesign.phosphor || _design == LauncherDesign.crt || isRetro)
+        if (_design == LauncherDesign.phosphor ||
+            _design == LauncherDesign.crt ||
+            _design == LauncherDesign.toon ||
+            isRetro)
           Flexible(
               fit: FlexFit.loose,
               child: Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), child: resultsContent))
@@ -1235,6 +1238,7 @@ class LauncherState extends State<Launcher>
       LauncherDesign.strata => StrataLauncherFrame.new,
       LauncherDesign.crt => CrtLauncherFrame.new,
       LauncherDesign.retro => RetroLauncherFrame.new,
+      LauncherDesign.toon => ToonLauncherFrame.new,
       LauncherDesign.phosphor => PhosphorLauncherFrame.new,
       LauncherDesign.command => CommandLauncherFrame.new,
       LauncherDesign.terminal => TerminalLauncherFrame.new,
@@ -1300,6 +1304,7 @@ class LauncherState extends State<Launcher>
         _design == LauncherDesign.phosphor ||
         _design == LauncherDesign.crt ||
         isRetro ||
+        _design == LauncherDesign.toon ||
         _design == LauncherDesign.strata ||
         _design == LauncherDesign.aurora ||
         isTerminal ||

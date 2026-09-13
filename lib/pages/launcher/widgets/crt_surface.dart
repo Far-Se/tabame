@@ -14,6 +14,7 @@ class CrtSurface extends StatefulWidget {
     this.pixelSize = 0,
     this.persistenceRate = 9,
     this.effectName = 'CRT',
+    this.animateEffect = true,
     this.background,
     this.accent,
   });
@@ -22,6 +23,9 @@ class CrtSurface extends StatefulWidget {
   final double pixelSize;
   final double persistenceRate;
   final String effectName;
+
+  /// Static print effects do not need a clock or phosphor trails.
+  final bool animateEffect;
   final Color? background;
   final Color? accent;
 
@@ -87,7 +91,7 @@ class _CrtSurfaceState extends State<CrtSurface>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _motion = !MediaQuery.disableAnimationsOf(context) && TickerMode.valuesOf(context).enabled;
+    _motion = widget.animateEffect && !MediaQuery.disableAnimationsOf(context) && TickerMode.valuesOf(context).enabled;
     _sync();
   }
 

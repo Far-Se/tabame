@@ -1,3 +1,4 @@
+import 'design_arcade.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -109,6 +110,9 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
   @override
   Widget build(BuildContext context) {
     return switch (QuickMenuDesigns.values[user.quickMenuDesign]) {
+      QuickMenuDesigns.crt || QuickMenuDesigns.retro || QuickMenuDesigns.superMario => MainMenuArcadeWidget(
+          key: ValueKey<String>('${user.quickMenuDesign}:$_refreshCounter'),
+          design: QuickMenuDesigns.values[user.quickMenuDesign]),
       QuickMenuDesigns.classic => MainMenuClassicWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.interface => MainMenuInterfaceWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.modern => MainMenuModernWidget(key: ValueKey<int>(_refreshCounter)),

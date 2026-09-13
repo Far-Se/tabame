@@ -57,6 +57,15 @@ class LauncherModalTokens {
             accent: CrtTokens.accent,
             onSurface: CrtTokens.foreground,
             dim: CrtTokens.dim);
+      case LauncherDesign.toon:
+        return LauncherModalTokens._(
+          design: LauncherDesign.toon,
+          isDark: true,
+          surface: ToonTokens.background,
+          accent: ToonTokens.orange,
+          onSurface: ToonTokens.foreground,
+          dim: ToonTokens.dim,
+        );
       case LauncherDesign.retro:
         return LauncherModalTokens._(
           design: LauncherDesign.retro,
@@ -314,6 +323,7 @@ class LauncherModalTokens {
         LauncherDesign.omarchy => 0.0,
         LauncherDesign.aurora => 10.0,
         LauncherDesign.crt => 2.0,
+        LauncherDesign.toon => 5.0,
         LauncherDesign.retro => 0.0,
         LauncherDesign.phosphor => 0.0,
         LauncherDesign.strata => 8.0,
@@ -336,7 +346,8 @@ class LauncherModalTokens {
       design == LauncherDesign.windowsXp ||
       design == LauncherDesign.windows98 ||
       design == LauncherDesign.switchboard ||
-      design == LauncherDesign.relay;
+      design == LauncherDesign.relay ||
+      design == LauncherDesign.toon;
 
   /// The design voice — same font family the launcher rows use.
   TextStyle text({
@@ -349,6 +360,13 @@ class LauncherModalTokens {
     return switch (design) {
       LauncherDesign.crt => CrtTokens.font(size: fontSize ?? 14, color: color ?? onSurface, spacing: letterSpacing)
           .copyWith(fontWeight: fontWeight, height: height),
+      LauncherDesign.toon => ToonTokens.font(
+          size: fontSize ?? 13,
+          color: color ?? onSurface,
+          spacing: letterSpacing,
+          weight: fontWeight ?? FontWeight.w600,
+          height: height,
+        ),
       LauncherDesign.retro => RetroTokens.pixel(
           size: fontSize ?? 18,
           color: color ?? onSurface,
@@ -474,6 +492,17 @@ class LauncherModalFrame extends StatelessWidget {
       );
     }
 
+    if (design == LauncherDesign.toon) {
+      core = CrtSurface(
+        shaderAsset: 'resources/shaders/toon.frag',
+        animateEffect: false,
+        effectName: 'Toon',
+        background: ToonTokens.background,
+        accent: ToonTokens.orange,
+        child: ColoredBox(color: ToonTokens.background, child: core),
+      );
+    }
+
     return Container(
       width: width,
       constraints: constraints ?? BoxConstraints(maxHeight: maxHeight),
@@ -514,6 +543,7 @@ class LauncherModalFrame extends StatelessWidget {
     return switch (design) {
       LauncherDesign.opticalGlass => Colors.transparent,
       LauncherDesign.liquidMetal => Colors.transparent,
+      LauncherDesign.toon => Colors.transparent,
       LauncherDesign.omarchy => tokens.surface,
       LauncherDesign.tui => tokens.surface,
       LauncherDesign.retro => tokens.surface,

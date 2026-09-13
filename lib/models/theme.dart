@@ -17,7 +17,7 @@ class AppTheme {
 
     late TextTheme uiFont;
     try {
-      uiFont = GoogleFonts.getTextTheme(theme.uiFontFamily, base.textTheme);
+      uiFont = GoogleFonts.getTextTheme(Design.quickMenuContentFont(theme.uiFontFamily), base.textTheme);
     } catch (_) {
       theme.uiFontFamily = "Roboto";
       uiFont = GoogleFonts.getTextTheme(theme.uiFontFamily, base.textTheme);
@@ -25,11 +25,31 @@ class AppTheme {
     }
     late TextTheme entryFont;
     try {
-      entryFont = GoogleFonts.getTextTheme(theme.entryFontFamily, ThemeData.dark().textTheme);
+      entryFont =
+          GoogleFonts.getTextTheme(Design.quickMenuContentFont(theme.entryFontFamily), ThemeData.dark().textTheme);
     } catch (_) {
       theme.entryFontFamily = "Roboto";
       entryFont = GoogleFonts.getTextTheme(theme.entryFontFamily, ThemeData.dark().textTheme);
       Boxes.saveActiveQuickMenuThemes();
+    }
+
+    if (Design.arcadeTypography) {
+      final double bodySize = theme.baseFontSize + 1;
+      TextStyle? sized(TextStyle? style, double size) => style?.copyWith(fontSize: size, letterSpacing: 0.2);
+      // Assign actual sizes; TextTheme.apply also transforms unset fields and
+      // is inappropriate for replacing the compact UI's typography scale.
+      uiFont = uiFont.copyWith(
+        bodySmall: sized(uiFont.bodySmall, theme.baseFontSize),
+        bodyMedium: sized(uiFont.bodyMedium, bodySize),
+        bodyLarge: sized(uiFont.bodyLarge, bodySize),
+        labelSmall: sized(uiFont.labelSmall, theme.baseFontSize),
+        labelMedium: sized(uiFont.labelMedium, bodySize),
+        labelLarge: sized(uiFont.labelLarge, bodySize),
+        titleSmall: sized(uiFont.titleSmall, bodySize),
+        titleMedium: sized(uiFont.titleMedium, bodySize + 2),
+        titleLarge: sized(uiFont.titleLarge, bodySize + 4),
+      );
+      entryFont = entryFont.copyWith(labelLarge: sized(entryFont.labelLarge, bodySize));
     }
 
     return base.copyWith(

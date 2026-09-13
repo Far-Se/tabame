@@ -71,6 +71,9 @@ enum QuickMenuDesigns {
   orbit,
   // familyGuy,
   tui,
+  crt,
+  retro,
+  superMario,
   ;
 
   String get displayName => switch (this) {
@@ -78,6 +81,8 @@ enum QuickMenuDesigns {
         QuickMenuDesigns.windows98 => 'Windows 98',
         QuickMenuDesigns.commandDeck => 'Command Deck',
         QuickMenuDesigns.tui => 'TUI',
+        QuickMenuDesigns.crt => 'CRT',
+        QuickMenuDesigns.superMario => 'SuperMario',
         _ => name.toUpperCaseFirst(),
       };
 }
@@ -118,13 +123,15 @@ enum LauncherDesign {
   opticalGlass,
   crt,
   // Persisted by index: new designs must remain append-only.
-  retro;
+  retro,
+  toon;
 
   String get displayName => switch (this) {
         LauncherDesign.crt => 'CRT',
         LauncherDesign.retro => 'Retro',
         LauncherDesign.liquidMetal => 'Liquid Metal',
         LauncherDesign.opticalGlass => 'Optical Glass',
+        LauncherDesign.toon => 'Toon',
         LauncherDesign.windowsXp => 'Windows XP',
         LauncherDesign.tui => 'TUI',
         LauncherDesign.windows98 => 'Windows 98',
@@ -148,11 +155,11 @@ class Design {
   static Color get text => _colors.text;
   static Color get accent => _colors.accent;
   static int get gradientAlpha => _colors.gradientAlpha;
-  static String get uiFontFamily => _colors.uiFontFamily;
+  static String get uiFontFamily => quickMenuContentFont(_colors.uiFontFamily);
   static int get uiFontWeight => _colors.uiFontWeight;
   static bool get uiFontItalic => _colors.uiFontItalic;
   static bool get useCustomFont => _isLauncher && user.launcherUseCustomFont;
-  static String get entryFontFamily => _colors.entryFontFamily;
+  static String get entryFontFamily => quickMenuContentFont(_colors.entryFontFamily);
   static int get entryFontWeight => _colors.entryFontWeight;
   static bool get entryFontItalic => _colors.entryFontItalic;
   static List<String> get backdropImages => _colors.backdropImages;
@@ -164,6 +171,16 @@ class Design {
   static String get panelOpacityEnd => _colors.panelOpacityEnd;
   static double get borderRadius => _colors.borderRadius;
   static double get baseFontSize => _colors.baseFontSize;
+  static bool get arcadeTypography =>
+      !_isLauncher &&
+      user.page == TPage.quickmenu &&
+      (user.currentQuickMenuDesign == QuickMenuDesigns.retro ||
+          user.currentQuickMenuDesign == QuickMenuDesigns.superMario);
+
+  // Older saved arcade palettes used display fonts for everyday controls.
+  // Resolve those defaults at render time without rewriting saved preferences.
+  static String quickMenuContentFont(String family) =>
+      arcadeTypography && (family == 'Press Start 2P' || family == 'VT323') ? 'Jura' : family;
   static bool get hasBackdrop => backdropType.isNotEmpty && backdropPath.isNotEmpty;
   static final TextStyle fontSize2Alpha80 =
       TextStyle(fontSize: baseFontSize + 2, color: user.themeColors.text.withAlpha(80));
@@ -796,6 +813,28 @@ class Settings {
           borderRadius: 8,
         ),
       ),
+      LauncherDesign.toon.displayName: LauncherDesignThemeSet(
+        lightTheme: _defaultThemeColors(
+          background: const Color(0xFF292C30),
+          textColor: const Color(0xFFFFF3D6),
+          accentColor: const Color(0xFFFFB642),
+          gradientAlpha: 0,
+          uiFontFamily: 'Barlow Condensed',
+          entryFontFamily: 'Barlow Condensed',
+          entryFontWeight: 600,
+          borderRadius: 8,
+        ),
+        darkTheme: _defaultThemeColors(
+          background: const Color(0xFF292C30),
+          textColor: const Color(0xFFFFF3D6),
+          accentColor: const Color(0xFFFFB642),
+          gradientAlpha: 0,
+          uiFontFamily: 'Barlow Condensed',
+          entryFontFamily: 'Barlow Condensed',
+          entryFontWeight: 600,
+          borderRadius: 8,
+        ),
+      ),
       LauncherDesign.phosphor.displayName: LauncherDesignThemeSet(
         lightTheme: _defaultThemeColors(
             background: const Color(0xFF090F0E),
@@ -883,6 +922,63 @@ class Settings {
 
   static Map<String, QMDesignThemeSet> createDefaultQuickMenuDesignThemes() {
     return <String, QMDesignThemeSet>{
+      QuickMenuDesigns.crt.displayName: QMDesignThemeSet(
+          lightTheme: _defaultThemeColors(
+              background: const Color(0xFF130F09),
+              textColor: const Color(0xFFFFDDA0),
+              accentColor: const Color(0xFFFFBE62),
+              gradientAlpha: 0,
+              uiFontFamily: 'Consolas',
+              entryFontFamily: 'Consolas',
+              entryFontWeight: 400,
+              borderRadius: 18),
+          darkTheme: _defaultThemeColors(
+              background: const Color(0xFF130F09),
+              textColor: const Color(0xFFFFDDA0),
+              accentColor: const Color(0xFFFFBE62),
+              gradientAlpha: 0,
+              uiFontFamily: 'Consolas',
+              entryFontFamily: 'Consolas',
+              entryFontWeight: 400,
+              borderRadius: 18)),
+      QuickMenuDesigns.retro.displayName: QMDesignThemeSet(
+          lightTheme: _defaultThemeColors(
+              background: const Color(0xFF090B1A),
+              textColor: const Color(0xFFFFF0C6),
+              accentColor: const Color(0xFFFF4F9A),
+              gradientAlpha: 0,
+              uiFontFamily: 'Jura',
+              entryFontFamily: 'Jura',
+              entryFontWeight: 400,
+              borderRadius: 8),
+          darkTheme: _defaultThemeColors(
+              background: const Color(0xFF090B1A),
+              textColor: const Color(0xFFFFF0C6),
+              accentColor: const Color(0xFFFF4F9A),
+              gradientAlpha: 0,
+              uiFontFamily: 'Jura',
+              entryFontFamily: 'Jura',
+              entryFontWeight: 400,
+              borderRadius: 8)),
+      QuickMenuDesigns.superMario.displayName: QMDesignThemeSet(
+          lightTheme: _defaultThemeColors(
+              background: const Color(0xFF15264A),
+              textColor: const Color(0xFFFCF4DC),
+              accentColor: const Color(0xFFF8C840),
+              gradientAlpha: 0,
+              uiFontFamily: 'Jura',
+              entryFontFamily: 'Jura',
+              entryFontWeight: 400,
+              borderRadius: 2),
+          darkTheme: _defaultThemeColors(
+              background: const Color(0xFF15264A),
+              textColor: const Color(0xFFFCF4DC),
+              accentColor: const Color(0xFFF8C840),
+              gradientAlpha: 0,
+              uiFontFamily: 'Jura',
+              entryFontFamily: 'Jura',
+              entryFontWeight: 400,
+              borderRadius: 2)),
       QuickMenuDesigns.modern.displayName: QMDesignThemeSet(
         lightTheme: _defaultThemeColors(
           background: const Color(0xffD5E0FB),
@@ -2448,9 +2544,14 @@ TextStyle baseEntryStyle = GoogleFonts.getFont(
   fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal,
 );
 TextStyle entryStyle(bool? isSelected, {double? fontSize, double? letterSpacing, Color? color}) {
-  return baseEntryStyle.copyWith(
-    fontSize: fontSize ?? Design.baseFontSize + 2,
-    letterSpacing: letterSpacing ?? 1.4,
+  final TextStyle style = Design.arcadeTypography
+      ? GoogleFonts.getFont(Design.entryFontFamily,
+          fontWeight: FontWeight(Design.entryFontWeight),
+          fontStyle: Design.entryFontItalic ? FontStyle.italic : FontStyle.normal)
+      : baseEntryStyle;
+  return style.copyWith(
+    fontSize: fontSize ?? Design.baseFontSize + (Design.arcadeTypography ? 1 : 2),
+    letterSpacing: letterSpacing ?? (Design.arcadeTypography ? 0.2 : 1.4),
     color: color ?? ((isSelected ?? false) ? Design.text : Design.text.withAlpha(200)),
   );
 }

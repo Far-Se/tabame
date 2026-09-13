@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'models/classes/boxes.dart';
+import 'models/globals.dart';
 import 'models/win32/win_utils.dart';
 
 class TimestampLogger {
@@ -37,6 +39,11 @@ class TimestampLogger {
 
   static Future<void> _writeTimestamp() async {
     try {
+      if (File('${WinUtils.getTabameAppDataFolder()}\\reset.log').existsSync()) {
+        await QuickMenuFunctions.toggleQuickMenu(type: QuickMenuPage.quickMenu, visible: true, forceReposition: true);
+        await QuickMenuFunctions.refreshQuickMenu();
+        WinUtils.fixDrawBug();
+      }
       final File file = File(filePath);
 
       await file.writeAsString(

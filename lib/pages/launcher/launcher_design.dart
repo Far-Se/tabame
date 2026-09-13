@@ -877,6 +877,7 @@ class LauncherThemeData {
   bool get isRelay => design == LauncherDesign.relay;
   bool get isRaycast => design == LauncherDesign.newCast;
   bool get isRetro => design == LauncherDesign.retro;
+  bool get isToon => design == LauncherDesign.toon;
   bool get isQuickMenuInspired => switch (design) {
         LauncherDesign.tech ||
         LauncherDesign.vector ||
@@ -925,6 +926,7 @@ class LauncherThemeData {
         LauncherDesign.aurora => Icons.search_rounded,
         LauncherDesign.crt || LauncherDesign.phosphor => Icons.search_rounded,
         LauncherDesign.retro => Icons.videogame_asset_rounded,
+        LauncherDesign.toon => Icons.auto_awesome_rounded,
         LauncherDesign.strata => Icons.search_rounded,
         LauncherDesign.tui => Icons.terminal,
       };
@@ -962,6 +964,7 @@ class LauncherThemeData {
         LauncherDesign.aurora => 28.0,
         LauncherDesign.crt || LauncherDesign.phosphor => 20.0,
         LauncherDesign.retro => 20.0,
+        LauncherDesign.toon => 20.0,
         LauncherDesign.strata => 28.0,
         LauncherDesign.tui => 16.0,
       };
@@ -1001,6 +1004,7 @@ class LauncherThemeData {
         LauncherDesign.aurora => 23.0,
         LauncherDesign.crt || LauncherDesign.phosphor => 23.0,
         LauncherDesign.retro => 20.0,
+        LauncherDesign.toon => 18.0,
         LauncherDesign.strata => 23.0,
         LauncherDesign.tui => TuiTokens.fontSize,
       };
@@ -1037,6 +1041,7 @@ class LauncherThemeData {
         LauncherDesign.aurora => FontWeight.w400,
         LauncherDesign.crt || LauncherDesign.phosphor => FontWeight.w400,
         LauncherDesign.retro => FontWeight.w400,
+        LauncherDesign.toon => FontWeight.w700,
         LauncherDesign.strata => FontWeight.w400,
         LauncherDesign.tui => FontWeight.w400,
       };
@@ -1047,7 +1052,9 @@ class LauncherThemeData {
           ? 'Search apps, files, and commands...'
           : isRetro
               ? 'TYPE TO SEARCH...'
-              : null;
+              : isToon
+                  ? 'SEARCH THE ARCHIVE...'
+                  : null;
 
   double get frameRadius => switch (design) {
         LauncherDesign.liquidMetal => 16.0,
@@ -1082,6 +1089,7 @@ class LauncherThemeData {
         LauncherDesign.aurora => 18.0,
         LauncherDesign.crt => 18.0,
         LauncherDesign.retro => 8.0,
+        LauncherDesign.toon => 8.0,
         LauncherDesign.phosphor => 0.0,
         LauncherDesign.strata => 12.0,
         LauncherDesign.tui => 0.0,
@@ -1091,7 +1099,9 @@ class LauncherThemeData {
       ? const EdgeInsets.symmetric(horizontal: 8, vertical: 2)
       : design == LauncherDesign.retro
           ? const EdgeInsets.symmetric(horizontal: 4, vertical: 6)
-          : const EdgeInsets.all(8.0);
+          : design == LauncherDesign.toon
+              ? const EdgeInsets.symmetric(horizontal: 6, vertical: 4)
+              : const EdgeInsets.all(8.0);
 
   @override
   bool operator ==(Object other) =>
@@ -1181,6 +1191,39 @@ abstract final class CrtTokens {
       PhosphorTokens.font(size: size, color: color ?? foreground, spacing: spacing);
 }
 
+/// Warm paper, ink, and signal colors for the comic-book Toon launcher.
+/// The shader applies the final posterization and outline pass to the live UI.
+abstract final class ToonTokens {
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static Color get panel => Color.alphaBlend(foreground.withAlpha(18), background);
+  static Color get dim => Color.alphaBlend(foreground.withAlpha(210), background);
+  static Color get border => Color.alphaBlend(orange.withAlpha(155), background);
+  static Color get selected => Color.alphaBlend(orange.withAlpha(65), background);
+
+  static const Color ink = Color(0xFF121519);
+  static const Color orange = Color(0xFFFFB642);
+  static const Color cream = Color(0xFFFFF3D6);
+  static const Color red = Color(0xFFFF7961);
+  static const Color blue = Color(0xFF83ACD4);
+
+  static TextStyle font({
+    double size = 13,
+    Color? color,
+    double? spacing,
+    FontWeight weight = FontWeight.w600,
+    double? height,
+  }) =>
+      launcherTextStyle(GoogleFonts.barlowCondensed(
+        fontSize: size,
+        color: color ?? foreground,
+        letterSpacing: spacing,
+        fontWeight: weight,
+        height: height ?? 1.12,
+      ));
+}
+
 /// Arcade cabinet tokens and pixel-era typography for the Retro launcher.
 ///
 /// The three base colors follow the active Launcher Design settings. The
@@ -1199,6 +1242,21 @@ abstract final class RetroTokens {
   static Color get border => Color.alphaBlend(accent.withValues(alpha: 0.38), background);
   static Color get selected => Color.alphaBlend(accent.withValues(alpha: 0.16), background);
   static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+
+  static double get resultTitleSize => Design.baseFontSize + 5;
+
+  static double get resultSubtitleSize => Design.baseFontSize + 2;
+
+  static TextTheme resultTextTheme(TextTheme baseTextTheme) {
+    final TextTheme textTheme = GoogleFonts.vt323TextTheme(baseTextTheme).apply(
+      bodyColor: foreground,
+      displayColor: foreground,
+    );
+    return textTheme.copyWith(
+      bodyMedium: textTheme.bodyMedium?.copyWith(fontSize: resultTitleSize),
+      bodySmall: textTheme.bodySmall?.copyWith(fontSize: resultSubtitleSize),
+    );
+  }
 
   static TextStyle pixel({
     double size = 18,
