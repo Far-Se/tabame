@@ -81,6 +81,8 @@ flutter:
     - resources/shaders/liquid_metal.frag
     - resources/shaders/optical_glass.frag
     - resources/shaders/toon.frag
+    - resources/shaders/capillary.frag
+    - resources/shaders/thermal.frag
 
   assets:
     # - resources/logo.png

@@ -12,6 +12,8 @@ import '../../models/win32/win_utils.dart';
 import '../../widgets/widgets/date_time_widget.dart';
 import '../quickmenu_designs/design_backdrop_stable.dart';
 import 'launcher_design.dart';
+import 'widgets/capillary_surface.dart';
+import 'widgets/thermal_surface.dart';
 import 'widgets/liquid_metal_surface.dart';
 import 'widgets/crt_surface.dart';
 
@@ -51,6 +53,8 @@ part 'launcher_designs/retro_launcher_design.dart';
 part 'launcher_designs/liquid_metal_launcher_design.dart';
 part 'launcher_designs/optical_glass_launcher_design.dart';
 part 'launcher_designs/toon_launcher_design.dart';
+part 'launcher_designs/capillary_launcher_design.dart';
+part 'launcher_designs/thermal_launcher_design.dart';
 
 // ---------------------------------------------------------------------------
 // Extension: per-design widget factories used by LauncherState
@@ -63,6 +67,16 @@ extension LauncherDesignBuilder on LauncherDesign {
     required Color accent,
   }) {
     switch (this) {
+      case LauncherDesign.thermal:
+        return BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: ThermalTokens.border),
+        );
+      case LauncherDesign.capillary:
+        return BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: CapillaryTokens.resolve(surface.computeLuminance() < 0.5).border),
+        );
       case LauncherDesign.opticalGlass:
         return BoxDecoration(
             borderRadius: BorderRadius.circular(24), border: Border.all(color: OpticalGlassTokens.border));
@@ -419,6 +433,20 @@ extension LauncherDesignBuilder on LauncherDesign {
     required bool isSearching,
   }) {
     switch (this) {
+      case LauncherDesign.thermal:
+        return ThermalSearchBar(
+          dragHandle: dragHandle,
+          textField: textField,
+          trailingBadge: trailingBadge,
+          isSearching: isSearching,
+        );
+      case LauncherDesign.capillary:
+        return CapillarySearchBar(
+          dragHandle: dragHandle,
+          textField: textField,
+          trailingBadge: trailingBadge,
+          isSearching: isSearching,
+        );
       case LauncherDesign.opticalGlass:
         return OpticalGlassSearchBar(
             dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
@@ -688,6 +716,19 @@ extension LauncherDesignBuilder on LauncherDesign {
   /// Returns the section-header label widget.
   Widget buildSectionHeader({required String label, required Color accent}) {
     switch (this) {
+      case LauncherDesign.thermal:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+          child: Text(label, style: ThermalTokens.font(size: 11, color: ThermalTokens.dim)),
+        );
+      case LauncherDesign.capillary:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 5),
+          child: Builder(builder: (BuildContext context) {
+            final CapillaryTokens capillary = CapillaryTokens.of(context);
+            return Text(label, style: capillary.font(size: 11, color: capillary.dim, weight: FontWeight.w600));
+          }),
+        );
       case LauncherDesign.opticalGlass:
         return Padding(
             padding: const EdgeInsets.fromLTRB(18, 10, 18, 6),

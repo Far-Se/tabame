@@ -7,6 +7,8 @@ import '../../models/design_settings.dart';
 import '../../models/settings.dart';
 import 'launcher_design.dart';
 import 'launcher_design_builder.dart';
+import 'widgets/capillary_surface.dart';
+import 'widgets/thermal_surface.dart';
 import 'widgets/liquid_metal_surface.dart';
 import 'widgets/crt_surface.dart';
 
@@ -32,6 +34,25 @@ class LauncherModalTokens {
     final bool isDark = theme.brightness == Brightness.dark;
     final LauncherDesign design = user.launcherDesign;
     switch (design) {
+      case LauncherDesign.thermal:
+        return const LauncherModalTokens._(
+          design: LauncherDesign.thermal,
+          isDark: true,
+          surface: ThermalTokens.background,
+          accent: ThermalTokens.accent,
+          onSurface: ThermalTokens.foreground,
+          dim: ThermalTokens.dim,
+        );
+      case LauncherDesign.capillary:
+        final CapillaryTokens capillary = CapillaryTokens.resolve(isDark);
+        return LauncherModalTokens._(
+          design: LauncherDesign.capillary,
+          isDark: isDark,
+          surface: capillary.background,
+          accent: capillary.accent,
+          onSurface: capillary.foreground,
+          dim: capillary.dim,
+        );
       case LauncherDesign.opticalGlass:
         return const LauncherModalTokens._(
           design: LauncherDesign.opticalGlass,
@@ -293,6 +314,8 @@ class LauncherModalTokens {
 
   /// Radius for inner controls (search field, chips).
   double get controlRadius => switch (design) {
+        LauncherDesign.thermal => 5.0,
+        LauncherDesign.capillary => 4.0,
         LauncherDesign.opticalGlass => 12.0,
         LauncherDesign.liquidMetal => 8.0,
         LauncherDesign.terminal => 3.0,
@@ -359,6 +382,20 @@ class LauncherModalTokens {
     double? height,
   }) {
     return switch (design) {
+      LauncherDesign.thermal => ThermalTokens.font(
+          size: fontSize ?? 14,
+          color: color ?? onSurface,
+          weight: fontWeight ?? FontWeight.w500,
+          spacing: letterSpacing ?? 0,
+        ).copyWith(height: height),
+      LauncherDesign.capillary => CapillaryTokens.resolve(isDark)
+          .font(
+            size: fontSize ?? 14,
+            color: color ?? onSurface,
+            weight: fontWeight ?? FontWeight.w500,
+            spacing: letterSpacing ?? 0,
+          )
+          .copyWith(height: height),
       LauncherDesign.crt => CrtTokens.font(size: fontSize ?? 14, color: color ?? onSurface, spacing: letterSpacing)
           .copyWith(fontWeight: fontWeight, height: height),
       LauncherDesign.toon => ToonTokens.font(
@@ -468,6 +505,20 @@ class LauncherModalFrame extends StatelessWidget {
 
     core = _applyBackdropEffect(core);
 
+    if (design == LauncherDesign.thermal) {
+      core = ThermalSurface(radius: tokens.frameRadius, child: core);
+    }
+
+    if (design == LauncherDesign.capillary) {
+      core = CapillaryMotion(
+        child: CapillarySurface(
+          kind: CapillarySurfaceKind.paper,
+          radius: tokens.frameRadius,
+          child: CapillarySurface(kind: CapillarySurfaceKind.overlay, radius: tokens.frameRadius, child: core),
+        ),
+      );
+    }
+
     if (design == LauncherDesign.opticalGlass) {
       core = LiquidMetalMotion(
           child: OpticalGlassSurface(
@@ -542,6 +593,8 @@ class LauncherModalFrame extends StatelessWidget {
 
   Color _surfaceColor(BuildContext context) {
     return switch (design) {
+      LauncherDesign.thermal => Colors.transparent,
+      LauncherDesign.capillary => Colors.transparent,
       LauncherDesign.opticalGlass => Colors.transparent,
       LauncherDesign.liquidMetal => Colors.transparent,
       LauncherDesign.toon => Colors.transparent,

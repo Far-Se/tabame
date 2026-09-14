@@ -29,6 +29,7 @@ import '../widgets/itzy/quickmenu/button_steam.dart';
 import 'launcher/launcher_design.dart';
 import 'launcher/launcher_design_builder.dart';
 import 'launcher/launcher_modal_theme.dart';
+import 'launcher/widgets/thermal_surface.dart';
 import 'launcher/result/result_item_bookmark.dart';
 import 'launcher/result/result_row.dart';
 import 'launcher/services/launcher_app_catalog_service.dart';
@@ -286,8 +287,9 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
 
                             return KeyEventResult.ignored;
                           },
-                          child: TextField(
+                          child: _wrapThermalQuery(TextField(
                             controller: _searchController,
+                            cursorColor: tokens.design == LauncherDesign.thermal ? ThermalTokens.accent : null,
                             autofocus: true,
                             focusNode: _searchControllerFocus,
                             onChanged: _filterActions,
@@ -296,7 +298,9 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
                               hintText: 'Search actions...',
                               hintStyle: tokens.text(
                                 fontSize: Design.baseFontSize + 3,
-                                color: tokens.onSurface.withAlpha(70),
+                                color: tokens.design == LauncherDesign.thermal
+                                    ? tokens.dim
+                                    : tokens.onSurface.withAlpha(70),
                               ),
                               prefixIcon: Icon(
                                 launcherTheme.searchIcon,
@@ -328,7 +332,7 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
                                     : BorderSide.none,
                               ),
                             ),
-                          ),
+                          )),
                         ),
                       ),
                     ),
@@ -376,6 +380,10 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
       ),
     );
   }
+
+  Widget _wrapThermalQuery(Widget textField) => user.launcherDesign == LauncherDesign.thermal
+      ? ThermalQueryHeat(controller: _searchController, child: textField)
+      : textField;
 }
 
 // =============================================================================

@@ -15,7 +15,10 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
     final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
-    if (_design == LauncherDesign.newCast || _design == LauncherDesign.tui) {
+    if (_design == LauncherDesign.newCast ||
+        _design == LauncherDesign.tui ||
+        _design == LauncherDesign.capillary ||
+        _design == LauncherDesign.thermal) {
       return LauncherResultRow(
         isSelected: isSelected,
         isRepeating: isRepeatingKey,
@@ -138,7 +141,10 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
     final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
-    if (_design == LauncherDesign.newCast || _design == LauncherDesign.tui) {
+    if (_design == LauncherDesign.newCast ||
+        _design == LauncherDesign.tui ||
+        _design == LauncherDesign.capillary ||
+        _design == LauncherDesign.thermal) {
       return LauncherResultRow(
         isSelected: isSelected,
         isRepeating: isRepeatingKey,
@@ -217,7 +223,10 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
     final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
-    if (_design == LauncherDesign.newCast || _design == LauncherDesign.tui) {
+    if (_design == LauncherDesign.newCast ||
+        _design == LauncherDesign.tui ||
+        _design == LauncherDesign.capillary ||
+        _design == LauncherDesign.thermal) {
       return LauncherResultRow(
         isSelected: isSelected,
         isRepeating: isRepeatingKey,
@@ -292,7 +301,10 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
     final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
-    if (_design == LauncherDesign.newCast || _design == LauncherDesign.tui) {
+    if (_design == LauncherDesign.newCast ||
+        _design == LauncherDesign.tui ||
+        _design == LauncherDesign.capillary ||
+        _design == LauncherDesign.thermal) {
       final Widget icon = result.coverPath != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(4),
@@ -400,7 +412,10 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
     final Color accent = Design.accent;
     final Color onSurface = theme.colorScheme.onSurface;
 
-    if (_design == LauncherDesign.newCast || _design == LauncherDesign.tui) {
+    if (_design == LauncherDesign.newCast ||
+        _design == LauncherDesign.tui ||
+        _design == LauncherDesign.capillary ||
+        _design == LauncherDesign.thermal) {
       return LauncherResultRow(
         isSelected: isSelected,
         isRepeating: isRepeatingKey,
@@ -475,7 +490,10 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
     final Color accent = Design.accent;
     final bool showSplash = _quickActionSplashId == quickAction.id;
 
-    if (_design == LauncherDesign.newCast || _design == LauncherDesign.tui) {
+    if (_design == LauncherDesign.newCast ||
+        _design == LauncherDesign.tui ||
+        _design == LauncherDesign.capillary ||
+        _design == LauncherDesign.thermal) {
       final Widget resultRow = LauncherResultRow(
         isSelected: isSelected,
         isRepeating: isRepeatingKey,

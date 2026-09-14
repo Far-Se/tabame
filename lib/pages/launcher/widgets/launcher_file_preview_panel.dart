@@ -226,7 +226,10 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
     final Widget panel = Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: (widget.design == LauncherDesign.liquidMetal || widget.design == LauncherDesign.opticalGlass)
+        color: (widget.design == LauncherDesign.liquidMetal ||
+                widget.design == LauncherDesign.thermal ||
+                widget.design == LauncherDesign.opticalGlass ||
+                widget.design == LauncherDesign.capillary)
             ? null
             : panelColor,
         borderRadius: BorderRadius.circular(radius),
@@ -257,6 +260,7 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
         ],
       ),
     );
+    if (widget.design == LauncherDesign.capillary) return CapillarySurface(radius: radius, child: panel);
     if (widget.design == LauncherDesign.opticalGlass) return OpticalGlassSurface(radius: radius, child: panel);
     return widget.design == LauncherDesign.liquidMetal ? LiquidMetalSurface(child: panel) : panel;
   }

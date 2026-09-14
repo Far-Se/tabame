@@ -4,6 +4,92 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../models/design_settings.dart';
 import '../../models/settings.dart';
 
+abstract final class ThermalTokens {
+  static const Color background = Color(0xFF14181C);
+  static const Color foreground = Color(0xFFEEE9DF);
+  static const Color accent = Color(0xFFE1AD70);
+  static const Color dim = Color(0xFFC9C1B5);
+  static const Color border = Color(0xFF3D3D39);
+  static const Color rust = Color(0xFF653725);
+
+  static TextStyle font({
+    double size = 14,
+    Color color = foreground,
+    FontWeight weight = FontWeight.w500,
+    double spacing = 0,
+  }) =>
+      launcherTextStyle(GoogleFonts.hankenGrotesk(
+        fontSize: size,
+        color: color,
+        fontWeight: weight,
+        letterSpacing: spacing,
+        height: 1.3,
+      ));
+
+  static TextStyle label() => launcherTextStyle(GoogleFonts.archivo(
+        fontSize: 10,
+        color: dim,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.4,
+      ));
+}
+
+@immutable
+class CapillaryTokens {
+  const CapillaryTokens._({
+    required this.background,
+    required this.foreground,
+    required this.accent,
+    required this.dim,
+    required this.border,
+  });
+
+  static const CapillaryTokens light = CapillaryTokens._(
+    background: Color(0xFFF3F0E6),
+    foreground: Color(0xFF252C3C),
+    accent: Color(0xFF354B82),
+    dim: Color(0xFF5E6574),
+    border: Color(0xFFC9C8C1),
+  );
+  static const CapillaryTokens dark = CapillaryTokens._(
+    background: Color(0xFF191C24),
+    foreground: Color(0xFFE8E6DE),
+    accent: Color(0xFF94A6D9),
+    dim: Color(0xFFA2A7B4),
+    border: Color(0xFF3A404F),
+  );
+
+  static CapillaryTokens resolve(bool isDark) => isDark ? dark : light;
+  static CapillaryTokens of(BuildContext context) => resolve(Theme.of(context).brightness == Brightness.dark);
+
+  final Color background;
+  final Color foreground;
+  final Color accent;
+  final Color dim;
+  final Color border;
+
+  TextStyle font({
+    double size = 14,
+    Color? color,
+    double spacing = 0,
+    FontWeight weight = FontWeight.w500,
+  }) =>
+      launcherTextStyle(GoogleFonts.commissioner(
+        fontSize: size,
+        color: color ?? foreground,
+        letterSpacing: spacing,
+        fontWeight: weight,
+        height: 1.3,
+      ));
+
+  TextStyle title() => launcherTextStyle(GoogleFonts.literata(
+        fontSize: 17,
+        color: foreground,
+        fontWeight: FontWeight.w500,
+        height: 1.2,
+      ));
+}
+
 abstract final class OpticalGlassTokens {
   static const Color background = Color(0xFFE5EAF2);
   static const Color foreground = Color(0xFF202D45);
@@ -895,6 +981,8 @@ class LauncherThemeData {
   /// consoles, a leaf for Zen, a drafting compass for Blueprint, a radar scope
   /// for Orbit, a magnifier otherwise.
   IconData get searchIcon => switch (design) {
+        LauncherDesign.thermal => Icons.search_rounded,
+        LauncherDesign.capillary => Icons.search_rounded,
         LauncherDesign.liquidMetal => Icons.search_rounded,
         LauncherDesign.opticalGlass => Icons.search_rounded,
         LauncherDesign.command => Icons.chevron_right_rounded,
@@ -933,6 +1021,8 @@ class LauncherThemeData {
       };
 
   double get searchIconSize => switch (design) {
+        LauncherDesign.thermal => 20.0,
+        LauncherDesign.capillary => 20.0,
         LauncherDesign.liquidMetal => 22.0,
         LauncherDesign.opticalGlass => 22.0,
         LauncherDesign.serene => 22.0,
@@ -973,6 +1063,8 @@ class LauncherThemeData {
   bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent || isNotion || isRaycast;
 
   double get searchFontSize => switch (design) {
+        LauncherDesign.thermal => 18.0,
+        LauncherDesign.capillary => 18.0,
         LauncherDesign.liquidMetal => 20.0,
         LauncherDesign.opticalGlass => 20.0,
         LauncherDesign.serene => 16.0,
@@ -1010,6 +1102,8 @@ class LauncherThemeData {
         LauncherDesign.tui => TuiTokens.fontSize,
       };
   FontWeight? get searchFontWeight => switch (design) {
+        LauncherDesign.thermal => FontWeight.w500,
+        LauncherDesign.capillary => FontWeight.w400,
         LauncherDesign.liquidMetal => FontWeight.w500,
         LauncherDesign.opticalGlass => FontWeight.w500,
         LauncherDesign.serene => FontWeight.w400,
@@ -1058,6 +1152,8 @@ class LauncherThemeData {
                   : null;
 
   double get frameRadius => switch (design) {
+        LauncherDesign.thermal => 10.0,
+        LauncherDesign.capillary => 8.0,
         LauncherDesign.liquidMetal => 16.0,
         LauncherDesign.opticalGlass => 24.0,
         LauncherDesign.serene => 14.0,

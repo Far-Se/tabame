@@ -10,7 +10,24 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
     required bool isDark,
     required Color accent,
   }) {
+    final CapillaryTokens capillary = CapillaryTokens.resolve(isDark);
     return switch (_design) {
+      LauncherDesign.thermal => _copyDesignTheme(baseTheme,
+          brightness: Brightness.dark,
+          colorSchemeBrightness: Brightness.dark,
+          surface: ThermalTokens.background,
+          onSurface: ThermalTokens.foreground,
+          primary: ThermalTokens.accent,
+          highlightColor: ThermalTokens.rust,
+          textTheme: GoogleFonts.hankenGroteskTextTheme(baseTheme.textTheme)
+              .apply(bodyColor: ThermalTokens.foreground, displayColor: ThermalTokens.foreground)),
+      LauncherDesign.capillary => _copyDesignTheme(baseTheme,
+          surface: capillary.background,
+          onSurface: capillary.foreground,
+          primary: capillary.accent,
+          highlightColor: capillary.accent.withAlpha(30),
+          textTheme: GoogleFonts.commissionerTextTheme(baseTheme.textTheme)
+              .apply(bodyColor: capillary.foreground, displayColor: capillary.foreground)),
       LauncherDesign.opticalGlass => _copyDesignTheme(baseTheme,
           brightness: Brightness.light,
           colorSchemeBrightness: Brightness.light,

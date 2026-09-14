@@ -66,6 +66,8 @@ import 'launcher/search/search_utils.dart';
 import 'launcher/search/windows_search_handler.dart';
 import 'launcher_search_models.dart';
 import 'launcher/launcher_design.dart';
+import 'launcher/widgets/capillary_surface.dart';
+import 'launcher/widgets/thermal_surface.dart';
 import 'launcher/widgets/liquid_metal_surface.dart';
 
 import 'launcher/launcher_design_builder.dart';
@@ -797,6 +799,8 @@ class LauncherState extends State<Launcher>
     // Glass keeps the theme colors (its glass picks them up) and only forces
     // Inter for the iOS feel.
     final Color accent = switch (true) {
+      _ when _design == LauncherDesign.thermal => ThermalTokens.accent,
+      _ when _design == LauncherDesign.capillary => CapillaryTokens.resolve(isDark).accent,
       _ when _design == LauncherDesign.liquidMetal => LiquidMetalTokens.accent,
       _ when _design == LauncherDesign.opticalGlass => OpticalGlassTokens.accent,
       _ when _design == LauncherDesign.aurora => AuroraTokens.accent,
@@ -843,15 +847,17 @@ class LauncherState extends State<Launcher>
           ),
         ),
       ),
-      textField: TextField(
+      textField: _wrapThermalQuery(TextField(
         controller: _controller,
         focusNode: _searchFocusNode,
         selectAllOnFocus: false,
-        cursorColor: isTui
-            ? onSurface
-            : usesBlockCursor
-                ? accent
-                : null,
+        cursorColor: _design == LauncherDesign.thermal
+            ? ThermalTokens.accent
+            : isTui
+                ? onSurface
+                : usesBlockCursor
+                    ? accent
+                    : null,
         cursorWidth: isTui
             ? TuiTokens.fontSize * 0.55
             : usesBlockCursor
@@ -875,11 +881,15 @@ class LauncherState extends State<Launcher>
               launcherTheme.searchHint ??
               (isTerminal2 ? 'type a command or search the system...' : 'Search applications, files, bookmarks...'),
           hintStyle: TextStyle(
-              color: isOmarchy
-                  ? OmarchyTokens.dim(isDark)
-                  : isRaycast
-                      ? RaycastTokens.muted(isDark)
-                      : onSurface.withAlpha(70)),
+              color: _design == LauncherDesign.thermal
+                  ? ThermalTokens.dim
+                  : _design == LauncherDesign.capillary
+                      ? CapillaryTokens.resolve(isDark).dim
+                      : isOmarchy
+                          ? OmarchyTokens.dim(isDark)
+                          : isRaycast
+                              ? RaycastTokens.muted(isDark)
+                              : onSurface.withAlpha(70)),
           border: InputBorder.none,
           isDense: true,
           contentPadding: EdgeInsets.only(
@@ -891,7 +901,7 @@ class LauncherState extends State<Launcher>
         ),
         onChanged: _onSearchChanged,
         onSubmitted: _onSubmitted,
-      ),
+      )),
       trailingBadge: _buildTrailingBadge(accent, onSurface),
       isSearching: _isSearching,
     );
@@ -1231,6 +1241,22 @@ class LauncherState extends State<Launcher>
     final Color surface = theme.colorScheme.surface;
     final int resultCount = _results.length;
     final LauncherFrameBuilder frameBuilder = switch (_design) {
+      LauncherDesign.thermal => ThermalLauncherFrame.new,
+      LauncherDesign.capillary => ({
+          required Color surface,
+          required Color accent,
+          required Color onSurface,
+          required int resultCount,
+          required Widget child,
+        }) =>
+            CapillaryLauncherFrame(
+              surface: surface,
+              accent: accent,
+              onSurface: onSurface,
+              resultCount: resultCount,
+              queryController: _controller,
+              child: child,
+            ),
       LauncherDesign.liquidMetal => LiquidMetalLauncherFrame.new,
       LauncherDesign.opticalGlass => OpticalGlassLauncherFrame.new,
       LauncherDesign.serene => SereneLauncherFrame.new,
@@ -1301,6 +1327,8 @@ class LauncherState extends State<Launcher>
     );
 
     final bool usesDesignFont = _design == LauncherDesign.liquidMetal ||
+        _design == LauncherDesign.thermal ||
+        _design == LauncherDesign.capillary ||
         _design == LauncherDesign.opticalGlass ||
         _design == LauncherDesign.phosphor ||
         _design == LauncherDesign.crt ||
@@ -1343,6 +1371,9 @@ class LauncherState extends State<Launcher>
       ),
     );
   }
+
+  Widget _wrapThermalQuery(Widget textField) =>
+      _design == LauncherDesign.thermal ? ThermalQueryHeat(controller: _controller, child: textField) : textField;
 
   Widget _buildLauncherAppearanceFrame(Widget frame) {
     final List<double> points = Design.panelOpacityPoints;

@@ -179,7 +179,10 @@ class _UsageDetails extends StatelessWidget {
           backgroundColor: Design.text.withAlpha(20),
         ),
         const SizedBox(height: 3),
-        Text(reset != null ? 'Resets in ${_timeUntil(reset)}' : 'Resets ${fallback ?? 'unavailable'}',
+        Text(
+            reset != null
+                ? 'Resets in ${_timeUntil(reset)} at ${reset.hour}:${reset.minute}'
+                : 'Resets ${fallback ?? 'unavailable'}',
             style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(175))),
       ],
     );
@@ -198,9 +201,18 @@ String _timeAgo(DateTime date) {
 
 String _timeUntil(DateTime reset) {
   final Duration remaining = reset.difference(DateTime.now());
+
   if (remaining.isNegative || remaining == Duration.zero) return '0m';
+
   if (remaining.inDays > 0) return '${remaining.inDays}d';
-  if (remaining.inHours > 0) return '${remaining.inHours}h';
+
+  if (remaining.inHours > 0) {
+    final int hours = remaining.inHours;
+    final int minutes = remaining.inMinutes % 60;
+
+    return minutes > 0 ? '${hours}h${minutes}m' : '${hours}h';
+  }
+
   return '${remaining.inMinutes.clamp(1, 59)}m';
 }
 

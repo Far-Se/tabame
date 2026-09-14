@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import '../../../models/design_settings.dart';
 import '../../../models/settings.dart';
 import '../launcher_design.dart';
+import '../widgets/capillary_surface.dart';
+import '../widgets/thermal_surface.dart';
 import '../widgets/liquid_metal_surface.dart';
 import 'inline_markup.dart';
 
@@ -213,6 +215,8 @@ class LauncherResultRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final LauncherDesign design = LauncherTheme.maybeOf(context)?.design ?? user.launcherDesign;
     return switch (design) {
+      LauncherDesign.thermal => _buildThermal(context),
+      LauncherDesign.capillary => _buildCapillary(context),
       LauncherDesign.liquidMetal => _buildLiquidMetal(context),
       LauncherDesign.opticalGlass => _buildOpticalGlass(context),
       LauncherDesign.aurora => _buildAurora(context),
@@ -250,6 +254,112 @@ class LauncherResultRow extends StatelessWidget {
       LauncherDesign.omarchy => _buildOmarchy(context),
       LauncherDesign.tui => _buildTui(context),
     };
+  }
+
+  Widget _buildThermal(BuildContext context) => Semantics(
+        selected: isSelected,
+        button: true,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onHover: (PointerHoverEvent event) {
+            if (event.delta != Offset.zero) onHover();
+          },
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: ThermalRegion(
+                key: ValueKey<(String?, String?)>((title, subtitle)),
+                selected: isSelected,
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 50),
+                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(color: isSelected ? ThermalTokens.accent.withAlpha(95) : Colors.transparent),
+                  ),
+                  child: Row(children: <Widget>[
+                    SizedBox(width: 28, height: 28, child: Center(child: icon)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: content ??
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              _titleText(ThermalTokens.font(weight: isSelected ? FontWeight.w600 : FontWeight.w500)),
+                              if ((subtitle ?? '').isNotEmpty) ...<Widget>[
+                                const SizedBox(height: 2),
+                                _subtitleText(ThermalTokens.font(size: 11, color: ThermalTokens.dim)),
+                              ],
+                            ],
+                          ),
+                    ),
+                    if (badge != null) Padding(padding: const EdgeInsets.only(left: 8), child: badge),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: 16,
+                      child: isSelected
+                          ? const Icon(Icons.keyboard_return_rounded, size: 15, color: ThermalTokens.accent)
+                          : null,
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+  Widget _buildCapillary(BuildContext context) {
+    final CapillaryTokens capillary = CapillaryTokens.of(context);
+    return Semantics(
+      selected: isSelected,
+      button: true,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onHover: (PointerHoverEvent event) {
+          if (event.delta != Offset.zero) onHover();
+        },
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: CapillarySurface(
+            key: ValueKey<(String?, String?)>((title, subtitle)),
+            selected: isSelected,
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 52),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(children: <Widget>[
+                SizedBox(width: 28, height: 28, child: Center(child: icon)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: content ??
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          _titleText(capillary.font(size: 14, weight: isSelected ? FontWeight.w600 : FontWeight.w500)),
+                          if ((subtitle ?? '').isNotEmpty) ...<Widget>[
+                            const SizedBox(height: 2),
+                            _subtitleText(capillary.font(size: 11, color: capillary.dim)),
+                          ],
+                        ],
+                      ),
+                ),
+                if (badge != null) Padding(padding: const EdgeInsets.only(left: 8), child: badge),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 16,
+                  child: isSelected ? Icon(Icons.keyboard_return_rounded, size: 15, color: capillary.accent) : null,
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildOpticalGlass(BuildContext context) => MouseRegion(

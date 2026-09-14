@@ -405,7 +405,17 @@ class Settings {
     final Map<String, LauncherDesignThemeSet> defaults = DesignSettings.createDefaultLauncherDesignThemes();
     if (source != null) {
       for (final MapEntry<String, LauncherDesignThemeSet> entry in source.entries) {
-        defaults[entry.key] = entry.value.copyWith();
+        final LauncherDesignThemeSet saved = entry.value.copyWith();
+        // Capillary originally saved the light palette in both theme slots.
+        // Upgrade that exact old palette while preserving fonts and appearance settings.
+        if (entry.key == LauncherDesign.capillary.displayName &&
+            saved.darkTheme.background == const Color(0xFFF3F0E6) &&
+            saved.darkTheme.text == const Color(0xFF252C3C) &&
+            saved.darkTheme.accent == const Color(0xFF354B82)) {
+          final ThemeColors dark = defaults[entry.key]!.darkTheme;
+          saved.darkTheme = saved.darkTheme.copyWith(background: dark.background, text: dark.text, accent: dark.accent);
+        }
+        defaults[entry.key] = saved;
       }
     }
     launcherDesignThemes = defaults.map(

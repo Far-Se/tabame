@@ -93,9 +93,10 @@ enum LauncherDesign {
   liquidMetal,
   opticalGlass,
   crt,
-  // Persisted by index: new designs must remain append-only.
   retro,
-  toon;
+  toon,
+  capillary,
+  thermal;
 
   String get displayName => switch (this) {
         LauncherDesign.crt => 'CRT',
@@ -446,6 +447,54 @@ class DesignSettings {
           entryFontFamily: 'Encode Sans',
           entryFontWeight: 600,
           borderRadius: 7,
+        ),
+      ),
+      LauncherDesign.thermal.displayName: LauncherDesignThemeSet(
+        lightTheme: defaultThemeColors(
+          background: const Color(0xFF14181C),
+          textColor: const Color(0xFFEEE9DF),
+          accentColor: const Color(0xFFE1AD70),
+          gradientAlpha: 0,
+          uiFontFamily: 'Hanken Grotesk',
+          uiFontWeight: 500,
+          entryFontFamily: 'Hanken Grotesk',
+          entryFontWeight: 500,
+          borderRadius: 10,
+        ),
+        darkTheme: defaultThemeColors(
+          background: const Color(0xFF14181C),
+          textColor: const Color(0xFFEEE9DF),
+          accentColor: const Color(0xFFE1AD70),
+          gradientAlpha: 0,
+          uiFontFamily: 'Hanken Grotesk',
+          uiFontWeight: 500,
+          entryFontFamily: 'Hanken Grotesk',
+          entryFontWeight: 500,
+          borderRadius: 10,
+        ),
+      ),
+      LauncherDesign.capillary.displayName: LauncherDesignThemeSet(
+        lightTheme: defaultThemeColors(
+          background: const Color(0xFFF3F0E6),
+          textColor: const Color(0xFF252C3C),
+          accentColor: const Color(0xFF354B82),
+          gradientAlpha: 0,
+          uiFontFamily: 'Commissioner',
+          uiFontWeight: 500,
+          entryFontFamily: 'Commissioner',
+          entryFontWeight: 500,
+          borderRadius: 8,
+        ),
+        darkTheme: defaultThemeColors(
+          background: const Color(0xFF191C24),
+          textColor: const Color(0xFFE8E6DE),
+          accentColor: const Color(0xFF94A6D9),
+          gradientAlpha: 0,
+          uiFontFamily: 'Commissioner',
+          uiFontWeight: 500,
+          entryFontFamily: 'Commissioner',
+          entryFontWeight: 500,
+          borderRadius: 8,
         ),
       ),
       LauncherDesign.opticalGlass.displayName: LauncherDesignThemeSet(
