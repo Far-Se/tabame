@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../models/design_settings.dart';
 import '../../../platform/audio_system_service.dart';
 import '../../../platform/windows/tabamewin32_api.dart' hide AudioDeviceType;
 import '../../../platform/windows/win32_api.dart';

@@ -34,7 +34,7 @@ class RetroSearchBar extends StatelessWidget {
             ],
             if (isSearching)
               Padding(
-                padding: EdgeInsets.only(left: 10),
+                padding: const EdgeInsets.only(left: 10),
                 child: SizedBox(
                   width: 14,
                   height: 14,
@@ -218,12 +218,12 @@ class _RetroBackdropPainter extends CustomPainter {
       ..color = RetroTokens.cyan.withAlpha(90)
       ..isAntiAlias = false;
     for (final Offset point in <Offset>[
-      Offset(18, 14),
-      Offset(54, 44),
-      Offset(92, 22),
-      Offset(140, 66),
-      Offset(210, 18),
-      Offset(278, 52),
+      const Offset(18, 14),
+      const Offset(54, 44),
+      const Offset(92, 22),
+      const Offset(140, 66),
+      const Offset(210, 18),
+      const Offset(278, 52),
     ]) {
       if (point.dx < size.width - 3 && point.dy < size.height - 3) {
         canvas.drawRect(Rect.fromLTWH(point.dx, point.dy, 2, 2), pixels);

@@ -51,7 +51,13 @@ DEFAULT_AGENTS = [
         "binary": ["codex", "exec"],
         "file_flag": ["-i", "{file}"],
         "output_flag": ["-o", "{output}"],
-        "trailing_flags": ["--skip-git-repo-check"],
+        "trailing_flags": [
+            "-m",
+            "gpt-5.6-terra",
+            "-c",
+            "model_reasoning_effort=\"medium\"",
+            "--skip-git-repo-check",
+        ],
         "output_filename": "result.md",
     }
 ]
@@ -184,14 +190,27 @@ def normalize_token_list(value: Any) -> List[str]:
 
 def normalize_agent(raw: Any) -> Dict[str, Any]:
     item = raw if isinstance(raw, dict) else {}
+    agent_id = as_string(item.get("id"), new_id("agent"))
+    binary = normalize_token_list(item.get("binary"))
+    trailing_flags = normalize_token_list(item.get("trailing_flags"))
+    # Older installs generated the built-in preset without a model override,
+    # which made it inherit whichever model the user's Codex config selected.
+    # Migrate that exact old default while preserving intentionally customized
+    # Codex presets.
+    if (
+        agent_id == BUILTIN_AGENT_ID
+        and binary == ["codex", "exec"]
+        and trailing_flags == ["--skip-git-repo-check"]
+    ):
+        trailing_flags = normalize_token_list(DEFAULT_AGENTS[0]["trailing_flags"])
     return {
-        "id": as_string(item.get("id"), new_id("agent")),
+        "id": agent_id,
         "name": as_string(item.get("name"), "Unnamed agent").strip()
         or "Unnamed agent",
-        "binary": normalize_token_list(item.get("binary")),
+        "binary": binary,
         "file_flag": normalize_token_list(item.get("file_flag")),
         "output_flag": normalize_token_list(item.get("output_flag")),
-        "trailing_flags": normalize_token_list(item.get("trailing_flags")),
+        "trailing_flags": trailing_flags,
         "output_filename": as_string(item.get("output_filename"), "result.md").strip()
         or "result.md",
     }
@@ -1388,6 +1407,35 @@ def build_agent_command(
     return argv
 
 
+def resolve_agent_command(argv: List[str], agent: Dict[str, Any]) -> List[str]:
+    """Prefer the current Windows npm Codex shim over an older codex.exe.
+
+    ``subprocess.Popen`` does not use PowerShell's command resolution.  On
+    Windows, a bare ``codex`` therefore resolves to a ``codex.exe`` that can
+    be older than the npm-installed ``codex.cmd`` visible in a terminal.
+    ``codex.cmd`` is directly executable by Python's Windows subprocess
+    implementation, so resolving it here keeps the plugin's no-shell launch
+    model while using the same CLI a user gets from the terminal.
+    """
+
+    if not argv or os.name != "nt":
+        return argv
+    if as_string(agent.get("id")) != BUILTIN_AGENT_ID:
+        return argv
+
+    executable = as_string(argv[0]).strip()
+    if Path(executable).name.lower() not in {"codex", "codex.exe"}:
+        return argv
+
+    npm_shim = shutil.which("codex.cmd")
+    if not npm_shim:
+        return argv
+
+    resolved = list(argv)
+    resolved[0] = npm_shim
+    return resolved
+
+
 def terminate_process(context: Dict[str, Any]) -> None:
     process = context.get("process")
     if process is None:
@@ -2046,6 +2094,7 @@ def submit_run(entry_id: str, values: Dict[str, Any], rev: int) -> None:
     output_path = run_dir / output_filename
     try:
         argv = build_agent_command(entry, agent, resolved, output_path)
+        argv = resolve_agent_command(argv, agent)
     except Exception as exc:
         draft["form_error"] = f"Could not construct the agent command: {exc}"
         render_run_form(entry_id, rev, "replace", {}, draft["form_error"])

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image/image.dart' as img;
 import 'package:just_audio/just_audio.dart';
+import '../../models/design_settings.dart';
 import '../../platform/audio_system_service.dart';
 
 import '../../platform/windows/tabamewin32_api.dart' hide AudioDeviceType;

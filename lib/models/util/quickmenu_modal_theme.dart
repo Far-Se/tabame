@@ -11,6 +11,7 @@ import '../../pages/quickmenu_designs/design_family_guy.dart';
 import '../../pages/quickmenu_designs/design_outrun2.dart';
 import '../../pages/quickmenu_designs/design_winamp.dart';
 import '../classes/boxes.dart';
+import '../design_settings.dart';
 import '../globals.dart';
 import '../settings.dart';
 import 'quickmenu_tui_theme.dart';

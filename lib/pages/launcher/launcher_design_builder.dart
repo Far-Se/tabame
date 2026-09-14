@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes.dart';
+import '../../models/design_settings.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win_utils.dart';
@@ -94,10 +95,10 @@ extension LauncherDesignBuilder on LauncherDesign {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: RetroTokens.accent.withAlpha(180), width: 1.5),
           boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: const Color(0xAA02030B),
+            const BoxShadow(
+              color: Color(0xAA02030B),
               blurRadius: 0,
-              offset: const Offset(6, 6),
+              offset: Offset(6, 6),
             ),
           ],
         );

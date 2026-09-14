@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../models/design_settings.dart';
 import '../../models/settings.dart';
 
 abstract final class OpticalGlassTokens {

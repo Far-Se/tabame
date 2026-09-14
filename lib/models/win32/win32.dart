@@ -10,6 +10,7 @@ import '../../platform/windows/tabamewin32_api.dart';
 import '../../platform/windows/win32_api.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../design_settings.dart';
 import '../globals.dart';
 import '../settings.dart';
 import 'imports.dart';

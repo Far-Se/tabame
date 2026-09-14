@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:markdown_widget/markdown_widget.dart';
 
+import '../../../models/design_settings.dart';
 import '../../../models/settings.dart';
 import '../../../widgets/widgets/windows_scroll.dart';
 import '../launcher_modal_theme.dart';

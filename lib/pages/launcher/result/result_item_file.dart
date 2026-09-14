@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../../../models/classes/saved_maps.dart';
+import '../../../models/design_settings.dart';
 import '../../../models/settings.dart';
 import '../../../widgets/itzy/quickmenu/bookmark_icon.dart';
 import 'result_row.dart';

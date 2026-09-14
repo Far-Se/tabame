@@ -1245,18 +1245,20 @@
     {
       "id": "cli-glossary",
       "name": "AI Agent Glossary",
-      "category": "AI tools",
+      "category": "AI Tools",
       "keyword": "aai",
       "recommended": true,
       "description": "Run saved prompt templates with Codex and other command-line agents.",
       "icon": "terminal",
       "runtime": "python",
       "author": "Far-Se",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/cli-glossary",
       "files": {
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/cli-glossary/plugin.json",
-        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/cli-glossary/main.py"
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/cli-glossary/main.py",
+        "agents.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/cli-glossary/agents.json",
+        "entries.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/cli-glossary/entries.json"
       }
     },
     {

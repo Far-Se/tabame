@@ -1,11 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tabame/models/classes/saved_maps.dart';
+import 'package:tabame/models/design_settings.dart';
 import 'package:tabame/models/settings.dart';
 
 void main() {
   group('Settings.appThemeColors', () {
     test('registers the Rundown theme set', () {
-      final Map<String, QMDesignThemeSet> themes = Settings.createDefaultQuickMenuDesignThemes();
+      final Map<String, QMDesignThemeSet> themes = DesignSettings.createDefaultQuickMenuDesignThemes();
 
       expect(themes[QuickMenuDesigns.rundown.displayName], isNotNull);
     });

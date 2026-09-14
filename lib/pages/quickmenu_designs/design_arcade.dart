@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/classes/boxes/quick_menu_box.dart';
+import '../../models/design_settings.dart';
 import '../../models/settings.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
 import '../../widgets/quickmenu/info_bar.dart';

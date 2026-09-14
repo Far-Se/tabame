@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
+import '../../../models/design_settings.dart';
 import '../../../models/globals.dart';
 import '../../../platform/app_paths.dart';
 import '../../../models/settings.dart';
@@ -295,7 +296,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
   Future<void> _resetCurrentPalette() async {
     if (_designTarget == _DesignTarget.launcher) {
       final LauncherDesignThemeSet defaults =
-          Settings.createDefaultLauncherDesignThemes()[user.launcherDesign.displayName]!;
+          DesignSettings.createDefaultLauncherDesignThemes()[user.launcherDesign.displayName]!;
       await _updateTheme(() {
         final ThemeColors source =
             _paletteMode == _QuickMenuPaletteMode.dark ? defaults.darkTheme : defaults.lightTheme;
@@ -316,7 +317,7 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     }
 
     final QMDesignThemeSet defaults =
-        Settings.createDefaultQuickMenuDesignThemes()[user.currentQuickMenuDesign.displayName]!;
+        DesignSettings.createDefaultQuickMenuDesignThemes()[user.currentQuickMenuDesign.displayName]!;
     await _updateTheme(() {
       if (_paletteMode == _QuickMenuPaletteMode.dark) {
         user.darkTheme = defaults.darkTheme.copyWith();

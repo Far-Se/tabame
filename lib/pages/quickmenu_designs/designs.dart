@@ -1,3 +1,4 @@
+import '../../models/design_settings.dart';
 import 'design_arcade.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:window_manager/window_manager.dart';

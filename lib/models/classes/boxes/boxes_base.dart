@@ -13,6 +13,7 @@ import '../../../pages/launcher/plugins/plugin_auto_updater.dart';
 import '../../../platform/app_paths.dart';
 import '../../../services/notification_coordinator.dart';
 import '../../../services/ai_coding_usage_service.dart';
+import '../../design_settings.dart';
 import '../../globals.dart';
 import '../../settings.dart';
 import '../../util/quick_action_list.dart';

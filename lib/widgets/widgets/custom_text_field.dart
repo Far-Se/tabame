@@ -16,7 +16,7 @@ class CustomTextField extends StatefulWidget {
     this.iconData,
     this.icon,
     this.value,
-    required this.onChanged(String val),
+    required this.onChanged,
   });
 
   @override

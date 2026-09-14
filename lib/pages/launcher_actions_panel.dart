@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import '../models/design_settings.dart';
 import '../platform/clipboard_service.dart';
 import '../platform/file_picker_service.dart';
 import '../platform/platform_models.dart';

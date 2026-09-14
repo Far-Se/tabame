@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import '../../../models/design_settings.dart';
 import '../../../platform/file_picker_service.dart';
 import 'package:flutter/material.dart';
 

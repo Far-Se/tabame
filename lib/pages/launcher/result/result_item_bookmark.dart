@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/app_items.dart';
 import '../../../models/classes/saved_maps.dart';
+import '../../../models/design_settings.dart';
 import '../../../models/settings.dart';
 import '../../../widgets/itzy/quickmenu/bookmark_icon.dart';
 import '../../../widgets/widgets/custom_tooltip.dart';

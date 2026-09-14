@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../models/design_settings.dart';
 import '../../../models/settings.dart';
 import '../launcher_design.dart';
 import '../widgets/liquid_metal_surface.dart';
