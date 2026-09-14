@@ -134,19 +134,18 @@ class _CrtSurfaceState extends State<CrtSurface>
   }
 
   @override
-  Widget build(BuildContext context) => _screen == null
-      ? widget.child
-      : _CrtSampler(
-          screen: _screen!,
-          persistence: _persistence!,
-          clock: _clock,
-          motion: _motion,
-          background: widget.background ?? Theme.of(context).colorScheme.surface,
-          accent: widget.accent ?? Theme.of(context).colorScheme.primary,
-          pixelSize: widget.pixelSize,
-          persistenceRate: widget.persistenceRate,
-          pixelRatio: MediaQuery.devicePixelRatioOf(context).clamp(1.0, 2.0),
-          child: widget.child);
+  // Keep the child mounted so shader loading preserves text input and focus.
+  Widget build(BuildContext context) => _CrtSampler(
+      screen: _screen,
+      persistence: _persistence,
+      clock: _clock,
+      motion: _motion,
+      background: widget.background ?? Theme.of(context).colorScheme.surface,
+      accent: widget.accent ?? Theme.of(context).colorScheme.primary,
+      pixelSize: widget.pixelSize,
+      persistenceRate: widget.persistenceRate,
+      pixelRatio: MediaQuery.devicePixelRatioOf(context).clamp(1.0, 2.0),
+      child: widget.child);
 }
 
 class _CrtSampler extends SingleChildRenderObjectWidget {
@@ -161,8 +160,8 @@ class _CrtSampler extends SingleChildRenderObjectWidget {
       required this.pixelSize,
       required this.persistenceRate,
       required super.child});
-  final ui.FragmentProgram screen;
-  final ui.FragmentProgram persistence;
+  final ui.FragmentProgram? screen;
+  final ui.FragmentProgram? persistence;
   final Animation<double> clock;
   final bool motion;
   final double pixelRatio;
@@ -176,6 +175,8 @@ class _CrtSampler extends SingleChildRenderObjectWidget {
       _RenderCrt(screen, persistence, clock, motion, pixelRatio, background, accent, pixelSize, persistenceRate);
   @override
   void updateRenderObject(BuildContext context, covariant _RenderCrt renderObject) {
+    renderObject.screen = screen;
+    renderObject.persistence = persistence;
     renderObject.configure(motion, pixelRatio, background, accent, pixelSize, persistenceRate);
   }
 }
@@ -183,8 +184,8 @@ class _CrtSampler extends SingleChildRenderObjectWidget {
 class _RenderCrt extends RenderProxyBox {
   _RenderCrt(this.screen, this.persistence, this.clock, this.motion, this.pixelRatio, this.background, this.accent,
       this.pixelSize, this.persistenceRate);
-  final ui.FragmentProgram screen;
-  final ui.FragmentProgram persistence;
+  ui.FragmentProgram? screen;
+  ui.FragmentProgram? persistence;
   final Animation<double> clock;
   bool motion;
   double pixelRatio;
@@ -228,14 +229,16 @@ class _RenderCrt extends RenderProxyBox {
 
   @override
   OffsetLayer updateCompositedLayer({covariant _CrtLayer? oldLayer}) {
-    final _CrtLayer result = oldLayer ?? _CrtLayer(screen.fragmentShader(), persistence.fragmentShader());
+    final _CrtLayer result = oldLayer ?? _CrtLayer();
+    result.screen ??= screen?.fragmentShader();
+    result.persistence ??= persistence?.fragmentShader();
     result.configure(size, pixelRatio, clock.value * 3600, motion, background, accent, pixelSize, persistenceRate);
     return result;
   }
 
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    if (size.isEmpty || child == null || (layer is _CrtLayer && (layer! as _CrtLayer).failed)) {
+    if (screen == null || size.isEmpty || child == null || (layer is _CrtLayer && (layer! as _CrtLayer).failed)) {
       return super.hitTestChildren(result, position: position);
     }
     final Offset p = Offset(position.dx / size.width * 2 - 1, position.dy / size.height * 2 - 1);
@@ -251,9 +254,8 @@ class _RenderCrt extends RenderProxyBox {
 /// Separate child scene avoids CPU readback and preserves composited children.
 /// The persistence texture contains unwarped content, never the optical output.
 class _CrtLayer extends OffsetLayer {
-  _CrtLayer(this.screen, this.persistence);
-  final ui.FragmentShader screen;
-  final ui.FragmentShader persistence;
+  ui.FragmentShader? screen;
+  ui.FragmentShader? persistence;
   ui.Image? _history;
   ui.Picture? _picture;
   Size _size = Size.zero;
@@ -308,7 +310,9 @@ class _CrtLayer extends OffsetLayer {
   @override
   void addToScene(ui.SceneBuilder builder) {
     if (_size.isEmpty) return;
-    if (failed) {
+    final ui.FragmentShader? screen = this.screen;
+    final ui.FragmentShader? persistence = this.persistence;
+    if (failed || screen == null || persistence == null) {
       super.addToScene(builder);
       return;
     }
@@ -374,8 +378,8 @@ class _CrtLayer extends OffsetLayer {
   void dispose() {
     _history?.dispose();
     _picture?.dispose();
-    screen.dispose();
-    persistence.dispose();
+    screen?.dispose();
+    persistence?.dispose();
     super.dispose();
   }
 }

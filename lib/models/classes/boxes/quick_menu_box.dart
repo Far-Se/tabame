@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../../logic/ui_health.dart';
 import '../../globals.dart';
 import '../../settings.dart';
 import '../../win32/win32.dart';
@@ -14,6 +17,7 @@ class QuickMenuFunctions {
   static bool keepOpen = false;
   static int hiddenTime = 0;
   static int shownTime = 0;
+  static int _visibilityRequest = 0;
 
   static int taskBarSelectedIdx = -1;
 
@@ -111,13 +115,50 @@ class QuickMenuFunctions {
       bool center = false,
       bool forceReposition = true,
       bool forcePop = false}) async {
-    // if (visible == false /* && (kDebugMode && !Globals.debugHotkeys) */) return;
-    if (visible != null) {
-      if (visible == false && QuickMenuFunctions.keepOpen) {
-        return;
+    final bool show = visible ?? !isQuickMenuVisible;
+    if (!show && keepOpen) return;
+    // Reject rapid reopens before listeners or opacity change anything.
+    if (show && DateTime.now().millisecondsSinceEpoch - hiddenTime <= 150) return;
+    final int request = ++_visibilityRequest;
+    void restoreOpacity() {
+      if (request == _visibilityRequest && isQuickMenuVisible) {
+        WinUtils.setWindowFullyOpaque(Win32.hWnd);
       }
     }
-    visible ??= !isQuickMenuVisible;
+
+    // A native/listener future can also stall. This timer is independent of
+    // Flutter frames and prevents an async wait from leaving alpha at zero.
+    final Timer? revealFallback = show
+        ? Timer(const Duration(seconds: 3), () {
+            if (request != _visibilityRequest || !isQuickMenuVisible) return;
+            UiHealth.record('quickMenu.revealFallback');
+            restoreOpacity();
+          })
+        : null;
+    try {
+      await UiHealth.step(
+          show ? 'quickMenu.show' : 'quickMenu.hide',
+          () => _toggleQuickMenu(
+                request: request,
+                type: type,
+                visible: show,
+                center: center,
+                forceReposition: forceReposition,
+                forcePop: forcePop,
+              ));
+    } finally {
+      revealFallback?.cancel();
+      restoreOpacity();
+    }
+  }
+
+  static Future<void> _toggleQuickMenu(
+      {required int request,
+      required bool visible,
+      QuickMenuPage type = QuickMenuPage.quickMenu,
+      bool center = false,
+      bool forceReposition = true,
+      bool forcePop = false}) async {
     isQuickMenuVisible = visible;
     if (!visible && !(kDebugMode && !Globals.debugHotkeys)) {
       Win32.setPosition(const Offset(-99999, -99999));
@@ -125,13 +166,16 @@ class QuickMenuFunctions {
     if (Globals.quickMenuPage != type) {
       for (final QuickMenuTriggers listener in listeners) {
         if (!_listeners.contains(listener)) continue;
-        await listener.onQuickMenuSwitchedPage(type, Globals.quickMenuPage, visible);
+        await UiHealth.step('quickMenu.switch.${listener.runtimeType}',
+            () => listener.onQuickMenuSwitchedPage(type, Globals.quickMenuPage, visible));
+        if (request != _visibilityRequest) return;
       }
     }
 
     for (final QuickMenuTriggers listener in listeners) {
       if (!_listeners.contains(listener)) continue;
-      await listener.onQuickMenuToggled(visible, type);
+      await UiHealth.step('quickMenu.toggle.${listener.runtimeType}', () => listener.onQuickMenuToggled(visible, type));
+      if (request != _visibilityRequest) return;
       if (forcePop) await listener.onQuickMenuMaybePop();
     }
 
@@ -144,10 +188,10 @@ class QuickMenuFunctions {
           triggerQuickAction("action:refreshTaskbar");
         }
         // await Future<void>.delayed(const Duration(milliseconds: 110));
-        final Size value = await windowManager.getSize();
-        await windowManager.setSize(Size(value.width + 2, value.height + 2));
+        final Size value = await UiHealth.step('quickMenu.getSize', windowManager.getSize);
+        await UiHealth.step('quickMenu.resize', () => windowManager.setSize(Size(value.width + 2, value.height + 2)));
         await Future<void>.delayed(const Duration(milliseconds: 30));
-        await windowManager.setSize(Size(value.width, value.height));
+        await UiHealth.step('quickMenu.restoreSize', () => windowManager.setSize(value));
 
         if (forceReposition) {
           if (center) {
@@ -158,14 +202,16 @@ class QuickMenuFunctions {
         }
         for (final QuickMenuTriggers listener in listeners) {
           if (!_listeners.contains(listener)) continue;
-          await listener.onQuickMenuVisible(type, center);
+          await UiHealth.step(
+              'quickMenu.visible.${listener.runtimeType}', () => listener.onQuickMenuVisible(type, center));
         }
 
         // Keep the native window transparent until Flutter has painted the
         // destination page. Revealing before the frame is ready lets DWM show
         // the previous QuickMenu backing surface for a moment.
-        await WidgetsBinding.instance.endOfFrame;
-        await Win32.forceRedraw();
+        await UiHealth.waitForFrame('quickMenu.reveal');
+        await UiHealth.step('quickMenu.redraw', Win32.forceRedraw);
+        if (request != _visibilityRequest || !isQuickMenuVisible) return;
         Win32.setWindowInvisible(false);
         shownTime = DateTime.now().millisecondsSinceEpoch;
         // WinUtils.setWindowFullyOpaque(Win32.hWnd);

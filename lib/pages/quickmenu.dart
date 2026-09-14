@@ -12,6 +12,7 @@ import '../platform/windows/tabamewin32_api.dart' hide AudioDeviceType;
 import '../platform/windows/win32_api.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../logic/ui_health.dart';
 import '../models/classes/boxes.dart';
 import '../models/classes/saved_maps.dart';
 import '../models/classes/text_snippet.dart';
@@ -159,9 +160,17 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
   bool tryToPop = false;
   @override
   Future<void> onQuickMenuMaybePop() async {
-    print("Maybe pop?");
-    tryToPop = true;
-    Navigator.of(context).maybePop();
+    tryToPop = false;
+    await _dismissQuickMenuPopup();
+  }
+
+  Future<void> _dismissQuickMenuPopup() async {
+    if (!mounted) return;
+    final NavigatorState navigator = Navigator.of(context);
+    if (!navigator.canPop()) return;
+    // maybePop rechecks the current route after asynchronous pop callbacks and
+    // refuses to pop the root route. A popup can disappear during that wait.
+    await navigator.maybePop();
   }
 
   @override
@@ -228,6 +237,8 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
   // Private Implementations
   // --------------------------------------------------------------------------
   void _initState() {
+    UiHealth.quickMenuMounted = true;
+    UiHealth.record('quickMenu.mounted');
     if (Globals.isStandaloneLauncher) {
       QuickMenuFunctions.isQuickMenuVisible = true;
       Globals.quickMenuPage = QuickMenuPage.launcher;
@@ -283,6 +294,8 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
   }
 
   void _dispose() {
+    UiHealth.quickMenuMounted = false;
+    UiHealth.record('quickMenu.disposed');
     trk.stopTimer();
     _clickThroughTimer?.cancel();
     _clearRam?.cancel();
@@ -376,7 +389,8 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       case PlatformQuickSnapEventType.open:
         if (!user.quickSnapOverlay) return;
         if (Boxes.quickGrids.isEmpty && !user.quickSnapGrid) return;
-        if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+        await _dismissQuickMenuPopup();
+        if (!mounted) return;
         final PlatformMonitor? monitor = await MonitorService.instance.cursorMonitor();
         if (monitor == null) return;
         _quickSnapOverlayState = await service.prepareOverlay(monitor);
@@ -408,21 +422,15 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       // ShowWindow(Win32.hWnd, SW_SHOW);
       // PaintingBinding.instance.imageCache.clear();
 
-      if (Navigator.of(context).canPop()) {
-        if (user.hideTabameOnUnfocus) {
-          if (!user.keepPopupsOpen && !user.keepPopupOpenOnDemand) {
-            Navigator.of(context).pop();
-          } else {
-            if (DateTime.now().difference(lastTimeShown).inSeconds > 30 && !user.keepPopupOpenOnDemand) {
-              Navigator.of(context).pop();
-            }
-          }
-        }
-        if (tryToPop) {
-          Navigator.of(context).pop();
-          tryToPop = false;
-        }
-      }
+      // Both a page switch and the popup settings can request dismissal.
+      // Decide once: two pops after one canPop check can remove QuickMenu's
+      // root route, disposing this state and its global hotkey subscription.
+      final bool popupExpired = DateTime.now().difference(lastTimeShown).inSeconds > 30;
+      final bool dismissPopup = tryToPop ||
+          (user.hideTabameOnUnfocus && !user.keepPopupOpenOnDemand && (!user.keepPopupsOpen || popupExpired));
+      tryToPop = false;
+      if (dismissPopup) await _dismissQuickMenuPopup();
+      if (!mounted) return;
       if (Globals.quickMenuPage == QuickMenuPage.launcher) {
         user.launcherSearchText = "";
         await WindowManager.instance.setSize(Size(Boxes.launcherSizeWidth, Globals.launcherSize.height));
@@ -480,8 +488,9 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
 
     Globals.quickMenuPage = newType;
     if (mounted) setState(() {});
-    await WidgetsBinding.instance.endOfFrame;
-    await WidgetsBinding.instance.endOfFrame;
+    if (await UiHealth.waitForFrame('quickMenu.switch.first')) {
+      await UiHealth.waitForFrame('quickMenu.switch.second');
+    }
   }
 
   Future<void> _onQuickMenuVisible(QuickMenuPage type, bool center) async {
