@@ -37,7 +37,7 @@ class ToonSearchBar extends StatelessWidget {
             Expanded(child: textField),
             if (trailingBadge != null) trailingBadge!,
             if (isSearching)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(left: 10),
                 child: SizedBox(
                   width: 15,
@@ -95,7 +95,7 @@ class ToonLauncherFrame extends StatelessWidget {
                           child: DragToMoveArea(
                             child: Row(
                               children: <Widget>[
-                                const Icon(Icons.bolt_rounded, size: 18, color: ToonTokens.orange),
+                                Icon(Icons.bolt_rounded, size: 18, color: ToonTokens.orange),
                                 const SizedBox(width: 7),
                                 Text(
                                   'TABAME // TOON',
@@ -109,7 +109,7 @@ class ToonLauncherFrame extends StatelessWidget {
                                 const SizedBox(width: 9),
                                 Transform.rotate(
                                   angle: 0.785398,
-                                  child: const SizedBox(
+                                  child: SizedBox(
                                     width: 6,
                                     height: 6,
                                     child: ColoredBox(color: ToonTokens.red),

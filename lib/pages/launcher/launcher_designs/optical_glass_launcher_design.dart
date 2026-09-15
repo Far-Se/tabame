@@ -28,7 +28,7 @@ class OpticalGlassSearchBar extends StatelessWidget {
               Expanded(child: textField),
               if (trailingBadge != null) trailingBadge!,
               if (isSearching)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(left: 10),
                   child: SizedBox(
                       width: 16,
@@ -74,7 +74,7 @@ class OpticalGlassLauncherFrame extends StatelessWidget {
                       Expanded(
                           child: DragToMoveArea(
                               child: Row(children: <Widget>[
-                        const OpticalGlassSurface(
+                        OpticalGlassSurface(
                             radius: 14,
                             selected: true,
                             child: SizedBox(

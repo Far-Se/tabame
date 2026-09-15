@@ -60,6 +60,8 @@ class CrtLauncherFrame extends StatelessWidget {
           child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: CrtSurface(
+                background: CrtTokens.background,
+                accent: CrtTokens.accent,
                 child: ColoredBox(
                     color: CrtTokens.background,
                     child: Padding(

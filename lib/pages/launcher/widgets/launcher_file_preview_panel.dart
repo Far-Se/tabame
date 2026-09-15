@@ -288,7 +288,7 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
                       style: PhosphorTokens.font(size: 12, color: PhosphorTokens.dim)),
                 ])),
               ])),
-          const Divider(height: 1, color: PhosphorTokens.border),
+          Divider(height: 1, color: PhosphorTokens.border),
           Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: SingleChildScrollView(
@@ -308,7 +308,7 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
                   future: _previewData,
                   builder: (BuildContext context, AsyncSnapshot<_LauncherFilePreviewData> snapshot) {
                     if (!snapshot.hasData)
-                      return const Center(
+                      return Center(
                           child: CircularProgressIndicator(strokeWidth: 1.5, color: PhosphorTokens.accent));
                     final _LauncherFilePreviewData data = snapshot.data!;
                     return LayoutBuilder(
@@ -335,7 +335,7 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
                                       ]))),
                               if (constraints.maxHeight >= 260) ...<Widget>[
                                 const SizedBox(height: 12),
-                                const Divider(height: 1, color: PhosphorTokens.border),
+                                Divider(height: 1, color: PhosphorTokens.border),
                                 const SizedBox(height: 10),
                                 for (final MapEntry<String, String> entry in <String, String>{
                                   'Type': _fileKind(data.stat),
@@ -401,7 +401,7 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
               ])),
               PopupMenuButton<String>(
                 tooltip: 'File actions',
-                icon: const Icon(Icons.more_horiz, color: StrataTokens.dim),
+                icon: Icon(Icons.more_horiz, color: StrataTokens.dim),
                 onSelected: (String action) async {
                   if (action == 'open') widget.onOpen?.call();
                   if (action == 'copy') await Clipboard.setData(ClipboardData(text: widget.entity.path));
@@ -438,7 +438,7 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
                 future: _previewData,
                 builder: (BuildContext context, AsyncSnapshot<_LauncherFilePreviewData> snapshot) {
                   if (!snapshot.hasData)
-                    return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: StrataTokens.accent));
+                    return Center(child: CircularProgressIndicator(strokeWidth: 2, color: StrataTokens.accent));
                   final _LauncherFilePreviewData data = snapshot.data!;
                   return LayoutBuilder(
                       builder: (BuildContext context, BoxConstraints constraints) => Column(children: <Widget>[

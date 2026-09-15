@@ -16,16 +16,16 @@ class StrataSearchBar extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: StrataTokens.border)),
         ),
         child: Row(children: <Widget>[
-          const MouseRegion(
+          MouseRegion(
             cursor: SystemMouseCursors.move,
             child: DragToMoveArea(
               child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 6),
-                child: CustomPaint(size: Size(30, 24), painter: _StrataLogoPainter()),
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: CustomPaint(size: const Size(30, 24), painter: _StrataLogoPainter(StrataTokens.accent)),
               ),
             ),
           ),
@@ -37,8 +37,8 @@ class StrataSearchBar extends StatelessWidget {
               message: 'Toggle file preview',
               child: Text('Ctrl + P', style: StrataTokens.font(size: 12, color: StrataTokens.dim))),
           if (isSearching)
-            const Padding(
-                padding: EdgeInsets.only(left: 12),
+            Padding(
+                padding: const EdgeInsets.only(left: 12),
                 child: SizedBox(
                     width: 18,
                     height: 18,
@@ -73,17 +73,16 @@ class StrataLauncherFrame extends StatelessWidget {
                 Container(
                     height: 42,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: const BoxDecoration(border: Border(top: BorderSide(color: StrataTokens.border))),
+                    decoration: BoxDecoration(border: Border(top: BorderSide(color: StrataTokens.border))),
                     child: LayoutBuilder(
                         builder: (BuildContext context, BoxConstraints constraints) => Row(children: <Widget>[
-                              _hint('? ?', 'Navigate'),
+                              _hint('↑↓ ', 'Navigate'),
                               const SizedBox(width: 18),
-                              _hint('?', 'Open'),
+                              _hint('↵ ', 'Open'),
                               if (constraints.maxWidth > 650) ...<Widget>[
                                 const SizedBox(width: 18),
                                 _hint('Ctrl C', 'Copy'),
                                 const SizedBox(width: 18),
-                                _hint('Ctrl O', 'Open folder')
                               ],
                               const Spacer(),
                               const Icon(Icons.circle, size: 8, color: Color(0xFF80F454)),
@@ -98,8 +97,8 @@ class StrataLauncherFrame extends StatelessWidget {
         Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             decoration: BoxDecoration(
-                color: const Color(0xFF202D37),
-                border: Border.all(color: const Color(0xFF354653)),
+                color: StrataTokens.foreground,
+                border: Border.all(color: StrataTokens.border),
                 borderRadius: BorderRadius.circular(4)),
             child: Text(key, style: StrataTokens.font(size: 11, color: StrataTokens.dim))),
         const SizedBox(width: 9),
@@ -108,10 +107,13 @@ class StrataLauncherFrame extends StatelessWidget {
 }
 
 class _StrataLogoPainter extends CustomPainter {
-  const _StrataLogoPainter();
+  const _StrataLogoPainter(this.color);
+
+  final Color color;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()..color = StrataTokens.accent;
+    final Paint paint = Paint()..color = color;
     for (final double offset in <double>[0, 12]) {
       canvas.drawPath(
           Path()
@@ -125,7 +127,7 @@ class _StrataLogoPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_StrataLogoPainter oldDelegate) => false;
+  bool shouldRepaint(_StrataLogoPainter oldDelegate) => color != oldDelegate.color;
 }
 
 class StrataResultsPanel extends StatelessWidget {

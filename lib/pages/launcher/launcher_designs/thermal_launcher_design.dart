@@ -18,14 +18,14 @@ class ThermalSearchBar extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         margin: const EdgeInsets.symmetric(horizontal: 18),
         padding: const EdgeInsets.fromLTRB(2, 14, 0, 13),
-        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: ThermalTokens.border))),
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ThermalTokens.border))),
         child: Row(children: <Widget>[
           dragHandle,
           const SizedBox(width: 12),
           Expanded(child: textField),
           if (trailingBadge != null) trailingBadge!,
           if (isSearching)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(horizontal: 8),
               child: SizedBox(
                   width: 13,
@@ -41,7 +41,7 @@ class ThermalSearchBar extends StatelessWidget {
               padding: EdgeInsets.zero,
               style: const ButtonStyle(overlayColor: WidgetStatePropertyAll<Color>(Colors.transparent)),
               onPressed: () => windowManager.hide(),
-              icon: const Icon(Icons.close_rounded, size: 16, color: ThermalTokens.dim),
+              icon: Icon(Icons.close_rounded, size: 16, color: ThermalTokens.dim),
             ),
           ),
         ]),
@@ -75,7 +75,7 @@ class ThermalLauncherFrame extends StatelessWidget {
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 18),
                 padding: const EdgeInsets.symmetric(vertical: 11),
-                decoration: const BoxDecoration(border: Border(top: BorderSide(color: ThermalTokens.border))),
+                decoration: BoxDecoration(border: Border(top: BorderSide(color: ThermalTokens.border))),
                 child: Row(children: <Widget>[
                   Expanded(
                     child: SingleChildScrollView(

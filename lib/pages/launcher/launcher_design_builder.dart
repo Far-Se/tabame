@@ -109,8 +109,8 @@ extension LauncherDesignBuilder on LauncherDesign {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: RetroTokens.accent.withAlpha(180), width: 1.5),
           boxShadow: <BoxShadow>[
-            const BoxShadow(
-              color: Color(0xAA02030B),
+            BoxShadow(
+              color: Colors.black.withAlpha(RetroTokens.isDark ? 170 : 40),
               blurRadius: 0,
               offset: Offset(6, 6),
             ),
@@ -125,7 +125,7 @@ extension LauncherDesignBuilder on LauncherDesign {
         return BoxDecoration(
             color: StrataTokens.background,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF205563)));
+            border: Border.all(color: StrataTokens.border));
       case LauncherDesign.aurora:
         return BoxDecoration(
             color: AuroraTokens.background,
@@ -748,7 +748,7 @@ extension LauncherDesignBuilder on LauncherDesign {
           padding: const EdgeInsets.fromLTRB(16, 9, 16, 5),
           child: Row(
             children: <Widget>[
-              const Icon(Icons.bolt_rounded, size: 15, color: ToonTokens.orange),
+              Icon(Icons.bolt_rounded, size: 15, color: ToonTokens.orange),
               const SizedBox(width: 7),
               Text(
                 label.toUpperCase(),

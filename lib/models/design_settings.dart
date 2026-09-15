@@ -451,9 +451,9 @@ class DesignSettings {
       ),
       LauncherDesign.thermal.displayName: LauncherDesignThemeSet(
         lightTheme: defaultThemeColors(
-          background: const Color(0xFF14181C),
-          textColor: const Color(0xFFEEE9DF),
-          accentColor: const Color(0xFFE1AD70),
+          background: const Color(0xFFF1ECE4),
+          textColor: const Color(0xFF2E3338),
+          accentColor: const Color(0xFFA85F2D),
           gradientAlpha: 0,
           uiFontFamily: 'Hanken Grotesk',
           uiFontWeight: 500,
@@ -509,9 +509,9 @@ class DesignSettings {
           borderRadius: 24,
         ),
         darkTheme: defaultThemeColors(
-          background: const Color(0xFFE5EAF2),
-          textColor: const Color(0xFF202D45),
-          accentColor: const Color(0xFF435B91),
+          background: const Color(0xFF11151D),
+          textColor: const Color(0xFFE6ECF7),
+          accentColor: const Color(0xFF8AAEF5),
           gradientAlpha: 0,
           uiFontFamily: 'Mulish',
           entryFontFamily: 'Mulish',
@@ -521,9 +521,9 @@ class DesignSettings {
       ),
       LauncherDesign.liquidMetal.displayName: LauncherDesignThemeSet(
         lightTheme: defaultThemeColors(
-          background: const Color(0xFF12151A),
-          textColor: const Color(0xFFECEAE4),
-          accentColor: const Color(0xFFCEC5AF),
+          background: const Color(0xFFE7EAED),
+          textColor: const Color(0xFF2B3035),
+          accentColor: const Color(0xFF626A73),
           gradientAlpha: 0,
           uiFontFamily: 'Barlow',
           entryFontFamily: 'Barlow',
@@ -543,9 +543,9 @@ class DesignSettings {
       ),
       LauncherDesign.crt.displayName: LauncherDesignThemeSet(
         lightTheme: defaultThemeColors(
-            background: const Color(0xFF130F09),
-            textColor: const Color(0xFFFFDDA0),
-            accentColor: const Color(0xFFFFBE62),
+            background: const Color(0xFFF0E2C5),
+            textColor: const Color(0xFF49361F),
+            accentColor: const Color(0xFFB56A22),
             gradientAlpha: 0,
             uiFontFamily: 'Consolas',
             entryFontFamily: 'Consolas',
@@ -563,9 +563,9 @@ class DesignSettings {
       ),
       LauncherDesign.retro.displayName: LauncherDesignThemeSet(
         lightTheme: defaultThemeColors(
-          background: const Color(0xFF090B1A),
-          textColor: const Color(0xFFFFF0C6),
-          accentColor: const Color(0xFFFF4F9A),
+          background: const Color(0xFFF5EEE6),
+          textColor: const Color(0xFF302638),
+          accentColor: const Color(0xFFC93475),
           gradientAlpha: 0,
           uiFontFamily: 'Press Start 2P',
           entryFontFamily: 'VT323',
@@ -585,9 +585,9 @@ class DesignSettings {
       ),
       LauncherDesign.toon.displayName: LauncherDesignThemeSet(
         lightTheme: defaultThemeColors(
-          background: const Color(0xFF292C30),
-          textColor: const Color(0xFFFFF3D6),
-          accentColor: const Color(0xFFFFB642),
+          background: const Color(0xFFFFF0D8),
+          textColor: const Color(0xFF2D3035),
+          accentColor: const Color(0xFFD36B1E),
           gradientAlpha: 0,
           uiFontFamily: 'Barlow Condensed',
           entryFontFamily: 'Barlow Condensed',
@@ -607,9 +607,9 @@ class DesignSettings {
       ),
       LauncherDesign.phosphor.displayName: LauncherDesignThemeSet(
         lightTheme: defaultThemeColors(
-            background: const Color(0xFF090F0E),
-            textColor: const Color(0xFFDCE3DF),
-            accentColor: const Color(0xFF58EF92),
+            background: const Color(0xFFE8F0EB),
+            textColor: const Color(0xFF1E3328),
+            accentColor: const Color(0xFF168347),
             gradientAlpha: 0,
             uiFontFamily: 'Consolas',
             entryFontFamily: 'Consolas',
@@ -627,9 +627,9 @@ class DesignSettings {
       ),
       LauncherDesign.strata.displayName: LauncherDesignThemeSet(
         lightTheme: defaultThemeColors(
-            background: const Color(0xFF0C151A),
-            textColor: const Color(0xFFEEF3F7),
-            accentColor: const Color(0xFF20DFE3),
+            background: const Color(0xFFEAF1F3),
+            textColor: const Color(0xFF243640),
+            accentColor: const Color(0xFF008B95),
             gradientAlpha: 0,
             uiFontFamily: 'Segoe UI',
             entryFontFamily: 'Segoe UI',

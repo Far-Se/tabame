@@ -7,6 +7,9 @@ uniform float uTime;
 uniform vec2 uPointer;
 uniform float uActive;
 uniform float uMode;
+uniform vec3 uBackground;
+uniform vec3 uForeground;
+uniform vec3 uAccent;
 out vec4 fragColor;
 
 void main() {
@@ -23,8 +26,8 @@ void main() {
   float reflection = pow(0.5 + 0.5 * sin(fold * 5.0), 14.0);
   float broad = 0.5 + 0.5 * sin(fold * 2.0 - 0.6);
   float brushed = sin(pixel.y * 2.4 + sin(pixel.x * 0.013)) * 0.003;
-  vec3 graphite = vec3(0.064, 0.070, 0.079);
-  vec3 silver = vec3(0.73, 0.71, 0.66);
+  vec3 graphite = uBackground;
+  vec3 silver = mix(uForeground, uAccent, 0.18);
 
   // Mode 0 is the deep frame, 1 is a raised surface, 2 is a fine
   // translucent reflection over existing controls and preview content.
@@ -38,7 +41,7 @@ void main() {
     vec3 color = graphite + vec3(broad * 0.028 + brushed);
     color += silver * reflection * intensity;
     color += silver * rim * (0.16 + broad * 0.22);
-    color += vec3(0.027, 0.025, 0.021) * uActive;
+    color += uAccent * 0.045 * uActive;
     // Keep the reading area dark; reflected metal gathers at the perimeter.
     float centerShade = smoothstep(0.05, 0.4, abs(uv.x - 0.5));
     color = mix(color * 0.80, color, centerShade);

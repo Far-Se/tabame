@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../launcher_design.dart';
+
 /// One clock per launcher. Painters listen directly without rebuilding content.
 class LiquidMetalMotion extends StatefulWidget {
   const LiquidMetalMotion({super.key, required this.child});
@@ -156,6 +158,7 @@ class _LiquidMetalSurfaceState extends State<LiquidMetalSurface> {
     final Animation<double> clock =
         context.dependOnInheritedWidgetOfExactType<_MetalClock>()?.clock ?? const AlwaysStoppedAnimation<double>(0);
     final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final _LiquidMetalPainter painter = _LiquidMetalPainter(
       shader: _shader,
       clock: clock,
@@ -165,6 +168,10 @@ class _LiquidMetalSurfaceState extends State<LiquidMetalSurface> {
       reduceMotion: reduceMotion,
       optical: widget.optical,
       radius: widget.radius,
+      isDark: isDark,
+      background: widget.optical ? OpticalGlassTokens.background : LiquidMetalTokens.background,
+      foreground: widget.optical ? OpticalGlassTokens.foreground : LiquidMetalTokens.foreground,
+      accent: widget.optical ? OpticalGlassTokens.accent : LiquidMetalTokens.accent,
     );
     return MouseRegion(
       onHover: reduceMotion ? null : (PointerEvent event) => _pointer.value = event.localPosition,
@@ -191,6 +198,10 @@ class _LiquidMetalPainter extends CustomPainter {
     required this.reduceMotion,
     required this.optical,
     required this.radius,
+    required this.isDark,
+    required this.background,
+    required this.foreground,
+    required this.accent,
   }) : super(repaint: Listenable.merge(<Listenable>[clock, pointer]));
 
   final ui.FragmentShader? shader;
@@ -201,6 +212,10 @@ class _LiquidMetalPainter extends CustomPainter {
   final bool reduceMotion;
   final bool optical;
   final double radius;
+  final bool isDark;
+  final Color background;
+  final Color foreground;
+  final Color accent;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -217,14 +232,14 @@ class _LiquidMetalPainter extends CustomPainter {
               end: Alignment.bottomRight,
               colors: optical
                   ? <Color>[
-                      const Color(0xFFF2F4FA),
-                      selected ? const Color(0xFFDCE5FA) : const Color(0xFFE5EAF2),
-                      const Color(0xFFF4EEF4),
+                      Color.alphaBlend(Colors.white.withAlpha(isDark ? 78 : 150), background),
+                      Color.alphaBlend(foreground.withAlpha(selected ? 48 : 24), background),
+                      Color.alphaBlend(accent.withAlpha(isDark ? 34 : 18), background),
                     ]
                   : <Color>[
-                      selected ? const Color(0xFF45443F) : const Color(0xFF292C30),
-                      const Color(0xFF12151A),
-                      const Color(0xFF303238),
+                      Color.alphaBlend(foreground.withAlpha(selected ? 64 : 34), background),
+                      background,
+                      Color.alphaBlend(foreground.withAlpha(48), background),
                     ],
             ).createShader(rect));
       return;
@@ -238,7 +253,14 @@ class _LiquidMetalPainter extends CustomPainter {
       ..setFloat(4, cursor.dy)
       ..setFloat(5, selected ? 1 : (!reduceMotion && pointer.value != null ? 0.45 : 0))
       ..setFloat(6, mode);
-    if (optical) effect.setFloat(7, radius);
+    int slot = 7;
+    if (optical) effect.setFloat(slot++, radius);
+    for (final Color color in <Color>[background, foreground, accent]) {
+      effect
+        ..setFloat(slot++, color.r)
+        ..setFloat(slot++, color.g)
+        ..setFloat(slot++, color.b);
+    }
     canvas.drawRect(rect, Paint()..shader = effect);
   }
 
@@ -249,7 +271,11 @@ class _LiquidMetalPainter extends CustomPainter {
       mode != oldDelegate.mode ||
       optical != oldDelegate.optical ||
       radius != oldDelegate.radius ||
-      reduceMotion != oldDelegate.reduceMotion;
+      reduceMotion != oldDelegate.reduceMotion ||
+      isDark != oldDelegate.isDark ||
+      background != oldDelegate.background ||
+      foreground != oldDelegate.foreground ||
+      accent != oldDelegate.accent;
 }
 
 /// Optical material uses the same clock and resource lifecycle as Liquid Metal.

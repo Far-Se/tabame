@@ -142,7 +142,14 @@ class _ThermalSurfaceState extends State<ThermalSurface>
                     borderRadius: BorderRadius.circular(widget.radius),
                     child: CustomPaint(
                       key: _sheetKey,
-                      painter: _ThermalPainter(field: _field, shader: _shader),
+                      painter: _ThermalPainter(
+                        field: _field,
+                        shader: _shader,
+                        isDark: Theme.of(context).brightness == Brightness.dark,
+                        background: ThermalTokens.background,
+                        foreground: ThermalTokens.foreground,
+                        accent: ThermalTokens.accent,
+                      ),
                       child: RepaintBoundary(child: widget.child),
                     ),
                   ),
@@ -528,10 +535,21 @@ class _ThermalField extends ChangeNotifier {
 }
 
 class _ThermalPainter extends CustomPainter {
-  _ThermalPainter({required this.field, required this.shader}) : super(repaint: field);
+  _ThermalPainter({
+    required this.field,
+    required this.shader,
+    required this.isDark,
+    required this.background,
+    required this.foreground,
+    required this.accent,
+  }) : super(repaint: field);
 
   final _ThermalField field;
   final ui.FragmentShader? shader;
+  final bool isDark;
+  final Color background;
+  final Color foreground;
+  final Color accent;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -539,7 +557,7 @@ class _ThermalPainter extends CustomPainter {
     final Rect panel = Offset.zero & size;
     final ui.FragmentShader? effect = shader;
     if (effect == null) {
-      canvas.drawRect(panel, Paint()..color = ThermalTokens.background);
+      canvas.drawRect(panel, Paint()..color = background);
       final Rect? selected = field.selectionRect;
       if (selected != null) {
         canvas.drawRRect(RRect.fromRectAndRadius(selected, const Radius.circular(5)),
@@ -561,8 +579,9 @@ class _ThermalPainter extends CustomPainter {
         ..setFloat(slot++, softness);
     }
 
-    // 80 float slots, in thermal.frag declaration order. Empty slots are cleared
-    // on every paint; the four history budgets cannot evict one another.
+    // The first 80 float slots contain state in thermal.frag declaration order.
+    // Empty slots are cleared on every paint; the four history budgets cannot
+    // evict one another. Palette colors follow the state slots below.
     source(field.selectionRect, field.selectionHeat, 5);
     source(field.pointer == null ? null : Rect.fromCenter(center: field.pointer!, width: 0, height: 0), field.hoverHeat,
         24);
@@ -578,9 +597,21 @@ class _ThermalPainter extends CustomPainter {
     history(field.touches, 3);
     history(field.typing, 3);
     history(field.clicks, 2);
+    for (final Color color in <Color>[background, foreground, accent]) {
+      effect
+        ..setFloat(slot++, color.r)
+        ..setFloat(slot++, color.g)
+        ..setFloat(slot++, color.b);
+    }
     canvas.drawRect(panel, Paint()..shader = effect);
   }
 
   @override
-  bool shouldRepaint(_ThermalPainter oldDelegate) => field != oldDelegate.field || shader != oldDelegate.shader;
+  bool shouldRepaint(_ThermalPainter oldDelegate) =>
+      field != oldDelegate.field ||
+      shader != oldDelegate.shader ||
+      isDark != oldDelegate.isDark ||
+      background != oldDelegate.background ||
+      foreground != oldDelegate.foreground ||
+      accent != oldDelegate.accent;
 }

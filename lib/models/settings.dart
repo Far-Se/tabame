@@ -415,6 +415,78 @@ class Settings {
           final ThemeColors dark = defaults[entry.key]!.darkTheme;
           saved.darkTheme = saved.darkTheme.copyWith(background: dark.background, text: dark.text, accent: dark.accent);
         }
+
+        bool matchesPalette(ThemeColors theme, Color background, Color text, Color accent) =>
+            theme.background == background && theme.text == text && theme.accent == accent;
+
+        void migrateLightPalette(LauncherDesign design, Color background, Color text, Color accent) {
+          if (entry.key != design.displayName || !matchesPalette(saved.lightTheme, background, text, accent)) return;
+          final ThemeColors light = defaults[entry.key]!.lightTheme;
+          saved.lightTheme = saved.lightTheme.copyWith(
+            background: light.background,
+            text: light.text,
+            accent: light.accent,
+          );
+        }
+
+        void migrateDarkPalette(LauncherDesign design, Color background, Color text, Color accent) {
+          if (entry.key != design.displayName || !matchesPalette(saved.darkTheme, background, text, accent)) return;
+          final ThemeColors dark = defaults[entry.key]!.darkTheme;
+          saved.darkTheme = saved.darkTheme.copyWith(
+            background: dark.background,
+            text: dark.text,
+            accent: dark.accent,
+          );
+        }
+
+        migrateLightPalette(
+          LauncherDesign.thermal,
+          const Color(0xFF14181C),
+          const Color(0xFFEEE9DF),
+          const Color(0xFFE1AD70),
+        );
+        migrateDarkPalette(
+          LauncherDesign.opticalGlass,
+          const Color(0xFFE5EAF2),
+          const Color(0xFF202D45),
+          const Color(0xFF435B91),
+        );
+        migrateLightPalette(
+          LauncherDesign.liquidMetal,
+          const Color(0xFF12151A),
+          const Color(0xFFECEAE4),
+          const Color(0xFFCEC5AF),
+        );
+        migrateLightPalette(
+          LauncherDesign.crt,
+          const Color(0xFF130F09),
+          const Color(0xFFFFDDA0),
+          const Color(0xFFFFBE62),
+        );
+        migrateLightPalette(
+          LauncherDesign.retro,
+          const Color(0xFF090B1A),
+          const Color(0xFFFFF0C6),
+          const Color(0xFFFF4F9A),
+        );
+        migrateLightPalette(
+          LauncherDesign.toon,
+          const Color(0xFF292C30),
+          const Color(0xFFFFF3D6),
+          const Color(0xFFFFB642),
+        );
+        migrateLightPalette(
+          LauncherDesign.phosphor,
+          const Color(0xFF090F0E),
+          const Color(0xFFDCE3DF),
+          const Color(0xFF58EF92),
+        );
+        migrateLightPalette(
+          LauncherDesign.strata,
+          const Color(0xFF0C151A),
+          const Color(0xFFEEF3F7),
+          const Color(0xFF20DFE3),
+        );
         defaults[entry.key] = saved;
       }
     }

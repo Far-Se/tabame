@@ -30,7 +30,7 @@ class LiquidMetalSearchBar extends StatelessWidget {
               Expanded(child: textField),
               if (trailingBadge != null) trailingBadge!,
               if (isSearching)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(left: 12),
                   child: SizedBox(
                       width: 16,
@@ -76,7 +76,7 @@ class LiquidMetalLauncherFrame extends StatelessWidget {
                       Expanded(
                           child: DragToMoveArea(
                               child: Row(children: <Widget>[
-                        const Icon(Icons.blur_circular_rounded, color: LiquidMetalTokens.accent, size: 16),
+                        Icon(Icons.blur_circular_rounded, color: LiquidMetalTokens.accent, size: 16),
                         const SizedBox(width: 8),
                         Text('LIQUID METAL', style: LiquidMetalTokens.font(size: 10, spacing: 2)),
                       ]))),
@@ -95,7 +95,7 @@ class LiquidMetalLauncherFrame extends StatelessWidget {
                     child: Container(
                       height: 38,
                       padding: const EdgeInsets.symmetric(horizontal: 18),
-                      decoration: const BoxDecoration(border: Border(top: BorderSide(color: LiquidMetalTokens.border))),
+                      decoration: BoxDecoration(border: Border(top: BorderSide(color: LiquidMetalTokens.border))),
                       child: Row(children: <Widget>[
                         Expanded(
                             child: SingleChildScrollView(

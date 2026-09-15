@@ -301,7 +301,7 @@ class LauncherResultRow extends StatelessWidget {
                     SizedBox(
                       width: 16,
                       child: isSelected
-                          ? const Icon(Icons.keyboard_return_rounded, size: 15, color: ThermalTokens.accent)
+                          ? Icon(Icons.keyboard_return_rounded, size: 15, color: ThermalTokens.accent)
                           : null,
                     ),
                   ]),
@@ -404,7 +404,7 @@ class LauncherResultRow extends StatelessWidget {
                           )),
                   if (badge != null) Padding(padding: const EdgeInsets.only(left: 8), child: badge),
                   if (isSelected)
-                    const Padding(
+                    Padding(
                         padding: EdgeInsets.only(left: 10),
                         child: Icon(Icons.arrow_outward_rounded, size: 16, color: OpticalGlassTokens.accent)),
                 ]),
@@ -456,7 +456,7 @@ class LauncherResultRow extends StatelessWidget {
                           )),
                   if (badge != null) Padding(padding: const EdgeInsets.only(left: 8), child: badge),
                   if (isSelected)
-                    const Padding(
+                    Padding(
                         padding: EdgeInsets.only(left: 10),
                         child: Icon(Icons.keyboard_return_rounded, size: 16, color: LiquidMetalTokens.accent)),
                 ]),
@@ -571,7 +571,7 @@ class LauncherResultRow extends StatelessWidget {
                 ),
                 if (badge != null) Padding(padding: const EdgeInsets.only(left: 8), child: badge),
                 if (isSelected)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(left: 10),
                     child: Icon(Icons.keyboard_return_rounded, size: 16, color: ToonTokens.orange),
                   ),
@@ -728,7 +728,7 @@ class LauncherResultRow extends StatelessWidget {
                         ])),
             if (badge != null) Padding(padding: const EdgeInsets.only(left: 10), child: badge),
             if (isSelected)
-              const Padding(
+              Padding(
                   padding: EdgeInsets.only(left: 16),
                   child: Icon(Icons.keyboard_return_rounded, color: StrataTokens.accent, size: 21)),
           ]),

@@ -18,7 +18,7 @@ class PhosphorSearchBar extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.fromLTRB(20, 8, 4, 8),
-        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: PhosphorTokens.border))),
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: PhosphorTokens.border))),
         child: Row(children: <Widget>[
           DragToMoveArea(
               child: Padding(
@@ -28,7 +28,7 @@ class PhosphorSearchBar extends StatelessWidget {
           Expanded(child: textField),
           if (trailingBadge != null) trailingBadge!,
           if (isSearching)
-            const Padding(
+            Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
                 child: SizedBox(
                     width: 15,
@@ -82,20 +82,16 @@ class PhosphorLauncherFrame extends StatelessWidget {
                   height: 44,
                   margin: const EdgeInsets.symmetric(horizontal: 6),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: const BoxDecoration(border: Border(top: BorderSide(color: PhosphorTokens.border))),
+                  decoration: BoxDecoration(border: Border(top: BorderSide(color: PhosphorTokens.border))),
                   child: LayoutBuilder(
                       builder: (BuildContext context, BoxConstraints constraints) => Row(children: <Widget>[
                             Expanded(
                                 child: SingleChildScrollView(
                                     scrollDirection: Axis.horizontal,
                                     child: Row(children: <Widget>[
-                                      _hint('Ctrl + P', 'Preview'),
-                                      _hint('? ?', 'Navigate'),
+                                      _hint('↑↓ ', 'Navigate'),
                                       _hint('Enter', 'Open'),
-                                      if (constraints.maxWidth > 720) ...<Widget>[
-                                        _hint('Ctrl + C', 'Copy path'),
-                                        _hint('Ctrl + O', 'Open folder')
-                                      ],
+                                      _hint('Ctrl + ↵ ', 'Open Folder'),
                                     ]))),
                             const SizedBox(width: 12),
                             Text('$resultCount results',

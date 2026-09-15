@@ -1,8 +1,9 @@
 #version 460 core
 #include <flutter/runtime_effect.glsl>
 
-// _ThermalPainter writes 80 floats in this order. Bounds are panel-local
-// center/half-size; state is temperature/diffusion width. No texture captures.
+// _ThermalPainter writes 80 state floats followed by three RGB palette colors.
+// Bounds are panel-local center/half-size; state is temperature/diffusion
+// width. No texture captures.
 uniform vec2 uSize;
 uniform vec4 uSelection;
 uniform vec2 uSelectionState;
@@ -30,6 +31,9 @@ uniform vec4 uClick0;
 uniform vec2 uClick0State;
 uniform vec4 uClick1;
 uniform vec2 uClick1State;
+uniform vec3 uBackground;
+uniform vec3 uForeground;
+uniform vec3 uAccent;
 out vec4 fragColor;
 
 float hash(vec2 p) {
@@ -80,16 +84,17 @@ void main() {
   heat *= 0.9 + stone * 0.2;
   float temperature = 1.0 - exp(-heat * 1.25);
 
-  vec3 mineral = vec3(0.0784, 0.0941, 0.1098);
+  float dark = 1.0 - smoothstep(0.25, 0.62, dot(uBackground, vec3(0.2126, 0.7152, 0.0722)));
+  vec3 mineral = mix(uBackground, vec3(0.0784, 0.0941, 0.1098), dark * 0.08);
   mineral += (strata - 0.5) * vec3(0.014, 0.017, 0.018);
   mineral += (grain - 0.5) * 0.013;
   // A faint fractured seam remains visible while the panel is completely cold.
   float seam = 1.0 - smoothstep(0.008, 0.032, abs(stone - 0.48));
   mineral -= seam * 0.009;
 
-  vec3 slate = vec3(0.185, 0.204, 0.214);
-  vec3 rust = vec3(0.34, 0.143, 0.086);
-  vec3 amber = vec3(0.445, 0.250, 0.095);
+  vec3 slate = mix(uBackground, uForeground, dark * 0.16 + (1.0 - dark) * 0.12);
+  vec3 rust = mix(uAccent, vec3(0.34, 0.143, 0.086), 0.28);
+  vec3 amber = mix(uAccent, vec3(0.96, 0.57, 0.19), 0.35);
   vec3 color = mix(mineral, slate, smoothstep(0.0, 0.23, temperature));
   color = mix(color, rust, smoothstep(0.18, 0.58, temperature));
   color = mix(color, amber, smoothstep(0.56, 0.94, temperature));

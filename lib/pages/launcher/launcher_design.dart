@@ -5,22 +5,23 @@ import '../../models/design_settings.dart';
 import '../../models/settings.dart';
 
 abstract final class ThermalTokens {
-  static const Color background = Color(0xFF14181C);
-  static const Color foreground = Color(0xFFEEE9DF);
-  static const Color accent = Color(0xFFE1AD70);
-  static const Color dim = Color(0xFFC9C1B5);
-  static const Color border = Color(0xFF3D3D39);
-  static const Color rust = Color(0xFF653725);
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: isDark ? 0.8 : 0.64), background);
+  static Color get border => Color.alphaBlend(foreground.withValues(alpha: isDark ? 0.18 : 0.2), background);
+  static Color get rust => isDark ? const Color(0xFF653725) : const Color(0xFFA8542C);
 
   static TextStyle font({
     double size = 14,
-    Color color = foreground,
+    Color? color,
     FontWeight weight = FontWeight.w500,
     double spacing = 0,
   }) =>
       launcherTextStyle(GoogleFonts.hankenGrotesk(
         fontSize: size,
-        color: color,
+        color: color ?? foreground,
         fontWeight: weight,
         letterSpacing: spacing,
         height: 1.3,
@@ -91,29 +92,29 @@ class CapillaryTokens {
 }
 
 abstract final class OpticalGlassTokens {
-  static const Color background = Color(0xFFE5EAF2);
-  static const Color foreground = Color(0xFF202D45);
-  static const Color accent = Color(0xFF435B91);
-  static const Color dim = Color(0xFF52617A);
-  static const Color border = Color(0x809AAAC7);
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: isDark ? 0.65 : 0.72), background);
+  static Color get border => accent.withAlpha(isDark ? 120 : 128);
 
-  static TextStyle font(
-          {double size = 14, Color color = foreground, double spacing = 0, FontWeight weight = FontWeight.w500}) =>
-      launcherTextStyle(
-          GoogleFonts.mulish(fontSize: size, color: color, letterSpacing: spacing, fontWeight: weight, height: 1.3));
+  static TextStyle font({double size = 14, Color? color, double spacing = 0, FontWeight weight = FontWeight.w500}) =>
+      launcherTextStyle(GoogleFonts.mulish(
+          fontSize: size, color: color ?? foreground, letterSpacing: spacing, fontWeight: weight, height: 1.3));
 }
 
 abstract final class LiquidMetalTokens {
-  static const Color background = Color(0xFF12151A);
-  static const Color foreground = Color(0xFFECEAE4);
-  static const Color accent = Color(0xFFCEC5AF);
-  static const Color dim = Color(0xFFA6A8AA);
-  static const Color border = Color(0xFF45484C);
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: isDark ? 0.68 : 0.58), background);
+  static Color get border => Color.alphaBlend(foreground.withValues(alpha: isDark ? 0.22 : 0.28), background);
 
-  static TextStyle font(
-          {double size = 14, Color color = foreground, double spacing = 0, FontWeight weight = FontWeight.w500}) =>
-      launcherTextStyle(
-          GoogleFonts.barlow(fontSize: size, color: color, letterSpacing: spacing, fontWeight: weight, height: 1.25));
+  static TextStyle font({double size = 14, Color? color, double spacing = 0, FontWeight weight = FontWeight.w500}) =>
+      launcherTextStyle(GoogleFonts.barlow(
+          fontSize: size, color: color ?? foreground, letterSpacing: spacing, fontWeight: weight, height: 1.25));
 }
 
 TextStyle launcherTextStyle(TextStyle designStyle) {
@@ -1245,31 +1246,37 @@ abstract final class AuroraTokens {
 
 /// Slate surfaces and cyan outlines from the Strata reference.
 abstract final class StrataTokens {
-  static const Color background = Color(0xFF0C151A);
-  static const Color panel = Color(0xFF101A20);
-  static const Color accent = Color(0xFF20DFE3);
-  static const Color foreground = Color(0xFFEEF3F7);
-  static const Color dim = Color(0xFFA8BECE);
-  static const Color border = Color(0xFF22343F);
-  static TextStyle font({double size = 13, Color color = foreground, double? spacing}) =>
-      launcherTextStyle(TextStyle(fontFamily: 'Segoe UI', fontSize: size, color: color, letterSpacing: spacing));
+  static Color get background => user.launcherThemeColors.background;
+  static Color get panel => isDark
+      ? Color.alphaBlend(foreground.withAlpha(6), background)
+      : Color.alphaBlend(Colors.white.withAlpha(108), background);
+  static Color get accent => user.launcherThemeColors.accent;
+  static Color get foreground => user.launcherThemeColors.text;
+  static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: isDark ? 0.69 : 0.68), background);
+  static Color get border => Color.alphaBlend(foreground.withValues(alpha: isDark ? 0.095 : 0.22), background);
+  static TextStyle font({double size = 13, Color? color, double? spacing}) => launcherTextStyle(
+      TextStyle(fontFamily: 'Segoe UI', fontSize: size, color: color ?? foreground, letterSpacing: spacing));
 }
 
 /// The green console palette from the Phosphor reference.
 abstract final class PhosphorTokens {
-  static const Color background = Color(0xFF090F0E);
-  static const Color panel = Color(0xFF0B1210);
-  static const Color accent = Color(0xFF58EF92);
-  static const Color foreground = Color(0xFFDCE3DF);
-  static const Color dim = Color(0xFF8BA3AE);
-  static const Color border = Color(0xFF345F56);
-  static const Color cyan = Color(0xFF51BCD5);
-  static const Color yellow = Color(0xFFE6C85C);
-  static TextStyle font({double size = 13, Color color = foreground, double? spacing}) => launcherTextStyle(TextStyle(
+  static Color get background => user.launcherThemeColors.background;
+  static Color get panel => isDark
+      ? Color.alphaBlend(foreground.withAlpha(4), background)
+      : Color.alphaBlend(Colors.white.withAlpha(110), background);
+  static Color get accent => user.launcherThemeColors.accent;
+  static Color get foreground => user.launcherThemeColors.text;
+  static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: isDark ? 0.58 : 0.65), background);
+  static Color get border => Color.alphaBlend(foreground.withValues(alpha: isDark ? 0.18 : 0.22), background);
+  static Color get cyan => isDark ? const Color(0xFF51BCD5) : const Color(0xFF247B91);
+  static Color get yellow => isDark ? const Color(0xFFE6C85C) : const Color(0xFF956C12);
+  static TextStyle font({double size = 13, Color? color, double? spacing}) => launcherTextStyle(TextStyle(
       fontFamily: 'Consolas',
       fontFamilyFallback: const <String>['Cascadia Mono', 'monospace'],
       fontSize: size,
-      color: color,
+      color: color ?? foreground,
       letterSpacing: spacing,
       height: 1.3));
 }
@@ -1294,16 +1301,18 @@ abstract final class ToonTokens {
   static Color get background => user.launcherThemeColors.background;
   static Color get foreground => user.launcherThemeColors.text;
   static Color get accent => user.launcherThemeColors.accent;
-  static Color get panel => Color.alphaBlend(foreground.withAlpha(18), background);
-  static Color get dim => Color.alphaBlend(foreground.withAlpha(210), background);
+  static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+  static Color get panel =>
+      Color.alphaBlend((isDark ? foreground : Colors.black).withAlpha(isDark ? 18 : 14), background);
+  static Color get dim => Color.alphaBlend(foreground.withAlpha(isDark ? 210 : 165), background);
   static Color get border => Color.alphaBlend(orange.withAlpha(155), background);
   static Color get selected => Color.alphaBlend(orange.withAlpha(65), background);
 
   static const Color ink = Color(0xFF121519);
-  static const Color orange = Color(0xFFFFB642);
-  static const Color cream = Color(0xFFFFF3D6);
-  static const Color red = Color(0xFFFF7961);
-  static const Color blue = Color(0xFF83ACD4);
+  static Color get orange => accent;
+  static Color get cream => isDark ? const Color(0xFFFFF3D6) : foreground;
+  static Color get red => isDark ? const Color(0xFFFF7961) : const Color(0xFFB84D3F);
+  static Color get blue => isDark ? const Color(0xFF83ACD4) : const Color(0xFF3D7594);
 
   static TextStyle font({
     double size = 13,
@@ -1333,8 +1342,10 @@ abstract final class RetroTokens {
   static Color get accent => user.launcherThemeColors.accent;
   static Color get panel => Color.alphaBlend(foreground.withValues(alpha: 0.06), background);
   static Color get bezel => Color.alphaBlend(accent.withValues(alpha: 0.12), background);
-  static Color get cyan => Color.lerp(accent, foreground, 0.45)!;
-  static Color get yellow => Color.lerp(accent, foreground, 0.72)!;
+  static Color get cyan =>
+      isDark ? Color.lerp(accent, foreground, 0.45)! : const Color(0xFF2E7B93);
+  static Color get yellow =>
+      isDark ? Color.lerp(accent, foreground, 0.72)! : const Color(0xFF986A16);
   static Color get dim => Color.alphaBlend(foreground.withValues(alpha: 0.7), background);
   static Color get border => Color.alphaBlend(accent.withValues(alpha: 0.38), background);
   static Color get selected => Color.alphaBlend(accent.withValues(alpha: 0.16), background);

@@ -35,9 +35,9 @@ class LauncherModalTokens {
     final LauncherDesign design = user.launcherDesign;
     switch (design) {
       case LauncherDesign.thermal:
-        return const LauncherModalTokens._(
+        return LauncherModalTokens._(
           design: LauncherDesign.thermal,
-          isDark: true,
+          isDark: ThermalTokens.isDark,
           surface: ThermalTokens.background,
           accent: ThermalTokens.accent,
           onSurface: ThermalTokens.foreground,
@@ -54,18 +54,18 @@ class LauncherModalTokens {
           dim: capillary.dim,
         );
       case LauncherDesign.opticalGlass:
-        return const LauncherModalTokens._(
+        return LauncherModalTokens._(
           design: LauncherDesign.opticalGlass,
-          isDark: false,
+          isDark: OpticalGlassTokens.isDark,
           surface: OpticalGlassTokens.background,
           accent: OpticalGlassTokens.accent,
           onSurface: OpticalGlassTokens.foreground,
           dim: OpticalGlassTokens.dim,
         );
       case LauncherDesign.liquidMetal:
-        return const LauncherModalTokens._(
+        return LauncherModalTokens._(
           design: LauncherDesign.liquidMetal,
-          isDark: true,
+          isDark: LiquidMetalTokens.isDark,
           surface: LiquidMetalTokens.background,
           accent: LiquidMetalTokens.accent,
           onSurface: LiquidMetalTokens.foreground,
@@ -82,7 +82,7 @@ class LauncherModalTokens {
       case LauncherDesign.toon:
         return LauncherModalTokens._(
           design: LauncherDesign.toon,
-          isDark: true,
+          isDark: ToonTokens.isDark,
           surface: ToonTokens.background,
           accent: ToonTokens.orange,
           onSurface: ToonTokens.foreground,
@@ -98,17 +98,17 @@ class LauncherModalTokens {
           dim: RetroTokens.dim,
         );
       case LauncherDesign.phosphor:
-        return const LauncherModalTokens._(
+        return LauncherModalTokens._(
             design: LauncherDesign.phosphor,
-            isDark: true,
+            isDark: PhosphorTokens.isDark,
             surface: PhosphorTokens.background,
             accent: PhosphorTokens.accent,
             onSurface: PhosphorTokens.foreground,
             dim: PhosphorTokens.dim);
       case LauncherDesign.strata:
-        return const LauncherModalTokens._(
+        return LauncherModalTokens._(
             design: LauncherDesign.strata,
-            isDark: true,
+            isDark: StrataTokens.isDark,
             surface: StrataTokens.background,
             accent: StrataTokens.accent,
             onSurface: StrataTokens.foreground,

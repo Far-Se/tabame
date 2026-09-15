@@ -81,9 +81,15 @@ class RetroLauncherFrame extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.passthrough,
                   children: <Widget>[
-                    const Positioned.fill(
+                    Positioned.fill(
                       child: IgnorePointer(
-                        child: CustomPaint(painter: _RetroBackdropPainter()),
+                        child: CustomPaint(
+                          painter: _RetroBackdropPainter(
+                            border: RetroTokens.border,
+                            accent: RetroTokens.accent,
+                            cyan: RetroTokens.cyan,
+                          ),
+                        ),
                       ),
                     ),
                     Padding(
@@ -99,9 +105,12 @@ class RetroLauncherFrame extends StatelessWidget {
                                   child: DragToMoveArea(
                                     child: Row(
                                       children: <Widget>[
-                                        const CustomPaint(
+                                        CustomPaint(
                                           size: Size(34, 22),
-                                          painter: _RetroCabinetPainter(),
+                                          painter: _RetroCabinetPainter(
+                                            accent: RetroTokens.accent,
+                                            cyan: RetroTokens.cyan,
+                                          ),
                                         ),
                                         const SizedBox(width: 9),
                                         Flexible(
@@ -193,12 +202,16 @@ class RetroSectionHeader extends StatelessWidget {
 }
 
 class _RetroBackdropPainter extends CustomPainter {
-  const _RetroBackdropPainter();
+  const _RetroBackdropPainter({required this.border, required this.accent, required this.cyan});
+
+  final Color border;
+  final Color accent;
+  final Color cyan;
 
   @override
   void paint(Canvas canvas, Size size) {
     final Paint grid = Paint()
-      ..color = RetroTokens.border.withAlpha(34)
+      ..color = border.withAlpha(34)
       ..style = PaintingStyle.fill
       ..isAntiAlias = false;
     for (double x = 20; x < size.width; x += 32) {
@@ -209,13 +222,13 @@ class _RetroBackdropPainter extends CustomPainter {
     }
 
     final Paint horizon = Paint()
-      ..color = RetroTokens.accent.withAlpha(18)
+      ..color = accent.withAlpha(18)
       ..isAntiAlias = false;
     canvas.drawRect(Rect.fromLTWH(0, size.height * 0.72, size.width, 2), horizon);
     canvas.drawRect(Rect.fromLTWH(0, size.height * 0.78, size.width, 1), horizon);
 
     final Paint pixels = Paint()
-      ..color = RetroTokens.cyan.withAlpha(90)
+      ..color = cyan.withAlpha(90)
       ..isAntiAlias = false;
     for (final Offset point in <Offset>[
       const Offset(18, 14),
@@ -232,19 +245,23 @@ class _RetroBackdropPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RetroBackdropPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _RetroBackdropPainter oldDelegate) =>
+      border != oldDelegate.border || accent != oldDelegate.accent || cyan != oldDelegate.cyan;
 }
 
 class _RetroCabinetPainter extends CustomPainter {
-  const _RetroCabinetPainter();
+  const _RetroCabinetPainter({required this.accent, required this.cyan});
+
+  final Color accent;
+  final Color cyan;
 
   @override
   void paint(Canvas canvas, Size size) {
     final Paint pink = Paint()
-      ..color = RetroTokens.accent
+      ..color = accent
       ..isAntiAlias = false;
     final Paint blue = Paint()
-      ..color = RetroTokens.cyan
+      ..color = cyan
       ..isAntiAlias = false;
 
     canvas.drawRect(const Rect.fromLTWH(2, 5, 5, 5), pink);
@@ -258,5 +275,6 @@ class _RetroCabinetPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RetroCabinetPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _RetroCabinetPainter oldDelegate) =>
+      accent != oldDelegate.accent || cyan != oldDelegate.cyan;
 }
