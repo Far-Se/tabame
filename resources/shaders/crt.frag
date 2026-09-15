@@ -44,5 +44,8 @@ void main() {
   float sweep = exp(-pow((uv.y - fract(uTime * 0.075)) * 24.0, 2.0));
   color += uAccent * 0.009 * sweep * uMotion;
   float edge = step(0.0, uv.x) * step(uv.x, 1.0) * step(0.0, uv.y) * step(uv.y, 1.0);
-  fragColor = vec4(mix(uBackground * 0.45, clamp(color, 0.0, 1.0), edge), 1.0);
+  // Keep the curved edge readable when a light phosphor palette is active.
+  float backgroundLuma = dot(uBackground, vec3(0.2126, 0.7152, 0.0722));
+  float edgeShade = mix(0.45, 0.88, smoothstep(0.35, 0.75, backgroundLuma));
+  fragColor = vec4(mix(uBackground * edgeShade, clamp(color, 0.0, 1.0), edge), 1.0);
 }

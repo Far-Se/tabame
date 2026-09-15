@@ -694,9 +694,9 @@ class DesignSettings {
     return <String, QMDesignThemeSet>{
       QuickMenuDesigns.crt.displayName: QMDesignThemeSet(
           lightTheme: defaultThemeColors(
-              background: const Color(0xFF130F09),
-              textColor: const Color(0xFFFFDDA0),
-              accentColor: const Color(0xFFFFBE62),
+              background: const Color(0xFFF8F4EC), // Warm white phosphor paper
+              textColor: const Color(0xFF3A2B1F), // Dark brown terminal ink
+              accentColor: const Color(0xFF9A4F14), // Readable amber-brown accent
               gradientAlpha: 0,
               uiFontFamily: 'Consolas',
               entryFontFamily: 'Consolas',
@@ -713,9 +713,9 @@ class DesignSettings {
               borderRadius: 18)),
       QuickMenuDesigns.retro.displayName: QMDesignThemeSet(
           lightTheme: defaultThemeColors(
-              background: const Color(0xFF090B1A),
-              textColor: const Color(0xFFFFF0C6),
-              accentColor: const Color(0xFFFF4F9A),
+              background: const Color(0xFFFFF5FA), // Pink-tinted arcade white
+              textColor: const Color(0xFF2E2034), // Deep plum for pixel text
+              accentColor: const Color(0xFFC21E68), // High-contrast arcade pink
               gradientAlpha: 0,
               uiFontFamily: 'Jura',
               entryFontFamily: 'Jura',
@@ -734,9 +734,9 @@ class DesignSettings {
               baseFontSize: 11)),
       QuickMenuDesigns.superMario.displayName: QMDesignThemeSet(
           lightTheme: defaultThemeColors(
-              background: const Color(0xFF15264A),
-              textColor: const Color(0xFFFCF4DC),
-              accentColor: const Color(0xFFF8C840),
+              background: const Color(0xFFF3F8FF), // Bright overworld sky
+              textColor: const Color(0xFF17325B), // Deep blue game-menu ink
+              accentColor: const Color(0xFFB05A00), // Darkened coin-gold accent
               gradientAlpha: 0,
               uiFontFamily: 'Jura',
               entryFontFamily: 'Jura',

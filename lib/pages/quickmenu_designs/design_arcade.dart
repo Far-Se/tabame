@@ -21,14 +21,18 @@ class MainMenuArcadeWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Theme.of(context);
     final bool crt = design == QuickMenuDesigns.crt;
     final bool mario = design == QuickMenuDesigns.superMario;
     final bool retro = design == QuickMenuDesigns.retro;
     final Color bg = Design.background;
     final Color accent = Design.accent;
+    final bool isDark = bg.computeLuminance() < 0.5;
     final Color border = Color.alphaBlend(accent.withAlpha(100), bg);
     final double radius = crt ? Design.borderRadius : 2;
+    final Color marioSky = isDark ? const Color(0xFF5C94FC) : const Color(0xFFA9D8FF);
+    final Color marioInk = isDark ? const Color(0xFFFCF4DC) : const Color(0xFF17325B);
+    final Color marioTitleShadow = isDark ? const Color(0xFF203878) : const Color(0xFFF8FCFF);
+    final Color marioFrame = isDark ? const Color(0xFFB83B24) : const Color(0xFF9D3927);
     final TextStyle label = crt
         ? TextStyle(fontFamily: 'Consolas', fontSize: 11, color: Design.text, letterSpacing: 1.2)
         : GoogleFonts.pressStart2p(fontSize: Design.baseFontSize - 1, color: Design.text, height: 1.5);
@@ -45,12 +49,15 @@ class MainMenuArcadeWidget extends StatelessWidget {
           Container(
             height: mario ? 64 : 38,
             decoration: BoxDecoration(
-              color: mario ? const Color(0xFF5C94FC) : Color.alphaBlend(accent.withAlpha(18), bg),
+              color: mario ? marioSky : Color.alphaBlend(accent.withAlpha(18), bg),
               border: Border(bottom: BorderSide(color: border, width: crt ? 1 : 2)),
             ),
             child: Stack(
               children: <Widget>[
-                if (mario) const Positioned.fill(child: IgnorePointer(child: CustomPaint(painter: _KingdomPainter()))),
+                if (mario)
+                  Positioned.fill(
+                    child: IgnorePointer(child: CustomPaint(painter: _KingdomPainter(isDark: isDark))),
+                  ),
                 Row(children: <Widget>[
                   Expanded(
                     child: DragToMoveArea(
@@ -61,8 +68,8 @@ class MainMenuArcadeWidget extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: mario
                                 ? label.copyWith(
-                                    color: const Color(0xFFFCF4DC),
-                                    shadows: const <Shadow>[Shadow(color: Color(0xFF203878), offset: Offset(2, 2))])
+                                    color: marioInk,
+                                    shadows: <Shadow>[Shadow(color: marioTitleShadow, offset: const Offset(2, 2))])
                                 : label),
                       ),
                     ),
@@ -70,7 +77,7 @@ class MainMenuArcadeWidget extends StatelessWidget {
                   IconButton(
                     tooltip: 'Hide QuickMenu',
                     onPressed: () => QuickMenuFunctions.hideQuickMenu(),
-                    icon: Icon(Icons.close, size: 16, color: mario ? const Color(0xFFFCF4DC) : accent),
+                    icon: Icon(Icons.close, size: 16, color: mario ? marioInk : accent),
                   ),
                 ]),
               ],
@@ -96,7 +103,10 @@ class MainMenuArcadeWidget extends StatelessWidget {
             child: const BottomBar(),
           ),
           if (mario)
-            const SizedBox(height: 22, child: IgnorePointer(child: CustomPaint(painter: _KingdomPainter(ground: true))))
+            SizedBox(
+              height: 22,
+              child: IgnorePointer(child: CustomPaint(painter: _KingdomPainter(ground: true, isDark: isDark))),
+            )
           else
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 4, 10, 8),
@@ -120,7 +130,7 @@ class MainMenuArcadeWidget extends StatelessWidget {
             : BoxDecoration(
                 color: Color.alphaBlend(accent.withAlpha(crt ? 30 : 18), bg),
                 borderRadius: BorderRadius.circular(radius),
-                border: Border.all(color: mario ? const Color(0xFFB83B24) : border, width: crt ? 1 : 2),
+                border: Border.all(color: mario ? marioFrame : border, width: crt ? 1 : 2),
               ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(crt ? (radius - 6).clamp(0, 100) : 0),
@@ -144,8 +154,9 @@ class MainMenuArcadeWidget extends StatelessWidget {
 
 /// Integer-aligned scenery remains visible when GPU effects are unavailable.
 class _KingdomPainter extends CustomPainter {
-  const _KingdomPainter({this.ground = false});
+  const _KingdomPainter({this.ground = false, this.isDark = true});
   final bool ground;
+  final bool isDark;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -155,18 +166,19 @@ class _KingdomPainter extends CustomPainter {
     }
 
     if (ground) {
-      block(0, 0, size.width, size.height, const Color(0xFF6B2818));
+      block(0, 0, size.width, size.height, isDark ? const Color(0xFF6B2818) : const Color(0xFF8A3A24));
       for (int row = 0; row < 2; row++) {
         for (double x = row == 0 ? 0 : -12; x < size.width; x += 24) {
-          block(x + 1, row * 11.0 + 1, 22, 9, const Color(0xFFC86C32));
-          block(x + 1, row * 11.0 + 1, 22, 2, const Color(0xFFF8B878));
+          block(x + 1, row * 11.0 + 1, 22, 9, isDark ? const Color(0xFFC86C32) : const Color(0xFFD8773A));
+          block(x + 1, row * 11.0 + 1, 22, 2, isDark ? const Color(0xFFF8B878) : const Color(0xFFFFD3A0));
         }
       }
       return;
     }
+    final Color cloud = isDark ? const Color(0xFFE4EFFF) : const Color(0xFFFFFFFF);
     for (double x = 18; x < size.width; x += 130) {
-      block(x, 43, 34, 8, const Color(0xFFE4EFFF));
-      block(x + 8, 37, 18, 8, const Color(0xFFE4EFFF));
+      block(x, 43, 34, 8, cloud);
+      block(x + 8, 37, 18, 8, cloud);
     }
     final double pipe = size.width - 66;
     block(pipe, 46, 23, 18, const Color(0xFF186828));
@@ -186,5 +198,5 @@ class _KingdomPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_KingdomPainter oldDelegate) => ground != oldDelegate.ground;
+  bool shouldRepaint(_KingdomPainter oldDelegate) => ground != oldDelegate.ground || isDark != oldDelegate.isDark;
 }

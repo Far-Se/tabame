@@ -68,5 +68,8 @@ void main() {
   color *= scanline * grille * vignette;
   color += (staticNoise - 0.5) * 0.008 * uMotion;
   color += uAccent * 0.007 * sweep * uMotion;
-  fragColor = vec4(mix(uBackground * 0.42, clamp(color, 0.0, 1.0), inside), 1.0);
+  // Preserve a light cabinet edge for the light arcade palette.
+  float backgroundLuma = dot(uBackground, vec3(0.2126, 0.7152, 0.0722));
+  float edgeShade = mix(0.42, 0.88, smoothstep(0.35, 0.75, backgroundLuma));
+  fragColor = vec4(mix(uBackground * edgeShade, clamp(color, 0.0, 1.0), inside), 1.0);
 }

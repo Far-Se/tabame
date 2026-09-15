@@ -293,7 +293,44 @@ class Settings {
     final Map<String, QMDesignThemeSet> defaults = DesignSettings.createDefaultQuickMenuDesignThemes();
     if (source != null) {
       for (final MapEntry<String, QMDesignThemeSet> entry in source.entries) {
-        defaults[entry.key] = entry.value.copyWith();
+        final QMDesignThemeSet saved = entry.value.copyWith();
+
+        // The arcade designs originally stored their dark palette in both
+        // theme slots. Upgrade that exact old light palette while preserving
+        // custom fonts, radius, backdrops, and other appearance settings.
+        bool matchesPalette(ThemeColors theme, Color background, Color text, Color accent) =>
+            theme.background == background && theme.text == text && theme.accent == accent;
+
+        void migrateLightPalette(QuickMenuDesigns design, Color background, Color text, Color accent) {
+          if (entry.key != design.displayName || !matchesPalette(saved.lightTheme, background, text, accent)) return;
+          final ThemeColors light = defaults[entry.key]!.lightTheme;
+          saved.lightTheme = saved.lightTheme.copyWith(
+            background: light.background,
+            text: light.text,
+            accent: light.accent,
+          );
+        }
+
+        migrateLightPalette(
+          QuickMenuDesigns.crt,
+          const Color(0xFF130F09),
+          const Color(0xFFFFDDA0),
+          const Color(0xFFFFBE62),
+        );
+        migrateLightPalette(
+          QuickMenuDesigns.retro,
+          const Color(0xFF090B1A),
+          const Color(0xFFFFF0C6),
+          const Color(0xFFFF4F9A),
+        );
+        migrateLightPalette(
+          QuickMenuDesigns.superMario,
+          const Color(0xFF15264A),
+          const Color(0xFFFCF4DC),
+          const Color(0xFFF8C840),
+        );
+
+        defaults[entry.key] = saved;
       }
     }
     quickMenuDesignThemes = defaults.map(
