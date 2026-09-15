@@ -393,7 +393,7 @@ QuickActions are the building blocks of Tabame. You can put them on the QuickMen
 - **Weather** - hourly and daily, for multiple locations.
 - **QrScanner** - scan a QR code straight off your screen.
 - **CustomChars** - accents, currency symbols and math characters to copy.
-- **TextSnippets** - saved snippets of text you paste often.
+- **[TextSnippets](docs/snippets.md)** - searchable, tagged templates with dynamic placeholders, named inputs, JSON import/export, and Windows keyword expansion.
 - **UniversalConverter** - a general-purpose converter (units, bases, encodings and more) in one box.
 - **DevToolbox** - a grab-bag of dev utilities (formatters, encoders/decoders, generators…).
 - **Wallpapers** - browse wallpapers from a folder you pick.

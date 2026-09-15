@@ -1569,6 +1569,11 @@ class NativeHooks {
   }
 
   static Future<void> _methodCallHandler(MethodCall call) async {
+    if (call.method == 'SnippetExpansionRequested') {
+      final Map<dynamic, dynamic> args = call.arguments as Map<dynamic, dynamic>;
+      await TextSnippets.onExpansionRequested?.call(args['id'] as String, args['request'] as int);
+      return;
+    }
     if (!<String>[
       "HotKeyEvent",
       "TrktivityEvent",
@@ -1738,29 +1743,84 @@ Future<bool> enableDebug(String path) async {
   return true;
 }
 
-/// Native "Text Expander / Snippets" bridge.
-///
-/// The plugin keeps a rolling buffer of the most recently typed characters
-/// inside the low-level keyboard hook. [setSnippets] pushes the trigger/text
-/// rules; [expand] — called when the customizable insert hotkey fires — deletes
-/// the matched trigger from the focused control and types its expansion. See
-/// `windows/text_snippets.cpp`.
+/// Windows keyword matching with asynchronous Dart template rendering.
 class TextSnippets {
   TextSnippets._();
 
-  /// Replace the native snippet list. Each entry is `{'trigger': ..., 'text': ...}`.
-  static Future<void> setSnippets(List<Map<String, String>> snippets) async {
+  static Future<void> Function(String id, int request)? onExpansionRequested;
+
+  static Future<void> setSnippets(
+    List<Map<String, dynamic>> snippets, {
+    Map<String, dynamic> preferences = const <String, dynamic>{},
+  }) async {
+    if (!Platform.isWindows) {
+      //TODO: Implement multiplatform
+      return;
+    }
     await tabameWin32MethodChannel.invokeMethod<void>(
       'setTextSnippets',
-      <String, dynamic>{'snippets': snippets},
+      <String, dynamic>{'snippets': snippets, 'preferences': preferences},
     );
   }
 
   /// Attempt to expand the trigger currently at the tail of the native buffer.
   /// Returns true if a snippet was expanded.
   static Future<bool> expand() async {
+    if (!Platform.isWindows) {
+      //TODO: Implement multiplatform
+      return false;
+    }
     final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>('expandTextSnippet');
     return result ?? false;
+  }
+
+  static Future<bool> complete(
+          {required int request,
+          required String text,
+          required int cursorLeft,
+          required int characterCount,
+          String html = ''}) async =>
+      await tabameWin32MethodChannel.invokeMethod<bool>('completeTextSnippet', <String, dynamic>{
+        'request': request,
+        'text': text,
+        'cursorLeft': cursorLeft,
+        'characterCount': characterCount,
+        'html': html,
+      }) ??
+      false;
+
+  static Future<void> cancel(int request) async {
+    await tabameWin32MethodChannel.invokeMethod<void>('cancelTextSnippet', <String, dynamic>{'request': request});
+  }
+
+  static Future<bool> paste(
+      {required int target,
+      required String text,
+      required int cursorLeft,
+      required int characterCount,
+      String html = ''}) async {
+    if (!Platform.isWindows) {
+      //TODO: Implement multiplatform
+      return false;
+    }
+    return await tabameWin32MethodChannel.invokeMethod<bool>('pasteTextSnippet', <String, dynamic>{
+          'target': target,
+          'text': text,
+          'cursorLeft': cursorLeft,
+          'characterCount': characterCount,
+          'html': html,
+        }) ??
+        false;
+  }
+
+  static Future<bool> copyRichText(String text, String html) async {
+    if (!Platform.isWindows) {
+      //TODO: Implement multiplatform
+      return false;
+    }
+    return await tabameWin32MethodChannel
+            .invokeMethod<bool>('copyTextSnippet', <String, dynamic>{'text': text, 'html': html}) ??
+        false;
   }
 }
 

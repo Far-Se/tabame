@@ -1771,6 +1771,24 @@ void InvokeShellMenuItemH(Tabamewin32Plugin *, const MethodCall &call,
 void SetTextSnippetsH(Tabamewin32Plugin *, const MethodCall &call,
                       MethodResult result) {
   auto &a = Args::Map(call);
+  auto stringValue = [](const EMap &m, const char *key, const std::string &fallback = "") {
+    auto it = m.find(EVal(key));
+    return it != m.end() && std::holds_alternative<std::string>(it->second) ? std::get<std::string>(it->second) : fallback;
+  };
+  auto boolValue = [](const EMap &m, const char *key, bool fallback) {
+    auto it = m.find(EVal(key));
+    return it != m.end() && std::holds_alternative<bool>(it->second) ? std::get<bool>(it->second) : fallback;
+  };
+  auto stringsValue = [](const EMap &m, const char *key) {
+    std::vector<std::wstring> values;
+    auto it = m.find(EVal(key));
+    if (it != m.end() && std::holds_alternative<flutter::EncodableList>(it->second)) {
+      for (const auto &value : std::get<flutter::EncodableList>(it->second)) {
+        if (std::holds_alternative<std::string>(value)) values.push_back(Encoding::Utf8ToWide(std::get<std::string>(value)));
+      }
+    }
+    return values;
+  };
   std::vector<TextSnippet> snippets;
   auto it = a.find(EVal("snippets"));
   if (it != a.end() &&
@@ -1780,27 +1798,65 @@ void SetTextSnippetsH(Tabamewin32Plugin *, const MethodCall &call,
         continue;
       const auto &m = std::get<EMap>(entry);
       TextSnippet snippet;
-      auto triggerIt = m.find(EVal("trigger"));
-      auto textIt = m.find(EVal("text"));
-      if (triggerIt != m.end() &&
-          std::holds_alternative<std::string>(triggerIt->second))
-        snippet.trigger =
-            Encoding::Utf8ToWide(std::get<std::string>(triggerIt->second));
-      if (textIt != m.end() &&
-          std::holds_alternative<std::string>(textIt->second))
-        snippet.text =
-            Encoding::Utf8ToWide(std::get<std::string>(textIt->second));
-      if (!snippet.trigger.empty())
+      snippet.id = stringValue(m, "id");
+      snippet.trigger = Encoding::Utf8ToWide(stringValue(m, "trigger"));
+      snippet.caseSensitive = boolValue(m, "caseSensitive", true);
+      snippet.wordBoundary = boolValue(m, "wordBoundary", true);
+      snippet.appMode = stringValue(m, "appMode", "any");
+      snippet.apps = stringsValue(m, "apps");
+      snippet.windowTitle = Encoding::Utf8ToWide(stringValue(m, "windowTitle"));
+      if (!snippet.trigger.empty() && snippet.trigger.size() <= 128)
         snippets.push_back(std::move(snippet));
     }
   }
-  SetTextSnippets(std::move(snippets));
+  TextSnippetPreferences preferences;
+  auto prefs = a.find(EVal("preferences"));
+  if (prefs != a.end() && std::holds_alternative<EMap>(prefs->second)) {
+    const EMap &m = std::get<EMap>(prefs->second);
+    preferences.autoExpand = boolValue(m, "autoExpand", false);
+    preferences.mode = stringValue(m, "mode", "immediate");
+    preferences.restoreClipboard = boolValue(m, "restoreClipboard", true);
+    preferences.undoOnEscape = boolValue(m, "undoOnEscape", true);
+    preferences.completionSound = boolValue(m, "completionSound", false);
+    preferences.excludedApps = stringsValue(m, "excludedApps");
+    auto delay = m.find(EVal("pasteDelayMs"));
+    if (delay != m.end() && std::holds_alternative<int>(delay->second)) preferences.pasteDelayMs = (std::clamp)(std::get<int>(delay->second), 30, 1000);
+  }
+  SetTextSnippets(std::move(snippets), std::move(preferences), [](const std::string &id, int64_t request) {
+    if (!channel) return;
+    EMap args;
+    args[EVal("id")] = EVal(id);
+    args[EVal("request")] = EVal(request);
+    channel->InvokeMethod("SnippetExpansionRequested", std::make_unique<EVal>(args));
+  });
   OK(result, true);
 }
 
 void ExpandTextSnippetH(Tabamewin32Plugin *, const MethodCall &,
                         MethodResult result) {
   OK(result, ExpandTextSnippet());
+}
+
+void CompleteTextSnippetH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result) {
+  const auto &a = Args::Map(call);
+  OK(result, CompleteTextSnippet(Args::Int64(a, "request"), Encoding::Utf8ToWide(Args::Str(a, "text")),
+                                Args::Int(a, "cursorLeft"), Args::Int(a, "characterCount"), Args::Str(a, "html")));
+}
+
+void CancelTextSnippetH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result) {
+  CancelTextSnippet(Args::Int64(Args::Map(call), "request"));
+  OK(result);
+}
+
+void PasteTextSnippetH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result) {
+  const auto &a = Args::Map(call);
+  OK(result, PasteTextSnippet(reinterpret_cast<HWND>(static_cast<intptr_t>(Args::Int64(a, "target"))),
+      Encoding::Utf8ToWide(Args::Str(a, "text")), Args::Int(a, "cursorLeft"), Args::Int(a, "characterCount"), Args::Str(a, "html")));
+}
+
+void CopyTextSnippetH(Tabamewin32Plugin *, const MethodCall &call, MethodResult result) {
+  const auto &a = Args::Map(call);
+  OK(result, CopyTextSnippet(Encoding::Utf8ToWide(Args::Str(a, "text")), Args::Str(a, "html")));
 }
 
 } // namespace Handlers
@@ -1952,6 +2008,10 @@ static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
       // Text Snippets
       {"setTextSnippets", Handlers::SetTextSnippetsH},
       {"expandTextSnippet", Handlers::ExpandTextSnippetH},
+      {"completeTextSnippet", Handlers::CompleteTextSnippetH},
+      {"cancelTextSnippet", Handlers::CancelTextSnippetH},
+      {"pasteTextSnippet", Handlers::PasteTextSnippetH},
+      {"copyTextSnippet", Handlers::CopyTextSnippetH},
   };
   return table;
 }
@@ -1966,12 +2026,14 @@ void Tabamewin32Plugin::RegisterWithRegistrar(
       &flutter::StandardMethodCodec::GetInstance());
 
   auto plugin = std::make_unique<Tabamewin32Plugin>(registrar);
+  SnippetInput::clipboardOwner = registrar->GetView()->GetNativeWindow();
   RegisterClipboardUpdateListener(plugin.get());
   plugin->clipboard_proc_id_ = registrar->RegisterTopLevelWindowProcDelegate(
       [](HWND, UINT message, WPARAM, LPARAM) -> std::optional<LRESULT> {
         if (message == WM_CLIPBOARDUPDATE && channel) {
           EMap event;
           const DWORD sequence = GetClipboardSequenceNumber();
+          if (IsSnippetClipboardSequence(sequence)) return std::nullopt;
           if (sequence != 0) {
             event[EVal("sequence")] = EVal(static_cast<int64_t>(sequence));
           }
@@ -2008,6 +2070,7 @@ Tabamewin32Plugin::Tabamewin32Plugin(flutter::PluginRegistrarWindows *registrar)
     : registrar_(registrar) {}
 
 Tabamewin32Plugin::~Tabamewin32Plugin() {
+  ShutdownTextSnippets();
   UnregisterClipboardUpdateListener(this);
   if (registrar_ != nullptr && clipboard_proc_id_ != -1)
     registrar_->UnregisterTopLevelWindowProcDelegate(clipboard_proc_id_);

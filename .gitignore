@@ -85,6 +85,7 @@ docs/
 docs/*
 !docs/macos-permissions.md
 !docs/audio-platform.md
+!docs/snippets.md
 !docs/debugging-ui-freeze.md
 !docs/release/
 !docs/release/**

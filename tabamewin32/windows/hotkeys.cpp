@@ -1080,12 +1080,6 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
   if (isKeystrokeVizEnabled && keyDown)
     KeyVizEvent("key", static_cast<int>(keyInfo.vkCode), 0, 0);
 
-  // Feed the Text Snippets buffer with real typing (skips command chords and
-  // the insert-snippet hotkey combo internally). Runs before hotkey handling so
-  // the buffer is complete even if this key is later consumed as a hotkey.
-  if (keyDown)
-    RecordSnippetKey(wParam, keyInfo);
-
   LRESULT standaloneResult = 0;
   if (TryHandleStandaloneModifierHotkey(nCode, wParam, lParam, keyInfo,
                                         standaloneResult))
@@ -1129,9 +1123,11 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
         NotifySystemWindowsHotkeyUsed();
 
       hotkeyName = activeHotkey->hotkey;
+      InvalidateSnippetRequest();
       HotKeyEvent(activeHotkey->name, "pressedKbd");
       return -1;
     }
+    if (RecordSnippetKey(wParam, keyInfo)) return 1;
     return CallNextHookEx(nullptr, nCode, wParam, lParam);
   } else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
     // Trcktivity keyboard tracking
@@ -1158,6 +1154,7 @@ LRESULT CALLBACK HandleKeyboardHook(int nCode, WPARAM wParam, LPARAM lParam) {
     }
   }
 
+  if (keyDown && RecordSnippetKey(wParam, keyInfo)) return 1;
   return CallNextHookEx(nullptr, nCode, wParam, lParam);
 }
 
@@ -1169,6 +1166,7 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam) {
     return CallNextHookEx(nullptr, nCode, wParam, lParam);
 
   MSLLHOOKSTRUCT *info = reinterpret_cast<MSLLHOOKSTRUCT *>(lParam);
+  if (wParam == WM_MOUSEMOVE) RecordSnippetMouse(wParam, *info);
 
   // ---- Mouse movement ----
   if (wParam == WM_MOUSEMOVE) {
@@ -1287,15 +1285,19 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam) {
         bool result = (bID == 5) ? CheckForPressedHotKey(L"MOUSEBUTTON4")
                                  : CheckForPressedHotKey(L"MOUSEBUTTON5");
         if (result) {
-          if (ShouldSuppressHotkey())
+          if (ShouldSuppressHotkey()) {
+            RecordSnippetMouse(wParam, *info);
             return CallNextHookEx(nullptr, nCode, wParam, lParam);
+          }
 
           const Hotkey *activeHotkey = GetActiveHotkey();
           if (activeHotkey == nullptr) {
             ResetActiveHotkeyState();
+            RecordSnippetMouse(wParam, *info);
             return CallNextHookEx(nullptr, nCode, wParam, lParam);
           }
 
+          InvalidateSnippetRequest();
           HotKeyEvent(activeHotkey->name, "pressed");
           return -1;
         }
@@ -1309,6 +1311,7 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam) {
     }
   }
 
+  if (wParam != WM_MOUSEMOVE) RecordSnippetMouse(wParam, *info);
   return CallNextHookEx(nullptr, nCode, wParam, lParam);
 }
 
@@ -1318,8 +1321,10 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam) {
 VOID CALLBACK EventHook(HWINEVENTHOOK /*hWinEventHook*/, DWORD dwEvent,
                         HWND hwnd, LONG /*idObject*/, LONG /*idChild*/,
                         DWORD /*dwEventThread*/, DWORD /*dwmsEventTime*/) {
-  if (dwEvent == EVENT_SYSTEM_FOREGROUND)
+  if (dwEvent == EVENT_SYSTEM_FOREGROUND) {
+    RecordSnippetForeground(hwnd);
     WinEvent("foreground", hwnd);
+  }
 
   if (isTrcktivityEnabled && dwEvent == EVENT_OBJECT_NAMECHANGE) {
     if (reinterpret_cast<DWORD_PTR>(hwnd) == 0)
