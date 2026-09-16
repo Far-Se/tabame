@@ -97,48 +97,49 @@ class RetroLauncherFrame extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          SizedBox(
-                            height: 30,
-                            child: Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: DragToMoveArea(
-                                    child: Row(
-                                      children: <Widget>[
-                                        CustomPaint(
-                                          size: Size(34, 22),
-                                          painter: _RetroCabinetPainter(
-                                            accent: RetroTokens.accent,
-                                            cyan: RetroTokens.cyan,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 9),
-                                        Flexible(
-                                          child: Text(
-                                            'TABAME // RETRO',
-                                            overflow: TextOverflow.ellipsis,
-                                            style: RetroTokens.label(
-                                              size: 8,
-                                              color: onSurface,
-                                              spacing: 0.3,
+                          if (user.launcherShowTitlebar)
+                            SizedBox(
+                              height: 30,
+                              child: Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: DragToMoveArea(
+                                      child: Row(
+                                        children: <Widget>[
+                                          CustomPaint(
+                                            size: Size(34, 22),
+                                            painter: _RetroCabinetPainter(
+                                              accent: RetroTokens.accent,
+                                              cyan: RetroTokens.cyan,
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(width: 9),
+                                          Flexible(
+                                            child: Text(
+                                              'TABAME // RETRO',
+                                              overflow: TextOverflow.ellipsis,
+                                              style: RetroTokens.label(
+                                                size: 8,
+                                                color: onSurface,
+                                                spacing: 0.3,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                                Text('1P', style: RetroTokens.label(size: 7, color: RetroTokens.cyan)),
-                                IconButton(
-                                  tooltip: 'Hide launcher',
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints.tightFor(width: 30, height: 30),
-                                  onPressed: windowManager.hide,
-                                  icon: Text('X', style: RetroTokens.label(size: 8, color: RetroTokens.dim)),
-                                ),
-                              ],
+                                  Text('1P', style: RetroTokens.label(size: 7, color: RetroTokens.cyan)),
+                                  IconButton(
+                                    tooltip: 'Hide launcher',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+                                    onPressed: windowManager.hide,
+                                    icon: Text('X', style: RetroTokens.label(size: 8, color: RetroTokens.dim)),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
                           Flexible(fit: FlexFit.loose, child: child),
                           Container(
                             padding: const EdgeInsets.fromLTRB(8, 10, 8, 3),

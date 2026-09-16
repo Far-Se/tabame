@@ -48,28 +48,29 @@ class NotionLauncherSearchBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          DragToMoveArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 9, 12, 6),
-              child: Row(
-                children: <Widget>[
-                  _NotionLauncherMark(isDark: isDark, size: 22),
-                  const SizedBox(width: 8),
-                  Text(
-                    'QuickLaunch',
-                    style: NotionTokens.ui(
-                      fontSize: Design.baseFontSize + 1,
-                      fontWeight: FontWeight.w600,
-                      color: onSurface,
+          if (user.launcherShowTitlebar)
+            DragToMoveArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 9, 12, 6),
+                child: Row(
+                  children: <Widget>[
+                    _NotionLauncherMark(isDark: isDark, size: 22),
+                    const SizedBox(width: 8),
+                    Text(
+                      'QuickLaunch',
+                      style: NotionTokens.ui(
+                        fontSize: Design.baseFontSize + 1,
+                        fontWeight: FontWeight.w600,
+                        color: onSurface,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  const SizedBox(width: 3),
-                  _NotionKeycap(label: WinUtils.shellUser()),
-                ],
+                    const Spacer(),
+                    const SizedBox(width: 3),
+                    _NotionKeycap(label: WinUtils.shellUser()),
+                  ],
+                ),
               ),
             ),
-          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 2, 12, 10),
             child: Row(

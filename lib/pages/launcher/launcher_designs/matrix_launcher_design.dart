@@ -187,34 +187,35 @@ class _MatrixLauncherFrameState extends State<MatrixLauncherFrame> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(11, 6, 11, 0),
-              child: Row(
-                children: <Widget>[
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: widget.accent.withAlpha(170),
-                      fontSize: 8,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.5,
+            if (label != 'SEARCH' || user.launcherShowTitlebar)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(11, 6, 11, 0),
+                child: Row(
+                  children: <Widget>[
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: widget.accent.withAlpha(170),
+                        fontSize: 8,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.5,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(child: Container(height: .5, color: text.withAlpha(22))),
-                  const SizedBox(width: 8),
-                  Text(
-                    trailing,
-                    style: TextStyle(
-                      color: text.withAlpha(85),
-                      fontSize: 8,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.2,
+                    const SizedBox(width: 8),
+                    Expanded(child: Container(height: .5, color: text.withAlpha(22))),
+                    const SizedBox(width: 8),
+                    Text(
+                      trailing,
+                      style: TextStyle(
+                        color: text.withAlpha(85),
+                        fontSize: 8,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
             child,
           ],
         ),

@@ -41,30 +41,32 @@ class CyberLauncherFrame extends StatelessWidget {
                   child: IgnorePointer(
                       child: CustomPaint(painter: _CyberLauncherGridPainter(accent.withAlpha(isDark ? 16 : 10))))),
               Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(13, 7, 13, 0),
-                  child: Row(children: <Widget>[
-                    Text('「 TABAME // LAUNCHER 』',
-                        style: TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
-                    const Spacer(),
-                    Container(width: 5, height: 5, color: accent),
-                    const SizedBox(width: 5),
-                    Text(Globals.isLauncherPluginActive ? "PLUGIN" : 'SYNC $resultCount',
+                if (user.launcherShowTitlebar)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(13, 7, 13, 0),
+                    child: Row(children: <Widget>[
+                      Text('「 TABAME // LAUNCHER 』',
+                          style:
+                              TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
+                      const Spacer(),
+                      Container(width: 5, height: 5, color: accent),
+                      const SizedBox(width: 5),
+                      Text(Globals.isLauncherPluginActive ? "PLUGIN" : 'SYNC $resultCount',
+                          style: TextStyle(
+                              color: onSurface.withAlpha(125),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.1)),
+                      DateTimeWidget(
+                        padding: const EdgeInsets.only(left: 10),
                         style: TextStyle(
                             color: onSurface.withAlpha(125),
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
-                            letterSpacing: 1.1)),
-                    DateTimeWidget(
-                      padding: const EdgeInsets.only(left: 10),
-                      style: TextStyle(
-                          color: onSurface.withAlpha(125),
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.1),
-                    ),
-                  ]),
-                ),
+                            letterSpacing: 1.1),
+                      ),
+                    ]),
+                  ),
                 child,
               ]),
               Positioned.fill(

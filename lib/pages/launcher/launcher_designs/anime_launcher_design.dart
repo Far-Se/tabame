@@ -42,20 +42,21 @@ class AnimeLauncherFrame extends StatelessWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Container(
-                    height: 25,
-                    color: ribbon,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: <Widget>[
-                        Icon(Icons.auto_awesome_rounded, size: 13, color: onSurface.withAlpha(190)),
-                        const Spacer(),
-                        Icon(Icons.star_rounded, size: 10, color: onSurface.withAlpha(160)),
-                        const SizedBox(width: 3),
-                        Icon(Icons.star_rounded, size: 8, color: onSurface.withAlpha(120)),
-                      ],
+                  if (user.launcherShowTitlebar)
+                    Container(
+                      height: 25,
+                      color: ribbon,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: <Widget>[
+                          Icon(Icons.auto_awesome_rounded, size: 13, color: onSurface.withAlpha(190)),
+                          const Spacer(),
+                          Icon(Icons.star_rounded, size: 10, color: onSurface.withAlpha(160)),
+                          const SizedBox(width: 3),
+                          Icon(Icons.star_rounded, size: 8, color: onSurface.withAlpha(120)),
+                        ],
+                      ),
                     ),
-                  ),
                   Container(color: card, child: child),
                   Container(
                     margin: const EdgeInsets.fromLTRB(9, 0, 9, 7),

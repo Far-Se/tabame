@@ -269,6 +269,8 @@ class Settings {
   set launcherDarkFontCustomized(bool value) => currentLauncherDesignThemeSet.darkFontCustomized = value;
   bool get launcherUseCustomFont => currentLauncherDesignThemeSet.useCustomFont;
   set launcherUseCustomFont(bool value) => currentLauncherDesignThemeSet.useCustomFont = value;
+  bool get launcherShowTitlebar => currentLauncherDesignThemeSet.showTitlebar;
+  set launcherShowTitlebar(bool value) => currentLauncherDesignThemeSet.showTitlebar = value;
   Map<String, QMDesignThemeSet> quickMenuDesignThemes = DesignSettings.createDefaultQuickMenuDesignThemes();
   ThemeColors get themeColors => themeTypeMode == ThemeType.dark ? darkTheme : lightTheme;
   ThemeColors get launcherThemeColors => themeTypeMode == ThemeType.dark ? launcherDarkTheme : launcherLightTheme;

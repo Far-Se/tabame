@@ -55,7 +55,8 @@ class TechLauncherFrame extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      _TechLauncherStatus(accent: accent, onSurface: onSurface, resultCount: resultCount),
+                      if (user.launcherShowTitlebar)
+                        _TechLauncherStatus(accent: accent, onSurface: onSurface, resultCount: resultCount),
                       child,
                     ],
                   ),

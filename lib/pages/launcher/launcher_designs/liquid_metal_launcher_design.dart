@@ -70,25 +70,26 @@ class LiquidMetalLauncherFrame extends StatelessWidget {
               child: Container(
                 decoration: LauncherDesign.liquidMetal.outerDecoration(surface: surface, accent: accent),
                 child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 12, 2),
-                    child: Row(children: <Widget>[
-                      Expanded(
-                          child: DragToMoveArea(
-                              child: Row(children: <Widget>[
-                        Icon(Icons.blur_circular_rounded, color: LiquidMetalTokens.accent, size: 16),
-                        const SizedBox(width: 8),
-                        Text('LIQUID METAL', style: LiquidMetalTokens.font(size: 10, spacing: 2)),
-                      ]))),
-                      _windowControl('Minimize', Icons.remove_rounded, () {
-                        windowManager.minimize();
-                      }),
-                      const SizedBox(width: 4),
-                      _windowControl('Hide launcher', Icons.close_rounded, () {
-                        windowManager.hide();
-                      }),
-                    ]),
-                  ),
+                  if (user.launcherShowTitlebar)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 10, 12, 2),
+                      child: Row(children: <Widget>[
+                        Expanded(
+                            child: DragToMoveArea(
+                                child: Row(children: <Widget>[
+                          Icon(Icons.blur_circular_rounded, color: LiquidMetalTokens.accent, size: 16),
+                          const SizedBox(width: 8),
+                          Text('LIQUID METAL', style: LiquidMetalTokens.font(size: 10, spacing: 2)),
+                        ]))),
+                        _windowControl('Minimize', Icons.remove_rounded, () {
+                          windowManager.minimize();
+                        }),
+                        const SizedBox(width: 4),
+                        _windowControl('Hide launcher', Icons.close_rounded, () {
+                          windowManager.hide();
+                        }),
+                      ]),
+                    ),
                   Flexible(fit: FlexFit.loose, child: child),
                   LiquidMetalSurface(
                     radius: 0,

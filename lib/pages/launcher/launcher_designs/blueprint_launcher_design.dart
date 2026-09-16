@@ -28,17 +28,17 @@ class _BlueprintSearchBar extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        // Micro title-block labels above the field.
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 9, 16, 0),
-          child: Row(
-            children: <Widget>[
-              Text('DWG NO. TB-001', style: microLabel),
-              const Spacer(),
-              Text('SEARCH FIELD', style: microLabel),
-            ],
+        if (user.launcherShowTitlebar)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 9, 16, 0),
+            child: Row(
+              children: <Widget>[
+                Text('DWG NO. TB-001', style: microLabel),
+                const Spacer(),
+                Text('SEARCH FIELD', style: microLabel),
+              ],
+            ),
           ),
-        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 3, 14, 0),
           child: Row(

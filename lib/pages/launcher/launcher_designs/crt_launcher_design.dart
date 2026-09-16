@@ -67,28 +67,29 @@ class CrtLauncherFrame extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(10),
                       child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-                        SizedBox(
-                            height: 30,
-                            child: Row(children: <Widget>[
-                              Expanded(
-                                  child: DragToMoveArea(
-                                      child: Row(children: <Widget>[
-                                Icon(Icons.circle, size: 6, color: CrtTokens.accent),
-                                const SizedBox(width: 8),
-                                Flexible(
-                                    child: Text('TABAME / CRT',
-                                        overflow: TextOverflow.ellipsis,
-                                        style: CrtTokens.font(size: 11, spacing: 1.8))),
-                              ]))),
-                              IconButton(
-                                  tooltip: 'Hide launcher',
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints.tightFor(width: 30, height: 30),
-                                  onPressed: () {
-                                    windowManager.hide();
-                                  },
-                                  icon: Icon(Icons.close, size: 15, color: CrtTokens.dim)),
-                            ])),
+                        if (user.launcherShowTitlebar)
+                          SizedBox(
+                              height: 30,
+                              child: Row(children: <Widget>[
+                                Expanded(
+                                    child: DragToMoveArea(
+                                        child: Row(children: <Widget>[
+                                  Icon(Icons.circle, size: 6, color: CrtTokens.accent),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                      child: Text('TABAME / CRT',
+                                          overflow: TextOverflow.ellipsis,
+                                          style: CrtTokens.font(size: 11, spacing: 1.8))),
+                                ]))),
+                                IconButton(
+                                    tooltip: 'Hide launcher',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+                                    onPressed: () {
+                                      windowManager.hide();
+                                    },
+                                    icon: Icon(Icons.close, size: 15, color: CrtTokens.dim)),
+                              ])),
                         Flexible(fit: FlexFit.loose, child: child),
                         Container(
                             padding: const EdgeInsets.fromLTRB(6, 10, 6, 4),

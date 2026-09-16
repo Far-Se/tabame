@@ -103,40 +103,38 @@ class TuiLauncherFrame extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Container(
-              decoration: BoxDecoration(
-                color: Color.alphaBlend(onSurface.withValues(alpha: 0.1), surface),
-                border: Border(bottom: BorderSide(color: TuiTokens.border)),
-              ),
-              child: Row(children: <Widget>[
-                Expanded(
-                    child: DragToMoveArea(
-                        child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-                  child: Row(children: <Widget>[
-                    Text('>_', style: TuiTokens.mono(fontSize: 13)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: Text('Tabame - Command Prompt',
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontFamily: 'Segoe UI', fontSize: 12, color: onSurface))),
-                  ]),
-                ))),
-                IconButton(
-                  tooltip: 'Close (Esc)',
-                  onPressed: QuickMenuFunctions.hideQuickMenu,
-                  constraints: const BoxConstraints(minWidth: 40, minHeight: 30),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  icon: Text('×', style: TuiTokens.mono(fontSize: 18)),
-                  style: IconButton.styleFrom(shape: const RoundedRectangleBorder()),
+            if (user.launcherShowTitlebar) ...<Widget>[
+              Container(
+                decoration: BoxDecoration(
+                  color: Color.alphaBlend(onSurface.withValues(alpha: 0.1), surface),
+                  border: Border(bottom: BorderSide(color: TuiTokens.border)),
                 ),
-              ]),
-            ),
-            // Padding(
-            //   padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
-            //   child: Text('Tabame Launcher\nSearch applications, files, and commands.', style: TuiTokens.mono()),
-            // ),
-            const SizedBox(height: 10),
+                child: Row(children: <Widget>[
+                  Expanded(
+                      child: DragToMoveArea(
+                          child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                    child: Row(children: <Widget>[
+                      Text('>_', style: TuiTokens.mono(fontSize: 13)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                          child: Text('Tabame - Command Prompt',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontFamily: 'Segoe UI', fontSize: 12, color: onSurface))),
+                    ]),
+                  ))),
+                  IconButton(
+                    tooltip: 'Close (Esc)',
+                    onPressed: QuickMenuFunctions.hideQuickMenu,
+                    constraints: const BoxConstraints(minWidth: 40, minHeight: 30),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    icon: Text('×', style: TuiTokens.mono(fontSize: 18)),
+                    style: IconButton.styleFrom(shape: const RoundedRectangleBorder()),
+                  ),
+                ]),
+              ),
+              const SizedBox(height: 10),
+            ],
             child,
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),

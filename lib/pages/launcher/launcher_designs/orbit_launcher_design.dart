@@ -27,17 +27,17 @@ class _OrbitSearchBar extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        // Telemetry micro-labels above the field.
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 9, 16, 0),
-          child: Row(
-            children: <Widget>[
-              Text('NAV · TARGET ACQUISITION', style: microLabel),
-              const Spacer(),
-              Text('CH·01', style: microLabel),
-            ],
+        if (user.launcherShowTitlebar)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 9, 16, 0),
+            child: Row(
+              children: <Widget>[
+                Text('NAV · TARGET ACQUISITION', style: microLabel),
+                const Spacer(),
+                Text('CH·01', style: microLabel),
+              ],
+            ),
           ),
-        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 3, 14, 0),
           child: Row(

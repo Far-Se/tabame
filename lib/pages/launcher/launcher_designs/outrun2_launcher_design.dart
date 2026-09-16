@@ -88,33 +88,37 @@ class Outrun2LauncherFrame extends StatelessWidget {
                 height: 66,
                 child: CustomPaint(painter: _Outrun2LauncherPalmPainter(color: palm))),
             Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(13, 7, 13, 0),
-                child: Row(children: <Widget>[
-                  Text('OUTRUN',
-                      style: TextStyle(
-                          color: accent,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          fontStyle: FontStyle.italic,
-                          letterSpacing: 2.4,
-                          shadows: <Shadow>[Shadow(color: accent.withAlpha(150), blurRadius: 8)])),
-                  const SizedBox(width: 8),
-                  Expanded(child: Container(height: 1, color: accent.withAlpha(110))),
-                  const SizedBox(width: 8),
-                  Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount // 86',
+              if (user.launcherShowTitlebar)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(13, 7, 13, 0),
+                  child: Row(children: <Widget>[
+                    Text('OUTRUN',
+                        style: TextStyle(
+                            color: accent,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            fontStyle: FontStyle.italic,
+                            letterSpacing: 2.4,
+                            shadows: <Shadow>[Shadow(color: accent.withAlpha(150), blurRadius: 8)])),
+                    const SizedBox(width: 8),
+                    Expanded(child: Container(height: 1, color: accent.withAlpha(110))),
+                    const SizedBox(width: 8),
+                    Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount // 86',
+                        style: TextStyle(
+                            color: onSurface.withAlpha(145),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.4)),
+                    DateTimeWidget(
+                      padding: const EdgeInsets.only(left: 10),
                       style: TextStyle(
                           color: onSurface.withAlpha(145),
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
-                          letterSpacing: 1.4)),
-                  DateTimeWidget(
-                    padding: const EdgeInsets.only(left: 10),
-                    style: TextStyle(
-                        color: onSurface.withAlpha(145), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.4),
-                  ),
-                ]),
-              ),
+                          letterSpacing: 1.4),
+                    ),
+                  ]),
+                ),
               child,
             ]),
             Positioned.fill(

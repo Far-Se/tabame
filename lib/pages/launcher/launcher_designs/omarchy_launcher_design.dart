@@ -88,26 +88,27 @@ class OmarchyLauncherFrame extends StatelessWidget {
       child: Container(
         decoration: LauncherDesign.omarchy.outerDecoration(surface: surface, accent: accent),
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 2, 8, 2),
-            child: Row(children: <Widget>[
-              Expanded(
-                  child: DragToMoveArea(
-                      child: Row(children: <Widget>[
-                Text('▰ ', style: label.copyWith(color: accent)),
-                Text('tabame', style: label.copyWith(color: onSurface, fontWeight: FontWeight.w600)),
-                const SizedBox(width: 10),
-                Flexible(child: Text('/ launcher', overflow: TextOverflow.ellipsis, style: label)),
-              ]))),
-              IconButton(
-                tooltip: 'Close launcher (Esc)',
-                onPressed: QuickMenuFunctions.hideQuickMenu,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                padding: const EdgeInsets.all(6),
-                icon: Text('×', style: label.copyWith(fontSize: 20)),
-              ),
-            ]),
-          ),
+          if (user.launcherShowTitlebar)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 2, 8, 2),
+              child: Row(children: <Widget>[
+                Expanded(
+                    child: DragToMoveArea(
+                        child: Row(children: <Widget>[
+                  Text('▰ ', style: label.copyWith(color: accent)),
+                  Text('tabame', style: label.copyWith(color: onSurface, fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 10),
+                  Flexible(child: Text('/ launcher', overflow: TextOverflow.ellipsis, style: label)),
+                ]))),
+                IconButton(
+                  tooltip: 'Close launcher (Esc)',
+                  onPressed: QuickMenuFunctions.hideQuickMenu,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  padding: const EdgeInsets.all(6),
+                  icon: Text('×', style: label.copyWith(fontSize: 20)),
+                ),
+              ]),
+            ),
           child,
           Container(
             width: double.infinity,

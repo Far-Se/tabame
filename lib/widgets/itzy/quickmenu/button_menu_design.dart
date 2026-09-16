@@ -662,7 +662,74 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
                     ..removeLast(),
             ),
           ),
+          if (!isQuickMenu) ...<Widget>[
+            const SizedBox(height: 8),
+            _buildLauncherTitlebarOption(accent, onSurface),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildLauncherTitlebarOption(Color accent, Color onSurface) {
+    final bool enabled = user.launcherShowTitlebar;
+
+    Future<void> updateTitlebar(bool value) async {
+      await _updateTheme(
+        () => user.launcherShowTitlebar = value,
+        customizeLauncherAppearance: false,
+      );
+    }
+
+    return InkWell(
+      onTap: () => updateTitlebar(!enabled),
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.fromLTRB(9, 7, 5, 7),
+        decoration: BoxDecoration(
+          color: enabled ? accent.withAlpha(10) : onSurface.withAlpha(5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: enabled ? accent.withAlpha(45) : onSurface.withAlpha(16)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(
+              enabled ? Icons.web_asset_rounded : Icons.web_asset_off_rounded,
+              size: 16,
+              color: enabled ? accent : onSurface.withAlpha(110),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    "Show Titlebar",
+                    style: TextStyle(
+                      fontSize: Design.baseFontSize + 1,
+                      fontWeight: FontWeight.w700,
+                      color: onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    "Display the selected design's titlebar above the search field when available.",
+                    style: TextStyle(
+                      fontSize: Design.baseFontSize,
+                      color: onSurface.withAlpha(145),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Checkbox(
+              value: enabled,
+              onChanged: (bool? value) => updateTitlebar(value ?? false),
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
       ),
     );
   }

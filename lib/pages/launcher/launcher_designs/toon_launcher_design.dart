@@ -87,44 +87,45 @@ class ToonLauncherFrame extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(17, 10, 11, 5),
-                    child: Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: DragToMoveArea(
-                            child: Row(
-                              children: <Widget>[
-                                Icon(Icons.bolt_rounded, size: 18, color: ToonTokens.orange),
-                                const SizedBox(width: 7),
-                                Text(
-                                  'TABAME // TOON',
-                                  style: ToonTokens.font(
-                                    size: 12,
-                                    color: ToonTokens.cream,
-                                    spacing: 1.3,
-                                    weight: FontWeight.w700,
+                  if (user.launcherShowTitlebar)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(17, 10, 11, 5),
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: DragToMoveArea(
+                              child: Row(
+                                children: <Widget>[
+                                  Icon(Icons.bolt_rounded, size: 18, color: ToonTokens.orange),
+                                  const SizedBox(width: 7),
+                                  Text(
+                                    'TABAME // TOON',
+                                    style: ToonTokens.font(
+                                      size: 12,
+                                      color: ToonTokens.cream,
+                                      spacing: 1.3,
+                                      weight: FontWeight.w700,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 9),
-                                Transform.rotate(
-                                  angle: 0.785398,
-                                  child: SizedBox(
-                                    width: 6,
-                                    height: 6,
-                                    child: ColoredBox(color: ToonTokens.red),
+                                  const SizedBox(width: 9),
+                                  Transform.rotate(
+                                    angle: 0.785398,
+                                    child: SizedBox(
+                                      width: 6,
+                                      height: 6,
+                                      child: ColoredBox(color: ToonTokens.red),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        _control('Minimize', Icons.remove_rounded, windowManager.minimize),
-                        const SizedBox(width: 3),
-                        _control('Hide launcher', Icons.close_rounded, windowManager.hide),
-                      ],
+                          _control('Minimize', Icons.remove_rounded, windowManager.minimize),
+                          const SizedBox(width: 3),
+                          _control('Hide launcher', Icons.close_rounded, windowManager.hide),
+                        ],
+                      ),
                     ),
-                  ),
                   Flexible(fit: FlexFit.loose, child: child),
                   Container(
                     padding: const EdgeInsets.fromLTRB(17, 8, 15, 9),

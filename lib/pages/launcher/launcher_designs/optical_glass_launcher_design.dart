@@ -68,34 +68,35 @@ class OpticalGlassLauncherFrame extends StatelessWidget {
               child: Container(
                 decoration: LauncherDesign.opticalGlass.outerDecoration(surface: surface, accent: accent),
                 child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 12, 14, 10),
-                    child: Row(children: <Widget>[
-                      Expanded(
-                          child: DragToMoveArea(
-                              child: Row(children: <Widget>[
-                        OpticalGlassSurface(
-                            radius: 14,
-                            selected: true,
-                            child: SizedBox(
-                                width: 28,
-                                height: 28,
-                                child: Icon(Icons.lens_blur_rounded, size: 20, color: OpticalGlassTokens.accent))),
-                        const SizedBox(width: 10),
-                        Flexible(
-                            child: Text('Optical Glass',
-                                overflow: TextOverflow.ellipsis,
-                                style: OpticalGlassTokens.font(size: 14, weight: FontWeight.w600))),
-                      ]))),
-                      _control('Minimize', Icons.remove_rounded, () {
-                        windowManager.minimize();
-                      }),
-                      const SizedBox(width: 6),
-                      _control('Hide launcher', Icons.close_rounded, () {
-                        windowManager.hide();
-                      }),
-                    ]),
-                  ),
+                  if (user.launcherShowTitlebar)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(22, 12, 14, 10),
+                      child: Row(children: <Widget>[
+                        Expanded(
+                            child: DragToMoveArea(
+                                child: Row(children: <Widget>[
+                          OpticalGlassSurface(
+                              radius: 14,
+                              selected: true,
+                              child: SizedBox(
+                                  width: 28,
+                                  height: 28,
+                                  child: Icon(Icons.lens_blur_rounded, size: 20, color: OpticalGlassTokens.accent))),
+                          const SizedBox(width: 10),
+                          Flexible(
+                              child: Text('Optical Glass',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: OpticalGlassTokens.font(size: 14, weight: FontWeight.w600))),
+                        ]))),
+                        _control('Minimize', Icons.remove_rounded, () {
+                          windowManager.minimize();
+                        }),
+                        const SizedBox(width: 6),
+                        _control('Hide launcher', Icons.close_rounded, () {
+                          windowManager.hide();
+                        }),
+                      ]),
+                    ),
                   Flexible(fit: FlexFit.loose, child: child),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),

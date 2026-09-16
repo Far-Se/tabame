@@ -715,6 +715,7 @@ class LauncherDesignThemeSet {
   bool lightFontCustomized;
   bool darkFontCustomized;
   bool useCustomFont;
+  bool showTitlebar;
 
   LauncherDesignThemeSet({
     required this.lightTheme,
@@ -724,6 +725,7 @@ class LauncherDesignThemeSet {
     this.lightFontCustomized = false,
     this.darkFontCustomized = false,
     this.useCustomFont = false,
+    this.showTitlebar = true,
   });
 
   LauncherDesignThemeSet copyWith({
@@ -734,6 +736,7 @@ class LauncherDesignThemeSet {
     bool? lightFontCustomized,
     bool? darkFontCustomized,
     bool? useCustomFont,
+    bool? showTitlebar,
   }) {
     return LauncherDesignThemeSet(
       lightTheme: lightTheme ?? this.lightTheme.copyWith(),
@@ -743,6 +746,7 @@ class LauncherDesignThemeSet {
       lightFontCustomized: lightFontCustomized ?? this.lightFontCustomized,
       darkFontCustomized: darkFontCustomized ?? this.darkFontCustomized,
       useCustomFont: useCustomFont ?? this.useCustomFont,
+      showTitlebar: showTitlebar ?? this.showTitlebar,
     );
   }
 
@@ -755,6 +759,7 @@ class LauncherDesignThemeSet {
       'lightFontCustomized': lightFontCustomized,
       'darkFontCustomized': darkFontCustomized,
       'useCustomFont': useCustomFont,
+      'showTitlebar': showTitlebar,
     };
   }
 
@@ -767,6 +772,7 @@ class LauncherDesignThemeSet {
       lightFontCustomized: (map['lightFontCustomized'] ?? false) as bool,
       darkFontCustomized: (map['darkFontCustomized'] ?? false) as bool,
       useCustomFont: (map['useCustomFont'] ?? false) as bool,
+      showTitlebar: (map['showTitlebar'] ?? true) as bool,
     );
   }
 
@@ -777,7 +783,7 @@ class LauncherDesignThemeSet {
 
   @override
   String toString() =>
-      'LauncherDesignThemeSet(lightTheme: $lightTheme, darkTheme: $darkTheme, lightThemeCustomized: $lightThemeCustomized, darkThemeCustomized: $darkThemeCustomized, lightFontCustomized: $lightFontCustomized, darkFontCustomized: $darkFontCustomized, useCustomFont: $useCustomFont)';
+      'LauncherDesignThemeSet(lightTheme: $lightTheme, darkTheme: $darkTheme, lightThemeCustomized: $lightThemeCustomized, darkThemeCustomized: $darkThemeCustomized, lightFontCustomized: $lightFontCustomized, darkFontCustomized: $darkFontCustomized, useCustomFont: $useCustomFont, showTitlebar: $showTitlebar)';
 
   @override
   bool operator ==(covariant LauncherDesignThemeSet other) {
@@ -789,7 +795,8 @@ class LauncherDesignThemeSet {
         other.darkThemeCustomized == darkThemeCustomized &&
         other.lightFontCustomized == lightFontCustomized &&
         other.darkFontCustomized == darkFontCustomized &&
-        other.useCustomFont == useCustomFont;
+        other.useCustomFont == useCustomFont &&
+        other.showTitlebar == showTitlebar;
   }
 
   @override
@@ -800,7 +807,8 @@ class LauncherDesignThemeSet {
       darkThemeCustomized.hashCode ^
       lightFontCustomized.hashCode ^
       darkFontCustomized.hashCode ^
-      useCustomFont.hashCode;
+      useCustomFont.hashCode ^
+      showTitlebar.hashCode;
 }
 
 class ApiRequest {

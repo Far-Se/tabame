@@ -50,7 +50,8 @@ class MangaLauncherFrame extends StatelessWidget {
                             border: Border.all(color: onSurface.withAlpha(75), width: .9),
                             borderRadius: BorderRadius.circular(11))))),
             Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-              _MangaLauncherMasthead(accent: accent, ink: onSurface, paper: surface, resultCount: resultCount),
+              if (user.launcherShowTitlebar)
+                _MangaLauncherMasthead(accent: accent, ink: onSurface, paper: surface, resultCount: resultCount),
               child,
             ]),
           ]),

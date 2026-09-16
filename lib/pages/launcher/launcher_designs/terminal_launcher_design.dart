@@ -134,7 +134,7 @@ class TerminalLauncherFrame extends StatelessWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  _TerminalTitleBar(accent: accent, isDark: isDark),
+                  if (user.launcherShowTitlebar) _TerminalTitleBar(accent: accent, isDark: isDark),
                   child,
                   _TerminalStatusBar(accent: accent, resultCount: resultCount, isDark: isDark),
                 ],

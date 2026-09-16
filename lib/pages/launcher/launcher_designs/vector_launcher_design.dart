@@ -43,28 +43,35 @@ class VectorLauncherFrame extends StatelessWidget {
                 child: IgnorePointer(
                     child: CustomPaint(painter: _VectorLauncherScanPainter(onSurface.withAlpha(isDark ? 12 : 9))))),
             Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 7, 12, 0),
-                child: Row(children: <Widget>[
-                  Container(width: 4, height: 4, color: accent),
-                  const SizedBox(width: 6),
-                  Text('VEC / 01',
-                      style: TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
-                  const SizedBox(width: 7),
-                  Text('TARGET INDEX',
+              if (user.launcherShowTitlebar)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 7, 12, 0),
+                  child: Row(children: <Widget>[
+                    Container(width: 4, height: 4, color: accent),
+                    const SizedBox(width: 6),
+                    Text('VEC / 01',
+                        style: TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
+                    const SizedBox(width: 7),
+                    Text('TARGET INDEX',
+                        style: TextStyle(
+                            color: onSurface.withAlpha(120),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 2)),
+                    const Spacer(),
+                    Text(resultCount.toString().padLeft(3, '0'),
+                        style: TextStyle(
+                            color: accent.withAlpha(190),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.4)),
+                    DateTimeWidget(
+                      padding: const EdgeInsets.only(left: 10),
                       style: TextStyle(
-                          color: onSurface.withAlpha(120), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 2)),
-                  const Spacer(),
-                  Text(resultCount.toString().padLeft(3, '0'),
-                      style: TextStyle(
-                          color: accent.withAlpha(190), fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
-                  DateTimeWidget(
-                    padding: const EdgeInsets.only(left: 10),
-                    style: TextStyle(
-                        color: accent.withAlpha(190), fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4),
-                  ),
-                ]),
-              ),
+                          color: accent.withAlpha(190), fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4),
+                    ),
+                  ]),
+                ),
               child,
             ]),
             Positioned.fill(
