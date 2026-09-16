@@ -45,7 +45,6 @@ enum QuickMenuDesigns {
   crt,
   retro,
   superMario,
-  winamp2,
   ;
 
   String get displayName => switch (this) {
@@ -1680,30 +1679,6 @@ class DesignSettings {
           entryFontWeight: 400,
           borderRadius: 24,
           baseFontSize: 11,
-        ),
-      ),
-      QuickMenuDesigns.winamp2.displayName: QMDesignThemeSet(
-        lightTheme: defaultThemeColors(
-          background: const Color(0xFFD1D4D7),
-          textColor: const Color(0xFF1B2228),
-          accentColor: const Color(0xFF009D49),
-          gradientAlpha: 0,
-          uiFontFamily: 'Consolas',
-          entryFontFamily: 'Consolas',
-          entryFontWeight: 700,
-          borderRadius: 0,
-          baseFontSize: 10,
-        ),
-        darkTheme: defaultThemeColors(
-          background: const Color(0xFF15191E),
-          textColor: const Color(0xFFB1BBC6),
-          accentColor: const Color(0xFF19E266),
-          gradientAlpha: 0,
-          uiFontFamily: 'Consolas',
-          entryFontFamily: 'Consolas',
-          entryFontWeight: 700,
-          borderRadius: 0,
-          baseFontSize: 10,
         ),
       ),
     };

@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../../logic/ui_health.dart';
 import '../../globals.dart';
 import '../../settings.dart';
 import '../../win32/win32.dart';
@@ -131,21 +130,18 @@ class QuickMenuFunctions {
     final Timer? revealFallback = show
         ? Timer(const Duration(seconds: 3), () {
             if (request != _visibilityRequest || !isQuickMenuVisible) return;
-            UiHealth.record('quickMenu.revealFallback');
             restoreOpacity();
           })
         : null;
     try {
-      await UiHealth.step(
-          show ? 'quickMenu.show' : 'quickMenu.hide',
-          () => _toggleQuickMenu(
-                request: request,
-                type: type,
-                visible: show,
-                center: center,
-                forceReposition: forceReposition,
-                forcePop: forcePop,
-              ));
+      await _toggleQuickMenu(
+        request: request,
+        type: type,
+        visible: show,
+        center: center,
+        forceReposition: forceReposition,
+        forcePop: forcePop,
+      );
     } finally {
       revealFallback?.cancel();
       restoreOpacity();
@@ -166,15 +162,14 @@ class QuickMenuFunctions {
     if (Globals.quickMenuPage != type) {
       for (final QuickMenuTriggers listener in listeners) {
         if (!_listeners.contains(listener)) continue;
-        await UiHealth.step('quickMenu.switch.${listener.runtimeType}',
-            () => listener.onQuickMenuSwitchedPage(type, Globals.quickMenuPage, visible));
+        await listener.onQuickMenuSwitchedPage(type, Globals.quickMenuPage, visible);
         if (request != _visibilityRequest) return;
       }
     }
 
     for (final QuickMenuTriggers listener in listeners) {
       if (!_listeners.contains(listener)) continue;
-      await UiHealth.step('quickMenu.toggle.${listener.runtimeType}', () => listener.onQuickMenuToggled(visible, type));
+      await listener.onQuickMenuToggled(visible, type);
       if (request != _visibilityRequest) return;
       if (forcePop) await listener.onQuickMenuMaybePop();
     }
@@ -187,11 +182,10 @@ class QuickMenuFunctions {
         if (type == QuickMenuPage.quickMenu) {
           triggerQuickAction("action:refreshTaskbar");
         }
-        // await Future<void>.delayed(const Duration(milliseconds: 110));
-        final Size value = await UiHealth.step('quickMenu.getSize', windowManager.getSize);
-        await UiHealth.step('quickMenu.resize', () => windowManager.setSize(Size(value.width + 2, value.height + 2)));
+        final Size value = await windowManager.getSize();
+        await windowManager.setSize(Size(value.width + 2, value.height + 2));
         await Future<void>.delayed(const Duration(milliseconds: 30));
-        await UiHealth.step('quickMenu.restoreSize', () => windowManager.setSize(value));
+        await windowManager.setSize(value);
 
         if (forceReposition) {
           if (center) {
@@ -202,21 +196,13 @@ class QuickMenuFunctions {
         }
         for (final QuickMenuTriggers listener in listeners) {
           if (!_listeners.contains(listener)) continue;
-          await UiHealth.step(
-              'quickMenu.visible.${listener.runtimeType}', () => listener.onQuickMenuVisible(type, center));
+          await listener.onQuickMenuVisible(type, center);
         }
 
-        // Keep the native window transparent until Flutter has painted the
-        // destination page. Revealing before the frame is ready lets DWM show
-        // the previous QuickMenu backing surface for a moment.
-        await UiHealth.waitForFrame('quickMenu.reveal');
-        await UiHealth.step('quickMenu.redraw', Win32.forceRedraw);
+        await Win32.forceRedraw();
         if (request != _visibilityRequest || !isQuickMenuVisible) return;
         Win32.setWindowInvisible(false);
         shownTime = DateTime.now().millisecondsSinceEpoch;
-        // WinUtils.setWindowFullyOpaque(Win32.hWnd);
-
-        // if (IsWindowVisible(Win32.hWnd) == 0 && visible == true) ShowWindow(Win32.hWnd, SW_SHOW);
       } else {
         visible = false;
       }
@@ -227,25 +213,6 @@ class QuickMenuFunctions {
       Win32.setPosition(const Offset(-99999, -99999));
       // ShowWindow(Win32.hWnd, SW_HIDE);
       hiddenTime = DateTime.now().millisecondsSinceEpoch;
-
-      // await QuickMenuFunctions.refreshQuickMenu();
-      // if (!isQuickMenuVisible)
-      // EmptyWorkingSet(GetCurrentProcess());
-      // clearRAM();
-      // Future<void>.delayed(const Duration(milliseconds: 200), () {
-      //   final Offset pos = Win32.getPosition(hwnd: Win32.hWnd);
-      //   if (!isQuickMenuVisible && pos.dx > 0 && pos.dy > 0) {
-      //     toggleQuickMenu(
-      //       visible: true,
-      //       type: type,
-      //       center: center,
-      //       forceReposition: forceReposition,
-      //       forcePop: forcePop,
-      //     );
-      //   }
-      //   //   SetProcessWorkingSetSize(GetCurrentProcess(), -1, -1);
-      //   //   // if (!isQuickMenuVisible) EmptyWorkingSet(GetCurrentProcess());
-      // });
     }
   }
 

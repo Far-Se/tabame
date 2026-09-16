@@ -129,6 +129,7 @@ class CapillaryLauncherFrame extends StatelessWidget {
     );
   }
 
+  // ignore: unused_element
   Widget _control(CapillaryTokens capillary, String label, IconData icon, VoidCallback action) => CapillarySurface(
         child: SizedBox(
           width: 28,

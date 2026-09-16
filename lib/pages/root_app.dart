@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../logic/error_handler.dart';
-import '../logic/ui_health.dart';
 import '../models/classes/boxes.dart';
 import '../models/globals.dart';
 import '../models/settings.dart';
@@ -80,7 +79,6 @@ class _TabameState extends State<Tabame> {
                   <ThemeMode>[ThemeMode.system, ThemeMode.light, ThemeMode.dark, scheduled][themeType.index];
               AppTheme.loadDragCursor(context);
               return MaterialApp(
-                  navigatorObservers: <NavigatorObserver>[UiHealth.navigatorObserver],
                   scrollBehavior: MyCustomScrollBehavior(),
                   debugShowCheckedModeBanner: false,
                   title: 'Tabame - Taskbar Menu',

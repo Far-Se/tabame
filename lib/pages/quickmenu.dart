@@ -12,7 +12,6 @@ import '../platform/windows/tabamewin32_api.dart' hide AudioDeviceType;
 import '../platform/windows/win32_api.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../logic/ui_health.dart';
 import '../models/classes/boxes.dart';
 import '../models/classes/saved_maps.dart';
 import '../models/classes/text_snippet.dart';
@@ -237,8 +236,6 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
   // Private Implementations
   // --------------------------------------------------------------------------
   void _initState() {
-    UiHealth.quickMenuMounted = true;
-    UiHealth.record('quickMenu.mounted');
     if (Globals.isStandaloneLauncher) {
       QuickMenuFunctions.isQuickMenuVisible = true;
       Globals.quickMenuPage = QuickMenuPage.launcher;
@@ -294,8 +291,6 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
   }
 
   void _dispose() {
-    UiHealth.quickMenuMounted = false;
-    UiHealth.record('quickMenu.disposed');
     trk.stopTimer();
     _clickThroughTimer?.cancel();
     _clearRam?.cancel();
@@ -489,9 +484,6 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
 
     Globals.quickMenuPage = newType;
     if (mounted) setState(() {});
-    if (await UiHealth.waitForFrame('quickMenu.switch.first')) {
-      await UiHealth.waitForFrame('quickMenu.switch.second');
-    }
   }
 
   Future<void> _onQuickMenuVisible(QuickMenuPage type, bool center) async {

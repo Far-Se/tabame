@@ -107,7 +107,6 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   // SMTC media sessions stream (all sessions)
 
   // Window sizing state
-  bool get _winamp2Style => user.quickMenuDesign == QuickMenuDesigns.winamp2.index;
 
   @override
   void initState() {
@@ -390,10 +389,8 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
       });
     }
     final List<Window> visibleWindows = _visibleWindows;
-    final double rowHeight =
-        _winamp2Style ? kTaskBarItemHeight : (user.expandedTaskbar ? Caches.expandedHeight : kTaskBarItemHeight);
-    final double maxTaskbarHeight =
-        _winamp2Style ? 250 : (user.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320);
+    final double rowHeight = (user.expandedTaskbar ? Caches.expandedHeight : kTaskBarItemHeight);
+    final double maxTaskbarHeight = (user.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320);
     Globals.heights.taskbar = (rowHeight * visibleWindows.length).clamp(150, maxTaskbarHeight);
 
     // Recompute after layout so the shadow reflects content changes (windows
@@ -409,7 +406,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
           child: Container(
             constraints: BoxConstraints(
               minHeight: 150,
-              maxHeight: _winamp2Style ? 250 : (user.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320),
+              maxHeight: (user.quickMenuDesign == QuickMenuDesigns.matrix.index ? 280 : 320),
             ),
             child: ShaderMask(
               shaderCallback: (Rect rect) {
@@ -557,7 +554,6 @@ class _TaskBarItemState extends State<TaskBarItem> {
 
   bool get _terminalStyle => user.quickMenuDesign == QuickMenuDesigns.terminal2.index;
   bool get _tuiStyle => user.quickMenuDesign == QuickMenuDesigns.tui.index;
-  bool get _winamp2Style => user.quickMenuDesign == QuickMenuDesigns.winamp2.index;
 
   // bool get _isDark => userSettings.themeTypeMode == ThemeType.dark;
 
@@ -567,12 +563,11 @@ class _TaskBarItemState extends State<TaskBarItem> {
     final bool isSelected = widget.isSelected;
     final bool isHovered = _isHovered;
     final bool expanded = user.expandedTaskbar;
-    final double height = _winamp2Style ? kTaskBarItemHeight : (expanded ? Caches.expandedHeight : kTaskBarItemHeight);
+    final double height = (expanded ? Caches.expandedHeight : kTaskBarItemHeight);
 
     if (user.taskManagerStats && widget.window.process.exe.toLowerCase() == "taskmgr.exe") {
       return const SizedBox.shrink();
     }
-    if (_winamp2Style) return _buildWinamp2Item();
     return MouseRegion(
       onEnter: (_) {
         setState(() => _isHovered = true);
@@ -616,106 +611,6 @@ class _TaskBarItemState extends State<TaskBarItem> {
             : expanded
                 ? _buildExpandedContent()
                 : _buildMainContent(),
-      ),
-    );
-  }
-
-  Widget _buildWinamp2Item() {
-    final bool highlighted = widget.isSelected || _isHovered;
-    final bool hasMediaControls = Boxes.mediaControls.contains(widget.window.process.exe);
-    final bool isAudioSource = Caches.audioMixerExes.contains(widget.window.process.exe);
-    final String processName = widget.window.process.exe.replaceFirst('.exe', '').toUpperCase();
-    final Color accent = Design.accent;
-    final Color titleColor = highlighted ? accent : Design.text.withAlpha(210);
-    final TextStyle titleStyle = TextStyle(
-      color: titleColor,
-      fontFamily: 'Consolas',
-      fontFamilyFallback: const <String>['Cascadia Mono', 'Courier New'],
-      fontSize: Design.baseFontSize + 1,
-      fontWeight: widget.isSelected ? FontWeight.w700 : FontWeight.w500,
-      letterSpacing: 0.15,
-      height: 1,
-    );
-    final TextStyle metaStyle = TextStyle(
-      color: highlighted ? accent.withAlpha(180) : Design.text.withAlpha(105),
-      fontFamily: 'Consolas',
-      fontSize: Design.baseFontSize - 1,
-      letterSpacing: 0.2,
-      height: 1,
-    );
-
-    return MouseRegion(
-      onEnter: (_) {
-        setState(() => _isHovered = true);
-        widget.onHover?.call(widget.window);
-      },
-      onExit: (_) {
-        setState(() => _isHovered = false);
-        widget.onHover?.call(null);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 110),
-        height: kTaskBarItemHeight,
-        margin: EdgeInsets.zero,
-        decoration: BoxDecoration(
-          color: widget.isSelected
-              ? accent.withAlpha(42)
-              : _isHovered
-                  ? accent.withAlpha(18)
-                  : Colors.transparent,
-          border: Border(
-            bottom: BorderSide(color: Design.text.withAlpha(22)),
-          ),
-        ),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _activateWindow,
-          onVerticalDragEnd: (_) => _activateWindow(),
-          onSecondaryTapUp: (TapUpDetails details) => _showContextMenu(context),
-          onTertiaryTapUp: (_) => _showZonesPicker(context),
-          onLongPress: () => Win32.forceActivateWindow(widget.window.hWnd),
-          onHorizontalDragUpdate: (DragUpdateDetails details) => _dragMovement += details.delta.dx,
-          onHorizontalDragEnd: _handleHorizontalDragEnd,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              children: <Widget>[
-                SizedBox(
-                  width: 28,
-                  child: Text(
-                    (widget.index + 1).toString().padLeft(2, '0'),
-                    style: metaStyle.copyWith(color: highlighted ? accent : Design.text.withAlpha(120)),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    widget.window.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: titleStyle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 76,
-                  child: Text(
-                    processName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
-                    style: metaStyle,
-                  ),
-                ),
-                if (_isHovered) ...<Widget>[
-                  if (user.mediaControlForApp && (hasMediaControls || isAudioSource)) _buildMediaButton(),
-                  if (isAudioSource) _buildVolumeButton(),
-                  _buildCloseButton(),
-                ],
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

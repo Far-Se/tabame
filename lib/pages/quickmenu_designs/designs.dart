@@ -41,7 +41,6 @@ import 'design_terminal2.dart';
 import 'design_tui.dart';
 import 'design_vector.dart';
 import 'design_winamp.dart';
-import 'design_winamp2.dart';
 import 'design_windows_98.dart';
 import 'design_windows_xp.dart';
 
@@ -90,13 +89,6 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       await windowManager.setMinimumSize(Size(controlPanelWidth, Globals.quickMenuSize.height));
       if (size.width < controlPanelWidth) {
         await windowManager.setSize(Size(controlPanelWidth, size.height));
-      }
-    } else if (design == QuickMenuDesigns.winamp2) {
-      const double winamp2Width = 550;
-      final Size size = await windowManager.getSize();
-      await windowManager.setMinimumSize(Size(winamp2Width, Globals.quickMenuSize.height));
-      if (size.width < winamp2Width) {
-        await windowManager.setSize(Size(winamp2Width, size.height));
       }
     } else {
       await windowManager.setMinimumSize(Size(Globals.quickMenuSize.width, Globals.quickMenuSize.height));
@@ -147,7 +139,6 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.cyber => MainMenuCyberWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.tech => MainMenuTechWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.manga => MainMenuMangaWidget(key: ValueKey<int>(_refreshCounter)),
-      // QuickMenuDesigns.impact => MainMenuImpactWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.outrun => MainMenuOutrunWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.outrun2 => MainMenuOutrun2Widget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.winamp => MainMenuWinampWidget(key: ValueKey<int>(_refreshCounter)),
@@ -158,8 +149,6 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.commandDeck => MainMenuCommandDeckWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.switchboard => MainMenuSwitchboardWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.orbit => MainMenuOrbitWidget(key: ValueKey<int>(_refreshCounter)),
-      QuickMenuDesigns.winamp2 => MainMenuWinamp2Widget(key: ValueKey<int>(_refreshCounter)),
-      // QuickMenuDesigns.familyGuy => MainMenuFamilyGuyWidget(key: ValueKey<int>(_refreshCounter)),
     };
   }
 }

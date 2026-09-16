@@ -5,7 +5,6 @@ import 'dart:ui';
 import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:window_manager/window_manager.dart';
 
-import 'logic/ui_health.dart';
 import 'models/classes/boxes.dart';
 import 'models/globals.dart';
 import 'models/win32/win32.dart';
@@ -36,8 +35,6 @@ class TimestampLogger {
 
     // Preserve the last failure across a restart.
     await file.writeAsString('${DateTime.now().toIso8601String()} start pid=$pid\n', mode: FileMode.append);
-    UiHealth.start();
-
     // Prevent duplicate timers.
     _timer?.cancel();
 
@@ -82,12 +79,6 @@ class TimestampLogger {
         mode: FileMode.append,
         flush: true,
       );
-      UiHealth.record('heartbeat', <String, Object?>{
-        'quickMenuVisible': QuickMenuFunctions.isQuickMenuVisible,
-        'quickMenuPage': Globals.quickMenuPage.name,
-        'recoveryPending': _recovering,
-      });
-      await UiHealth.probeNative();
       final File reset = File('${WinUtils.getTabameAppDataFolder()}\\reset.log');
       if (!_recovering && await reset.exists()) {
         // Consume the request once; do not stack a new recovery every minute.
@@ -95,8 +86,7 @@ class TimestampLogger {
         _recovering = true;
         unawaited(_recover());
       }
-    } catch (e, stack) {
-      UiHealth.record('heartbeat.error', <String, Object?>{'error': '$e', 'stack': '$stack'});
+    } catch (e) {
       print('TimestampLogger error: $e');
     } finally {
       _writing = false;
@@ -104,39 +94,29 @@ class TimestampLogger {
   }
 
   static Future<void> _recover() async {
-    UiHealth.record('reset.before');
     try {
-      if (!await UiHealth.probeNative()) {
-        UiHealth.record('reset.aborted.nativeUnresponsive');
-        return;
-      }
       // Request a framework frame without depending on the stalled vsync.
       // This cannot repair a deadlocked raster thread or a lost GPU device.
       WidgetsBinding.instance.scheduleWarmUpFrame();
-      await UiHealth.waitForFrame('reset.warmUp');
-      await UiHealth.step(
-          'reset.show',
-          () => QuickMenuFunctions.toggleQuickMenu(
-                type: QuickMenuPage.quickMenu,
-                visible: true,
-                forceReposition: true,
-              ));
-      await UiHealth.step('reset.refresh', QuickMenuFunctions.refreshQuickMenu);
+      await QuickMenuFunctions.toggleQuickMenu(
+        type: QuickMenuPage.quickMenu,
+        visible: true,
+        forceReposition: true,
+      );
+      await QuickMenuFunctions.refreshQuickMenu();
       WinUtils.setWindowFullyOpaque(Win32.hWnd);
-      await UiHealth.step('reset.redraw', Win32.forceRedraw);
-      final Size value = await UiHealth.step('reset.getSize', windowManager.getSize);
-      await UiHealth.step('reset.resize', () => windowManager.setSize(Size(value.width + 1, value.height + 1)));
+      await Win32.forceRedraw();
+      final Size value = await windowManager.getSize();
+      await windowManager.setSize(Size(value.width + 1, value.height + 1));
       await Future<void>.delayed(const Duration(milliseconds: 10));
-      await UiHealth.step('reset.restoreSize', () => windowManager.setSize(value));
+      await windowManager.setSize(value);
       if (NativeHooks.isRegistered) {
-        await UiHealth.step('reset.freeHotkeys', NativeHooks.freeHotkeys);
-        await UiHealth.step('reset.unhook', NativeHooks.unHook);
-        await UiHealth.step('reset.hook', NativeHooks.hook);
+        await NativeHooks.freeHotkeys();
+        await NativeHooks.unHook();
+        await NativeHooks.hook();
       }
-      final bool frameCompleted = await UiHealth.waitForFrame('reset.after');
-      UiHealth.record('reset.after', <String, Object?>{'frameworkFrameCompleted': frameCompleted});
     } catch (error, stack) {
-      UiHealth.record('reset.error', <String, Object?>{'error': '$error', 'stack': '$stack'});
+      print('TimestampLogger recovery error: $error\n$stack');
     } finally {
       _recovering = false;
     }
@@ -145,6 +125,5 @@ class TimestampLogger {
   static void dispose() {
     _timer?.cancel();
     _timer = null;
-    UiHealth.stop();
   }
 }
