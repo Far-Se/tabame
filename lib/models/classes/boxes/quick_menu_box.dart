@@ -156,6 +156,11 @@ class QuickMenuFunctions {
       bool forceReposition = true,
       bool forcePop = false}) async {
     isQuickMenuVisible = visible;
+    if (visible) {
+      // Keep the on-screen window invisible while Flutter rebuilds and the
+      // draw workaround runs. It is revealed only after the new frame is ready.
+      WinUtils.setWindowFullyTransparent(Win32.hWnd);
+    }
     if (!visible && !(kDebugMode && !Globals.debugHotkeys)) {
       Win32.setPosition(const Offset(-99999, -99999));
     }
@@ -175,7 +180,6 @@ class QuickMenuFunctions {
     }
 
     if (visible) {
-      WinUtils.setWindowFullyTransparent(Win32.hWnd);
       Globals.quickMenuPage = type;
 
       if (DateTime.now().millisecondsSinceEpoch - hiddenTime > 150) {

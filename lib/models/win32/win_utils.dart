@@ -1875,14 +1875,16 @@ class WinUtils {
     calloc.free(iniPtr);
   }
 
-  static void fixDrawBug({Duration delay = const Duration(milliseconds: 100)}) {
-    WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) async {
-      await Future<void>.delayed(delay);
-      final Size value = await windowManager.getSize();
-      await windowManager.setSize(Size(value.width + 1, value.height + 1));
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      await windowManager.setSize(Size(value.width, value.height));
-    });
+  static Future<void> fixDrawBug({Duration delay = const Duration(milliseconds: 100)}) async {
+    final Completer<void> frameComplete = Completer<void>();
+    WidgetsBinding.instance.addPostFrameCallback((_) => frameComplete.complete());
+    await frameComplete.future;
+
+    await Future<void>.delayed(delay);
+    final Size value = await windowManager.getSize();
+    await windowManager.setSize(Size(value.width + 1, value.height + 1));
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await windowManager.setSize(Size(value.width, value.height));
   }
 
   static void enableClickThrough(int hwnd) {

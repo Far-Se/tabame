@@ -456,7 +456,6 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       tryPop = true;
       user.launcherSearchText = "";
       Globals.clearQuickMenuSearchInput();
-      WinUtils.fixDrawBug(delay: const Duration(milliseconds: 10));
       try {
         if (mounted) setState(() {});
       } catch (_) {}
@@ -504,6 +503,9 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
         _requestQuickMenuFocus(focusWindow: true);
       });
     }
+    // QuickMenuFunctions has already made the window transparent. Keep it on
+    // screen while the resize workaround repairs the first frame.
+    await WinUtils.fixDrawBug(delay: const Duration(milliseconds: 10));
   }
 
   void _onQuickActionExecute(String actionName) {
