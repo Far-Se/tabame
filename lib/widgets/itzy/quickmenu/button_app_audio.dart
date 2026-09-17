@@ -143,7 +143,7 @@ class _AppAudioButtonState extends State<AppAudioButton> {
     unawaited(
       MediaSessionService.instance.sendApplicationCommand(
         _binding(ctl),
-        isUp ? PlatformMediaCommand.seekForward : PlatformMediaCommand.seekBackward,
+        isUp ? PlatformMediaCommand.seekBackward : PlatformMediaCommand.seekForward,
       ),
     );
   }
