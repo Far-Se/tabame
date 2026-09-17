@@ -6,6 +6,7 @@ import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/util/quick_action_list.dart';
+import '../itzy/quickmenu/button_bmac.dart';
 import '../itzy/quickmenu/button_changelog.dart';
 import '../itzy/quickmenu/button_logo_drag.dart';
 import '../itzy/quickmenu/button_open_settings.dart';
@@ -23,6 +24,14 @@ class TopBar extends StatefulWidget {
 class _TopBarState extends State<TopBar> with QuickMenuTriggers {
   List<Widget> showWidgets = <Widget>[];
 
+  List<Widget> _buildShowWidgets() {
+    return <Widget>[
+      for (final String name in Boxes().topBarWidgets.takeWhile((String name) => name != 'Deactivated:'))
+        if (name != buyMeACoffeeButtonName && (quickActionsMap[name]?.isVisible ?? false))
+          quickActionsMap[name]!.widget(),
+    ];
+  }
+
   @override
   void initState() {
     super.initState();
@@ -32,11 +41,7 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
     // (everything before the "Deactivated:" marker). Building the full
     // quickActionsMap up front allocated a widget for every action, including
     // the deactivated ones that never get mounted.
-    for (final String name in Boxes().topBarWidgets) {
-      if (name == "Deactivated:") break;
-      final QuickAction? action = quickActionsMap[name];
-      if (action != null && action.isVisible) showWidgets.add(action.widget());
-    }
+    showWidgets = _buildShowWidgets();
     Globals.heights.topbar = 25;
   }
 
@@ -50,10 +55,7 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
   Future<void> refreshQuickMenu() async {
     if (mounted) {
       setState(() {
-        showWidgets = <Widget>[
-          for (final String name in Boxes().topBarWidgets.takeWhile((String name) => name != 'Deactivated:'))
-            if (quickActionsMap[name]?.isVisible ?? false) quickActionsMap[name]!.widget(),
-        ];
+        showWidgets = _buildShowWidgets();
       });
     } else {}
   }
@@ -61,6 +63,7 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
   @override
   Widget build(BuildContext context) {
     if (user.quickActionsAtBottom) return const SizedBox.shrink();
+    final bool showBuyMeACoffee = shouldShowBuyMeACoffeeButton();
     return Theme(
       data: Theme.of(context).copyWith(
           iconTheme: IconThemeData(
@@ -89,12 +92,13 @@ class _TopBarState extends State<TopBar> with QuickMenuTriggers {
                     const LogoDragButton(),
                     const SizedBox(width: 4)
                   ],
-                  if (showWidgets.isNotEmpty)
+                  if (showBuyMeACoffee || showWidgets.isNotEmpty)
                     Expanded(
                       // topBar QuickActions Buttons
                       child: BarWithButtons(
                         height: 25,
                         children: <Widget>[
+                          if (showBuyMeACoffee) const BuyMeACoffeeButton(),
                           if (user.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
                           ...List<Widget>.generate(showWidgets.length, (int i) => showWidgets[i])
                         ],

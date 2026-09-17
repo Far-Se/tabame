@@ -160,7 +160,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
         Boxes.pref.setInt("installDate", DateTime.now().millisecondsSinceEpoch);
       } else {
         final Duration diff = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(installDate));
-        if (diff.inDays >= 2) {
+        if (diff.inDays >= 5) {
           showBuyMeACoffeePopup = true;
         }
       }
@@ -224,7 +224,7 @@ class InterfaceState extends State<Interface> with SingleTickerProviderStateMixi
           if (context.mounted) {
             showDialog(
               context: context,
-              builder: (BuildContext context) => const BMACDialog(),
+              builder: (BuildContext context) => const BMACDialog(center: true),
             );
           }
         },

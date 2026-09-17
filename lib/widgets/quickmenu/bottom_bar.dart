@@ -6,6 +6,7 @@ import '../../models/classes/boxes/quick_menu_box.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/util/quick_action_list.dart';
+import '../itzy/quickmenu/button_bmac.dart';
 import '../itzy/quickmenu/button_changelog.dart';
 import '../itzy/quickmenu/button_logo_drag.dart';
 import '../itzy/quickmenu/button_open_settings.dart';
@@ -156,16 +157,20 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
   Map<String, Widget> widgets = <String, Widget>{};
   OverlayEntry? _logoDragOverlayEntry;
 
+  List<Widget> _buildShowWidgets() {
+    return <Widget>[
+      for (final String name in Boxes().topBarWidgets.takeWhile((String name) => name != 'Deactivated:'))
+        if (name != buyMeACoffeeButtonName && (quickActionsMap[name]?.isVisible ?? false))
+          quickActionsMap[name]!.widget(),
+    ];
+  }
+
   @override
   void initState() {
     super.initState();
     QuickMenuFunctions.addListener(this);
     Debug.add("QuickMenu: Topbar");
-    for (final String name in Boxes().topBarWidgets) {
-      if (name == "Deactivated:") break;
-      final QuickAction? action = quickActionsMap[name];
-      if (action != null && action.isVisible) showWidgets.add(action.widget());
-    }
+    showWidgets = _buildShowWidgets();
     Globals.heights.topbar = 25;
   }
 
@@ -180,10 +185,7 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
   Future<void> refreshQuickMenu() async {
     if (mounted) {
       setState(() {
-        showWidgets = <Widget>[
-          for (final String name in Boxes().topBarWidgets.takeWhile((String name) => name != 'Deactivated:'))
-            if (quickActionsMap[name]?.isVisible ?? false) quickActionsMap[name]!.widget(),
-        ];
+        showWidgets = _buildShowWidgets();
       });
     } else {}
   }
@@ -254,10 +256,12 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
   }
 
   Widget _quickActionsBar() {
-    if (showWidgets.isEmpty) return const SizedBox.shrink();
+    final bool showBuyMeACoffee = shouldShowBuyMeACoffeeButton();
+    if (!showBuyMeACoffee && showWidgets.isEmpty) return const SizedBox.shrink();
     return BarWithButtons(
       height: 25.1,
       children: <Widget>[
+        if (showBuyMeACoffee) const BuyMeACoffeeButton(),
         if (kDebugMode) const TestingButton(),
         if (user.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
         ...List<Widget>.generate(showWidgets.length, (int i) => showWidgets[i]),
