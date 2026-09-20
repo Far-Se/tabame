@@ -5,6 +5,6 @@
   "description": "Browse and copy Tabame clipboard history",
   "icon": "clipboard",
   "runtime": "python",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "entry": "main.py"
 }

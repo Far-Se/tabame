@@ -742,7 +742,7 @@
       "icon": "clipboard",
       "runtime": "python",
       "author": "Far-Se",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/clipboard-history",
       "files": {
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/clipboard-history/plugin.json",

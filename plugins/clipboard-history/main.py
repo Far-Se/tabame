@@ -74,6 +74,9 @@ def build_item(entry):
     entry_type = entry.get("type", "text")
     text = entry.get("text", "")
     total = entry.get("textLength", len(text))
+    image_path = entry.get("imagePath", "")
+    if not isinstance(image_path, str):
+        image_path = ""
     title = (
         "Image clipboard item"
         if entry_type == "image"
@@ -86,15 +89,23 @@ def build_item(entry):
         if entry_type == "richText"
         else "TEXT"
     )
+    actions = [
+        {"id": "copy", "title": "Copy", "icon": "copy", "shortcut": "ctrl+shift+c"}
+    ]
+    if entry_type == "image" and image_path:
+        actions.extend(
+            [
+                {"id": "copy_file", "title": "Copy File", "icon": "file"},
+                {"id": "open_location", "title": "Open File Location", "icon": "folder"},
+            ]
+        )
     return {
         "id": entry["id"],
         "title": title,
         "subtitle": f"{kind} · {total:,} chars",
         "icon": "image" if entry_type == "image" else "clipboard",
         "accessories": [{"text": "PINNED"}] if entry.get("pinned") else [],
-        "actions": [
-            {"id": "copy", "title": "Copy", "icon": "copy", "shortcut": "ctrl+shift+c"}
-        ],
+        "actions": actions,
         "preview": {
             "markdown": preview_markdown(entry),
             "metadata": [
@@ -107,8 +118,8 @@ def build_item(entry):
                 },
                 {
                     "label": "Action",
-                    "text": "Copy the full original",
-                    "actions": [{"id": "copy", "title": "Copy", "icon": "copy"}],
+                    "text": "Copy the full original" if entry_type != "image" else "Manage the cached image",
+                    "actions": actions,
                 },
             ],
         },
@@ -201,15 +212,48 @@ def main():
         elif kind == "loadMore" and state["has_more"]:
             state["rev"] = message.get("rev", state["rev"])
             request_history(len(state["entries"]))
-        elif kind == "action" and message.get("action") in ("default", "copy"):
-            send(
-                {
-                    "type": "command",
-                    "command": "clipboardHistory",
-                    "op": "copy",
-                    "id": message.get("id", ""),
-                }
-            )
+        elif kind == "action":
+            action = message.get("action")
+            item_id = message.get("id", "")
+            if action in ("default", "copy"):
+                send(
+                    {
+                        "type": "command",
+                        "command": "clipboardHistory",
+                        "op": "copy",
+                        "id": item_id,
+                    }
+                )
+            elif action in ("copy_file", "open_location"):
+                entry = state["entries_by_id"].get(item_id)
+                image_path = entry.get("imagePath", "") if entry else ""
+                if not entry or entry.get("type") != "image" or not isinstance(image_path, str) or not image_path:
+                    send(
+                        {
+                            "type": "command",
+                            "command": "toast",
+                            "text": "The cached image file is unavailable",
+                            "style": "error",
+                        }
+                    )
+                    continue
+
+                if action == "copy_file":
+                    send(
+                        {
+                            "type": "command",
+                            "command": "copyFile",
+                            "path": image_path,
+                        }
+                    )
+                else:
+                    send(
+                        {
+                            "type": "command",
+                            "command": "open",
+                            "path": str(Path(image_path).parent),
+                        }
+                    )
 
 
 if __name__ == "__main__":

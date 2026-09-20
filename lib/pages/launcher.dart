@@ -498,12 +498,9 @@ class LauncherState extends State<Launcher>
       Win32.setWindowInvisible(false);
       _canConsumePendingInput = true;
       _startWindowRefreshLoop();
-      _consumePendingQuickMenuSearchInput();
       _searchFocusNode.requestFocus();
 
-      unawaited(_refreshLauncherCatalogs());
-
-      _onSearchChanged(_controller.text);
+      unawaited(_refreshWindowsBeforeSearch());
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -518,6 +515,15 @@ class LauncherState extends State<Launcher>
         _focusSearch();
       }
     });
+  }
+
+  Future<void> _refreshWindowsBeforeSearch() async {
+    await WindowWatcherService.instance.refresh();
+    if (!mounted) return;
+
+    _consumePendingQuickMenuSearchInput();
+    unawaited(_refreshLauncherCatalogs());
+    _onSearchChanged(_controller.text);
   }
 
   @override

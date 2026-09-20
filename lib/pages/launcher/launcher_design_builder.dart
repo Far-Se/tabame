@@ -112,7 +112,7 @@ extension LauncherDesignBuilder on LauncherDesign {
             BoxShadow(
               color: Colors.black.withAlpha(RetroTokens.isDark ? 170 : 40),
               blurRadius: 0,
-              offset: Offset(6, 6),
+              offset: const Offset(6, 6),
             ),
           ],
         );

@@ -42,8 +42,9 @@ class RetroSurface extends CrtSurface {
     super.accent,
   }) : super(
           shaderAsset: 'resources/shaders/retro.frag',
-          pixelSize: 0.32,
-          persistenceRate: 11.7,
+          pixelSize: 0.52, // 0.30
+          // Clear scroll-driven phosphor trails 30% faster, especially in plugin views.
+          persistenceRate: 11.7 * 1.25,
           effectName: 'Retro',
         );
 }
