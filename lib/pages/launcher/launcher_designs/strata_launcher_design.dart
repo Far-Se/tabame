@@ -1,97 +1,87 @@
 part of '../launcher_design_builder.dart';
 
-class StrataSearchBar extends StatelessWidget {
-  const StrataSearchBar(
-      {super.key,
-      required this.dragHandle,
-      required this.textField,
-      required this.trailingBadge,
-      required this.isSearching});
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+BoxDecoration _strataOuterDecoration() {
+  return BoxDecoration(
+      color: StrataTokens.background,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: StrataTokens.border));
+}
+
+class _StrataSearchBar extends StatelessWidget {
+  const _StrataSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: StrataTokens.border)),
-        ),
-        child: Row(children: <Widget>[
-          MouseRegion(
-            cursor: SystemMouseCursors.move,
-            child: DragToMoveArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: CustomPaint(size: const Size(30, 24), painter: _StrataLogoPainter(StrataTokens.accent)),
-              ),
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: StrataTokens.border)),
+      ),
+      child: Row(children: <Widget>[
+        MouseRegion(
+          cursor: SystemMouseCursors.move,
+          child: DragToMoveArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: CustomPaint(size: const Size(30, 24), painter: _StrataLogoPainter(StrataTokens.accent)),
             ),
           ),
-          const SizedBox(width: 20),
-          Expanded(child: textField),
-          if (trailingBadge != null) trailingBadge!,
-          const SizedBox(width: 10),
-          Tooltip(
-              message: 'Toggle file preview',
-              child: Text('Ctrl + P', style: StrataTokens.font(size: 12, color: StrataTokens.dim))),
-          if (isSearching)
-            Padding(
-                padding: const EdgeInsets.only(left: 12),
-                child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: StrataTokens.accent))),
-        ]),
-      );
+        ),
+        const SizedBox(width: 20),
+        Expanded(child: content.textField),
+        if (content.trailingBadge != null) content.trailingBadge!,
+        const SizedBox(width: 10),
+        Tooltip(
+            message: 'Toggle file preview',
+            child: Text('Ctrl + P', style: StrataTokens.font(size: 12, color: StrataTokens.dim))),
+        if (content.isSearching)
+          Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: SizedBox(
+                  width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: StrataTokens.accent))),
+      ]),
+    );
+  }
 }
 
 class StrataLauncherFrame extends StatelessWidget {
-  const StrataLauncherFrame(
-      {super.key,
-      required this.surface,
-      required this.accent,
-      required this.onSurface,
-      required this.resultCount,
-      required this.child});
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
+  const StrataLauncherFrame({super.key, required this.resultCount, required this.child});
   final int resultCount;
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => LauncherTheme(
-        data: const LauncherThemeData(design: LauncherDesign.strata),
-        child: Container(
-          decoration: LauncherDesign.strata.outerDecoration(surface: surface, accent: accent),
-          child: ClipRRect(
-              borderRadius: BorderRadius.circular(11),
-              child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-                Flexible(fit: FlexFit.loose, child: child),
-                Container(
-                    height: 42,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(border: Border(top: BorderSide(color: StrataTokens.border))),
-                    child: LayoutBuilder(
-                        builder: (BuildContext context, BoxConstraints constraints) => Row(children: <Widget>[
-                              _hint('↑↓ ', 'Navigate'),
-                              const SizedBox(width: 18),
-                              _hint('↵ ', 'Open'),
-                              if (constraints.maxWidth > 650) ...<Widget>[
-                                const SizedBox(width: 18),
-                                _hint('Ctrl C', 'Copy'),
-                                const SizedBox(width: 18),
-                              ],
-                              const Spacer(),
-                              const Icon(Icons.circle, size: 8, color: Color(0xFF80F454)),
-                              const SizedBox(width: 8),
-                              Text('$resultCount results', style: StrataTokens.font(size: 11, color: StrataTokens.dim)),
-                            ]))),
-              ])),
-        ),
-      );
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: _strataOuterDecoration(),
+      child: ClipRRect(
+          borderRadius: BorderRadius.circular(11),
+          child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            Flexible(fit: FlexFit.loose, child: child),
+            Container(
+                height: 42,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(border: Border(top: BorderSide(color: StrataTokens.border))),
+                child: LayoutBuilder(
+                    builder: (BuildContext context, BoxConstraints constraints) => Row(children: <Widget>[
+                          _hint('↑↓ ', 'Navigate'),
+                          const SizedBox(width: 18),
+                          _hint('↵ ', 'Open'),
+                          if (constraints.maxWidth > 650) ...<Widget>[
+                            const SizedBox(width: 18),
+                            _hint('Ctrl C', 'Copy'),
+                            const SizedBox(width: 18),
+                          ],
+                          const Spacer(),
+                          const Icon(Icons.circle, size: 8, color: Color(0xFF80F454)),
+                          const SizedBox(width: 8),
+                          Text('$resultCount results', style: StrataTokens.font(size: 11, color: StrataTokens.dim)),
+                        ]))),
+          ])),
+    );
+  }
 
   Widget _hint(String key, String label) => Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
         Container(

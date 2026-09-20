@@ -13,1089 +13,199 @@ import '../../widgets/widgets/date_time_widget.dart';
 import '../quickmenu_designs/design_backdrop_stable.dart';
 import 'launcher_design.dart';
 import 'widgets/capillary_surface.dart';
-import 'widgets/thermal_surface.dart';
-import 'widgets/liquid_metal_surface.dart';
 import 'widgets/crt_surface.dart';
+import 'widgets/liquid_metal_surface.dart';
+import 'widgets/thermal_surface.dart';
 
-part 'launcher_designs/manifesto_launcher_design.dart';
-part 'launcher_designs/classic_launcher_design.dart';
-part 'launcher_designs/serene_launcher_design.dart';
-part 'launcher_designs/command_launcher_design.dart';
-part 'launcher_designs/terminal_launcher_design.dart';
-part 'launcher_designs/terminal2_launcher_design.dart';
-part 'launcher_designs/zen_launcher_design.dart';
-part 'launcher_designs/glass_launcher_design.dart';
-part 'launcher_designs/blueprint_launcher_design.dart';
-part 'launcher_designs/transit_launcher_design.dart';
-part 'launcher_designs/fluent_launcher_design.dart';
-part 'launcher_designs/orbit_launcher_design.dart';
 part 'launcher_designs/anime_launcher_design.dart';
-part 'launcher_designs/tech_launcher_design.dart';
-part 'launcher_designs/vector_launcher_design.dart';
-part 'launcher_designs/outrun2_launcher_design.dart';
-part 'launcher_designs/matrix_launcher_design.dart';
-part 'launcher_designs/steam_launcher_design.dart';
-part 'launcher_designs/cyber_launcher_design.dart';
-part 'launcher_designs/manga_launcher_design.dart';
-part 'launcher_designs/windows_xp_launcher_design.dart';
-part 'launcher_designs/windows_98_launcher_design.dart';
-part 'launcher_designs/notion_launcher_design.dart';
-part 'launcher_designs/switchboard_launcher_design.dart';
-part 'launcher_designs/relay_launcher_design.dart';
-part 'launcher_designs/newcast_launcher_design.dart';
-part 'launcher_designs/omarchy_launcher_design.dart';
-part 'launcher_designs/tui_launcher_design.dart';
 part 'launcher_designs/aurora_launcher_design.dart';
-part 'launcher_designs/strata_launcher_design.dart';
-part 'launcher_designs/phosphor_launcher_design.dart';
-part 'launcher_designs/crt_launcher_design.dart';
-part 'launcher_designs/retro_launcher_design.dart';
-part 'launcher_designs/liquid_metal_launcher_design.dart';
-part 'launcher_designs/optical_glass_launcher_design.dart';
-part 'launcher_designs/toon_launcher_design.dart';
+part 'launcher_designs/blueprint_launcher_design.dart';
 part 'launcher_designs/capillary_launcher_design.dart';
+part 'launcher_designs/classic_launcher_design.dart';
+part 'launcher_designs/command_launcher_design.dart';
+part 'launcher_designs/crt_launcher_design.dart';
+part 'launcher_designs/cyber_launcher_design.dart';
+part 'launcher_designs/fluent_launcher_design.dart';
+part 'launcher_designs/glass_launcher_design.dart';
+part 'launcher_designs/liquid_metal_launcher_design.dart';
+part 'launcher_designs/manga_launcher_design.dart';
+part 'launcher_designs/manifesto_launcher_design.dart';
+part 'launcher_designs/matrix_launcher_design.dart';
+part 'launcher_designs/newcast_launcher_design.dart';
+part 'launcher_designs/notion_launcher_design.dart';
+part 'launcher_designs/omarchy_launcher_design.dart';
+part 'launcher_designs/optical_glass_launcher_design.dart';
+part 'launcher_designs/orbit_launcher_design.dart';
+part 'launcher_designs/outrun2_launcher_design.dart';
+part 'launcher_designs/phosphor_launcher_design.dart';
+part 'launcher_designs/relay_launcher_design.dart';
+part 'launcher_designs/retro_launcher_design.dart';
+part 'launcher_designs/serene_launcher_design.dart';
+part 'launcher_designs/steam_launcher_design.dart';
+part 'launcher_designs/strata_launcher_design.dart';
+part 'launcher_designs/switchboard_launcher_design.dart';
+part 'launcher_designs/tech_launcher_design.dart';
+part 'launcher_designs/terminal2_launcher_design.dart';
+part 'launcher_designs/terminal_launcher_design.dart';
 part 'launcher_designs/thermal_launcher_design.dart';
+part 'launcher_designs/toon_launcher_design.dart';
+part 'launcher_designs/transit_launcher_design.dart';
+part 'launcher_designs/tui_launcher_design.dart';
+part 'launcher_designs/vector_launcher_design.dart';
+part 'launcher_designs/windows_98_launcher_design.dart';
+part 'launcher_designs/windows_xp_launcher_design.dart';
+part 'launcher_designs/zen_launcher_design.dart';
+part 'widgets/launcher_search_field.dart';
+part 'widgets/launcher_section_header.dart';
 
-// ---------------------------------------------------------------------------
-// Extension: per-design widget factories used by LauncherState
-// ---------------------------------------------------------------------------
-
+/// Design widgets inherit their palette from Theme and LauncherTheme.
 extension LauncherDesignBuilder on LauncherDesign {
-  /// Returns the outer window decoration for the given design.
-  BoxDecoration outerDecoration({
-    required Color surface,
-    required Color accent,
-  }) {
-    switch (this) {
-      case LauncherDesign.thermal:
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: ThermalTokens.border),
-        );
-      case LauncherDesign.capillary:
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: CapillaryTokens.resolve(surface.computeLuminance() < 0.5).border),
-        );
-      case LauncherDesign.opticalGlass:
-        return BoxDecoration(
-            borderRadius: BorderRadius.circular(24), border: Border.all(color: OpticalGlassTokens.border));
-      case LauncherDesign.liquidMetal:
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: LiquidMetalTokens.border),
-        );
-      case LauncherDesign.crt:
-        return BoxDecoration(
-            color: CrtTokens.background,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: CrtTokens.border));
-      case LauncherDesign.toon:
-        return BoxDecoration(
-          color: ToonTokens.background,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: ToonTokens.orange.withAlpha(180), width: 1.5),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: ToonTokens.ink.withAlpha(220),
-              blurRadius: 0,
-              offset: const Offset(5, 5),
-            ),
-          ],
-        );
-      case LauncherDesign.retro:
-        return BoxDecoration(
-          color: RetroTokens.bezel,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: RetroTokens.accent.withAlpha(180), width: 1.5),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(RetroTokens.isDark ? 170 : 40),
-              blurRadius: 0,
-              offset: const Offset(6, 6),
-            ),
-          ],
-        );
-      case LauncherDesign.phosphor:
-        return BoxDecoration(
-            color: PhosphorTokens.background,
-            borderRadius: BorderRadius.zero,
-            border: Border.all(color: PhosphorTokens.border));
-      case LauncherDesign.strata:
-        return BoxDecoration(
-            color: StrataTokens.background,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: StrataTokens.border));
-      case LauncherDesign.aurora:
-        return BoxDecoration(
-            color: AuroraTokens.background,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AuroraTokens.border));
-      case LauncherDesign.tui:
-        return BoxDecoration(color: surface, border: Border.all(color: TuiTokens.border));
-      case LauncherDesign.omarchy:
-        return BoxDecoration(
-          color: surface,
-          border: Border.all(color: OmarchyTokens.border(surface.computeLuminance() < 0.5)),
-        );
-      case LauncherDesign.classic:
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[
-              surface.withAlpha(245),
-              Color.alphaBlend(accent.withAlpha(24), surface),
-              Color.alphaBlend(accent.withAlpha(10), surface),
-            ],
-          ),
-          border: Border.all(color: accent.withAlpha(28)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(18),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        );
+  /// Shared by launcher frames and action dialogs.
+  BoxDecoration outerDecoration({required Color surface, required Color accent}) => switch (this) {
+        LauncherDesign.anime => _animeOuterDecoration(surface, accent),
+        LauncherDesign.aurora => _auroraOuterDecoration(),
+        LauncherDesign.blueprint => _blueprintOuterDecoration(surface, accent),
+        LauncherDesign.capillary => _capillaryOuterDecoration(surface),
+        LauncherDesign.classic => _classicOuterDecoration(surface, accent),
+        LauncherDesign.command => _commandOuterDecoration(surface, accent),
+        LauncherDesign.crt => _crtOuterDecoration(),
+        LauncherDesign.cyber => _cyberOuterDecoration(surface, accent),
+        LauncherDesign.fluent => _fluentOuterDecoration(surface),
+        LauncherDesign.glass => _glassOuterDecoration(accent),
+        LauncherDesign.liquidMetal => _liquidMetalOuterDecoration(),
+        LauncherDesign.manga => _mangaOuterDecoration(surface),
+        LauncherDesign.manifesto => _manifestoOuterDecoration(surface),
+        LauncherDesign.matrix => _matrixOuterDecoration(),
+        LauncherDesign.newCast => _newCastOuterDecoration(surface),
+        LauncherDesign.notion => _notionOuterDecoration(surface),
+        LauncherDesign.omarchy => _omarchyOuterDecoration(surface),
+        LauncherDesign.opticalGlass => _opticalGlassOuterDecoration(),
+        LauncherDesign.orbit => _orbitOuterDecoration(surface, accent),
+        LauncherDesign.outrun => _outrunOuterDecoration(surface, accent),
+        LauncherDesign.phosphor => _phosphorOuterDecoration(),
+        LauncherDesign.relay => _relayOuterDecoration(surface, accent),
+        LauncherDesign.retro => _retroOuterDecoration(),
+        LauncherDesign.serene => _sereneOuterDecoration(surface),
+        LauncherDesign.steam => _steamOuterDecoration(surface),
+        LauncherDesign.strata => _strataOuterDecoration(),
+        LauncherDesign.switchboard => _switchboardOuterDecoration(surface),
+        LauncherDesign.tech => _techOuterDecoration(surface, accent),
+        LauncherDesign.terminal => _terminalOuterDecoration(surface, accent),
+        LauncherDesign.terminal2 => _terminal2OuterDecoration(surface),
+        LauncherDesign.thermal => _thermalOuterDecoration(),
+        LauncherDesign.toon => _toonOuterDecoration(),
+        LauncherDesign.transit => _transitOuterDecoration(surface, accent),
+        LauncherDesign.tui => _tuiOuterDecoration(surface),
+        LauncherDesign.vector => _vectorOuterDecoration(surface),
+        LauncherDesign.windows98 => _windows98OuterDecoration(),
+        LauncherDesign.windowsXp => _windowsXpOuterDecoration(),
+        LauncherDesign.zen => _zenOuterDecoration(surface, accent),
+      };
 
-      case LauncherDesign.serene:
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          color: surface.withAlpha(230),
-          border: Border.all(color: Colors.white.withAlpha(18)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(60),
-              blurRadius: 40,
-              spreadRadius: -4,
-              offset: const Offset(0, 16),
-            ),
-            BoxShadow(
-              color: Colors.black.withAlpha(14),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        );
-
-      case LauncherDesign.command:
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          color: surface.withAlpha(244),
-          border: Border.all(color: accent.withAlpha(56)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(70),
-              blurRadius: 28,
-              spreadRadius: -6,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        );
-
-      case LauncherDesign.terminal:
-        // Console screen — [surface] is the forced terminal palette background
-        // (light or dark) supplied by the launcher theme.
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          color: surface,
-          border: Border.all(color: accent.withAlpha(60)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(120),
-              blurRadius: 30,
-              spreadRadius: -4,
-              offset: const Offset(0, 14),
-            ),
-          ],
-        );
-
-      case LauncherDesign.zen:
-        // Soft "dawn" wash over the forced sage surface; big, diffuse shadow.
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: <Color>[
-              Color.alphaBlend(Colors.white.withAlpha(22), surface),
-              surface,
-            ],
-          ),
-          border: Border.all(color: accent.withAlpha(40)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(28),
-              blurRadius: 48,
-              spreadRadius: -8,
-              offset: const Offset(0, 20),
-            ),
-          ],
-        );
-
-      case LauncherDesign.glass:
-        // Just the floating-glass shadow + accent refraction glow; the glassy
-        // fill, border and specular highlights live inside [GlassLauncherFrame].
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: accent.withAlpha(100),
-              blurRadius: 30,
-              spreadRadius: -19,
-              offset: const Offset(0, 18),
-            ),
-            BoxShadow(
-              color: Colors.black.withAlpha(70),
-              blurRadius: 30,
-              spreadRadius: -8,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        );
-
-      case LauncherDesign.blueprint:
-        // Drafting sheet — [surface] is the forced blueprint palette. Sharp
-        // corners, a crisp ink edge, and a flat paper shadow (no glow).
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          color: surface,
-          border: Border.all(color: accent.withAlpha(110)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(90),
-              blurRadius: 26,
-              spreadRadius: -6,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        );
-
-      case LauncherDesign.transit:
-        // Station sign — [surface] is the forced signage palette. Soft signage
-        // rounding, an enamel-plate edge, and a flat drop shadow.
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          color: surface,
-          border: Border.all(color: accent.withAlpha(120), width: 1.4),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(90),
-              blurRadius: 26,
-              spreadRadius: -6,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        );
-
-      case LauncherDesign.fluent:
-        // Mica window — [surface] is the forced Win11 neutral. The 8px corner,
-        // a hairline stroke, and the broad soft shadow Windows 11 puts under
-        // every flyout.
-        final bool fluentDark = surface.computeLuminance() < 0.5;
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          color: surface,
-          border: Border.all(color: fluentDark ? Colors.white.withAlpha(24) : Colors.black.withAlpha(20)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(80),
-              blurRadius: 34,
-              spreadRadius: -8,
-              offset: const Offset(0, 16),
-            ),
-          ],
-        );
-
-      case LauncherDesign.manifesto:
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          color: surface,
-          border: Border.all(color: ManifestoTokens.fg(surface.computeLuminance() < 0.5), width: 2),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(110),
-              blurRadius: 0,
-              offset: const Offset(7, 7),
-            ),
-          ],
-        );
-
-      case LauncherDesign.orbit:
-        // Guidance scope — [surface] is the forced HUD palette. A thin
-        // phosphor edge, a deep instrument shadow, no glow.
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          color: surface,
-          border: Border.all(color: accent.withAlpha(70)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(110),
-              blurRadius: 28,
-              spreadRadius: -6,
-              offset: const Offset(0, 14),
-            ),
-          ],
-        );
-      case LauncherDesign.anime:
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          color: surface.withAlpha(245),
-          border: Border.all(color: accent.withAlpha(65)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(70),
-              blurRadius: 28,
-              spreadRadius: -6,
-              offset: const Offset(0, 14),
-            ),
-          ],
-        );
-      case LauncherDesign.tech:
-        return techLauncherOuterDecoration(surface, accent);
-      case LauncherDesign.vector:
-        return vectorLauncherOuterDecoration(surface, accent);
-      case LauncherDesign.outrun:
-        return outrun2LauncherOuterDecoration(surface, accent);
-      case LauncherDesign.matrix:
-        return matrixLauncherOuterDecoration(surface, accent);
-      case LauncherDesign.steam:
-        return steamLauncherOuterDecoration(surface, accent);
-      case LauncherDesign.cyber:
-        return cyberLauncherOuterDecoration(surface, accent);
-      case LauncherDesign.manga:
-        return mangaLauncherOuterDecoration(surface, accent);
-      case LauncherDesign.windowsXp:
-        return windowsXpLauncherOuterDecoration();
-      case LauncherDesign.windows98:
-        return windows98LauncherOuterDecoration();
-      case LauncherDesign.notion:
-        return notionLauncherOuterDecoration(surface);
-      case LauncherDesign.switchboard:
-        return switchboardLauncherOuterDecoration(surface, accent);
-      case LauncherDesign.relay:
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          color: surface,
-          border: Border.all(color: RelayTokens.border(surface.computeLuminance() < 0.5, accent)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(82),
-              blurRadius: 24,
-              spreadRadius: -7,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        );
-      case LauncherDesign.newCast:
-        final bool isDark = surface.computeLuminance() < 0.5;
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          color: surface.withAlpha(236),
-          border: Border.all(color: (isDark ? Colors.white : Colors.black).withAlpha(10)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(72),
-              blurRadius: 28,
-              spreadRadius: -5,
-              offset: const Offset(0, 14),
-            ),
-          ],
-        );
-      case LauncherDesign.terminal2:
-        final bool isTerminalDark = surface.computeLuminance() < 0.5;
-        return BoxDecoration(
-          borderRadius: BorderRadius.circular(2),
-          color: surface,
-          border: Border.all(color: Terminal2Tokens.dim(isTerminalDark).withAlpha(120)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withAlpha(isTerminalDark ? 105 : 48),
-              blurRadius: 18,
-              spreadRadius: -5,
-              offset: const Offset(0, 9),
-            ),
-          ],
-        );
-    }
-  }
-
-  /// Builds the search bar for this design variant.
   Widget buildSearchBar({
-    required Color surface,
-    required Color accent,
-    required Color onSurface,
     required Widget dragHandle,
     required Widget textField,
     required Widget? trailingBadge,
     required bool isSearching,
   }) {
-    switch (this) {
-      case LauncherDesign.thermal:
-        return ThermalSearchBar(
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.capillary:
-        return CapillarySearchBar(
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.opticalGlass:
-        return OpticalGlassSearchBar(
-            dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
-      case LauncherDesign.liquidMetal:
-        return LiquidMetalSearchBar(
-            dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
-      case LauncherDesign.crt:
-        return CrtSearchBar(
-            dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
-      case LauncherDesign.toon:
-        return ToonSearchBar(
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.retro:
-        return RetroSearchBar(
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.phosphor:
-        return PhosphorSearchBar(
-            dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
-      case LauncherDesign.strata:
-        return StrataSearchBar(
-            dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
-      case LauncherDesign.aurora:
-        return AuroraSearchBar(
-            dragHandle: dragHandle, textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
-
-      case LauncherDesign.classic:
-        return _ClassicSearchBar(
-          surface: surface,
-          accent: accent,
-          onSurface: onSurface,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.serene:
-        return _SereneSearchBar(
-          surface: surface,
-          accent: accent,
-          onSurface: onSurface,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.command:
-        return _CommandSearchBar(
-          surface: surface,
-          accent: accent,
-          onSurface: onSurface,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.terminal:
-        return _TerminalSearchBar(
-          accent: accent,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.zen:
-        return _ZenSearchBar(
-          accent: accent,
-          onSurface: onSurface,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.glass:
-        return _GlassSearchBar(
-          surface: surface,
-          accent: accent,
-          onSurface: onSurface,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.blueprint:
-        return _BlueprintSearchBar(
-          accent: accent,
-          onSurface: onSurface,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.transit:
-        return _TransitSearchBar(
-          accent: accent,
-          onSurface: onSurface,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.fluent:
-        return _FluentSearchBar(
-          accent: accent,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.manifesto:
-        return _ManifestoSearchBar(
-          accent: accent,
-          onSurface: onSurface,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.orbit:
-        return _OrbitSearchBar(
-          accent: accent,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.anime:
-        return _AnimeSearchBar(
-          accent: accent,
-          onSurface: onSurface,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.tech:
-        return TechLauncherSearchBar(
-            accent: accent,
-            onSurface: onSurface,
-            dragHandle: dragHandle,
-            textField: textField,
-            trailingBadge: trailingBadge,
-            isSearching: isSearching);
-      case LauncherDesign.vector:
-        return VectorLauncherSearchBar(
-            accent: accent,
-            onSurface: onSurface,
-            dragHandle: dragHandle,
-            textField: textField,
-            trailingBadge: trailingBadge,
-            isSearching: isSearching);
-      case LauncherDesign.outrun:
-        return Outrun2LauncherSearchBar(
-            surface: surface,
-            accent: accent,
-            dragHandle: dragHandle,
-            textField: textField,
-            trailingBadge: trailingBadge,
-            isSearching: isSearching);
-      case LauncherDesign.matrix:
-        return MatrixLauncherSearchBar(
-            accent: accent,
-            onSurface: onSurface,
-            dragHandle: dragHandle,
-            textField: textField,
-            trailingBadge: trailingBadge,
-            isSearching: isSearching);
-      case LauncherDesign.steam:
-        return SteamLauncherSearchBar(
-            accent: accent,
-            onSurface: onSurface,
-            dragHandle: dragHandle,
-            textField: textField,
-            trailingBadge: trailingBadge,
-            isSearching: isSearching);
-      case LauncherDesign.cyber:
-        return CyberLauncherSearchBar(
-            accent: accent,
-            onSurface: onSurface,
-            dragHandle: dragHandle,
-            textField: textField,
-            trailingBadge: trailingBadge,
-            isSearching: isSearching);
-      case LauncherDesign.manga:
-        return MangaLauncherSearchBar(
-            surface: surface,
-            accent: accent,
-            onSurface: onSurface,
-            dragHandle: dragHandle,
-            textField: textField,
-            trailingBadge: trailingBadge,
-            isSearching: isSearching);
-      case LauncherDesign.windowsXp:
-        return WindowsXpLauncherSearchBar(
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.windows98:
-        return Windows98LauncherSearchBar(
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.notion:
-        return NotionLauncherSearchBar(
-          accent: accent,
-          onSurface: onSurface,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.switchboard:
-        return SwitchboardLauncherSearchBar(
-          accent: accent,
-          onSurface: onSurface,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.relay:
-        return _RelaySearchBar(
-          accent: accent,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.newCast:
-        return _RaycastSearchBar(
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-      case LauncherDesign.omarchy:
-        return _OmarchySearchBar(
-            dragHandle: dragHandle,
-            textField: textField,
-            trailingBadge: trailingBadge,
-            isSearching: isSearching,
-            accent: accent);
-      case LauncherDesign.tui:
-        return _TuiSearchBar(textField: textField, trailingBadge: trailingBadge, isSearching: isSearching);
-      case LauncherDesign.terminal2:
-        return _Terminal2SearchBar(
-          accent: accent,
-          dragHandle: dragHandle,
-          textField: textField,
-          trailingBadge: trailingBadge,
-          isSearching: isSearching,
-        );
-    }
+    final _LauncherSearchBarContent content = _LauncherSearchBarContent(
+      dragHandle: dragHandle,
+      textField: textField,
+      trailingBadge: trailingBadge,
+      isSearching: isSearching,
+    );
+    return switch (this) {
+      LauncherDesign.anime => _AnimeSearchBar(content),
+      LauncherDesign.aurora => _AuroraSearchBar(content),
+      LauncherDesign.blueprint => _BlueprintSearchBar(content),
+      LauncherDesign.capillary => _CapillarySearchBar(content),
+      LauncherDesign.classic => _ClassicSearchBar(content),
+      LauncherDesign.command => _CommandSearchBar(content),
+      LauncherDesign.crt => _CrtSearchBar(content),
+      LauncherDesign.cyber => _CyberLauncherSearchBar(content),
+      LauncherDesign.fluent => _FluentSearchBar(content),
+      LauncherDesign.glass => _GlassSearchBar(content),
+      LauncherDesign.liquidMetal => _LiquidMetalSearchBar(content),
+      LauncherDesign.manga => _MangaLauncherSearchBar(content),
+      LauncherDesign.manifesto => _ManifestoSearchBar(content),
+      LauncherDesign.matrix => _MatrixLauncherSearchBar(content),
+      LauncherDesign.newCast => _RaycastSearchBar(content),
+      LauncherDesign.notion => _NotionLauncherSearchBar(content),
+      LauncherDesign.omarchy => _OmarchySearchBar(content),
+      LauncherDesign.opticalGlass => _OpticalGlassSearchBar(content),
+      LauncherDesign.orbit => _OrbitSearchBar(content),
+      LauncherDesign.outrun => _Outrun2LauncherSearchBar(content),
+      LauncherDesign.phosphor => _PhosphorSearchBar(content),
+      LauncherDesign.relay => _RelaySearchBar(content),
+      LauncherDesign.retro => _RetroSearchBar(content),
+      LauncherDesign.serene => _SereneSearchBar(content),
+      LauncherDesign.steam => _SteamLauncherSearchBar(content),
+      LauncherDesign.strata => _StrataSearchBar(content),
+      LauncherDesign.switchboard => _SwitchboardLauncherSearchBar(content),
+      LauncherDesign.tech => _TechLauncherSearchBar(content),
+      LauncherDesign.terminal => _TerminalSearchBar(content),
+      LauncherDesign.terminal2 => _Terminal2SearchBar(content),
+      LauncherDesign.thermal => _ThermalSearchBar(content),
+      LauncherDesign.toon => _ToonSearchBar(content),
+      LauncherDesign.transit => _TransitSearchBar(content),
+      LauncherDesign.tui => _TuiSearchBar(content),
+      LauncherDesign.vector => _VectorLauncherSearchBar(content),
+      LauncherDesign.windows98 => _Windows98LauncherSearchBar(content),
+      LauncherDesign.windowsXp => _WindowsXpLauncherSearchBar(content),
+      LauncherDesign.zen => _ZenSearchBar(content),
+    };
   }
 
-  /// Returns the section-header label widget.
-  Widget buildSectionHeader({required String label, required Color accent}) {
-    switch (this) {
-      case LauncherDesign.thermal:
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
-          child: Text(label, style: ThermalTokens.font(size: 11, color: ThermalTokens.dim)),
-        );
-      case LauncherDesign.capillary:
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(18, 10, 18, 5),
-          child: Builder(builder: (BuildContext context) {
-            final CapillaryTokens capillary = CapillaryTokens.of(context);
-            return Text(label, style: capillary.font(size: 11, color: capillary.dim, weight: FontWeight.w600));
-          }),
-        );
-      case LauncherDesign.opticalGlass:
-        return Padding(
-            padding: const EdgeInsets.fromLTRB(18, 10, 18, 6),
-            child: Text(label,
-                style: OpticalGlassTokens.font(size: 11, weight: FontWeight.w600, color: OpticalGlassTokens.dim)));
-      case LauncherDesign.liquidMetal:
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-          child: Text(label.toUpperCase(),
-              style: LiquidMetalTokens.font(size: 10, color: LiquidMetalTokens.dim, spacing: 1.5)),
-        );
-      case LauncherDesign.crt:
-      case LauncherDesign.phosphor:
-        return const SizedBox.shrink();
-      case LauncherDesign.toon:
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 9, 16, 5),
-          child: Row(
-            children: <Widget>[
-              Icon(Icons.bolt_rounded, size: 15, color: ToonTokens.orange),
-              const SizedBox(width: 7),
-              Text(
-                label.toUpperCase(),
-                style: ToonTokens.font(size: 11, color: ToonTokens.cream, spacing: 1.4, weight: FontWeight.w700),
-              ),
-              const SizedBox(width: 10),
-              Expanded(child: Container(height: 2, color: ToonTokens.orange.withAlpha(90))),
-              const SizedBox(width: 8),
-              Text('INK', style: ToonTokens.font(size: 10, color: ToonTokens.red, spacing: 1.1)),
-            ],
-          ),
-        );
-      case LauncherDesign.retro:
-        return RetroSectionHeader(label: label, accent: accent);
-      case LauncherDesign.strata:
-        return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Text(label, style: StrataTokens.font(color: StrataTokens.dim)));
-      case LauncherDesign.aurora:
-        return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 5),
-            child: Row(children: <Widget>[
-              Text(label.toUpperCase(), style: AuroraTokens.font(size: 11, color: AuroraTokens.dim, spacing: 1.8)),
-              const SizedBox(width: 12),
-              const Expanded(child: Divider(color: AuroraTokens.border, height: 1)),
-            ]));
+  Widget buildSectionHeader({required String label, Color? accent}) =>
+      _LauncherSectionHeader(design: this, label: label, accent: accent);
 
-      case LauncherDesign.classic:
-        return Padding(
-          padding: const EdgeInsets.only(left: 16, top: 12, bottom: 4),
-          child: Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontSize: Design.baseFontSize,
-              color: accent.withAlpha(180),
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.0,
-            ),
-          ),
-        );
-      case LauncherDesign.serene:
-        return Padding(
-          padding: const EdgeInsets.only(left: 18, top: 10, bottom: 2),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: Design.baseFontSize + 1,
-              color: accent.withAlpha(160),
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.1,
-            ),
-          ),
-        );
-      case LauncherDesign.command:
-        return Padding(
-          padding: const EdgeInsets.only(left: 14, top: 12, bottom: 4),
-          child: Row(
-            children: <Widget>[
-              Text(
-                '//',
-                style: TextStyle(
-                  fontSize: Design.baseFontSize,
-                  color: accent.withAlpha(150),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label.toUpperCase(),
-                style: TextStyle(
-                  fontSize: Design.baseFontSize,
-                  color: accent.withAlpha(170),
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.6,
-                ),
-              ),
-            ],
-          ),
-        );
-      case LauncherDesign.terminal:
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(12, 2, 12, 3),
-          child: Text(
-            ':: ${label.toLowerCase()} ${'─' * 24}',
-            maxLines: 1,
-            overflow: TextOverflow.clip,
-            style: TerminalTokens.mono(
-              fontSize: Design.baseFontSize - 0.5,
-              color: accent.withAlpha(100),
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
-          ),
-        );
-      case LauncherDesign.zen:
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(22, 14, 20, 4),
-          child: Row(
-            children: <Widget>[
-              Icon(Icons.spa_rounded, size: Design.baseFontSize + 1, color: accent.withAlpha(150)),
-              const SizedBox(width: 8),
-              Text(
-                label.toLowerCase(),
-                style: ZenTokens.soft(
-                  fontSize: Design.baseFontSize + 1,
-                  color: accent.withAlpha(190),
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.4,
-                ),
-              ),
-            ],
-          ),
-        );
-      case LauncherDesign.glass:
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(22, 14, 20, 4),
-          child: Text(
-            label.toUpperCase(),
-            style: GlassTokens.font(
-              fontSize: Design.baseFontSize - 0.5,
-              color: accent.withAlpha(150),
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
-            ),
-          ),
-        );
-      case LauncherDesign.blueprint:
-        // A dimension line: |◄──── LABEL ────►| with solid end ticks.
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-          child: Row(
-            children: <Widget>[
-              Container(width: 1, height: 9, color: accent.withAlpha(140)),
-              Text('◄', style: TextStyle(fontSize: 7, color: accent.withAlpha(140), height: 1.0)),
-              Expanded(child: Container(height: 1, color: accent.withAlpha(70))),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  label.toUpperCase(),
-                  style: BlueprintTokens.tech(
-                    fontSize: Design.baseFontSize - 1,
-                    color: accent.withAlpha(200),
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 2.4,
-                  ),
-                ),
-              ),
-              Expanded(child: Container(height: 1, color: accent.withAlpha(70))),
-              Text('►', style: TextStyle(fontSize: 7, color: accent.withAlpha(140), height: 1.0)),
-              Container(width: 1, height: 9, color: accent.withAlpha(140)),
-            ],
-          ),
-        );
-      case LauncherDesign.transit:
-        // A fare-zone boundary: a small zone pill, then a dashed border line
-        // running to the sign's edge.
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
-          child: Row(
-            children: <Widget>[
-              Container(
-                padding: const EdgeInsets.fromLTRB(8, 2, 8, 1),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: accent.withAlpha(150), width: 1.2),
-                ),
-                child: Text(
-                  'ZONE · ${label.toUpperCase()}',
-                  style: TransitTokens.sign(
-                    fontSize: Design.baseFontSize - 1.5,
-                    color: accent.withAlpha(220),
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.6,
-                    height: 1.1,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SizedBox(
-                  height: 1,
-                  child: CustomPaint(painter: _TransitZonePainter(color: accent.withAlpha(110))),
-                ),
-              ),
-            ],
-          ),
-        );
-      case LauncherDesign.fluent:
-        // A "Best match" group label: plain semibold Segoe in the foreground
-        // color — Windows 11 search never decorates its headers.
-        return Builder(builder: (BuildContext context) {
-          final Color fg = Theme.of(context).colorScheme.onSurface;
-          return Padding(
-            padding: const EdgeInsets.only(left: 16, top: 12, bottom: 4),
-            child: Text(
-              label,
-              style: FluentTokens.segoe(
-                fontSize: Design.baseFontSize + 1,
-                color: fg.withAlpha(210),
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.1,
-              ),
-            ),
-          );
-        });
-      case LauncherDesign.manifesto:
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(12, 9, 12, 3),
-          child: Row(
-            children: <Widget>[
-              Container(width: 8, height: 8, color: accent),
-              const SizedBox(width: 7),
-              Text(
-                label.toUpperCase(),
-                style: ManifestoTokens.display(
-                  fontSize: Design.baseFontSize,
-                  color: accent,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2.2,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(child: Container(height: 1, color: accent.withAlpha(100))),
-              const SizedBox(width: 5),
-              Text(
-                'INDEX',
-                style: ManifestoTokens.display(
-                  fontSize: Design.baseFontSize - 1.5,
-                  color: accent.withAlpha(170),
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.4,
-                ),
-              ),
-            ],
-          ),
-        );
-      case LauncherDesign.orbit:
-        // A track readout: cross marker + label, then a dashed track line
-        // running to the edge of the scope.
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-          child: Row(
-            children: <Widget>[
-              Text(
-                '+',
-                style: OrbitTokens.tele(
-                  fontSize: Design.baseFontSize + 1,
-                  color: accent.withAlpha(220),
-                  fontWeight: FontWeight.w700,
-                  height: 1.0,
-                ),
-              ),
-              const SizedBox(width: 7),
-              Text(
-                label.toUpperCase(),
-                style: OrbitTokens.tele(
-                  fontSize: Design.baseFontSize - 1,
-                  color: accent.withAlpha(200),
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 2.0,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: SizedBox(
-                  height: 7,
-                  child: CustomPaint(painter: _OrbitTrackPainter(color: accent.withAlpha(110))),
-                ),
-              ),
-            ],
-          ),
-        );
-      case LauncherDesign.anime:
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 11, 16, 4),
-          child: Row(
-            children: <Widget>[
-              Icon(Icons.star_rounded, size: 13, color: accent.withAlpha(200)),
-              const SizedBox(width: 6),
-              Text(
-                label.toUpperCase(),
-                style: TextStyle(
-                  fontSize: Design.baseFontSize - 0.5,
-                  color: accent.withAlpha(210),
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
-          ),
-        );
-      case LauncherDesign.tech:
-        return TechLauncherHeader(label: label, accent: accent);
-      case LauncherDesign.vector:
-        return VectorLauncherHeader(label: label, accent: accent);
-      case LauncherDesign.outrun:
-        return Outrun2LauncherHeader(label: label, accent: accent);
-      case LauncherDesign.matrix:
-        return MatrixLauncherHeader(label: label, accent: accent);
-      case LauncherDesign.steam:
-        return SteamLauncherHeader(label: label, accent: accent);
-      case LauncherDesign.cyber:
-        return CyberLauncherHeader(label: label, accent: accent);
-      case LauncherDesign.manga:
-        return MangaLauncherHeader(label: label, accent: accent);
-      case LauncherDesign.windowsXp:
-        return WindowsXpLauncherHeader(label: label);
-      case LauncherDesign.windows98:
-        return Windows98LauncherHeader(label: label);
-      case LauncherDesign.notion:
-        return NotionLauncherHeader(label: label);
-      case LauncherDesign.switchboard:
-        return SwitchboardLauncherHeader(label: label, accent: accent);
-      case LauncherDesign.relay:
-        return RelayLauncherHeader(label: label, accent: accent);
-      case LauncherDesign.newCast:
-        return Builder(
-          builder: (BuildContext context) {
-            final bool isDark = Theme.of(context).brightness == Brightness.dark;
-            return Padding(
-              padding: const EdgeInsets.only(left: 16, top: 8, bottom: 6),
-              child: Text(
-                (label == 'Results' ? 'Suggestions' : label).toUpperCase(),
-                style: RaycastTokens.ui(
-                  fontSize: 11,
-                  color: RaycastTokens.dim(isDark),
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.25,
-                  height: 1.1,
-                ),
-              ),
-            );
-          },
-        );
-      case LauncherDesign.terminal2:
-        return Terminal2LauncherHeader(label: label, accent: accent);
-      case LauncherDesign.omarchy:
-        return OmarchyLauncherHeader(label: label, accent: accent);
-      case LauncherDesign.tui:
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-          child: Text(' $label', style: TuiTokens.mono(color: TuiTokens.dim)),
-        );
-    }
-  }
+  Widget buildFrame({
+    required Widget child,
+    required Widget searchContent,
+    required Widget resultsContent,
+    required int resultCount,
+    required TextEditingController queryController,
+  }) =>
+      switch (this) {
+        LauncherDesign.anime => AnimeLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.aurora => AuroraLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.blueprint => BlueprintLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.capillary =>
+          CapillaryLauncherFrame(child: child, resultCount: resultCount, queryController: queryController),
+        LauncherDesign.classic => ClassicLauncherFrame(child: child),
+        LauncherDesign.command => CommandLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.crt => CrtLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.cyber => CyberLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.fluent => FluentLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.glass => GlassLauncherFrame(child: child),
+        LauncherDesign.liquidMetal => LiquidMetalLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.manga => MangaLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.manifesto => ManifestoLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.matrix =>
+          MatrixLauncherFrame(searchChild: searchContent, resultsChild: resultsContent, resultCount: resultCount),
+        LauncherDesign.newCast => RaycastLauncherFrame(child: child),
+        LauncherDesign.notion => NotionLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.omarchy => OmarchyLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.opticalGlass => OpticalGlassLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.orbit => OrbitLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.outrun => Outrun2LauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.phosphor => PhosphorLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.relay => RelayLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.retro => RetroLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.serene => SereneLauncherFrame(child: child),
+        LauncherDesign.steam => SteamLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.strata => StrataLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.switchboard => SwitchboardLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.tech => TechLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.terminal => TerminalLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.terminal2 => Terminal2LauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.thermal => ThermalLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.toon => ToonLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.transit => TransitLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.tui => TuiLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.vector => VectorLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.windows98 => Windows98LauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.windowsXp => WindowsXpLauncherFrame(child: child, resultCount: resultCount),
+        LauncherDesign.zen => ZenLauncherFrame(child: child, resultCount: resultCount),
+      };
 }
-
-// ---------------------------------------------------------------------------
-// Manifesto search bar
-// ---------------------------------------------------------------------------

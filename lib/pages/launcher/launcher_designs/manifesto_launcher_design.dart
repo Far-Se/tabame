@@ -1,24 +1,29 @@
 part of '../launcher_design_builder.dart';
 
-class _ManifestoSearchBar extends StatelessWidget {
-  const _ManifestoSearchBar({
-    required this.accent,
-    required this.onSurface,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+BoxDecoration _manifestoOuterDecoration(Color surface) {
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(Design.borderRadius),
+    color: surface,
+    border: Border.all(color: ManifestoTokens.fg(surface.computeLuminance() < 0.5), width: 2),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withAlpha(110),
+        blurRadius: 0,
+        offset: const Offset(7, 7),
+      ),
+    ],
+  );
+}
 
-  final Color accent;
-  final Color onSurface;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _ManifestoSearchBar extends StatelessWidget {
+  const _ManifestoSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final Color paper = Theme.of(context).colorScheme.surface;
     return Container(
       height: 56,
@@ -60,30 +65,25 @@ class _ManifestoSearchBar extends StatelessWidget {
                 Positioned(
                     right: 6,
                     top: 7,
-                    child: ColorFiltered(colorFilter: ColorFilter.mode(paper, BlendMode.srcIn), child: dragHandle)),
+                    child: ColorFiltered(
+                        colorFilter: ColorFilter.mode(paper, BlendMode.srcIn), child: content.dragHandle)),
               ],
             ),
           ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 3, 6, 3),
-              child: Stack(
-                alignment: Alignment.centerRight,
-                children: <Widget>[
-                  textField,
-                  if (trailingBadge != null) trailingBadge!,
-                ],
-              ),
+              child: _LauncherSearchField(content, badgePadding: 0),
             ),
           ),
           AnimatedContainer(
             duration: const Duration(milliseconds: 140),
             curve: Curves.easeOutQuart,
-            width: isSearching ? 18 : 10,
+            width: content.isSearching ? 18 : 10,
             height: double.infinity,
             color: accent,
             alignment: Alignment.center,
-            child: isSearching
+            child: content.isSearching
                 ? SizedBox(
                     width: 8,
                     height: 8,
@@ -97,67 +97,47 @@ class _ManifestoSearchBar extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Classic search bar
-// ---------------------------------------------------------------------------
-
 class ManifestoLauncherFrame extends StatelessWidget {
-  const ManifestoLauncherFrame({
-    super.key,
-    required this.child,
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    this.resultCount = 0,
-  });
+  const ManifestoLauncherFrame({super.key, required this.child, this.resultCount = 0});
 
   final Widget child;
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.manifesto),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: LauncherDesign.manifesto.outerDecoration(surface: surface, accent: accent),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          child: Stack(
-            children: <Widget>[
-              if (Design.hasBackdrop) const StableBackdrop(),
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: CustomPaint(painter: _ManifestoGridPainter(color: onSurface.withAlpha(18))),
-                ),
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _manifestoOuterDecoration(surface),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Design.borderRadius),
+        child: Stack(
+          children: <Widget>[
+            if (Design.hasBackdrop) const StableBackdrop(),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(painter: _ManifestoGridPainter(color: onSurface.withAlpha(18))),
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 22),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    child,
-                    _ManifestoFooter(
-                      paper: surface,
-                      ink: onSurface,
-                      accent: accent,
-                      resultCount: resultCount,
-                    ),
-                  ],
-                ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 22),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  child,
+                  _ManifestoFooter(paper: surface, ink: onSurface, resultCount: resultCount),
+                ],
               ),
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: 22,
-                child: _ManifestoIssueRail(paper: surface, ink: onSurface, accent: accent),
-              ),
-            ],
-          ),
+            ),
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 22,
+              child: _ManifestoIssueRail(paper: surface, ink: onSurface),
+            ),
+          ],
         ),
       ),
     );
@@ -165,14 +145,14 @@ class ManifestoLauncherFrame extends StatelessWidget {
 }
 
 class _ManifestoIssueRail extends StatelessWidget {
-  const _ManifestoIssueRail({required this.paper, required this.ink, required this.accent});
+  const _ManifestoIssueRail({required this.paper, required this.ink});
 
   final Color paper;
   final Color ink;
-  final Color accent;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
     return Container(
       color: accent,
       child: Column(
@@ -200,20 +180,15 @@ class _ManifestoIssueRail extends StatelessWidget {
 }
 
 class _ManifestoFooter extends StatelessWidget {
-  const _ManifestoFooter({
-    required this.paper,
-    required this.ink,
-    required this.accent,
-    required this.resultCount,
-  });
+  const _ManifestoFooter({required this.paper, required this.ink, required this.resultCount});
 
   final Color paper;
   final Color ink;
-  final Color accent;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
     Text key(String glyph, String label) {
       return Text.rich(
         TextSpan(
@@ -294,10 +269,3 @@ class _ManifestoGridPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _ManifestoGridPainter oldDelegate) => oldDelegate.color != color;
 }
-
-// ---------------------------------------------------------------------------
-// Orbit (spacecraft guidance HUD) — telemetry-labelled search field with an
-// animated acquisition scope, a graduation-tick underline, a range-ring frame,
-// and a telemetry strip as the footer. Results render as track lines with a
-// corner-bracket lock reticle (see LauncherResultRow._buildOrbit).
-// ---------------------------------------------------------------------------

@@ -1,24 +1,37 @@
 part of '../launcher_design_builder.dart';
 
-class _ZenSearchBar extends StatelessWidget {
-  const _ZenSearchBar({
-    required this.accent,
-    required this.onSurface,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+BoxDecoration _zenOuterDecoration(Color surface, Color accent) {
+  // Soft "dawn" wash over the forced sage surface; big, diffuse shadow.
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(Design.borderRadius),
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: <Color>[
+        Color.alphaBlend(Colors.white.withAlpha(22), surface),
+        surface,
+      ],
+    ),
+    border: Border.all(color: accent.withAlpha(40)),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withAlpha(28),
+        blurRadius: 48,
+        spreadRadius: -8,
+        offset: const Offset(0, 20),
+      ),
+    ],
+  );
+}
 
-  final Color accent;
-  final Color onSurface;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _ZenSearchBar extends StatelessWidget {
+  const _ZenSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
     // A soft floating pill with generous margin — room to breathe.
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -31,22 +44,12 @@ class _ZenSearchBar extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            dragHandle,
+            content.dragHandle,
             const SizedBox(width: 12),
             Expanded(
-              child: Stack(
-                alignment: Alignment.centerRight,
-                children: <Widget>[
-                  textField,
-                  if (trailingBadge != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: trailingBadge!,
-                    ),
-                ],
-              ),
+              child: _LauncherSearchField(content),
             ),
-            if (isSearching)
+            if (content.isSearching)
               Padding(
                 padding: const EdgeInsets.only(left: 10),
                 child: SizedBox(
@@ -65,56 +68,45 @@ class _ZenSearchBar extends StatelessWidget {
 /// The calm outer frame — soft dawn wash, big rounding, and a faint
 /// rolling-hills horizon footer.
 class ZenLauncherFrame extends StatelessWidget {
-  const ZenLauncherFrame({
-    super.key,
-    required this.child,
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    this.resultCount = 0,
-  });
+  const ZenLauncherFrame({super.key, required this.child, this.resultCount = 0});
 
   final Widget child;
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.zen),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 340),
-        decoration: LauncherDesign.zen.outerDecoration(surface: surface, accent: accent),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          child: Stack(
-            children: <Widget>[
-              if (Design.hasBackdrop) const StableBackdrop(),
-              // Soft dawn glow drifting in from the top-left.
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: RadialGradient(
-                        center: const Alignment(-0.7, -0.9),
-                        radius: 1.3,
-                        colors: <Color>[accent.withAlpha(22), accent.withAlpha(0)],
-                      ),
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color accent = LauncherTheme.accentOf(context);
+    return Container(
+      constraints: const BoxConstraints(minHeight: 340),
+      decoration: _zenOuterDecoration(surface, accent),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Design.borderRadius),
+        child: Stack(
+          children: <Widget>[
+            if (Design.hasBackdrop) const StableBackdrop(),
+            // Soft dawn glow drifting in from the top-left.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(-0.7, -0.9),
+                      radius: 1.3,
+                      colors: <Color>[accent.withAlpha(22), accent.withAlpha(0)],
                     ),
                   ),
                 ),
               ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  child,
-                  _ZenFooter(accent: accent, onSurface: onSurface, resultCount: resultCount),
-                ],
-              ),
-            ],
-          ),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                child,
+                _ZenFooter(resultCount: resultCount),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -122,14 +114,14 @@ class ZenLauncherFrame extends StatelessWidget {
 }
 
 class _ZenFooter extends StatelessWidget {
-  const _ZenFooter({required this.accent, required this.onSurface, required this.resultCount});
+  const _ZenFooter({required this.resultCount});
 
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return SizedBox(
       width: double.infinity,
       height: 30,
@@ -216,8 +208,3 @@ class _ZenHillsPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _ZenHillsPainter oldDelegate) => oldDelegate.color != color;
 }
-
-// ---------------------------------------------------------------------------
-// Glass (iOS Liquid Glass) — translucent capsule search field + layered glass
-// frame with specular highlights and an accent refraction glow.
-// ---------------------------------------------------------------------------

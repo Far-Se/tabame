@@ -1,6 +1,6 @@
 part of '../launcher_design_builder.dart';
 
-BoxDecoration notionLauncherOuterDecoration(Color surface) {
+BoxDecoration _notionOuterDecoration(Color surface) {
   final bool isDark = surface.computeLuminance() < 0.5;
   return BoxDecoration(
     color: NotionTokens.canvas(isDark),
@@ -22,26 +22,15 @@ BoxDecoration notionLauncherOuterDecoration(Color surface) {
   );
 }
 
-class NotionLauncherSearchBar extends StatelessWidget {
-  const NotionLauncherSearchBar({
-    super.key,
-    required this.accent,
-    required this.onSurface,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+class _NotionLauncherSearchBar extends StatelessWidget {
+  const _NotionLauncherSearchBar(this.content);
 
-  final Color accent;
-  final Color onSurface;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return ColoredBox(
       color: NotionTokens.canvas(isDark),
@@ -75,22 +64,12 @@ class NotionLauncherSearchBar extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(12, 2, 12, 10),
             child: Row(
               children: <Widget>[
-                dragHandle,
+                content.dragHandle,
                 const SizedBox(width: 9),
                 Expanded(
-                  child: Stack(
-                    alignment: Alignment.centerRight,
-                    children: <Widget>[
-                      textField,
-                      if (trailingBadge != null)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: trailingBadge!,
-                        ),
-                    ],
-                  ),
+                  child: _LauncherSearchField(content),
                 ),
-                if (isSearching)
+                if (content.isSearching)
                   Padding(
                     padding: const EdgeInsets.only(left: 8),
                     child: SizedBox(
@@ -133,44 +112,34 @@ class NotionLauncherHeader extends StatelessWidget {
 }
 
 class NotionLauncherFrame extends StatelessWidget {
-  const NotionLauncherFrame({
-    super.key,
-    required this.child,
-    required this.surface,
-    required this.resultCount,
-    Color? accent,
-    Color? onSurface,
-  });
+  const NotionLauncherFrame({super.key, required this.child, required this.resultCount});
 
   final Widget child;
-  final Color surface;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
     final bool isDark = surface.computeLuminance() < 0.5;
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.notion),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: notionLauncherOuterDecoration(surface),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(7),
-          child: Stack(
-            children: <Widget>[
-              if (Design.hasBackdrop) const StableBackdrop(),
-              ColoredBox(
-                color: NotionTokens.canvas(isDark).withAlpha(Design.hasBackdrop ? (isDark ? 224 : 232) : 255),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    child,
-                    _NotionLauncherFooter(isDark: isDark, resultCount: resultCount),
-                  ],
-                ),
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _notionOuterDecoration(surface),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(7),
+        child: Stack(
+          children: <Widget>[
+            if (Design.hasBackdrop) const StableBackdrop(),
+            ColoredBox(
+              color: NotionTokens.canvas(isDark).withAlpha(Design.hasBackdrop ? (isDark ? 224 : 232) : 255),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  child,
+                  _NotionLauncherFooter(isDark: isDark, resultCount: resultCount),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

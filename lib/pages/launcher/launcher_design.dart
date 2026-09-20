@@ -146,12 +146,12 @@ TextTheme launcherTextTheme(TextTheme designTextTheme) {
 /// Terminal colors derived from the active Launcher Design Colors.
 /// Read launcher settings directly so action dialogs use the same palette.
 abstract final class OmarchyTokens {
-  static Color bg(bool dark) => user.launcherThemeColors.background;
-  static Color fg(bool dark) => user.launcherThemeColors.text;
-  static Color dim(bool dark) => Color.alphaBlend(fg(dark).withValues(alpha: 0.72), bg(dark));
-  static Color accent(bool dark) => user.launcherThemeColors.accent;
-  static Color selected(bool dark) => Color.alphaBlend(accent(dark).withValues(alpha: 0.18), bg(dark));
-  static Color border(bool dark) => Color.alphaBlend(fg(dark).withValues(alpha: 0.42), bg(dark));
+  static Color get bg => user.launcherThemeColors.background;
+  static Color get fg => user.launcherThemeColors.text;
+  static Color get dim => Color.alphaBlend(fg.withValues(alpha: 0.72), bg);
+  static Color get accent => user.launcherThemeColors.accent;
+  static Color get selected => Color.alphaBlend(accent.withValues(alpha: 0.18), bg);
+  static Color get border => Color.alphaBlend(fg.withValues(alpha: 0.42), bg);
 
   static TextStyle mono(
           {double? fontSize, FontWeight? fontWeight, Color? color, double? letterSpacing, double? height}) =>
@@ -1214,10 +1214,17 @@ class LauncherTheme extends InheritedWidget {
   const LauncherTheme({
     super.key,
     required this.data,
+    required this.accent,
     required super.child,
   });
 
   final LauncherThemeData data;
+
+  /// The design accent can differ from Material's primary color.
+  final Color accent;
+
+  static Color accentOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<LauncherTheme>()?.accent ?? Theme.of(context).colorScheme.primary;
 
   static LauncherThemeData of(BuildContext context) {
     final LauncherTheme? theme = context.dependOnInheritedWidgetOfExactType<LauncherTheme>();
@@ -1229,7 +1236,7 @@ class LauncherTheme extends InheritedWidget {
       context.dependOnInheritedWidgetOfExactType<LauncherTheme>()?.data;
 
   @override
-  bool updateShouldNotify(LauncherTheme oldWidget) => data != oldWidget.data;
+  bool updateShouldNotify(LauncherTheme oldWidget) => data != oldWidget.data || accent != oldWidget.accent;
 }
 
 /// Reference palette for the Aurora night landscape design.
@@ -1342,10 +1349,8 @@ abstract final class RetroTokens {
   static Color get accent => user.launcherThemeColors.accent;
   static Color get panel => Color.alphaBlend(foreground.withValues(alpha: 0.06), background);
   static Color get bezel => Color.alphaBlend(accent.withValues(alpha: 0.12), background);
-  static Color get cyan =>
-      isDark ? Color.lerp(accent, foreground, 0.45)! : const Color(0xFF2E7B93);
-  static Color get yellow =>
-      isDark ? Color.lerp(accent, foreground, 0.72)! : const Color(0xFF986A16);
+  static Color get cyan => isDark ? Color.lerp(accent, foreground, 0.45)! : const Color(0xFF2E7B93);
+  static Color get yellow => isDark ? Color.lerp(accent, foreground, 0.72)! : const Color(0xFF986A16);
   static Color get dim => Color.alphaBlend(foreground.withValues(alpha: 0.7), background);
   static Color get border => Color.alphaBlend(accent.withValues(alpha: 0.38), background);
   static Color get selected => Color.alphaBlend(accent.withValues(alpha: 0.16), background);

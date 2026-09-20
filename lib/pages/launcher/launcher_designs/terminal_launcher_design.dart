@@ -1,44 +1,43 @@
 part of '../launcher_design_builder.dart';
 
-class _TerminalSearchBar extends StatelessWidget {
-  const _TerminalSearchBar({
-    required this.accent,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+BoxDecoration _terminalOuterDecoration(Color surface, Color accent) {
+  // Console screen — [surface] is the forced terminal palette background
+  // (light or dark) supplied by the launcher theme.
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(Design.borderRadius),
+    color: surface,
+    border: Border.all(color: accent.withAlpha(60)),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withAlpha(120),
+        blurRadius: 30,
+        spreadRadius: -4,
+        offset: const Offset(0, 14),
+      ),
+    ],
+  );
+}
 
-  final Color accent;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _TerminalSearchBar extends StatelessWidget {
+  const _TerminalSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 11, 12, 9),
       child: Row(
         children: <Widget>[
           // Prompt chevron (also the window drag handle).
-          dragHandle,
+          content.dragHandle,
           const SizedBox(width: 6),
           Expanded(
-            child: Stack(
-              alignment: Alignment.centerRight,
-              children: <Widget>[
-                textField,
-                if (trailingBadge != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: trailingBadge!,
-                  ),
-              ],
-            ),
+            child: _LauncherSearchField(content),
           ),
           // Blinking-style block cursor that runs while a query resolves.
-          if (isSearching)
+          if (content.isSearching)
             Padding(
               padding: const EdgeInsets.only(left: 8),
               child: SizedBox(
@@ -103,50 +102,39 @@ class _TerminalBlinkCursorState extends State<_TerminalBlinkCursor> with SingleT
 /// The console window — a forced-dark screen with a faux title bar, a
 /// keyboard status line, and a subtle CRT scanline overlay.
 class TerminalLauncherFrame extends StatelessWidget {
-  const TerminalLauncherFrame({
-    super.key,
-    required this.child,
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    this.resultCount = 0,
-  });
+  const TerminalLauncherFrame({super.key, required this.child, this.resultCount = 0});
 
   final Widget child;
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color accent = LauncherTheme.accentOf(context);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.terminal),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: LauncherDesign.terminal.outerDecoration(surface: surface, accent: accent),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          child: Stack(
-            children: <Widget>[
-              if (Design.hasBackdrop) const StableBackdrop(),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  if (user.launcherShowTitlebar) _TerminalTitleBar(accent: accent, isDark: isDark),
-                  child,
-                  _TerminalStatusBar(accent: accent, resultCount: resultCount, isDark: isDark),
-                ],
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _terminalOuterDecoration(surface, accent),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Design.borderRadius),
+        child: Stack(
+          children: <Widget>[
+            if (Design.hasBackdrop) const StableBackdrop(),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (user.launcherShowTitlebar) _TerminalTitleBar(isDark: isDark),
+                child,
+                _TerminalStatusBar(resultCount: resultCount, isDark: isDark),
+              ],
+            ),
+            // CRT scanlines.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(painter: _ScanlinePainter(isDark: isDark)),
               ),
-              // CRT scanlines.
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: CustomPaint(painter: _ScanlinePainter(isDark: isDark)),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -154,13 +142,13 @@ class TerminalLauncherFrame extends StatelessWidget {
 }
 
 class _TerminalTitleBar extends StatelessWidget {
-  const _TerminalTitleBar({required this.accent, required this.isDark});
+  const _TerminalTitleBar({required this.isDark});
 
-  final Color accent;
   final bool isDark;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
     return GestureDetector(
       onPanStart: (DragStartDetails _) {
         windowManager.startDragging();
@@ -213,14 +201,14 @@ class _TerminalTitleBar extends StatelessWidget {
 }
 
 class _TerminalStatusBar extends StatelessWidget {
-  const _TerminalStatusBar({required this.accent, required this.resultCount, required this.isDark});
+  const _TerminalStatusBar({required this.resultCount, required this.isDark});
 
-  final Color accent;
   final int resultCount;
   final bool isDark;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
     final TextStyle key = TerminalTokens.mono(
       fontSize: Design.baseFontSize - 1.5,
       color: accent.withAlpha(210),
@@ -289,7 +277,3 @@ class _ScanlinePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _ScanlinePainter oldDelegate) => oldDelegate.isDark != isDark;
 }
-
-// ---------------------------------------------------------------------------
-// Zen (nature) — a calm, airy search field, frame, and rolling-hills footer.
-// ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 part of '../launcher_design_builder.dart';
 
-BoxDecoration windowsXpLauncherOuterDecoration() {
+BoxDecoration _windowsXpOuterDecoration() {
   return BoxDecoration(
     color: WindowsXpTokens.surface,
     borderRadius: BorderRadius.circular(7),
@@ -12,19 +12,10 @@ BoxDecoration windowsXpLauncherOuterDecoration() {
   );
 }
 
-class WindowsXpLauncherSearchBar extends StatelessWidget {
-  const WindowsXpLauncherSearchBar({
-    super.key,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+class _WindowsXpLauncherSearchBar extends StatelessWidget {
+  const _WindowsXpLauncherSearchBar(this.content);
 
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
@@ -127,18 +118,12 @@ class WindowsXpLauncherSearchBar extends StatelessWidget {
                   ),
                   child: Row(
                     children: <Widget>[
-                      dragHandle,
+                      content.dragHandle,
                       const SizedBox(width: 6),
                       Expanded(
-                        child: Stack(
-                          alignment: Alignment.centerRight,
-                          children: <Widget>[
-                            textField,
-                            if (trailingBadge != null) trailingBadge!,
-                          ],
-                        ),
+                        child: _LauncherSearchField(content, badgePadding: 0),
                       ),
-                      if (isSearching)
+                      if (content.isSearching)
                         const Padding(
                           padding: EdgeInsets.only(left: 6, right: 2),
                           child: SizedBox(
@@ -202,36 +187,26 @@ class WindowsXpLauncherHeader extends StatelessWidget {
 }
 
 class WindowsXpLauncherFrame extends StatelessWidget {
-  const WindowsXpLauncherFrame({
-    super.key,
-    required this.child,
-    required this.resultCount,
-    Color? surface,
-    Color? accent,
-    Color? onSurface,
-  });
+  const WindowsXpLauncherFrame({super.key, required this.child, required this.resultCount});
 
   final Widget child;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.windowsXp),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: windowsXpLauncherOuterDecoration(),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(5),
-          child: ColoredBox(
-            color: WindowsXpTokens.paper,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                child,
-                _WindowsXpFooter(resultCount: resultCount),
-              ],
-            ),
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _windowsXpOuterDecoration(),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(5),
+        child: ColoredBox(
+          color: WindowsXpTokens.paper,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              child,
+              _WindowsXpFooter(resultCount: resultCount),
+            ],
           ),
         ),
       ),

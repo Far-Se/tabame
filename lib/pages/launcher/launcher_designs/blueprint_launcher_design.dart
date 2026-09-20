@@ -1,24 +1,32 @@
 part of '../launcher_design_builder.dart';
 
-class _BlueprintSearchBar extends StatelessWidget {
-  const _BlueprintSearchBar({
-    required this.accent,
-    required this.onSurface,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+BoxDecoration _blueprintOuterDecoration(Color surface, Color accent) {
+  // Drafting sheet — [surface] is the forced blueprint palette. Sharp
+  // corners, a crisp ink edge, and a flat paper shadow (no glow).
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(Design.borderRadius),
+    color: surface,
+    border: Border.all(color: accent.withAlpha(110)),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withAlpha(90),
+        blurRadius: 26,
+        spreadRadius: -6,
+        offset: const Offset(0, 12),
+      ),
+    ],
+  );
+}
 
-  final Color accent;
-  final Color onSurface;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _BlueprintSearchBar extends StatelessWidget {
+  const _BlueprintSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final TextStyle microLabel = BlueprintTokens.tech(
       fontSize: Design.baseFontSize - 3.5,
       color: onSurface.withAlpha(110),
@@ -43,22 +51,12 @@ class _BlueprintSearchBar extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 3, 14, 0),
           child: Row(
             children: <Widget>[
-              dragHandle,
+              content.dragHandle,
               const SizedBox(width: 10),
               Expanded(
-                child: Stack(
-                  alignment: Alignment.centerRight,
-                  children: <Widget>[
-                    textField,
-                    if (trailingBadge != null)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: trailingBadge!,
-                      ),
-                  ],
-                ),
+                child: _LauncherSearchField(content),
               ),
-              if (isSearching)
+              if (content.isSearching)
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
                   child: SizedBox(
@@ -116,48 +114,37 @@ class _BlueprintRulerPainter extends CustomPainter {
 /// The drafting sheet — grid paper, an inner sheet border with corner
 /// registration crosses, and an engineering title block along the bottom.
 class BlueprintLauncherFrame extends StatelessWidget {
-  const BlueprintLauncherFrame({
-    super.key,
-    required this.child,
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    this.resultCount = 0,
-  });
+  const BlueprintLauncherFrame({super.key, required this.child, this.resultCount = 0});
 
   final Widget child;
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.blueprint),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: LauncherDesign.blueprint.outerDecoration(surface: surface, accent: accent),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          child: Stack(
-            children: <Widget>[
-              if (Design.hasBackdrop) const StableBackdrop(),
-              // Grid paper + inner sheet border + corner registration marks.
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: CustomPaint(painter: _BlueprintSheetPainter(ink: accent)),
-                ),
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color accent = LauncherTheme.accentOf(context);
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _blueprintOuterDecoration(surface, accent),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Design.borderRadius),
+        child: Stack(
+          children: <Widget>[
+            if (Design.hasBackdrop) const StableBackdrop(),
+            // Grid paper + inner sheet border + corner registration marks.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(painter: _BlueprintSheetPainter(ink: accent)),
               ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  child,
-                  _BlueprintTitleBlock(accent: accent, onSurface: onSurface, resultCount: resultCount),
-                ],
-              ),
-            ],
-          ),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                child,
+                _BlueprintTitleBlock(resultCount: resultCount),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -218,64 +205,60 @@ class _BlueprintSheetPainter extends CustomPainter {
 
 /// The engineering title block: labeled cells separated by ruled dividers.
 class _BlueprintTitleBlock extends StatelessWidget {
-  const _BlueprintTitleBlock({
-    required this.accent,
-    required this.onSurface,
-    required this.resultCount,
-  });
+  const _BlueprintTitleBlock({required this.resultCount});
 
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
 
-  Widget _cell(String label, String value, {bool expand = false}) {
-    final Widget content = Padding(
-      padding: const EdgeInsets.fromLTRB(10, 4, 10, 9),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            label,
-            style: BlueprintTokens.tech(
-              fontSize: Design.baseFontSize - 4,
-              color: onSurface.withAlpha(110),
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.6,
-              height: 1.1,
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+
+    Widget buildCell(String label, String value, {bool expand = false}) {
+      final Widget content = Padding(
+        padding: const EdgeInsets.fromLTRB(10, 4, 10, 9),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              label,
+              style: BlueprintTokens.tech(
+                fontSize: Design.baseFontSize - 4,
+                color: onSurface.withAlpha(110),
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.6,
+                height: 1.1,
+              ),
             ),
-          ),
-          const SizedBox(height: 1),
-          value == "TIME"
-              ? DateTimeWidget(
-                  // padding: const EdgeInsets.only(left: 10),
-                  style: BlueprintTokens.tech(
-                  fontSize: Design.baseFontSize - 1.5,
-                  color: onSurface.withAlpha(220),
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.8,
-                  height: 1.1,
-                ))
-              : Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                  style: BlueprintTokens.tech(
+            const SizedBox(height: 1),
+            value == "TIME"
+                ? DateTimeWidget(
+                    style: BlueprintTokens.tech(
                     fontSize: Design.baseFontSize - 1.5,
                     color: onSurface.withAlpha(220),
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.8,
                     height: 1.1,
+                  ))
+                : Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
+                    style: BlueprintTokens.tech(
+                      fontSize: Design.baseFontSize - 1.5,
+                      color: onSurface.withAlpha(220),
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.8,
+                      height: 1.1,
+                    ),
                   ),
-                ),
-        ],
-      ),
-    );
-    return expand ? Expanded(child: content) : content;
-  }
+          ],
+        ),
+      );
+      return expand ? Expanded(child: content) : content;
+    }
 
-  @override
-  Widget build(BuildContext context) {
     final Widget divider = Container(width: 1, color: accent.withAlpha(80));
     return Container(
       decoration: BoxDecoration(
@@ -284,26 +267,20 @@ class _BlueprintTitleBlock extends StatelessWidget {
       child: IntrinsicHeight(
         child: Row(
           children: <Widget>[
-            _cell('DRAWING', 'TABAME — QUICK LAUNCH', expand: true),
+            buildCell('DRAWING', 'TABAME — QUICK LAUNCH', expand: true),
             divider,
-            _cell('ENTER', 'OPEN'),
+            buildCell('ENTER', 'OPEN'),
             divider,
-            _cell('ESC', 'CLOSE'),
+            buildCell('ESC', 'CLOSE'),
             divider,
             Globals.isLauncherPluginActive
-                ? _cell('TPY', "PLUGIN")
-                : _cell('QTY', resultCount.toString().padLeft(2, '0')),
+                ? buildCell('TPY', "PLUGIN")
+                : buildCell('QTY', resultCount.toString().padLeft(2, '0')),
             divider,
-            _cell('TIME', 'TIME'),
+            buildCell('TIME', 'TIME'),
           ],
         ),
       ),
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Transit (metro map) — destination-sign search bar topped by the line-color
-// band, a station-sign frame, and a platform-strip footer. Results render as
-// stations on a continuous route line (see LauncherResultRow._buildTransit).
-// ---------------------------------------------------------------------------

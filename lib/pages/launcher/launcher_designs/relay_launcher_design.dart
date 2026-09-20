@@ -1,19 +1,25 @@
 part of '../launcher_design_builder.dart';
 
-class _RelaySearchBar extends StatefulWidget {
-  const _RelaySearchBar({
-    required this.accent,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+BoxDecoration _relayOuterDecoration(Color surface, Color accent) {
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(Design.borderRadius),
+    color: surface,
+    border: Border.all(color: RelayTokens.border(surface.computeLuminance() < 0.5, accent)),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withAlpha(82),
+        blurRadius: 24,
+        spreadRadius: -7,
+        offset: const Offset(0, 12),
+      ),
+    ],
+  );
+}
 
-  final Color accent;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _RelaySearchBar extends StatefulWidget {
+  const _RelaySearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
   State<_RelaySearchBar> createState() => _RelaySearchBarState();
@@ -27,7 +33,7 @@ class _RelaySearchBarState extends State<_RelaySearchBar> with SingleTickerProvi
 
   void _syncAnimation() {
     final bool reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    if (widget.isSearching && !reduceMotion) {
+    if (widget.content.isSearching && !reduceMotion) {
       if (!_controller.isAnimating) _controller.repeat();
     } else if (_controller.isAnimating) {
       _controller.stop();
@@ -55,10 +61,11 @@ class _RelaySearchBarState extends State<_RelaySearchBar> with SingleTickerProvi
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color dim = RelayTokens.dim(isDark);
     return Container(
-      color: RelayTokens.panel(isDark, widget.accent),
+      color: RelayTokens.panel(isDark, accent),
       padding: const EdgeInsets.fromLTRB(14, 9, 14, 6),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -81,12 +88,12 @@ class _RelaySearchBarState extends State<_RelaySearchBar> with SingleTickerProvi
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 120),
                     child: Text(
-                      widget.isSearching ? 'ROUTING' : 'RX READY',
-                      key: ValueKey<bool>(widget.isSearching),
+                      widget.content.isSearching ? 'ROUTING' : 'RX READY',
+                      key: ValueKey<bool>(widget.content.isSearching),
                       style: RelayTokens.channel(
                         fontSize: Design.baseFontSize + 1,
                         fontWeight: FontWeight.w600,
-                        color: widget.isSearching ? widget.accent : dim,
+                        color: widget.content.isSearching ? accent : dim,
                         letterSpacing: 1.4,
                         height: 0.9,
                       ),
@@ -104,25 +111,15 @@ class _RelaySearchBarState extends State<_RelaySearchBar> with SingleTickerProvi
                 height: 32,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: RelayTokens.raised(isDark, widget.accent),
+                  color: RelayTokens.raised(isDark, accent),
                   borderRadius: BorderRadius.circular(3),
-                  border: Border.all(color: RelayTokens.border(isDark, widget.accent)),
+                  border: Border.all(color: RelayTokens.border(isDark, accent)),
                 ),
-                child: widget.dragHandle,
+                child: widget.content.dragHandle,
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Stack(
-                  alignment: Alignment.centerRight,
-                  children: <Widget>[
-                    widget.textField,
-                    if (widget.trailingBadge != null)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: widget.trailingBadge!,
-                      ),
-                  ],
-                ),
+                child: _LauncherSearchField(widget.content),
               ),
             ],
           ),
@@ -135,8 +132,8 @@ class _RelaySearchBarState extends State<_RelaySearchBar> with SingleTickerProvi
               builder: (BuildContext context, Widget? child) {
                 return CustomPaint(
                   painter: _RelaySignalPainter(
-                    color: widget.accent,
-                    progress: widget.isSearching ? _controller.value : null,
+                    color: accent,
+                    progress: widget.content.isSearching ? _controller.value : null,
                   ),
                 );
               },
@@ -198,47 +195,37 @@ class _RelaySignalPainter extends CustomPainter {
 }
 
 class RelayLauncherFrame extends StatelessWidget {
-  const RelayLauncherFrame({
-    super.key,
-    required this.child,
-    required this.surface,
-    required this.accent,
-    this.resultCount = 0,
-    Color? onSurface,
-  });
+  const RelayLauncherFrame({super.key, required this.child, this.resultCount = 0});
 
   final Widget child;
-  final Color surface;
-  final Color accent;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color accent = LauncherTheme.accentOf(context);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.relay),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: LauncherDesign.relay.outerDecoration(surface: surface, accent: accent),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          child: Stack(
-            children: <Widget>[
-              if (Design.hasBackdrop) const StableBackdrop(),
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: CustomPaint(painter: _RelayBackplanePainter(color: accent, isDark: isDark)),
-                ),
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _relayOuterDecoration(surface, accent),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Design.borderRadius),
+        child: Stack(
+          children: <Widget>[
+            if (Design.hasBackdrop) const StableBackdrop(),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(painter: _RelayBackplanePainter(color: accent, isDark: isDark)),
               ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  child,
-                  _RelayFooter(accent: accent, resultCount: resultCount, isDark: isDark),
-                ],
-              ),
-            ],
-          ),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                child,
+                _RelayFooter(resultCount: resultCount, isDark: isDark),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -352,43 +339,44 @@ class _RelayHeaderTracePainter extends CustomPainter {
 }
 
 class _RelayFooter extends StatelessWidget {
-  const _RelayFooter({required this.accent, required this.resultCount, required this.isDark});
+  const _RelayFooter({required this.resultCount, required this.isDark});
 
-  final Color accent;
   final int resultCount;
   final bool isDark;
 
-  Widget _hint(String key, String caption) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Text(
-          key,
-          style: RelayTokens.channel(
-            fontSize: Design.baseFontSize + 1,
-            color: accent,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.7,
-            height: 0.9,
-          ),
-        ),
-        const SizedBox(width: 3),
-        Text(
-          caption,
-          style: RelayTokens.channel(
-            fontSize: Design.baseFontSize + 1,
-            color: RelayTokens.dim(isDark),
-            fontWeight: FontWeight.w500,
-            letterSpacing: 1.0,
-            height: 0.9,
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
+
+    Widget buildHint(String key, String caption) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            key,
+            style: RelayTokens.channel(
+              fontSize: Design.baseFontSize + 1,
+              color: accent,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.7,
+              height: 0.9,
+            ),
+          ),
+          const SizedBox(width: 3),
+          Text(
+            caption,
+            style: RelayTokens.channel(
+              fontSize: Design.baseFontSize + 1,
+              color: RelayTokens.dim(isDark),
+              fontWeight: FontWeight.w500,
+              letterSpacing: 1.0,
+              height: 0.9,
+            ),
+          ),
+        ],
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 7, 14, 7),
       decoration: BoxDecoration(
@@ -399,11 +387,11 @@ class _RelayFooter extends StatelessWidget {
         children: <Widget>[
           Container(width: 5, height: 5, color: accent),
           const SizedBox(width: 8),
-          _hint('↵', 'OPEN'),
+          buildHint('↵', 'OPEN'),
           const SizedBox(width: 14),
-          _hint('→', 'ACTIONS'),
+          buildHint('→', 'ACTIONS'),
           const SizedBox(width: 14),
-          _hint('ESC', 'CLOSE'),
+          buildHint('ESC', 'CLOSE'),
           const Spacer(),
           Text(
             Globals.isLauncherPluginActive ? 'REMOTE LINK' : '${resultCount.toString().padLeft(2, '0')} ROUTES',

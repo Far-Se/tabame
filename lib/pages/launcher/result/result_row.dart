@@ -251,7 +251,7 @@ class LauncherResultRow extends StatelessWidget {
       LauncherDesign.relay => _buildRelay(context),
       LauncherDesign.terminal2 => _buildTerminal2(context),
       LauncherDesign.newCast => _buildRaycast(context),
-      LauncherDesign.omarchy => _buildOmarchy(context),
+      LauncherDesign.omarchy => _buildOmarchy(),
       LauncherDesign.tui => _buildTui(context),
     };
   }
@@ -405,7 +405,7 @@ class LauncherResultRow extends StatelessWidget {
                   if (badge != null) Padding(padding: const EdgeInsets.only(left: 8), child: badge),
                   if (isSelected)
                     Padding(
-                        padding: EdgeInsets.only(left: 10),
+                        padding: const EdgeInsets.only(left: 10),
                         child: Icon(Icons.arrow_outward_rounded, size: 16, color: OpticalGlassTokens.accent)),
                 ]),
               ),
@@ -457,7 +457,7 @@ class LauncherResultRow extends StatelessWidget {
                   if (badge != null) Padding(padding: const EdgeInsets.only(left: 8), child: badge),
                   if (isSelected)
                     Padding(
-                        padding: EdgeInsets.only(left: 10),
+                        padding: const EdgeInsets.only(left: 10),
                         child: Icon(Icons.keyboard_return_rounded, size: 16, color: LiquidMetalTokens.accent)),
                 ]),
               ),
@@ -572,7 +572,7 @@ class LauncherResultRow extends StatelessWidget {
                 if (badge != null) Padding(padding: const EdgeInsets.only(left: 8), child: badge),
                 if (isSelected)
                   Padding(
-                    padding: EdgeInsets.only(left: 10),
+                    padding: const EdgeInsets.only(left: 10),
                     child: Icon(Icons.keyboard_return_rounded, size: 16, color: ToonTokens.orange),
                   ),
               ],
@@ -729,7 +729,7 @@ class LauncherResultRow extends StatelessWidget {
             if (badge != null) Padding(padding: const EdgeInsets.only(left: 10), child: badge),
             if (isSelected)
               Padding(
-                  padding: EdgeInsets.only(left: 16),
+                  padding: const EdgeInsets.only(left: 16),
                   child: Icon(Icons.keyboard_return_rounded, color: StrataTokens.accent, size: 21)),
           ]),
         ),
@@ -2112,9 +2112,8 @@ class LauncherResultRow extends StatelessWidget {
     );
   }
 
-  Widget _buildOmarchy(BuildContext context) {
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
-    final Color foreground = OmarchyTokens.fg(dark);
+  Widget _buildOmarchy() {
+    final Color foreground = OmarchyTokens.fg;
     return Semantics(
       selected: isSelected,
       button: true,
@@ -2130,7 +2129,7 @@ class LauncherResultRow extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
             decoration: BoxDecoration(
-              color: isSelected ? OmarchyTokens.selected(dark) : Colors.transparent,
+              color: isSelected ? OmarchyTokens.selected : Colors.transparent,
               border: Border.all(color: isSelected ? accent : Colors.transparent),
             ),
             child: Row(children: <Widget>[
@@ -2152,7 +2151,7 @@ class LauncherResultRow extends StatelessWidget {
                               color: isSelected ? accent : foreground,
                               height: 1.2)),
                           _subtitleText(OmarchyTokens.mono(
-                              fontSize: Design.baseFontSize + 1, color: OmarchyTokens.dim(dark), height: 1.25)),
+                              fontSize: Design.baseFontSize + 1, color: OmarchyTokens.dim, height: 1.25)),
                         ],
                       )),
               if (badge != null) Padding(padding: const EdgeInsets.only(left: 8), child: badge),

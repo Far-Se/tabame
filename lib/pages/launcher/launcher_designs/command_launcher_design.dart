@@ -1,26 +1,29 @@
 part of '../launcher_design_builder.dart';
 
-class _CommandSearchBar extends StatelessWidget {
-  const _CommandSearchBar({
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+BoxDecoration _commandOuterDecoration(Color surface, Color accent) {
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(Design.borderRadius),
+    color: surface.withAlpha(244),
+    border: Border.all(color: accent.withAlpha(56)),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withAlpha(70),
+        blurRadius: 28,
+        spreadRadius: -6,
+        offset: const Offset(0, 12),
+      ),
+    ],
+  );
+}
 
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _CommandSearchBar extends StatelessWidget {
+  const _CommandSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -37,22 +40,12 @@ class _CommandSearchBar extends StatelessWidget {
             child: Row(
               children: <Widget>[
                 // Chevron prompt (also the window drag handle).
-                dragHandle,
+                content.dragHandle,
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Stack(
-                    alignment: Alignment.centerRight,
-                    children: <Widget>[
-                      textField,
-                      if (trailingBadge != null)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: trailingBadge!,
-                        ),
-                    ],
-                  ),
+                  child: _LauncherSearchField(content),
                 ),
-                if (isSearching)
+                if (content.isSearching)
                   Padding(
                     padding: const EdgeInsets.only(left: 8),
                     child: SizedBox(
@@ -70,7 +63,6 @@ class _CommandSearchBar extends StatelessWidget {
           // Bright prompt underline — the blinking-cursor line of the console.
           Container(
             height: 1.5,
-            // margin: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(1),
               gradient: LinearGradient(
@@ -84,61 +76,45 @@ class _CommandSearchBar extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// CommandLauncherFrame — a crisp console window with a top accent rail and a
-// keyboard-hint footer strip.
-// ---------------------------------------------------------------------------
-
 class CommandLauncherFrame extends StatelessWidget {
-  const CommandLauncherFrame({
-    super.key,
-    required this.child,
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    this.resultCount = 0,
-  });
+  const CommandLauncherFrame({super.key, required this.child, this.resultCount = 0});
 
   final Widget child;
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.command),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: LauncherDesign.command.outerDecoration(surface: surface, accent: accent),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          child: Stack(
-            children: <Widget>[
-              if (Design.hasBackdrop) const StableBackdrop(),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  // Top accent rail.
-                  Container(
-                    height: 2,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: <Color>[
-                          accent.withAlpha(200),
-                          accent.withAlpha(40),
-                          Colors.transparent,
-                        ],
-                      ),
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color accent = LauncherTheme.accentOf(context);
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _commandOuterDecoration(surface, accent),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Design.borderRadius),
+        child: Stack(
+          children: <Widget>[
+            if (Design.hasBackdrop) const StableBackdrop(),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                // Top accent rail.
+                Container(
+                  height: 2,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: <Color>[
+                        accent.withAlpha(200),
+                        accent.withAlpha(40),
+                        Colors.transparent,
+                      ],
                     ),
                   ),
-                  child,
-                  _CommandFooter(accent: accent, onSurface: onSurface, resultCount: resultCount),
-                ],
-              ),
-            ],
-          ),
+                ),
+                child,
+                _CommandFooter(resultCount: resultCount),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -146,18 +122,13 @@ class CommandLauncherFrame extends StatelessWidget {
 }
 
 class _CommandFooter extends StatelessWidget {
-  const _CommandFooter({
-    required this.accent,
-    required this.onSurface,
-    required this.resultCount,
-  });
+  const _CommandFooter({required this.resultCount});
 
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -166,11 +137,11 @@ class _CommandFooter extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 7, 14, 7),
           child: Row(
             children: <Widget>[
-              _KbdHint(label: '↵', action: 'open', accent: accent, onSurface: onSurface),
+              const _KbdHint(label: '↵', action: 'open'),
               const SizedBox(width: 12),
-              _KbdHint(label: '→', action: 'actions', accent: accent, onSurface: onSurface),
+              const _KbdHint(label: '→', action: 'actions'),
               const SizedBox(width: 12),
-              _KbdHint(label: 'esc', action: 'close', accent: accent, onSurface: onSurface),
+              const _KbdHint(label: 'esc', action: 'close'),
               const Spacer(),
               Text(
                 Globals.isLauncherPluginActive ? "PLUGIN" : (resultCount == 1 ? '1 result' : '$resultCount results'),
@@ -198,20 +169,14 @@ class _CommandFooter extends StatelessWidget {
 }
 
 class _KbdHint extends StatelessWidget {
-  const _KbdHint({
-    required this.label,
-    required this.action,
-    required this.accent,
-    required this.onSurface,
-  });
+  const _KbdHint({required this.label, required this.action});
 
   final String label;
   final String action;
-  final Color accent;
-  final Color onSurface;
 
   @override
   Widget build(BuildContext context) {
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -247,7 +212,3 @@ class _KbdHint extends StatelessWidget {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Terminal (CLI) — search bar, frame, chrome, and CRT scanline overlay.
-// ---------------------------------------------------------------------------

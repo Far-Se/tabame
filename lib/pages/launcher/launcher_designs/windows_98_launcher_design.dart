@@ -1,6 +1,6 @@
 part of '../launcher_design_builder.dart';
 
-BoxDecoration windows98LauncherOuterDecoration() {
+BoxDecoration _windows98OuterDecoration() {
   return BoxDecoration(
     color: Windows98Tokens.face,
     border: Border(
@@ -15,19 +15,10 @@ BoxDecoration windows98LauncherOuterDecoration() {
   );
 }
 
-class Windows98LauncherSearchBar extends StatelessWidget {
-  const Windows98LauncherSearchBar({
-    super.key,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+class _Windows98LauncherSearchBar extends StatelessWidget {
+  const _Windows98LauncherSearchBar(this.content);
 
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
@@ -96,18 +87,12 @@ class Windows98LauncherSearchBar extends StatelessWidget {
                           padding: const EdgeInsets.fromLTRB(5, 1, 4, 1),
                           child: Row(
                             children: <Widget>[
-                              dragHandle,
+                              content.dragHandle,
                               const SizedBox(width: 5),
                               Expanded(
-                                child: Stack(
-                                  alignment: Alignment.centerRight,
-                                  children: <Widget>[
-                                    textField,
-                                    if (trailingBadge != null) trailingBadge!,
-                                  ],
-                                ),
+                                child: _LauncherSearchField(content, badgePadding: 0),
                               ),
-                              if (isSearching)
+                              if (content.isSearching)
                                 const Padding(
                                   padding: EdgeInsets.symmetric(horizontal: 4),
                                   child: SizedBox(
@@ -164,44 +149,34 @@ class Windows98LauncherHeader extends StatelessWidget {
 }
 
 class Windows98LauncherFrame extends StatelessWidget {
-  const Windows98LauncherFrame({
-    super.key,
-    required this.child,
-    required this.resultCount,
-    Color? surface,
-    Color? accent,
-    Color? onSurface,
-  });
+  const Windows98LauncherFrame({super.key, required this.child, required this.resultCount});
 
   final Widget child;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.windows98),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: windows98LauncherOuterDecoration(),
-        child: Padding(
-          padding: const EdgeInsets.all(1),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Windows98Tokens.face,
-              border: Border(
-                left: BorderSide(color: Windows98Tokens.highlight),
-                top: BorderSide(color: Windows98Tokens.highlight),
-                right: BorderSide(color: Windows98Tokens.shadow),
-                bottom: BorderSide(color: Windows98Tokens.shadow),
-              ),
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _windows98OuterDecoration(),
+      child: Padding(
+        padding: const EdgeInsets.all(1),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Windows98Tokens.face,
+            border: Border(
+              left: BorderSide(color: Windows98Tokens.highlight),
+              top: BorderSide(color: Windows98Tokens.highlight),
+              right: BorderSide(color: Windows98Tokens.shadow),
+              bottom: BorderSide(color: Windows98Tokens.shadow),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                child,
-                _Windows98Footer(resultCount: resultCount),
-              ],
-            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              child,
+              _Windows98Footer(resultCount: resultCount),
+            ],
           ),
         ),
       ),

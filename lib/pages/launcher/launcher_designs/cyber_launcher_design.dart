@@ -1,6 +1,6 @@
 part of '../launcher_design_builder.dart';
 
-BoxDecoration cyberLauncherOuterDecoration(Color surface, Color accent) => BoxDecoration(
+BoxDecoration _cyberOuterDecoration(Color surface, Color accent) => BoxDecoration(
       borderRadius: BorderRadius.circular(Design.borderRadius),
       color: surface.withAlpha(248),
       border: Border.all(color: accent.withAlpha(70), width: .8),
@@ -10,112 +10,95 @@ BoxDecoration cyberLauncherOuterDecoration(Color surface, Color accent) => BoxDe
     );
 
 class CyberLauncherFrame extends StatelessWidget {
-  const CyberLauncherFrame(
-      {super.key,
-      required this.child,
-      required this.surface,
-      required this.accent,
-      required this.onSurface,
-      required this.resultCount});
+  const CyberLauncherFrame({super.key, required this.child, required this.resultCount});
   final Widget child;
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
   @override
   Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color accent = LauncherTheme.accentOf(context);
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final bool isDark = surface.computeLuminance() < .5;
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.cyber),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: cyberLauncherOuterDecoration(surface, accent),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          child: ClipPath(
-            clipper: _CyberLauncherClipper(),
-            child: Stack(children: <Widget>[
-              Positioned.fill(child: ColoredBox(color: surface.withAlpha(248))),
-              if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
-              Positioned.fill(
-                  child: IgnorePointer(
-                      child: CustomPaint(painter: _CyberLauncherGridPainter(accent.withAlpha(isDark ? 16 : 10))))),
-              Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-                if (user.launcherShowTitlebar)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(13, 7, 13, 0),
-                    child: Row(children: <Widget>[
-                      Text('「 TABAME // LAUNCHER 』',
-                          style:
-                              TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
-                      const Spacer(),
-                      Container(width: 5, height: 5, color: accent),
-                      const SizedBox(width: 5),
-                      Text(Globals.isLauncherPluginActive ? "PLUGIN" : 'SYNC $resultCount',
-                          style: TextStyle(
-                              color: onSurface.withAlpha(125),
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.1)),
-                      DateTimeWidget(
-                        padding: const EdgeInsets.only(left: 10),
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _cyberOuterDecoration(surface, accent),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Design.borderRadius),
+        child: ClipPath(
+          clipper: _CyberLauncherClipper(),
+          child: Stack(children: <Widget>[
+            Positioned.fill(child: ColoredBox(color: surface.withAlpha(248))),
+            if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
+            Positioned.fill(
+                child: IgnorePointer(
+                    child: CustomPaint(painter: _CyberLauncherGridPainter(accent.withAlpha(isDark ? 16 : 10))))),
+            Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+              if (user.launcherShowTitlebar)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(13, 7, 13, 0),
+                  child: Row(children: <Widget>[
+                    Text('「 TABAME // LAUNCHER 』',
+                        style: TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
+                    const Spacer(),
+                    Container(width: 5, height: 5, color: accent),
+                    const SizedBox(width: 5),
+                    Text(Globals.isLauncherPluginActive ? "PLUGIN" : 'SYNC $resultCount',
                         style: TextStyle(
                             color: onSurface.withAlpha(125),
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
-                            letterSpacing: 1.1),
-                      ),
-                    ]),
-                  ),
-                child,
-              ]),
-              Positioned.fill(
-                  child: IgnorePointer(
-                      child: CustomPaint(painter: _CyberLauncherFramePainter(neon: accent, isDark: isDark)))),
+                            letterSpacing: 1.1)),
+                    DateTimeWidget(
+                      padding: const EdgeInsets.only(left: 10),
+                      style: TextStyle(
+                          color: onSurface.withAlpha(125),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.1),
+                    ),
+                  ]),
+                ),
+              child,
             ]),
-          ),
+            Positioned.fill(
+                child: IgnorePointer(
+                    child: CustomPaint(painter: _CyberLauncherFramePainter(neon: accent, isDark: isDark)))),
+          ]),
         ),
       ),
     );
   }
 }
 
-class CyberLauncherSearchBar extends StatelessWidget {
-  const CyberLauncherSearchBar(
-      {super.key,
-      required this.accent,
-      required this.onSurface,
-      required this.dragHandle,
-      required this.textField,
-      required this.trailingBadge,
-      required this.isSearching});
-  final Color accent;
-  final Color onSurface;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _CyberLauncherSearchBar extends StatelessWidget {
+  const _CyberLauncherSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
+
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.fromLTRB(12, 9, 12, 5),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: accent.withAlpha(12),
-          border: Border(left: BorderSide(color: accent, width: 2), bottom: BorderSide(color: accent.withAlpha(72))),
-        ),
-        child: Row(children: <Widget>[
-          dragHandle,
-          const SizedBox(width: 8),
-          Text('SYS>', style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.1)),
-          const SizedBox(width: 8),
-          Expanded(child: textField),
-          if (trailingBadge != null) trailingBadge!,
-          if (isSearching) ...<Widget>[
-            const SizedBox(width: 7),
-            SizedBox.square(dimension: 12, child: CircularProgressIndicator(strokeWidth: 1.3, color: accent))
-          ],
-        ]),
-      );
+  Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 9, 12, 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: accent.withAlpha(12),
+        border: Border(left: BorderSide(color: accent, width: 2), bottom: BorderSide(color: accent.withAlpha(72))),
+      ),
+      child: Row(children: <Widget>[
+        content.dragHandle,
+        const SizedBox(width: 8),
+        Text('SYS>', style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.1)),
+        const SizedBox(width: 8),
+        Expanded(child: content.textField),
+        if (content.trailingBadge != null) content.trailingBadge!,
+        if (content.isSearching) ...<Widget>[
+          const SizedBox(width: 7),
+          SizedBox.square(dimension: 12, child: CircularProgressIndicator(strokeWidth: 1.3, color: accent))
+        ],
+      ]),
+    );
+  }
 }
 
 class CyberLauncherHeader extends StatelessWidget {

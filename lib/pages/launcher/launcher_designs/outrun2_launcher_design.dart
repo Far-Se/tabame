@@ -1,6 +1,6 @@
 part of '../launcher_design_builder.dart';
 
-BoxDecoration outrun2LauncherOuterDecoration(Color surface, Color accent) => BoxDecoration(
+BoxDecoration _outrunOuterDecoration(Color surface, Color accent) => BoxDecoration(
       borderRadius: BorderRadius.circular(Design.borderRadius),
       color: surface,
       border: Border.all(color: accent, width: 1.2),
@@ -11,163 +11,143 @@ BoxDecoration outrun2LauncherOuterDecoration(Color surface, Color accent) => Box
     );
 
 class Outrun2LauncherFrame extends StatelessWidget {
-  const Outrun2LauncherFrame(
-      {super.key,
-      required this.child,
-      required this.surface,
-      required this.accent,
-      required this.onSurface,
-      required this.resultCount});
+  const Outrun2LauncherFrame({super.key, required this.child, required this.resultCount});
   final Widget child;
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
   @override
   Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color accent = LauncherTheme.accentOf(context);
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final bool isDark = surface.computeLuminance() < .5;
     final Color palm = Color.alphaBlend(Colors.black.withAlpha(198), surface);
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.outrun),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: outrun2LauncherOuterDecoration(surface, accent),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          child: Stack(children: <Widget>[
-            Positioned.fill(child: ColoredBox(color: surface.withAlpha(250))),
-            if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
-            Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 110,
-                child: DecoratedBox(
-                    decoration: BoxDecoration(
-                        gradient:
-                            LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[
-                  const Color(0xFFFF00AA).withAlpha(isDark ? 76 : 52),
-                  const Color(0xFFFF7700).withAlpha(isDark ? 46 : 30),
-                  const Color(0xFFFFD700).withAlpha(12),
-                  Colors.transparent,
-                ], stops: const <double>[
-                  0,
-                  .35,
-                  .65,
-                  1
-                ])))),
-            Positioned(
-                top: 19,
-                left: 0,
-                right: 0,
-                child: Center(
-                    child: Container(
-                        width: 62,
-                        height: 62,
-                        decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(colors: <Color>[
-                              const Color(0xFFFFD700).withAlpha(isDark ? 90 : 62),
-                              const Color(0xFFFF00AA).withAlpha(isDark ? 38 : 24),
-                              Colors.transparent,
-                            ]))))),
-            Positioned.fill(
-                child: IgnorePointer(
-                    child:
-                        CustomPaint(painter: _Outrun2LauncherGridPainter(color: accent.withAlpha(isDark ? 60 : 44))))),
-            Positioned(
-                top: 8,
-                left: 7,
-                width: 48,
-                height: 75,
-                child: CustomPaint(painter: _Outrun2LauncherPalmPainter(color: palm))),
-            Positioned(
-                top: 14,
-                right: 10,
-                width: 42,
-                height: 66,
-                child: CustomPaint(painter: _Outrun2LauncherPalmPainter(color: palm))),
-            Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-              if (user.launcherShowTitlebar)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(13, 7, 13, 0),
-                  child: Row(children: <Widget>[
-                    Text('OUTRUN',
-                        style: TextStyle(
-                            color: accent,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            fontStyle: FontStyle.italic,
-                            letterSpacing: 2.4,
-                            shadows: <Shadow>[Shadow(color: accent.withAlpha(150), blurRadius: 8)])),
-                    const SizedBox(width: 8),
-                    Expanded(child: Container(height: 1, color: accent.withAlpha(110))),
-                    const SizedBox(width: 8),
-                    Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount // 86',
-                        style: TextStyle(
-                            color: onSurface.withAlpha(145),
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.4)),
-                    DateTimeWidget(
-                      padding: const EdgeInsets.only(left: 10),
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _outrunOuterDecoration(surface, accent),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Design.borderRadius),
+        child: Stack(children: <Widget>[
+          Positioned.fill(child: ColoredBox(color: surface.withAlpha(250))),
+          if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
+          Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 110,
+              child: DecoratedBox(
+                  decoration: BoxDecoration(
+                      gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[
+                const Color(0xFFFF00AA).withAlpha(isDark ? 76 : 52),
+                const Color(0xFFFF7700).withAlpha(isDark ? 46 : 30),
+                const Color(0xFFFFD700).withAlpha(12),
+                Colors.transparent,
+              ], stops: const <double>[
+                0,
+                .35,
+                .65,
+                1
+              ])))),
+          Positioned(
+              top: 19,
+              left: 0,
+              right: 0,
+              child: Center(
+                  child: Container(
+                      width: 62,
+                      height: 62,
+                      decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(colors: <Color>[
+                            const Color(0xFFFFD700).withAlpha(isDark ? 90 : 62),
+                            const Color(0xFFFF00AA).withAlpha(isDark ? 38 : 24),
+                            Colors.transparent,
+                          ]))))),
+          Positioned.fill(
+              child: IgnorePointer(
+                  child: CustomPaint(painter: _Outrun2LauncherGridPainter(color: accent.withAlpha(isDark ? 60 : 44))))),
+          Positioned(
+              top: 8,
+              left: 7,
+              width: 48,
+              height: 75,
+              child: CustomPaint(painter: _Outrun2LauncherPalmPainter(color: palm))),
+          Positioned(
+              top: 14,
+              right: 10,
+              width: 42,
+              height: 66,
+              child: CustomPaint(painter: _Outrun2LauncherPalmPainter(color: palm))),
+          Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            if (user.launcherShowTitlebar)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(13, 7, 13, 0),
+                child: Row(children: <Widget>[
+                  Text('OUTRUN',
+                      style: TextStyle(
+                          color: accent,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          fontStyle: FontStyle.italic,
+                          letterSpacing: 2.4,
+                          shadows: <Shadow>[Shadow(color: accent.withAlpha(150), blurRadius: 8)])),
+                  const SizedBox(width: 8),
+                  Expanded(child: Container(height: 1, color: accent.withAlpha(110))),
+                  const SizedBox(width: 8),
+                  Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount // 86',
                       style: TextStyle(
                           color: onSurface.withAlpha(145),
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
-                          letterSpacing: 1.4),
-                    ),
-                  ]),
-                ),
-              child,
-            ]),
-            Positioned.fill(
-                child: IgnorePointer(
-                    child: CustomPaint(painter: _Outrun2LauncherScanPainter(onSurface.withAlpha(isDark ? 11 : 7))))),
+                          letterSpacing: 1.4)),
+                  DateTimeWidget(
+                    padding: const EdgeInsets.only(left: 10),
+                    style: TextStyle(
+                        color: onSurface.withAlpha(145), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.4),
+                  ),
+                ]),
+              ),
+            child,
           ]),
-        ),
+          Positioned.fill(
+              child: IgnorePointer(
+                  child: CustomPaint(painter: _Outrun2LauncherScanPainter(onSurface.withAlpha(isDark ? 11 : 7))))),
+        ]),
       ),
     );
   }
 }
 
-class Outrun2LauncherSearchBar extends StatelessWidget {
-  const Outrun2LauncherSearchBar(
-      {super.key,
-      required this.surface,
-      required this.accent,
-      required this.dragHandle,
-      required this.textField,
-      required this.trailingBadge,
-      required this.isSearching});
-  final Color surface;
-  final Color accent;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _Outrun2LauncherSearchBar extends StatelessWidget {
+  const _Outrun2LauncherSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
+
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.fromLTRB(12, 9, 12, 5),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: surface.withAlpha(190),
-          border: Border.all(color: accent, width: 1.2),
-          boxShadow: <BoxShadow>[BoxShadow(color: accent.withAlpha(65), blurRadius: 10, spreadRadius: -2)],
-        ),
-        child: Row(children: <Widget>[
-          dragHandle,
-          const SizedBox(width: 8),
-          CustomPaint(size: const Size(8, 8), painter: _Outrun2LauncherChevronPainter(accent)),
-          const SizedBox(width: 8),
-          Expanded(child: textField),
-          if (trailingBadge != null) trailingBadge!,
-          if (isSearching) ...<Widget>[
-            const SizedBox(width: 7),
-            SizedBox.square(dimension: 13, child: CircularProgressIndicator(strokeWidth: 1.5, color: accent))
-          ],
-        ]),
-      );
+  Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color accent = LauncherTheme.accentOf(context);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 9, 12, 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: surface.withAlpha(190),
+        border: Border.all(color: accent, width: 1.2),
+        boxShadow: <BoxShadow>[BoxShadow(color: accent.withAlpha(65), blurRadius: 10, spreadRadius: -2)],
+      ),
+      child: Row(children: <Widget>[
+        content.dragHandle,
+        const SizedBox(width: 8),
+        CustomPaint(size: const Size(8, 8), painter: _Outrun2LauncherChevronPainter(accent)),
+        const SizedBox(width: 8),
+        Expanded(child: content.textField),
+        if (content.trailingBadge != null) content.trailingBadge!,
+        if (content.isSearching) ...<Widget>[
+          const SizedBox(width: 7),
+          SizedBox.square(dimension: 13, child: CircularProgressIndicator(strokeWidth: 1.5, color: accent))
+        ],
+      ]),
+    );
+  }
 }
 
 class Outrun2LauncherHeader extends StatelessWidget {

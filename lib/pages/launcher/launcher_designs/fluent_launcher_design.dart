@@ -1,22 +1,33 @@
 part of '../launcher_design_builder.dart';
 
-class _FluentSearchBar extends StatelessWidget {
-  const _FluentSearchBar({
-    required this.accent,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+BoxDecoration _fluentOuterDecoration(Color surface) {
+  // Mica window — [surface] is the forced Win11 neutral. The 8px corner,
+  // a hairline stroke, and the broad soft shadow Windows 11 puts under
+  // every flyout.
+  final bool fluentDark = surface.computeLuminance() < 0.5;
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(Design.borderRadius),
+    color: surface,
+    border: Border.all(color: fluentDark ? Colors.white.withAlpha(24) : Colors.black.withAlpha(20)),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withAlpha(80),
+        blurRadius: 34,
+        spreadRadius: -8,
+        offset: const Offset(0, 16),
+      ),
+    ],
+  );
+}
 
-  final Color accent;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _FluentSearchBar extends StatelessWidget {
+  const _FluentSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     // A WinUI AutoSuggestBox: faint layer fill, hairline stroke, and — since
     // the launcher input is always focused — the 2px accent bottom underline.
@@ -37,22 +48,12 @@ class _FluentSearchBar extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(12, 8, 10, 7),
                 child: Row(
                   children: <Widget>[
-                    dragHandle,
+                    content.dragHandle,
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Stack(
-                        alignment: Alignment.centerRight,
-                        children: <Widget>[
-                          textField,
-                          if (trailingBadge != null)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 4),
-                              child: trailingBadge!,
-                            ),
-                        ],
-                      ),
+                      child: _LauncherSearchField(content),
                     ),
-                    if (isSearching)
+                    if (content.isSearching)
                       Padding(
                         padding: const EdgeInsets.only(left: 8),
                         child: SizedBox(
@@ -77,43 +78,31 @@ class _FluentSearchBar extends StatelessWidget {
 /// The mica window — forced Win11 neutrals, 8px corners, and a footer strip in
 /// the shifted chrome shade, like the Start menu's bottom bar.
 class FluentLauncherFrame extends StatelessWidget {
-  const FluentLauncherFrame({
-    super.key,
-    required this.child,
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    this.resultCount = 0,
-  });
+  const FluentLauncherFrame({super.key, required this.child, this.resultCount = 0});
 
   final Widget child;
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.fluent),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: LauncherDesign.fluent.outerDecoration(surface: surface, accent: accent),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          child: Stack(
-            children: <Widget>[
-              if (Design.hasBackdrop) const StableBackdrop(),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  child,
-                  _FluentFooter(onSurface: onSurface, resultCount: resultCount, isDark: isDark),
-                ],
-              ),
-            ],
-          ),
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _fluentOuterDecoration(surface),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Design.borderRadius),
+        child: Stack(
+          children: <Widget>[
+            if (Design.hasBackdrop) const StableBackdrop(),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                child,
+                _FluentFooter(resultCount: resultCount, isDark: isDark),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -121,49 +110,50 @@ class FluentLauncherFrame extends StatelessWidget {
 }
 
 class _FluentFooter extends StatelessWidget {
-  const _FluentFooter({required this.onSurface, required this.resultCount, required this.isDark});
+  const _FluentFooter({required this.resultCount, required this.isDark});
 
-  final Color onSurface;
   final int resultCount;
   final bool isDark;
 
-  Widget _kbd(String keyLabel, String caption) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Container(
-          constraints: const BoxConstraints(minWidth: 18),
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: onSurface.withAlpha(12),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: FluentTokens.stroke(isDark)),
-          ),
-          child: Text(
-            keyLabel,
-            style: FluentTokens.segoe(
-              fontSize: Design.baseFontSize - 1,
-              fontWeight: FontWeight.w600,
-              color: onSurface.withAlpha(180),
-              height: 1.2,
-            ),
-          ),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          caption,
-          style: FluentTokens.segoe(
-            fontSize: Design.baseFontSize - 1,
-            color: FluentTokens.dim(isDark),
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+
+    Widget buildKeyHint(String keyLabel, String caption) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            constraints: const BoxConstraints(minWidth: 18),
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: onSurface.withAlpha(12),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: FluentTokens.stroke(isDark)),
+            ),
+            child: Text(
+              keyLabel,
+              style: FluentTokens.segoe(
+                fontSize: Design.baseFontSize - 1,
+                fontWeight: FontWeight.w600,
+                color: onSurface.withAlpha(180),
+                height: 1.2,
+              ),
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            caption,
+            style: FluentTokens.segoe(
+              fontSize: Design.baseFontSize - 1,
+              color: FluentTokens.dim(isDark),
+            ),
+          ),
+        ],
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 7, 14, 7),
       decoration: BoxDecoration(
@@ -172,11 +162,11 @@ class _FluentFooter extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          _kbd('↵', 'Open'),
+          buildKeyHint('↵', 'Open'),
           const SizedBox(width: 12),
-          _kbd('→', 'Actions'),
+          buildKeyHint('→', 'Actions'),
           const SizedBox(width: 12),
-          _kbd('Esc', 'Dismiss'),
+          buildKeyHint('Esc', 'Dismiss'),
           const Spacer(),
           Text(
             Globals.isLauncherPluginActive ? "PLUGIN" : (resultCount == 1 ? '1 result' : '$resultCount results'),
@@ -199,6 +189,3 @@ class _FluentFooter extends StatelessWidget {
     );
   }
 }
-
-/// An editorial command sheet with a permanent issue rail, registration grid,
-/// hard shadow and an ink-black keyboard legend.

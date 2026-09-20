@@ -1,26 +1,37 @@
 part of '../launcher_design_builder.dart';
 
-class _ClassicSearchBar extends StatelessWidget {
-  const _ClassicSearchBar({
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+BoxDecoration _classicOuterDecoration(Color surface, Color accent) {
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(Design.borderRadius),
+    gradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: <Color>[
+        surface.withAlpha(245),
+        Color.alphaBlend(accent.withAlpha(24), surface),
+        Color.alphaBlend(accent.withAlpha(10), surface),
+      ],
+    ),
+    border: Border.all(color: accent.withAlpha(28)),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withAlpha(18),
+        blurRadius: 20,
+        offset: const Offset(0, 8),
+      ),
+    ],
+  );
+}
 
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _ClassicSearchBar extends StatelessWidget {
+  const _ClassicSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color accent = LauncherTheme.accentOf(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -30,22 +41,12 @@ class _ClassicSearchBar extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          dragHandle,
+          content.dragHandle,
           const SizedBox(width: 10),
           Expanded(
-            child: Stack(
-              alignment: Alignment.centerRight,
-              children: <Widget>[
-                textField,
-                if (trailingBadge != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: trailingBadge!,
-                  ),
-              ],
-            ),
+            child: _LauncherSearchField(content),
           ),
-          if (isSearching)
+          if (content.isSearching)
             SizedBox(
               width: 16,
               height: 16,
@@ -60,59 +61,38 @@ class _ClassicSearchBar extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Serene search bar
-// ---------------------------------------------------------------------------
-
 class ClassicLauncherFrame extends StatelessWidget {
-  const ClassicLauncherFrame({
-    super.key,
-    required this.child,
-    required this.surface,
-    required this.accent,
-    Color? onSurface,
-    int? resultCount,
-  });
+  const ClassicLauncherFrame({super.key, required this.child});
 
   final Widget child;
-  final Color surface;
-  final Color accent;
 
   @override
   Widget build(BuildContext context) {
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.classic),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: LauncherDesign.classic.outerDecoration(
-          surface: surface,
-          accent: accent,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          child: Stack(
-            children: <Widget>[
-              if (Design.hasBackdrop) const StableBackdrop(),
-              child,
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: DateTimeWidget(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
-                  ),
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color accent = LauncherTheme.accentOf(context);
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _classicOuterDecoration(surface, accent),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Design.borderRadius),
+        child: Stack(
+          children: <Widget>[
+            if (Design.hasBackdrop) const StableBackdrop(),
+            child,
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: DateTimeWidget(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
                 ),
-              )
-            ],
-          ),
+              ),
+            )
+          ],
         ),
       ),
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Command search bar — a terminal input line with a chevron prompt.
-// ---------------------------------------------------------------------------

@@ -1,9 +1,5 @@
 part of '../../launcher.dart';
 
-// ---------------------------------------------------------------------------
-// Launcher theme construction
-// ---------------------------------------------------------------------------
-
 mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
   ThemeData _buildDesignTheme({
     required ThemeData baseTheme,
@@ -14,51 +10,41 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
     return switch (_design) {
       LauncherDesign.thermal => _copyDesignTheme(baseTheme,
           brightness: ThermalTokens.isDark ? Brightness.dark : Brightness.light,
-          colorSchemeBrightness: ThermalTokens.isDark ? Brightness.dark : Brightness.light,
           surface: ThermalTokens.background,
           onSurface: ThermalTokens.foreground,
           primary: ThermalTokens.accent,
           highlightColor: ThermalTokens.rust,
-          textTheme: GoogleFonts.hankenGroteskTextTheme(baseTheme.textTheme)
-              .apply(bodyColor: ThermalTokens.foreground, displayColor: ThermalTokens.foreground)),
+          textTheme: GoogleFonts.hankenGroteskTextTheme(baseTheme.textTheme)),
       LauncherDesign.capillary => _copyDesignTheme(baseTheme,
           surface: capillary.background,
           onSurface: capillary.foreground,
           primary: capillary.accent,
           highlightColor: capillary.accent.withAlpha(30),
-          textTheme: GoogleFonts.commissionerTextTheme(baseTheme.textTheme)
-              .apply(bodyColor: capillary.foreground, displayColor: capillary.foreground)),
+          textTheme: GoogleFonts.commissionerTextTheme(baseTheme.textTheme)),
       LauncherDesign.opticalGlass => _copyDesignTheme(baseTheme,
           brightness: OpticalGlassTokens.isDark ? Brightness.dark : Brightness.light,
-          colorSchemeBrightness: OpticalGlassTokens.isDark ? Brightness.dark : Brightness.light,
           surface: OpticalGlassTokens.background,
           onSurface: OpticalGlassTokens.foreground,
           primary: OpticalGlassTokens.accent,
           highlightColor: OpticalGlassTokens.accent.withAlpha(30),
-          textTheme: GoogleFonts.mulishTextTheme(baseTheme.textTheme)
-              .apply(bodyColor: OpticalGlassTokens.foreground, displayColor: OpticalGlassTokens.foreground)),
+          textTheme: GoogleFonts.mulishTextTheme(baseTheme.textTheme)),
       LauncherDesign.liquidMetal => _copyDesignTheme(baseTheme,
           brightness: LiquidMetalTokens.isDark ? Brightness.dark : Brightness.light,
-          colorSchemeBrightness: LiquidMetalTokens.isDark ? Brightness.dark : Brightness.light,
           surface: LiquidMetalTokens.background,
           onSurface: LiquidMetalTokens.foreground,
           primary: LiquidMetalTokens.accent,
           highlightColor: LiquidMetalTokens.accent.withAlpha(30),
-          textTheme: GoogleFonts.barlowTextTheme(baseTheme.textTheme)
-              .apply(bodyColor: LiquidMetalTokens.foreground, displayColor: LiquidMetalTokens.foreground)),
+          textTheme: GoogleFonts.barlowTextTheme(baseTheme.textTheme)),
       LauncherDesign.crt => _copyDesignTheme(baseTheme,
           brightness: CrtTokens.isDark ? Brightness.dark : Brightness.light,
-          colorSchemeBrightness: CrtTokens.isDark ? Brightness.dark : Brightness.light,
           surface: CrtTokens.background,
           onSurface: CrtTokens.foreground,
           primary: CrtTokens.accent,
           highlightColor: CrtTokens.accent.withAlpha(30),
-          textTheme: baseTheme.textTheme
-              .apply(fontFamily: 'Consolas', bodyColor: CrtTokens.foreground, displayColor: CrtTokens.foreground)),
+          textTheme: baseTheme.textTheme.apply(fontFamily: 'Consolas')),
       LauncherDesign.toon => _copyDesignTheme(
           baseTheme,
           brightness: ToonTokens.isDark ? Brightness.dark : Brightness.light,
-          colorSchemeBrightness: ToonTokens.isDark ? Brightness.dark : Brightness.light,
           surface: ToonTokens.background,
           onSurface: ToonTokens.foreground,
           primary: ToonTokens.accent,
@@ -66,14 +52,11 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
           textTheme: baseTheme.textTheme.apply(
             fontFamily: 'Barlow Condensed',
             fontFamilyFallback: const <String>['Segoe UI'],
-            bodyColor: ToonTokens.foreground,
-            displayColor: ToonTokens.foreground,
           ),
         ),
       LauncherDesign.retro => _copyDesignTheme(
           baseTheme,
           brightness: RetroTokens.isDark ? Brightness.dark : Brightness.light,
-          colorSchemeBrightness: RetroTokens.isDark ? Brightness.dark : Brightness.light,
           surface: RetroTokens.background,
           onSurface: RetroTokens.foreground,
           primary: RetroTokens.accent,
@@ -82,31 +65,25 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
         ),
       LauncherDesign.phosphor => _copyDesignTheme(baseTheme,
           brightness: PhosphorTokens.isDark ? Brightness.dark : Brightness.light,
-          colorSchemeBrightness: PhosphorTokens.isDark ? Brightness.dark : Brightness.light,
           surface: PhosphorTokens.background,
           onSurface: PhosphorTokens.foreground,
           primary: PhosphorTokens.accent,
           highlightColor: PhosphorTokens.accent.withAlpha(30),
-          textTheme: baseTheme.textTheme.apply(
-              fontFamily: 'Consolas', bodyColor: PhosphorTokens.foreground, displayColor: PhosphorTokens.foreground)),
+          textTheme: baseTheme.textTheme.apply(fontFamily: 'Consolas')),
       LauncherDesign.strata => _copyDesignTheme(baseTheme,
           brightness: StrataTokens.isDark ? Brightness.dark : Brightness.light,
-          colorSchemeBrightness: StrataTokens.isDark ? Brightness.dark : Brightness.light,
           surface: StrataTokens.background,
           onSurface: StrataTokens.foreground,
           primary: StrataTokens.accent,
           highlightColor: StrataTokens.accent.withAlpha(30),
-          textTheme: baseTheme.textTheme.apply(
-              fontFamily: 'Segoe UI', bodyColor: StrataTokens.foreground, displayColor: StrataTokens.foreground)),
+          textTheme: baseTheme.textTheme.apply(fontFamily: 'Segoe UI')),
       LauncherDesign.aurora => _copyDesignTheme(baseTheme,
           brightness: Brightness.dark,
-          colorSchemeBrightness: Brightness.dark,
           surface: AuroraTokens.background,
           onSurface: AuroraTokens.foreground,
           primary: AuroraTokens.accent,
           highlightColor: AuroraTokens.accent.withAlpha(30),
-          textTheme: baseTheme.textTheme.apply(
-              fontFamily: 'Segoe UI', bodyColor: AuroraTokens.foreground, displayColor: AuroraTokens.foreground)),
+          textTheme: baseTheme.textTheme.apply(fontFamily: 'Segoe UI')),
       LauncherDesign.tui => _copyDesignTheme(
           baseTheme,
           surface: TuiTokens.background,
@@ -116,25 +93,19 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
           textTheme: baseTheme.textTheme.apply(
             fontFamily: 'Consolas',
             fontFamilyFallback: const <String>['Lucida Console', 'monospace'],
-            bodyColor: TuiTokens.foreground,
-            displayColor: TuiTokens.foreground,
           ),
         ),
       LauncherDesign.omarchy => _copyDesignTheme(
           baseTheme,
-          surface: OmarchyTokens.bg(isDark),
-          onSurface: OmarchyTokens.fg(isDark),
+          surface: OmarchyTokens.bg,
+          onSurface: OmarchyTokens.fg,
           primary: accent,
-          highlightColor: OmarchyTokens.selected(isDark),
-          textTheme: GoogleFonts.inconsolataTextTheme(baseTheme.textTheme).apply(
-            bodyColor: OmarchyTokens.fg(isDark),
-            displayColor: OmarchyTokens.fg(isDark),
-          ),
+          highlightColor: OmarchyTokens.selected,
+          textTheme: GoogleFonts.inconsolataTextTheme(baseTheme.textTheme),
         ),
       LauncherDesign.newCast => _copyDesignTheme(
           baseTheme,
           brightness: isDark ? Brightness.dark : Brightness.light,
-          colorSchemeBrightness: isDark ? Brightness.dark : Brightness.light,
           surface: RaycastTokens.surface(isDark),
           onSurface: RaycastTokens.primary(isDark),
           primary: RaycastTokens.primary(isDark),
@@ -142,8 +113,6 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
           textTheme: baseTheme.textTheme.apply(
             fontFamily: 'Segoe UI Variable Text',
             fontFamilyFallback: const <String>['Segoe UI', 'Arial'],
-            bodyColor: RaycastTokens.primary(isDark),
-            displayColor: RaycastTokens.primary(isDark),
           ),
         ),
       LauncherDesign.windowsXp => _copyDesignTheme(
@@ -155,8 +124,6 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
           textTheme: baseTheme.textTheme.apply(
             fontFamily: 'Tahoma',
             fontFamilyFallback: const <String>['Verdana', 'Segoe UI'],
-            bodyColor: WindowsXpTokens.foreground,
-            displayColor: WindowsXpTokens.foreground,
           ),
         ),
       LauncherDesign.windows98 => _copyDesignTheme(
@@ -168,8 +135,6 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
           textTheme: baseTheme.textTheme.apply(
             fontFamily: 'MS Sans Serif',
             fontFamilyFallback: const <String>['Tahoma', 'Segoe UI'],
-            bodyColor: Windows98Tokens.foreground,
-            displayColor: Windows98Tokens.foreground,
           ),
         ),
       LauncherDesign.notion => _copyDesignTheme(
@@ -181,8 +146,6 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
           textTheme: baseTheme.textTheme.apply(
             fontFamily: 'Segoe UI Variable Text',
             fontFamilyFallback: const <String>['Segoe UI'],
-            bodyColor: NotionTokens.foreground(isDark),
-            displayColor: NotionTokens.foreground(isDark),
           ),
         ),
       LauncherDesign.terminal => _copyDesignTheme(
@@ -190,50 +153,35 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
           surface: TerminalTokens.bg(isDark),
           onSurface: TerminalTokens.fg(isDark),
           highlightColor: accent.withAlpha(38),
-          textTheme: GoogleFonts.jetBrainsMonoTextTheme(baseTheme.textTheme).apply(
-            bodyColor: TerminalTokens.fg(isDark),
-            displayColor: TerminalTokens.fg(isDark),
-          ),
+          textTheme: GoogleFonts.jetBrainsMonoTextTheme(baseTheme.textTheme),
         ),
       LauncherDesign.terminal2 => _copyDesignTheme(
           baseTheme,
           surface: Terminal2Tokens.bg(isDark),
           onSurface: Terminal2Tokens.fg(isDark),
           highlightColor: accent.withAlpha(38),
-          textTheme: GoogleFonts.fragmentMonoTextTheme(baseTheme.textTheme).apply(
-            bodyColor: Terminal2Tokens.fg(isDark),
-            displayColor: Terminal2Tokens.fg(isDark),
-          ),
+          textTheme: GoogleFonts.fragmentMonoTextTheme(baseTheme.textTheme),
         ),
       LauncherDesign.zen => _copyDesignTheme(
           baseTheme,
           surface: ZenTokens.bg(isDark),
           onSurface: ZenTokens.fg(isDark),
           highlightColor: accent.withAlpha(isDark ? 42 : 30),
-          textTheme: GoogleFonts.quicksandTextTheme(baseTheme.textTheme).apply(
-            bodyColor: ZenTokens.fg(isDark),
-            displayColor: ZenTokens.fg(isDark),
-          ),
+          textTheme: GoogleFonts.quicksandTextTheme(baseTheme.textTheme),
         ),
       LauncherDesign.blueprint => _copyDesignTheme(
           baseTheme,
           surface: BlueprintTokens.bg(isDark),
           onSurface: BlueprintTokens.fg(isDark),
           highlightColor: accent.withAlpha(34),
-          textTheme: GoogleFonts.chakraPetchTextTheme(baseTheme.textTheme).apply(
-            bodyColor: BlueprintTokens.fg(isDark),
-            displayColor: BlueprintTokens.fg(isDark),
-          ),
+          textTheme: GoogleFonts.chakraPetchTextTheme(baseTheme.textTheme),
         ),
       LauncherDesign.transit => _copyDesignTheme(
           baseTheme,
           surface: TransitTokens.bg(isDark),
           onSurface: TransitTokens.fg(isDark),
           highlightColor: accent.withAlpha(30),
-          textTheme: GoogleFonts.overpassTextTheme(baseTheme.textTheme).apply(
-            bodyColor: TransitTokens.fg(isDark),
-            displayColor: TransitTokens.fg(isDark),
-          ),
+          textTheme: GoogleFonts.overpassTextTheme(baseTheme.textTheme),
         ),
       LauncherDesign.fluent => _copyDesignTheme(
           baseTheme,
@@ -243,8 +191,6 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
           textTheme: baseTheme.textTheme.apply(
             fontFamily: 'Segoe UI Variable Text',
             fontFamilyFallback: const <String>['Segoe UI'],
-            bodyColor: FluentTokens.fg(isDark),
-            displayColor: FluentTokens.fg(isDark),
           ),
         ),
       LauncherDesign.manifesto => _copyDesignTheme(
@@ -255,8 +201,6 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
           textTheme: baseTheme.textTheme.apply(
             fontFamily: 'Segoe UI Variable Text',
             fontFamilyFallback: const <String>['Segoe UI'],
-            bodyColor: ManifestoTokens.fg(isDark),
-            displayColor: ManifestoTokens.fg(isDark),
           ),
         ),
       LauncherDesign.orbit => _copyDesignTheme(
@@ -264,30 +208,21 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
           surface: OrbitTokens.bg(isDark),
           onSurface: OrbitTokens.fg(isDark),
           highlightColor: accent.withAlpha(30),
-          textTheme: GoogleFonts.spaceGroteskTextTheme(baseTheme.textTheme).apply(
-            bodyColor: OrbitTokens.fg(isDark),
-            displayColor: OrbitTokens.fg(isDark),
-          ),
+          textTheme: GoogleFonts.spaceGroteskTextTheme(baseTheme.textTheme),
         ),
       LauncherDesign.relay => _copyDesignTheme(
           baseTheme,
           surface: RelayTokens.canvas(isDark, accent),
           onSurface: RelayTokens.foreground(isDark),
           highlightColor: accent.withAlpha(30),
-          textTheme: GoogleFonts.encodeSansTextTheme(baseTheme.textTheme).apply(
-            bodyColor: RelayTokens.foreground(isDark),
-            displayColor: RelayTokens.foreground(isDark),
-          ),
+          textTheme: GoogleFonts.encodeSansTextTheme(baseTheme.textTheme),
         ),
       LauncherDesign.switchboard => _copyDesignTheme(
           baseTheme,
           surface: SwitchboardTokens.canvas(isDark),
           onSurface: SwitchboardTokens.foreground(isDark),
           highlightColor: accent.withAlpha(28),
-          textTheme: GoogleFonts.publicSansTextTheme(baseTheme.textTheme).apply(
-            bodyColor: SwitchboardTokens.foreground(isDark),
-            displayColor: SwitchboardTokens.foreground(isDark),
-          ),
+          textTheme: GoogleFonts.publicSansTextTheme(baseTheme.textTheme),
         ),
       LauncherDesign.glass => baseTheme.copyWith(
           textTheme: GoogleFonts.interTextTheme(baseTheme.textTheme),
@@ -301,21 +236,20 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
     required Color surface,
     required Color onSurface,
     required Color highlightColor,
+    required TextTheme textTheme,
     Color? primary,
-    TextTheme? textTheme,
     Brightness? brightness,
-    Brightness? colorSchemeBrightness,
   }) {
     return baseTheme.copyWith(
       brightness: brightness,
       colorScheme: baseTheme.colorScheme.copyWith(
-        brightness: colorSchemeBrightness,
+        brightness: brightness,
         surface: surface,
         onSurface: onSurface,
         primary: primary,
       ),
       highlightColor: highlightColor,
-      textTheme: textTheme,
+      textTheme: textTheme.apply(bodyColor: onSurface, displayColor: onSurface),
     );
   }
 }

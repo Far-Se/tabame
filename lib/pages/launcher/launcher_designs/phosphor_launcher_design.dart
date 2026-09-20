@@ -1,104 +1,76 @@
-// ignore_for_file: unused_element
-
 part of '../launcher_design_builder.dart';
 
-class PhosphorSearchBar extends StatelessWidget {
-  const PhosphorSearchBar(
-      {super.key,
-      required this.dragHandle,
-      required this.textField,
-      required this.trailingBadge,
-      required this.isSearching});
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+BoxDecoration _phosphorOuterDecoration() {
+  return BoxDecoration(
+      color: PhosphorTokens.background,
+      borderRadius: BorderRadius.zero,
+      border: Border.all(color: PhosphorTokens.border));
+}
+
+class _PhosphorSearchBar extends StatelessWidget {
+  const _PhosphorSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.fromLTRB(20, 8, 4, 8),
-        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: PhosphorTokens.border))),
-        child: Row(children: <Widget>[
-          DragToMoveArea(
-              child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(r'C:\>', style: PhosphorTokens.font(size: 18, color: PhosphorTokens.accent)))),
-          const SizedBox(width: 20),
-          Expanded(child: textField),
-          if (trailingBadge != null) trailingBadge!,
-          if (isSearching)
-            Padding(
-                padding: EdgeInsets.symmetric(horizontal: 10),
-                child: SizedBox(
-                    width: 15,
-                    height: 15,
-                    child: CircularProgressIndicator(strokeWidth: 1.5, color: PhosphorTokens.accent))),
-          const SizedBox(width: 8),
-          // _windowButton('Minimize', Icons.remove, () {
-          //   windowManager.minimize();
-          // }),
-          // _windowButton('Maximize / restore', Icons.crop_square, () async {
-          //   if (await windowManager.isMaximized()) {
-          //     await windowManager.unmaximize();
-          //   } else {
-          //     await windowManager.maximize();
-          //   }
-          // }),
-          // _windowButton('Hide launcher', Icons.close, () {
-          //   windowManager.hide();
-          // }),
-        ]),
-      );
-
-  Widget _windowButton(String label, IconData icon, VoidCallback onPressed) => SizedBox(
-      width: 44,
-      child:
-          IconButton(tooltip: label, onPressed: onPressed, icon: Icon(icon, size: 18), color: PhosphorTokens.accent));
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(20, 8, 4, 8),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: PhosphorTokens.border))),
+      child: Row(children: <Widget>[
+        DragToMoveArea(
+            child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(r'C:\>', style: PhosphorTokens.font(size: 18, color: PhosphorTokens.accent)))),
+        const SizedBox(width: 20),
+        Expanded(child: content.textField),
+        if (content.trailingBadge != null) content.trailingBadge!,
+        if (content.isSearching)
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: SizedBox(
+                  width: 15,
+                  height: 15,
+                  child: CircularProgressIndicator(strokeWidth: 1.5, color: PhosphorTokens.accent))),
+        const SizedBox(width: 8),
+      ]),
+    );
+  }
 }
 
 class PhosphorLauncherFrame extends StatelessWidget {
-  const PhosphorLauncherFrame(
-      {super.key,
-      required this.surface,
-      required this.accent,
-      required this.onSurface,
-      required this.resultCount,
-      required this.child});
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
+  const PhosphorLauncherFrame({super.key, required this.resultCount, required this.child});
   final int resultCount;
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => LauncherTheme(
-        data: const LauncherThemeData(design: LauncherDesign.phosphor),
-        child: Container(
-            decoration: LauncherDesign.phosphor.outerDecoration(surface: surface, accent: accent),
-            child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-              Flexible(fit: FlexFit.loose, child: child),
-              Container(
-                  height: 44,
-                  margin: const EdgeInsets.symmetric(horizontal: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(border: Border(top: BorderSide(color: PhosphorTokens.border))),
-                  child: LayoutBuilder(
-                      builder: (BuildContext context, BoxConstraints constraints) => Row(children: <Widget>[
-                            Expanded(
-                                child: SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Row(children: <Widget>[
-                                      _hint('↑↓ ', 'Navigate'),
-                                      _hint('Enter', 'Open'),
-                                      _hint('Ctrl + ↵ ', 'Open Folder'),
-                                    ]))),
-                            const SizedBox(width: 12),
-                            Text('$resultCount results',
-                                style: PhosphorTokens.font(size: 12, color: PhosphorTokens.accent)),
-                          ]))),
-            ])),
-      );
+  Widget build(BuildContext context) {
+    return Container(
+        decoration: _phosphorOuterDecoration(),
+        child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          Flexible(fit: FlexFit.loose, child: child),
+          Container(
+              height: 44,
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(border: Border(top: BorderSide(color: PhosphorTokens.border))),
+              child: LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints constraints) => Row(children: <Widget>[
+                        Expanded(
+                            child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(children: <Widget>[
+                                  _hint('↑↓ ', 'Navigate'),
+                                  _hint('Enter', 'Open'),
+                                  _hint('Ctrl + ↵ ', 'Open Folder'),
+                                ]))),
+                        const SizedBox(width: 12),
+                        Text('$resultCount results',
+                            style: PhosphorTokens.font(size: 12, color: PhosphorTokens.accent)),
+                      ]))),
+        ]));
+  }
 
   Widget _hint(String key, String label) => Padding(
       padding: const EdgeInsets.only(right: 20),

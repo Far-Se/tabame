@@ -1,6 +1,6 @@
 part of '../launcher_design_builder.dart';
 
-BoxDecoration techLauncherOuterDecoration(Color surface, Color accent) => BoxDecoration(
+BoxDecoration _techOuterDecoration(Color surface, Color accent) => BoxDecoration(
       borderRadius: BorderRadius.circular(Design.borderRadius),
       color: surface.withAlpha(246),
       border: Border.all(color: accent.withAlpha(48)),
@@ -10,63 +10,52 @@ BoxDecoration techLauncherOuterDecoration(Color surface, Color accent) => BoxDec
     );
 
 class TechLauncherFrame extends StatelessWidget {
-  const TechLauncherFrame({
-    super.key,
-    required this.child,
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    required this.resultCount,
-  });
+  const TechLauncherFrame({super.key, required this.child, required this.resultCount});
 
   final Widget child;
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color accent = LauncherTheme.accentOf(context);
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final bool isDark = surface.computeLuminance() < .5;
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.tech),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: techLauncherOuterDecoration(surface, accent),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          child: Stack(
-            children: <Widget>[
-              Positioned.fill(child: ColoredBox(color: surface.withAlpha(246))),
-              if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: CustomPaint(painter: _TechLauncherDotPainter(accent.withAlpha(isDark ? 22 : 14))),
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _techOuterDecoration(surface, accent),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Design.borderRadius),
+        child: Stack(
+          children: <Widget>[
+            Positioned.fill(child: ColoredBox(color: surface.withAlpha(246))),
+            if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(painter: _TechLauncherDotPainter(accent.withAlpha(isDark ? 22 : 14))),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: onSurface.withAlpha(isDark ? 8 : 5),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: accent.withAlpha(38)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    if (user.launcherShowTitlebar) _TechLauncherStatus(resultCount: resultCount),
+                    child,
+                  ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: onSurface.withAlpha(isDark ? 8 : 5),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: accent.withAlpha(38)),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      if (user.launcherShowTitlebar)
-                        _TechLauncherStatus(accent: accent, onSurface: onSurface, resultCount: resultCount),
-                      child,
-                    ],
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: IgnorePointer(child: CustomPaint(painter: _TechLauncherHudPainter(accent: accent))),
-              ),
-            ],
-          ),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(child: CustomPaint(painter: _TechLauncherHudPainter(accent: accent))),
+            ),
+          ],
         ),
       ),
     );
@@ -74,72 +63,68 @@ class TechLauncherFrame extends StatelessWidget {
 }
 
 class _TechLauncherStatus extends StatelessWidget {
-  const _TechLauncherStatus({required this.accent, required this.onSurface, required this.resultCount});
-  final Color accent;
-  final Color onSurface;
+  const _TechLauncherStatus({required this.resultCount});
   final int resultCount;
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 7, 12, 0),
-        child: Row(
-          children: <Widget>[
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 7),
-            Text('LAUNCH CONTROL',
-                style: TextStyle(
-                    color: onSurface.withAlpha(140), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.6)),
-            const Spacer(),
-            Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount OBJECTS',
-                style: TextStyle(
-                    color: accent.withAlpha(175), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.2)),
-            DateTimeWidget(
-                padding: const EdgeInsets.only(left: 10),
-                style: TextStyle(
-                    color: accent.withAlpha(175), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.2)),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 7, 12, 0),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 7),
+          Text('LAUNCH CONTROL',
+              style: TextStyle(
+                  color: onSurface.withAlpha(140), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.6)),
+          const Spacer(),
+          Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount OBJECTS',
+              style: TextStyle(
+                  color: accent.withAlpha(175), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.2)),
+          DateTimeWidget(
+              padding: const EdgeInsets.only(left: 10),
+              style: TextStyle(
+                  color: accent.withAlpha(175), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.2)),
+        ],
+      ),
+    );
+  }
 }
 
-class TechLauncherSearchBar extends StatelessWidget {
-  const TechLauncherSearchBar(
-      {super.key,
-      required this.accent,
-      required this.onSurface,
-      required this.dragHandle,
-      required this.textField,
-      required this.trailingBadge,
-      required this.isSearching});
-  final Color accent;
-  final Color onSurface;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _TechLauncherSearchBar extends StatelessWidget {
+  const _TechLauncherSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
+
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.fromLTRB(10, 8, 10, 4),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: onSurface.withAlpha(8),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: accent.withAlpha(52)),
-        ),
-        child: Row(children: <Widget>[
-          dragHandle,
-          const SizedBox(width: 9),
-          Expanded(child: textField),
-          if (trailingBadge != null) trailingBadge!,
-          if (isSearching) ...<Widget>[
-            const SizedBox(width: 7),
-            SizedBox.square(dimension: 13, child: CircularProgressIndicator(strokeWidth: 1.5, color: accent))
-          ],
-        ]),
-      );
+  Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(10, 8, 10, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: onSurface.withAlpha(8),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: accent.withAlpha(52)),
+      ),
+      child: Row(children: <Widget>[
+        content.dragHandle,
+        const SizedBox(width: 9),
+        Expanded(child: content.textField),
+        if (content.trailingBadge != null) content.trailingBadge!,
+        if (content.isSearching) ...<Widget>[
+          const SizedBox(width: 7),
+          SizedBox.square(dimension: 13, child: CircularProgressIndicator(strokeWidth: 1.5, color: accent))
+        ],
+      ]),
+    );
+  }
 }
 
 class TechLauncherHeader extends StatelessWidget {

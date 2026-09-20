@@ -134,10 +134,10 @@ class LauncherModalTokens {
         return LauncherModalTokens._(
           design: design,
           isDark: isDark,
-          surface: OmarchyTokens.bg(isDark),
-          accent: OmarchyTokens.accent(isDark),
-          onSurface: OmarchyTokens.fg(isDark),
-          dim: OmarchyTokens.dim(isDark),
+          surface: OmarchyTokens.bg,
+          accent: OmarchyTokens.accent,
+          onSurface: OmarchyTokens.fg,
+          dim: OmarchyTokens.dim,
         );
       case LauncherDesign.terminal:
         return LauncherModalTokens._(

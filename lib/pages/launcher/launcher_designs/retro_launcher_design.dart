@@ -1,184 +1,182 @@
 part of '../launcher_design_builder.dart';
 
-class RetroSearchBar extends StatelessWidget {
-  const RetroSearchBar({
-    super.key,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+BoxDecoration _retroOuterDecoration() {
+  return BoxDecoration(
+    color: RetroTokens.bezel,
+    borderRadius: BorderRadius.circular(8),
+    border: Border.all(color: RetroTokens.accent.withAlpha(180), width: 1.5),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withAlpha(RetroTokens.isDark ? 170 : 40),
+        blurRadius: 0,
+        offset: const Offset(6, 6),
+      ),
+    ],
+  );
+}
 
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _RetroSearchBar extends StatelessWidget {
+  const _RetroSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.fromLTRB(14, 10, 12, 12),
-        decoration: BoxDecoration(
-          color: RetroTokens.panel,
-          border: Border(bottom: BorderSide(color: RetroTokens.border)),
-        ),
-        child: Row(
-          children: <Widget>[
-            dragHandle,
-            const SizedBox(width: 12),
-            Text('>', style: RetroTokens.label(size: 12, color: RetroTokens.accent)),
-            const SizedBox(width: 10),
-            Expanded(child: textField),
-            if (trailingBadge != null) ...<Widget>[
-              const SizedBox(width: 8),
-              trailingBadge!,
-            ],
-            if (isSearching)
-              Padding(
-                padding: const EdgeInsets.only(left: 10),
-                child: SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 1.5,
-                    color: RetroTokens.accent,
-                  ),
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 10, 12, 12),
+      decoration: BoxDecoration(
+        color: RetroTokens.panel,
+        border: Border(bottom: BorderSide(color: RetroTokens.border)),
+      ),
+      child: Row(
+        children: <Widget>[
+          content.dragHandle,
+          const SizedBox(width: 12),
+          Text('>', style: RetroTokens.label(size: 12, color: RetroTokens.accent)),
+          const SizedBox(width: 10),
+          Expanded(child: content.textField),
+          if (content.trailingBadge != null) ...<Widget>[
+            const SizedBox(width: 8),
+            content.trailingBadge!,
+          ],
+          if (content.isSearching)
+            Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.5,
+                  color: RetroTokens.accent,
                 ),
               ),
-          ],
-        ),
-      );
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class RetroLauncherFrame extends StatelessWidget {
-  const RetroLauncherFrame({
-    super.key,
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    required this.resultCount,
-    required this.child,
-  });
+  const RetroLauncherFrame({super.key, required this.resultCount, required this.child});
 
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => LauncherTheme(
-        data: const LauncherThemeData(design: LauncherDesign.retro),
-        child: Container(
-          padding: const EdgeInsets.all(7),
-          decoration: LauncherDesign.retro.outerDecoration(surface: surface, accent: accent),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: RetroSurface(
-              background: RetroTokens.background,
-              accent: RetroTokens.accent,
-              child: ColoredBox(
-                color: RetroTokens.background,
-                child: Stack(
-                  fit: StackFit.passthrough,
-                  children: <Widget>[
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: CustomPaint(
-                          painter: _RetroBackdropPainter(
-                            border: RetroTokens.border,
-                            accent: RetroTokens.accent,
-                            cyan: RetroTokens.cyan,
+  Widget build(BuildContext context) {
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    return Container(
+      padding: const EdgeInsets.all(7),
+      decoration: _retroOuterDecoration(),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: RetroSurface(
+          background: RetroTokens.background,
+          accent: RetroTokens.accent,
+          child: ColoredBox(
+            color: RetroTokens.background,
+            child: Stack(
+              fit: StackFit.passthrough,
+              children: <Widget>[
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: _RetroBackdropPainter(
+                        border: RetroTokens.border,
+                        accent: RetroTokens.accent,
+                        cyan: RetroTokens.cyan,
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      if (user.launcherShowTitlebar)
+                        SizedBox(
+                          height: 30,
+                          child: Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: DragToMoveArea(
+                                  child: Row(
+                                    children: <Widget>[
+                                      CustomPaint(
+                                        size: const Size(34, 22),
+                                        painter: _RetroCabinetPainter(
+                                          accent: RetroTokens.accent,
+                                          cyan: RetroTokens.cyan,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 9),
+                                      Flexible(
+                                        child: Text(
+                                          'TABAME // RETRO',
+                                          overflow: TextOverflow.ellipsis,
+                                          style: RetroTokens.label(
+                                            size: 8,
+                                            color: onSurface,
+                                            spacing: 0.3,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Text('1P', style: RetroTokens.label(size: 7, color: RetroTokens.cyan)),
+                              IconButton(
+                                tooltip: 'Hide launcher',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+                                onPressed: windowManager.hide,
+                                icon: Text('X', style: RetroTokens.label(size: 8, color: RetroTokens.dim)),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          if (user.launcherShowTitlebar)
-                            SizedBox(
-                              height: 30,
-                              child: Row(
-                                children: <Widget>[
-                                  Expanded(
-                                    child: DragToMoveArea(
-                                      child: Row(
-                                        children: <Widget>[
-                                          CustomPaint(
-                                            size: Size(34, 22),
-                                            painter: _RetroCabinetPainter(
-                                              accent: RetroTokens.accent,
-                                              cyan: RetroTokens.cyan,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 9),
-                                          Flexible(
-                                            child: Text(
-                                              'TABAME // RETRO',
-                                              overflow: TextOverflow.ellipsis,
-                                              style: RetroTokens.label(
-                                                size: 8,
-                                                color: onSurface,
-                                                spacing: 0.3,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Text('1P', style: RetroTokens.label(size: 7, color: RetroTokens.cyan)),
-                                  IconButton(
-                                    tooltip: 'Hide launcher',
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints.tightFor(width: 30, height: 30),
-                                    onPressed: windowManager.hide,
-                                    icon: Text('X', style: RetroTokens.label(size: 8, color: RetroTokens.dim)),
-                                  ),
-                                ],
+                      Flexible(fit: FlexFit.loose, child: child),
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(8, 10, 8, 3),
+                        decoration: BoxDecoration(
+                          border: Border(top: BorderSide(color: RetroTokens.border)),
+                        ),
+                        child: Row(
+                          children: <Widget>[
+                            Container(width: 7, height: 7, color: RetroTokens.cyan),
+                            const SizedBox(width: 7),
+                            Text('READY', style: RetroTokens.label(size: 7, color: RetroTokens.cyan)),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Text(
+                                  'UP/DN MOVE   ENTER SELECT   CTRL+P PREVIEW',
+                                  style: RetroTokens.pixel(size: 15, color: RetroTokens.dim),
+                                ),
                               ),
                             ),
-                          Flexible(fit: FlexFit.loose, child: child),
-                          Container(
-                            padding: const EdgeInsets.fromLTRB(8, 10, 8, 3),
-                            decoration: BoxDecoration(
-                              border: Border(top: BorderSide(color: RetroTokens.border)),
+                            const SizedBox(width: 12),
+                            Text(
+                              '${resultCount.toString().padLeft(2, '0')} ITEMS',
+                              style: RetroTokens.label(size: 7, color: RetroTokens.yellow),
                             ),
-                            child: Row(
-                              children: <Widget>[
-                                Container(width: 7, height: 7, color: RetroTokens.cyan),
-                                const SizedBox(width: 7),
-                                Text('READY', style: RetroTokens.label(size: 7, color: RetroTokens.cyan)),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Text(
-                                      'UP/DN MOVE   ENTER SELECT   CTRL+P PREVIEW',
-                                      style: RetroTokens.pixel(size: 15, color: RetroTokens.dim),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  '${resultCount.toString().padLeft(2, '0')} ITEMS',
-                                  style: RetroTokens.label(size: 7, color: RetroTokens.yellow),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
-      );
+      ),
+    );
+  }
 }
 
 class RetroSectionHeader extends StatelessWidget {

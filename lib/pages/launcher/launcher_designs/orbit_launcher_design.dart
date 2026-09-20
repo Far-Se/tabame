@@ -1,22 +1,31 @@
 part of '../launcher_design_builder.dart';
 
-class _OrbitSearchBar extends StatelessWidget {
-  const _OrbitSearchBar({
-    required this.accent,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+BoxDecoration _orbitOuterDecoration(Color surface, Color accent) {
+  // Guidance scope — [surface] is the forced HUD palette. A thin
+  // phosphor edge, a deep instrument shadow, no glow.
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(Design.borderRadius),
+    color: surface,
+    border: Border.all(color: accent.withAlpha(70)),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withAlpha(110),
+        blurRadius: 28,
+        spreadRadius: -6,
+        offset: const Offset(0, 14),
+      ),
+    ],
+  );
+}
 
-  final Color accent;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _OrbitSearchBar extends StatelessWidget {
+  const _OrbitSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final TextStyle microLabel = OrbitTokens.tele(
       fontSize: Design.baseFontSize - 3.5,
@@ -43,26 +52,16 @@ class _OrbitSearchBar extends StatelessWidget {
           child: Row(
             children: <Widget>[
               // Radar scope glyph (also the window drag handle).
-              dragHandle,
+              content.dragHandle,
               const SizedBox(width: 10),
               Expanded(
-                child: Stack(
-                  alignment: Alignment.centerRight,
-                  children: <Widget>[
-                    textField,
-                    if (trailingBadge != null)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: trailingBadge!,
-                      ),
-                  ],
-                ),
+                child: _LauncherSearchField(content),
               ),
               // Acquisition scope — sweeps while the query resolves, holds an
               // idle crosshair otherwise.
               Padding(
                 padding: const EdgeInsets.only(left: 8),
-                child: _OrbitScanScope(accent: accent, active: isSearching),
+                child: _OrbitScanScope(accent: accent, active: content.isSearching),
               ),
             ],
           ),
@@ -225,49 +224,38 @@ class _OrbitTickStripPainter extends CustomPainter {
 /// beyond the top-right corner, bearing ticks down the left edge, and a
 /// telemetry strip along the bottom.
 class OrbitLauncherFrame extends StatelessWidget {
-  const OrbitLauncherFrame({
-    super.key,
-    required this.child,
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    this.resultCount = 0,
-  });
+  const OrbitLauncherFrame({super.key, required this.child, this.resultCount = 0});
 
   final Widget child;
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color accent = LauncherTheme.accentOf(context);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.orbit),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: LauncherDesign.orbit.outerDecoration(surface: surface, accent: accent),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(Design.borderRadius),
-          child: Stack(
-            children: <Widget>[
-              if (Design.hasBackdrop) const StableBackdrop(),
-              // Range rings + bearing ticks.
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: CustomPaint(painter: _OrbitRangePainter(ink: accent, isDark: isDark)),
-                ),
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _orbitOuterDecoration(surface, accent),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Design.borderRadius),
+        child: Stack(
+          children: <Widget>[
+            if (Design.hasBackdrop) const StableBackdrop(),
+            // Range rings + bearing ticks.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(painter: _OrbitRangePainter(ink: accent, isDark: isDark)),
               ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  child,
-                  _OrbitTelemetryFooter(accent: accent, resultCount: resultCount, isDark: isDark),
-                ],
-              ),
-            ],
-          ),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                child,
+                _OrbitTelemetryFooter(resultCount: resultCount, isDark: isDark),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -318,39 +306,40 @@ class _OrbitRangePainter extends CustomPainter {
 /// The telemetry strip: a blinking status lamp, flight-control hints, and the
 /// locked-target count readout.
 class _OrbitTelemetryFooter extends StatelessWidget {
-  const _OrbitTelemetryFooter({required this.accent, required this.resultCount, required this.isDark});
+  const _OrbitTelemetryFooter({required this.resultCount, required this.isDark});
 
-  final Color accent;
   final int resultCount;
   final bool isDark;
 
-  Widget _hint(String key, String caption) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Text(
-          key,
-          style: OrbitTokens.tele(
-            fontSize: Design.baseFontSize - 1,
-            color: accent.withAlpha(220),
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.4,
-          ),
-        ),
-        Text(
-          ' $caption',
-          style: OrbitTokens.tele(
-            fontSize: Design.baseFontSize - 1,
-            color: OrbitTokens.dim(isDark),
-            letterSpacing: 0.8,
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
+
+    Widget buildHint(String key, String caption) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            key,
+            style: OrbitTokens.tele(
+              fontSize: Design.baseFontSize - 1,
+              color: accent.withAlpha(220),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
+            ),
+          ),
+          Text(
+            ' $caption',
+            style: OrbitTokens.tele(
+              fontSize: Design.baseFontSize - 1,
+              color: OrbitTokens.dim(isDark),
+              letterSpacing: 0.8,
+            ),
+          ),
+        ],
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
       decoration: BoxDecoration(
@@ -361,11 +350,11 @@ class _OrbitTelemetryFooter extends StatelessWidget {
         children: <Widget>[
           _OrbitStatusDot(color: accent),
           const SizedBox(width: 9),
-          _hint('↵', 'ENGAGE'),
+          buildHint('↵', 'ENGAGE'),
           const SizedBox(width: 14),
-          _hint('→', 'ACTIONS'),
+          buildHint('→', 'ACTIONS'),
           const SizedBox(width: 14),
-          _hint('ESC', 'ABORT'),
+          buildHint('ESC', 'ABORT'),
           const Spacer(),
           Text(
             Globals.isLauncherPluginActive ? "PLUGIN" : 'TGT ${resultCount.toString().padLeft(2, '0')}',

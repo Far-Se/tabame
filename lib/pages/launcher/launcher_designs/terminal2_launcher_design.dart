@@ -1,22 +1,30 @@
 part of '../launcher_design_builder.dart';
 
-class _Terminal2SearchBar extends StatelessWidget {
-  const _Terminal2SearchBar({
-    required this.accent,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+BoxDecoration _terminal2OuterDecoration(Color surface) {
+  final bool isTerminalDark = surface.computeLuminance() < 0.5;
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(2),
+    color: surface,
+    border: Border.all(color: Terminal2Tokens.dim(isTerminalDark).withAlpha(120)),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withAlpha(isTerminalDark ? 105 : 48),
+        blurRadius: 18,
+        spreadRadius: -5,
+        offset: const Offset(0, 9),
+      ),
+    ],
+  );
+}
 
-  final Color accent;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _Terminal2SearchBar extends StatelessWidget {
+  const _Terminal2SearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color dim = Terminal2Tokens.dim(isDark);
 
@@ -29,39 +37,6 @@ class _Terminal2SearchBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          // Padding(
-          //   padding: const EdgeInsets.fromLTRB(8, 5, 8, 4),
-          //   child: Row(
-          //     children: <Widget>[
-          //       Container(
-          //         padding: const EdgeInsets.fromLTRB(5, 3, 5, 2),
-          //         color: accent,
-          //         child: Text(
-          //           'QUERY',
-          //           style: Terminal2Tokens.label(
-          //             fontSize: Design.baseFontSize - 2,
-          //             fontWeight: FontWeight.w700,
-          //             color: Terminal2Tokens.bg(isDark),
-          //             letterSpacing: 1.1,
-          //             height: 1,
-          //           ),
-          //         ),
-          //       ),
-          //       Expanded(child: Container(height: 1, color: dim.withAlpha(60))),
-          //       const SizedBox(width: 8),
-          //       Text(
-          //         isSearching ? 'RESOLVING' : 'INSERT',
-          //         style: Terminal2Tokens.label(
-          //           fontSize: Design.baseFontSize - 2,
-          //           fontWeight: FontWeight.w600,
-          //           color: isSearching ? Terminal2Tokens.amber(isDark) : dim,
-          //           letterSpacing: 1,
-          //           height: 1,
-          //         ),
-          //       ),
-          //     ],
-          //   ),
-          // ),
           Container(height: 1, color: dim.withAlpha(48)),
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 5),
@@ -69,7 +44,7 @@ class _Terminal2SearchBar extends StatelessWidget {
               children: <Widget>[
                 Tooltip(
                   message: 'Drag launcher',
-                  child: SizedBox(width: 18, height: 22, child: Center(child: dragHandle)),
+                  child: SizedBox(width: 18, height: 22, child: Center(child: content.dragHandle)),
                 ),
                 // Text(
                 //   'tabame@local',
@@ -96,16 +71,9 @@ class _Terminal2SearchBar extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: Stack(
-                    alignment: Alignment.centerRight,
-                    children: <Widget>[
-                      textField,
-                      if (trailingBadge != null)
-                        Padding(padding: const EdgeInsets.only(right: 4), child: trailingBadge!),
-                    ],
-                  ),
+                  child: _LauncherSearchField(content),
                 ),
-                if (isSearching)
+                if (content.isSearching)
                   Padding(
                     padding: const EdgeInsets.only(left: 8),
                     child: _Terminal2Spinner(color: accent),
@@ -215,116 +183,33 @@ class _Terminal2SpinnerState extends State<_Terminal2Spinner> with SingleTickerP
 
 /// The second-generation compact operator shell with flat panes and keyboard-first status chrome.
 class Terminal2LauncherFrame extends StatelessWidget {
-  const Terminal2LauncherFrame({
-    super.key,
-    required this.child,
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    this.resultCount = 0,
-  });
+  const Terminal2LauncherFrame({super.key, required this.child, this.resultCount = 0});
 
   final Widget child;
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.terminal2),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: LauncherDesign.terminal2.outerDecoration(surface: surface, accent: accent),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(2),
-          child: Stack(
-            children: <Widget>[
-              if (Design.hasBackdrop) const StableBackdrop(),
-              ColoredBox(
-                color: surface.withAlpha(Design.hasBackdrop ? 224 : 255),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    // _Terminal2TitleBar(accent: accent, isDark: isDark),
-                    child,
-                    DragToMoveArea(
-                        child: _Terminal2StatusBar(accent: accent, resultCount: resultCount, isDark: isDark)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ignore: unused_element
-class _Terminal2TitleBar extends StatelessWidget {
-  const _Terminal2TitleBar({required this.accent, required this.isDark});
-
-  final Color accent;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color dim = Terminal2Tokens.dim(isDark);
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onPanStart: (DragStartDetails _) => windowManager.startDragging(),
-      child: Container(
-        height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: Terminal2Tokens.chrome(isDark),
-          border: Border(bottom: BorderSide(color: dim.withAlpha(72))),
-        ),
-        child: Row(
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _terminal2OuterDecoration(surface),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(2),
+        child: Stack(
           children: <Widget>[
-            Container(
-              padding: const EdgeInsets.fromLTRB(6, 4, 6, 3),
-              color: accent,
-              child: Text(
-                'TABAME',
-                style: Terminal2Tokens.label(
-                  fontSize: Design.baseFontSize - 1,
-                  fontWeight: FontWeight.w700,
-                  color: Terminal2Tokens.bg(isDark),
-                  letterSpacing: 1.4,
-                  height: 1,
-                ),
+            if (Design.hasBackdrop) const StableBackdrop(),
+            ColoredBox(
+              color: surface.withAlpha(Design.hasBackdrop ? 224 : 255),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  child,
+                  DragToMoveArea(child: _Terminal2StatusBar(resultCount: resultCount, isDark: isDark)),
+                ],
               ),
             ),
-            const SizedBox(width: 9),
-            Text(
-              '// COMMAND LAUNCHER',
-              style: Terminal2Tokens.label(
-                fontSize: Design.baseFontSize - 1.5,
-                fontWeight: FontWeight.w500,
-                color: dim,
-                letterSpacing: 0.9,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(child: Container(height: 1, color: dim.withAlpha(55))),
-            const SizedBox(width: 10),
-            Container(width: 6, height: 6, color: accent),
-            const SizedBox(width: 6),
-            Text(
-              'LOCAL / READY',
-              style: Terminal2Tokens.label(
-                fontSize: Design.baseFontSize - 2,
-                fontWeight: FontWeight.w600,
-                color: accent,
-                letterSpacing: 0.8,
-              ),
-            ),
-            const SizedBox(width: 10),
-            _Terminal2CloseButton(isDark: isDark),
           ],
         ),
       ),
@@ -332,45 +217,15 @@ class _Terminal2TitleBar extends StatelessWidget {
   }
 }
 
-class _Terminal2CloseButton extends StatelessWidget {
-  const _Terminal2CloseButton({required this.isDark});
-
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'Close launcher',
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: QuickMenuFunctions.hideQuickMenu,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-            child: Text(
-              '[x]',
-              style: Terminal2Tokens.mono(
-                fontSize: Design.baseFontSize - 1,
-                fontWeight: FontWeight.w600,
-                color: Terminal2Tokens.dim(isDark),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _Terminal2StatusBar extends StatelessWidget {
-  const _Terminal2StatusBar({required this.accent, required this.resultCount, required this.isDark});
+  const _Terminal2StatusBar({required this.resultCount, required this.isDark});
 
-  final Color accent;
   final int resultCount;
   final bool isDark;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
     final Color dim = Terminal2Tokens.dim(isDark);
     final TextStyle key = Terminal2Tokens.mono(
       fontSize: Design.baseFontSize - 1.5,

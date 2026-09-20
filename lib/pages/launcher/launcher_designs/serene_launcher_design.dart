@@ -1,26 +1,35 @@
 part of '../launcher_design_builder.dart';
 
-class _SereneSearchBar extends StatelessWidget {
-  const _SereneSearchBar({
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+BoxDecoration _sereneOuterDecoration(Color surface) {
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(Design.borderRadius),
+    color: surface.withAlpha(230),
+    border: Border.all(color: Colors.white.withAlpha(18)),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withAlpha(60),
+        blurRadius: 40,
+        spreadRadius: -4,
+        offset: const Offset(0, 16),
+      ),
+      BoxShadow(
+        color: Colors.black.withAlpha(14),
+        blurRadius: 6,
+        offset: const Offset(0, 2),
+      ),
+    ],
+  );
+}
 
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _SereneSearchBar extends StatelessWidget {
+  const _SereneSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
     return Container(
       decoration: BoxDecoration(
         color: surface.withAlpha(70),
@@ -32,22 +41,12 @@ class _SereneSearchBar extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
             child: Row(
               children: <Widget>[
-                dragHandle,
+                content.dragHandle,
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Stack(
-                    alignment: Alignment.centerRight,
-                    children: <Widget>[
-                      textField,
-                      if (trailingBadge != null)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: trailingBadge!,
-                        ),
-                    ],
-                  ),
+                  child: _LauncherSearchField(content),
                 ),
-                if (isSearching)
+                if (content.isSearching)
                   Padding(
                     padding: const EdgeInsets.only(left: 8),
                     child: SizedBox(
@@ -76,77 +75,55 @@ class _SereneSearchBar extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// SereneLauncherFrame
-// ---------------------------------------------------------------------------
-
 /// The frosted-glass outer frame used by the Serene design.
 ///
-/// This widget:
-/// 1. Applies backdrop blur + frosted surface.
-/// 2. Injects a [LauncherTheme] with [LauncherDesign.serene] so that all
-///    descendant result-item widgets automatically inherit the Serene variant
-///    without needing an explicit parameter.
 class SereneLauncherFrame extends StatelessWidget {
-  const SereneLauncherFrame({
-    super.key,
-    required this.child,
-    required this.accent,
-    Color? surface,
-    Color? onSurface,
-    int? resultCount,
-  });
+  const SereneLauncherFrame({super.key, required this.child});
 
   final Widget child;
-  final Color accent;
 
   @override
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final bool hasBackdrop = Design.hasBackdrop;
 
-    // Wrap in LauncherTheme so descendants can read the design without a
-    // parameter chain.
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.serene),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 360),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(Design.borderRadius),
-              color: surface.withAlpha(hasBackdrop ? 180 : 240),
-              border: Border.all(color: Colors.white.withAlpha(18)),
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: Colors.black.withAlpha(60),
-                  blurRadius: 40,
-                  spreadRadius: -4,
-                  offset: const Offset(0, 16),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(Design.borderRadius),
-              child: Stack(
-                children: <Widget>[
-                  if (Design.hasBackdrop) const StableBackdrop(),
-                  child,
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: DateTimeWidget(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
-                      ),
-                    ),
-                  )
-                ],
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(Design.borderRadius),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 360),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(Design.borderRadius),
+            color: surface.withAlpha(hasBackdrop ? 180 : 240),
+            border: Border.all(color: Colors.white.withAlpha(18)),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withAlpha(60),
+                blurRadius: 40,
+                spreadRadius: -4,
+                offset: const Offset(0, 16),
               ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(Design.borderRadius),
+            child: Stack(
+              children: <Widget>[
+                if (Design.hasBackdrop) const StableBackdrop(),
+                child,
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: DateTimeWidget(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
+                    ),
+                  ),
+                )
+              ],
             ),
           ),
         ),
@@ -154,12 +131,3 @@ class SereneLauncherFrame extends StatelessWidget {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// ClassicLauncherFrame
-// ---------------------------------------------------------------------------
-
-/// The glass-card outer frame used by the Classic design.
-///
-/// Mirrors [SereneLauncherFrame]: wraps [child] in a [LauncherTheme] with
-/// [LauncherDesign.classic] so descendants inherit the correct variant.

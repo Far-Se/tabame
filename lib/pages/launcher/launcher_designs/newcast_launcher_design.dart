@@ -1,17 +1,26 @@
 part of '../launcher_design_builder.dart';
 
-class _RaycastSearchBar extends StatelessWidget {
-  const _RaycastSearchBar({
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+BoxDecoration _newCastOuterDecoration(Color surface) {
+  final bool isDark = surface.computeLuminance() < 0.5;
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(14),
+    color: surface.withAlpha(236),
+    border: Border.all(color: (isDark ? Colors.white : Colors.black).withAlpha(10)),
+    boxShadow: <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withAlpha(72),
+        blurRadius: 28,
+        spreadRadius: -5,
+        offset: const Offset(0, 14),
+      ),
+    ],
+  );
+}
 
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+class _RaycastSearchBar extends StatelessWidget {
+  const _RaycastSearchBar(this.content);
+
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
@@ -26,22 +35,12 @@ class _RaycastSearchBar extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 0, 12, 0),
             child: Row(
               children: <Widget>[
-                dragHandle,
+                content.dragHandle,
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Stack(
-                    alignment: Alignment.centerRight,
-                    children: <Widget>[
-                      textField,
-                      if (trailingBadge != null)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: trailingBadge!,
-                        ),
-                    ],
-                  ),
+                  child: _LauncherSearchField(content),
                 ),
-                if (isSearching)
+                if (content.isSearching)
                   Padding(
                     padding: const EdgeInsets.only(left: 8, right: 8),
                     child: SizedBox(
@@ -54,7 +53,6 @@ class _RaycastSearchBar extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(width: 8),
-                // const _RaycastQuickAiButton(),
               ],
             ),
           ),
@@ -69,39 +67,66 @@ class _RaycastSearchBar extends StatelessWidget {
   }
 }
 
-// ignore: unused_element
-class _RaycastQuickAiButton extends StatelessWidget {
-  const _RaycastQuickAiButton();
+class RaycastLauncherFrame extends StatelessWidget {
+  const RaycastLauncherFrame({super.key, required this.child});
+
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Semantics(
-      button: true,
-      label: 'Quick AI',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-        decoration: BoxDecoration(
-          color: RaycastTokens.badge(isDark),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+    final Color surface = Theme.of(context).colorScheme.surface;
+    const BorderRadius radius = BorderRadius.all(Radius.circular(14));
+    final bool isDark = surface.computeLuminance() < 0.5;
+    final Color sheen = isDark ? Colors.white : Colors.black;
+
+    return Container(
+      decoration: _newCastOuterDecoration(surface),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Stack(
           children: <Widget>[
-            Icon(
-              Icons.move_to_inbox_rounded,
-              size: 14,
-              color: RaycastTokens.muted(isDark),
-            ),
-            const SizedBox(width: 5),
-            Text(
-              'Quick AI',
-              style: RaycastTokens.ui(
-                fontSize: 13,
-                color: RaycastTokens.secondary(isDark),
-                fontWeight: FontWeight.w500,
-                height: 1.0,
+            if (Design.hasBackdrop) const StableBackdrop(),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: const Alignment(-0.18, 0.38),
+                      colors: <Color>[
+                        sheen.withAlpha(isDark ? 26 : 10),
+                        sheen.withAlpha(isDark ? 8 : 4),
+                        Colors.transparent,
+                      ],
+                      stops: const <double>[0, 0.28, 1],
+                    ),
+                  ),
+                ),
               ),
+            ),
+            Positioned(
+              top: -74,
+              right: -34,
+              width: 250,
+              height: 170,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment.topRight,
+                      radius: 1.0,
+                      colors: <Color>[sheen.withAlpha(isDark ? 10 : 5), Colors.transparent],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                child,
+                const _RaycastFooter(),
+              ],
             ),
           ],
         ),
@@ -110,96 +135,12 @@ class _RaycastQuickAiButton extends StatelessWidget {
   }
 }
 
-class RaycastLauncherFrame extends StatelessWidget {
-  const RaycastLauncherFrame({
-    super.key,
-    required this.child,
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    int? resultCount,
-  });
-
-  final Widget child;
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
-
-  @override
-  Widget build(BuildContext context) {
-    const BorderRadius radius = BorderRadius.all(Radius.circular(14));
-    final bool isDark = surface.computeLuminance() < 0.5;
-    final Color sheen = isDark ? Colors.white : Colors.black;
-
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.newCast),
-      child: Container(
-        decoration: LauncherDesign.newCast.outerDecoration(
-          surface: surface,
-          accent: accent,
-        ),
-        child: ClipRRect(
-          borderRadius: radius,
-          child: Stack(
-            children: <Widget>[
-              if (Design.hasBackdrop) const StableBackdrop(),
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topRight,
-                        end: const Alignment(-0.18, 0.38),
-                        colors: <Color>[
-                          sheen.withAlpha(isDark ? 26 : 10),
-                          sheen.withAlpha(isDark ? 8 : 4),
-                          Colors.transparent,
-                        ],
-                        stops: const <double>[0, 0.28, 1],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: -74,
-                right: -34,
-                width: 250,
-                height: 170,
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: RadialGradient(
-                        center: Alignment.topRight,
-                        radius: 1.0,
-                        colors: <Color>[sheen.withAlpha(isDark ? 10 : 5), Colors.transparent],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  child,
-                  _RaycastFooter(onSurface: onSurface),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _RaycastFooter extends StatelessWidget {
-  const _RaycastFooter({required this.onSurface});
-
-  final Color onSurface;
+  const _RaycastFooter();
 
   @override
   Widget build(BuildContext context) {
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final bool isDark = onSurface.computeLuminance() > 0.5;
     final TextStyle labelStyle = RaycastTokens.ui(
       fontSize: 13,

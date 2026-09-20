@@ -1,6 +1,6 @@
 part of '../launcher_design_builder.dart';
 
-BoxDecoration switchboardLauncherOuterDecoration(Color surface, Color accent) {
+BoxDecoration _switchboardOuterDecoration(Color surface) {
   final bool isDark = surface.computeLuminance() < 0.5;
   return BoxDecoration(
     color: SwitchboardTokens.canvas(isDark),
@@ -17,26 +17,14 @@ BoxDecoration switchboardLauncherOuterDecoration(Color surface, Color accent) {
   );
 }
 
-class SwitchboardLauncherSearchBar extends StatelessWidget {
-  const SwitchboardLauncherSearchBar({
-    super.key,
-    required this.accent,
-    required this.onSurface,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+class _SwitchboardLauncherSearchBar extends StatelessWidget {
+  const _SwitchboardLauncherSearchBar(this.content);
 
-  final Color accent;
-  final Color onSurface;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+  final _LauncherSearchBarContent content;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return ColoredBox(
       color: SwitchboardTokens.panel(isDark),
@@ -44,7 +32,7 @@ class SwitchboardLauncherSearchBar extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         child: Row(
           children: <Widget>[
-            dragHandle,
+            content.dragHandle,
             const SizedBox(width: 10),
             DragToMoveArea(
               child: Container(
@@ -66,19 +54,13 @@ class SwitchboardLauncherSearchBar extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Stack(
-                alignment: Alignment.centerRight,
-                children: <Widget>[
-                  textField,
-                  if (trailingBadge != null) trailingBadge!,
-                ],
-              ),
+              child: _LauncherSearchField(content, badgePadding: 0),
             ),
             const SizedBox(width: 8),
             SizedBox(
               width: 16,
               height: 16,
-              child: isSearching
+              child: content.isSearching
                   ? CircularProgressIndicator(strokeWidth: 1.7, color: accent)
                   : Icon(Icons.keyboard_command_key_rounded, size: 15, color: SwitchboardTokens.dim(isDark)),
             ),
@@ -130,50 +112,35 @@ class SwitchboardLauncherHeader extends StatelessWidget {
 }
 
 class SwitchboardLauncherFrame extends StatelessWidget {
-  const SwitchboardLauncherFrame({
-    super.key,
-    required this.child,
-    required this.surface,
-    required this.accent,
-    required this.resultCount,
-    Color? onSurface,
-  });
+  const SwitchboardLauncherFrame({super.key, required this.child, required this.resultCount});
 
   final Widget child;
-  final Color surface;
-  final Color accent;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
     final bool isDark = surface.computeLuminance() < 0.5;
     final double radius = math.min(Design.borderRadius, 8);
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.switchboard),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: switchboardLauncherOuterDecoration(surface, accent),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(math.max(0, radius - 1)),
-          child: Stack(
-            children: <Widget>[
-              if (Design.hasBackdrop) const StableBackdrop(),
-              ColoredBox(
-                color: SwitchboardTokens.canvas(isDark).withAlpha(Design.hasBackdrop ? (isDark ? 224 : 232) : 255),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    child,
-                    _SwitchboardFooter(
-                      isDark: isDark,
-                      accent: accent,
-                      resultCount: resultCount,
-                    ),
-                  ],
-                ),
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _switchboardOuterDecoration(surface),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(math.max(0, radius - 1)),
+        child: Stack(
+          children: <Widget>[
+            if (Design.hasBackdrop) const StableBackdrop(),
+            ColoredBox(
+              color: SwitchboardTokens.canvas(isDark).withAlpha(Design.hasBackdrop ? (isDark ? 224 : 232) : 255),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  child,
+                  _SwitchboardFooter(isDark: isDark, resultCount: resultCount),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -237,14 +204,14 @@ class SwitchboardEmptyState extends StatelessWidget {
 }
 
 class _SwitchboardFooter extends StatelessWidget {
-  const _SwitchboardFooter({required this.isDark, required this.accent, required this.resultCount});
+  const _SwitchboardFooter({required this.isDark, required this.resultCount});
 
   final bool isDark;
-  final Color accent;
   final int resultCount;
 
   @override
   Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
     final Color dim = SwitchboardTokens.dim(isDark);
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 7, 12, 7),

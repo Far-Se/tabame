@@ -97,14 +97,6 @@ part 'launcher/state/search_mixin.dart';
 part 'launcher/state/result_actions_mixin.dart';
 part 'launcher/state/result_row_builders_mixin.dart';
 
-typedef LauncherFrameBuilder = Widget Function({
-  required Color surface,
-  required Color accent,
-  required Color onSurface,
-  required int resultCount,
-  required Widget child,
-});
-
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
@@ -804,24 +796,24 @@ class LauncherState extends State<Launcher>
     // accent); Zen replaces it with a calm moss, Blueprint with drafting ink.
     // Glass keeps the theme colors (its glass picks them up) and only forces
     // Inter for the iOS feel.
-    final Color accent = switch (true) {
-      _ when _design == LauncherDesign.thermal => ThermalTokens.accent,
-      _ when _design == LauncherDesign.capillary => CapillaryTokens.resolve(isDark).accent,
-      _ when _design == LauncherDesign.liquidMetal => LiquidMetalTokens.accent,
-      _ when _design == LauncherDesign.opticalGlass => OpticalGlassTokens.accent,
-      _ when _design == LauncherDesign.aurora => AuroraTokens.accent,
-      _ when _design == LauncherDesign.crt => CrtTokens.accent,
-      _ when isRetro => RetroTokens.accent,
-      _ when _design == LauncherDesign.phosphor => PhosphorTokens.accent,
-      _ when _design == LauncherDesign.strata => StrataTokens.accent,
-      _ when isTui => TuiTokens.accent,
-      _ when _design == LauncherDesign.omarchy => OmarchyTokens.accent(isDark),
-      _ when isZen => ZenTokens.accent(isDark),
-      _ when isBlueprint => BlueprintTokens.accent(isDark),
-      _ when isManifesto => ManifestoTokens.accent(isDark),
-      _ when isWindowsXp => WindowsXpTokens.selection,
-      _ when isWindows98 => Windows98Tokens.selection,
-      _ when isNotion => NotionTokens.blue(isDark),
+    final Color accent = switch (_design) {
+      LauncherDesign.thermal => ThermalTokens.accent,
+      LauncherDesign.capillary => CapillaryTokens.resolve(isDark).accent,
+      LauncherDesign.liquidMetal => LiquidMetalTokens.accent,
+      LauncherDesign.opticalGlass => OpticalGlassTokens.accent,
+      LauncherDesign.aurora => AuroraTokens.accent,
+      LauncherDesign.crt => CrtTokens.accent,
+      LauncherDesign.retro => RetroTokens.accent,
+      LauncherDesign.phosphor => PhosphorTokens.accent,
+      LauncherDesign.strata => StrataTokens.accent,
+      LauncherDesign.tui => TuiTokens.accent,
+      LauncherDesign.omarchy => OmarchyTokens.accent,
+      LauncherDesign.zen => ZenTokens.accent(isDark),
+      LauncherDesign.blueprint => BlueprintTokens.accent(isDark),
+      LauncherDesign.manifesto => ManifestoTokens.accent(isDark),
+      LauncherDesign.windowsXp => WindowsXpTokens.selection,
+      LauncherDesign.windows98 => Windows98Tokens.selection,
+      LauncherDesign.notion => NotionTokens.blue(isDark),
       _ => Design.accent,
     };
     final ThemeData designTheme = _buildDesignTheme(
@@ -837,9 +829,6 @@ class LauncherState extends State<Launcher>
 
     // Build the shared inner content once — no per-design duplication.
     final Widget searchContent = _design.buildSearchBar(
-      surface: theme.colorScheme.surface,
-      accent: accent,
-      onSurface: onSurface,
       dragHandle: MouseRegion(
         cursor: user.useCustomCursor ? Globals.customCursor ?? SystemMouseCursors.move : SystemMouseCursors.basic,
         child: GestureDetector(
@@ -892,7 +881,7 @@ class LauncherState extends State<Launcher>
                   : _design == LauncherDesign.capillary
                       ? CapillaryTokens.resolve(isDark).dim
                       : isOmarchy
-                          ? OmarchyTokens.dim(isDark)
+                          ? OmarchyTokens.dim
                           : isRaycast
                               ? RaycastTokens.muted(isDark)
                               : onSurface.withAlpha(70)),
@@ -1059,10 +1048,7 @@ class LauncherState extends State<Launcher>
                                                               Padding(
                                                                 key: _pluginsSectionHeaderKey,
                                                                 padding: EdgeInsets.zero,
-                                                                child: _design.buildSectionHeader(
-                                                                  label: 'Plugins',
-                                                                  accent: accent,
-                                                                ),
+                                                                child: _design.buildSectionHeader(label: 'Plugins'),
                                                               ),
                                                               Divider(
                                                                 height: 17,
@@ -1091,7 +1077,7 @@ class LauncherState extends State<Launcher>
                                                                       _auroraResultGroup(result)))
                                                             Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
                                                               _design.buildSectionHeader(
-                                                                  label: _auroraResultGroup(result), accent: accent),
+                                                                  label: _auroraResultGroup(result)),
                                                               resultWithDivider,
                                                             ])
                                                           else
@@ -1241,95 +1227,22 @@ class LauncherState extends State<Launcher>
       ],
     );
 
-    // ── Outer frame: chosen once, wraps the shared content ──────────────────
-    // Each frame widget also injects a LauncherTheme so descendants can
-    // read the active design without a parameter chain.
-    final Color surface = theme.colorScheme.surface;
-    final int resultCount = _results.length;
-    final LauncherFrameBuilder frameBuilder = switch (_design) {
-      LauncherDesign.thermal => ThermalLauncherFrame.new,
-      LauncherDesign.capillary => ({
-          required Color surface,
-          required Color accent,
-          required Color onSurface,
-          required int resultCount,
-          required Widget child,
-        }) =>
-            CapillaryLauncherFrame(
-              surface: surface,
-              accent: accent,
-              onSurface: onSurface,
-              resultCount: resultCount,
-              queryController: _controller,
-              child: child,
-            ),
-      LauncherDesign.liquidMetal => LiquidMetalLauncherFrame.new,
-      LauncherDesign.opticalGlass => OpticalGlassLauncherFrame.new,
-      LauncherDesign.serene => SereneLauncherFrame.new,
-      LauncherDesign.classic => ClassicLauncherFrame.new,
-      LauncherDesign.aurora => AuroraLauncherFrame.new,
-      LauncherDesign.strata => StrataLauncherFrame.new,
-      LauncherDesign.crt => CrtLauncherFrame.new,
-      LauncherDesign.retro => RetroLauncherFrame.new,
-      LauncherDesign.toon => ToonLauncherFrame.new,
-      LauncherDesign.phosphor => PhosphorLauncherFrame.new,
-      LauncherDesign.command => CommandLauncherFrame.new,
-      LauncherDesign.terminal => TerminalLauncherFrame.new,
-      LauncherDesign.zen => ZenLauncherFrame.new,
-      LauncherDesign.glass => GlassLauncherFrame.new,
-      LauncherDesign.blueprint => BlueprintLauncherFrame.new,
-      LauncherDesign.transit => TransitLauncherFrame.new,
-      LauncherDesign.fluent => FluentLauncherFrame.new,
-      LauncherDesign.manifesto => ManifestoLauncherFrame.new,
-      LauncherDesign.orbit => OrbitLauncherFrame.new,
-      LauncherDesign.anime => AnimeLauncherFrame.new,
-      LauncherDesign.tech => TechLauncherFrame.new,
-      LauncherDesign.vector => VectorLauncherFrame.new,
-      LauncherDesign.outrun => Outrun2LauncherFrame.new,
-      LauncherDesign.matrix => ({
-          required Color surface,
-          required Color accent,
-          required Color onSurface,
-          required int resultCount,
-          required Widget child,
-        }) =>
-            MatrixLauncherFrame(
-                surface: surface,
-                accent: accent,
-                onSurface: onSurface,
-                resultCount: resultCount,
-                searchChild: searchContent,
-                resultsChild: Stack(
-                  children: <Widget>[
-                    resultsContent,
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: _buildHeightResizeHandle(accent, onSurface),
-                    ),
-                  ],
-                )),
-      LauncherDesign.steam => SteamLauncherFrame.new,
-      LauncherDesign.cyber => CyberLauncherFrame.new,
-      LauncherDesign.manga => MangaLauncherFrame.new,
-      LauncherDesign.windowsXp => WindowsXpLauncherFrame.new,
-      LauncherDesign.windows98 => Windows98LauncherFrame.new,
-      LauncherDesign.notion => NotionLauncherFrame.new,
-      LauncherDesign.switchboard => SwitchboardLauncherFrame.new,
-      LauncherDesign.relay => RelayLauncherFrame.new,
-      LauncherDesign.newCast => RaycastLauncherFrame.new,
-      LauncherDesign.omarchy => OmarchyLauncherFrame.new,
-      LauncherDesign.tui => TuiLauncherFrame.new,
-      LauncherDesign.terminal2 => Terminal2LauncherFrame.new,
-    };
-
-    final Widget frame = frameBuilder(
-      surface: surface,
-      accent: accent,
-      onSurface: onSurface,
-      resultCount: resultCount,
+    final Widget frame = _design.buildFrame(
       child: innerContent,
+      searchContent: searchContent,
+      resultsContent: Stack(
+        children: <Widget>[
+          resultsContent,
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _buildHeightResizeHandle(accent, onSurface),
+          ),
+        ],
+      ),
+      resultCount: _results.length,
+      queryController: _controller,
     );
 
     final bool usesDesignFont = _design == LauncherDesign.liquidMetal ||
@@ -1373,7 +1286,7 @@ class LauncherState extends State<Launcher>
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onSecondaryTap: _openActionsForActiveResult,
-        child: appearanceFrame,
+        child: LauncherTheme(data: launcherTheme, accent: accent, child: appearanceFrame),
       ),
     );
   }
@@ -1518,10 +1431,8 @@ class LauncherState extends State<Launcher>
     return Row(
       children: <Widget>[
         Expanded(
-          child: _design.buildSectionHeader(
-            label: hasPluginsSection && _isPluginsSectionActive ? 'Plugins' : 'Results',
-            accent: accent,
-          ),
+          child:
+              _design.buildSectionHeader(label: hasPluginsSection && _isPluginsSectionActive ? 'Plugins' : 'Results'),
         ),
         _LauncherStatusBadges(
           accent: accent,

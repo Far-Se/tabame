@@ -1,6 +1,6 @@
 part of '../launcher_design_builder.dart';
 
-BoxDecoration matrixLauncherOuterDecoration(Color surface, Color accent) => BoxDecoration(
+BoxDecoration _matrixOuterDecoration() => BoxDecoration(
       color: Colors.transparent,
       boxShadow: <BoxShadow>[
         BoxShadow(
@@ -19,17 +19,11 @@ class MatrixLauncherFrame extends StatefulWidget {
     super.key,
     required this.searchChild,
     required this.resultsChild,
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
     required this.resultCount,
   });
 
   final Widget searchChild;
   final Widget resultsChild;
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
   final int resultCount;
 
   @override
@@ -97,72 +91,65 @@ class _MatrixLauncherFrameState extends State<MatrixLauncherFrame> {
   @override
   Widget build(BuildContext context) {
     final double radius = Design.borderRadius;
-    final Color text = widget.onSurface;
+    final Color text = Theme.of(context).colorScheme.onSurface;
 
-    return LauncherTheme(
-      data: const LauncherThemeData(design: LauncherDesign.matrix),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 360),
-        decoration: matrixLauncherOuterDecoration(widget.surface, widget.accent),
-        child: Stack(
-          key: _stackKey,
-          children: <Widget>[
-            if (_sectionRects.isNotEmpty)
-              Positioned.fill(
-                child: ClipPath(
-                  clipper: _MatrixLauncherSectionsClipper(_sectionRects, radius),
-                  child: RepaintBoundary(
-                    child: _MatrixLauncherGround(
-                      surface: widget.surface,
-                      accent: widget.accent,
-                      radius: radius,
-                    ),
-                  ),
-                ),
-              ),
-            NotificationListener<SizeChangedLayoutNotification>(
-              onNotification: (SizeChangedLayoutNotification notification) {
-                _scheduleMeasurement();
-                return true;
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    _sectionCard(
-                      key: _searchKey,
-                      radius: radius,
-                      text: text,
-                      label: 'SEARCH',
-                      trailing: 'INPUT',
-                      child: widget.searchChild,
-                    ),
-                    const SizedBox(height: 8),
-                    _sectionCard(
-                      key: _resultsKey,
-                      radius: radius,
-                      text: text,
-                      label: 'RESULTS',
-                      trailing: widget.resultCount.toString().padLeft(2, '0'),
-                      child: widget.resultsChild,
-                    ),
-                    DateTimeWidget(
-                      padding: const EdgeInsets.only(left: 10),
-                      style: TextStyle(
-                        color: text.withAlpha(85),
-                        fontSize: 8,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ],
+    return Container(
+      constraints: const BoxConstraints(minHeight: 360),
+      decoration: _matrixOuterDecoration(),
+      child: Stack(
+        key: _stackKey,
+        children: <Widget>[
+          if (_sectionRects.isNotEmpty)
+            Positioned.fill(
+              child: ClipPath(
+                clipper: _MatrixLauncherSectionsClipper(_sectionRects, radius),
+                child: RepaintBoundary(
+                  child: _MatrixLauncherGround(radius: radius),
                 ),
               ),
             ),
-          ],
-        ),
+          NotificationListener<SizeChangedLayoutNotification>(
+            onNotification: (SizeChangedLayoutNotification notification) {
+              _scheduleMeasurement();
+              return true;
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  _sectionCard(
+                    key: _searchKey,
+                    radius: radius,
+                    text: text,
+                    label: 'SEARCH',
+                    trailing: 'INPUT',
+                    child: widget.searchChild,
+                  ),
+                  const SizedBox(height: 8),
+                  _sectionCard(
+                    key: _resultsKey,
+                    radius: radius,
+                    text: text,
+                    label: 'RESULTS',
+                    trailing: widget.resultCount.toString().padLeft(2, '0'),
+                    child: widget.resultsChild,
+                  ),
+                  DateTimeWidget(
+                    padding: const EdgeInsets.only(left: 10),
+                    style: TextStyle(
+                      color: text.withAlpha(85),
+                      fontSize: 8,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -195,7 +182,7 @@ class _MatrixLauncherFrameState extends State<MatrixLauncherFrame> {
                     Text(
                       label,
                       style: TextStyle(
-                        color: widget.accent.withAlpha(170),
+                        color: LauncherTheme.accentOf(context).withAlpha(170),
                         fontSize: 8,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 1.5,
@@ -225,18 +212,14 @@ class _MatrixLauncherFrameState extends State<MatrixLauncherFrame> {
 }
 
 class _MatrixLauncherGround extends StatelessWidget {
-  const _MatrixLauncherGround({
-    required this.surface,
-    required this.accent,
-    required this.radius,
-  });
+  const _MatrixLauncherGround({required this.radius});
 
-  final Color surface;
-  final Color accent;
   final double radius;
 
   @override
   Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final Color accent = LauncherTheme.accentOf(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Color.alphaBlend(
@@ -261,53 +244,43 @@ class _MatrixLauncherGround extends StatelessWidget {
   }
 }
 
-class MatrixLauncherSearchBar extends StatelessWidget {
-  const MatrixLauncherSearchBar({
-    super.key,
-    required this.accent,
-    required this.onSurface,
-    required this.dragHandle,
-    required this.textField,
-    required this.trailingBadge,
-    required this.isSearching,
-  });
+class _MatrixLauncherSearchBar extends StatelessWidget {
+  const _MatrixLauncherSearchBar(this.content);
 
-  final Color accent;
-  final Color onSurface;
-  final Widget dragHandle;
-  final Widget textField;
-  final Widget? trailingBadge;
-  final bool isSearching;
+  final _LauncherSearchBarContent content;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(11, 2, 11, 7),
-        child: Row(
-          children: <Widget>[
-            dragHandle,
-            const SizedBox(width: 8),
-            Text(
-              '>_',
-              style: TextStyle(
-                color: accent,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1,
-              ),
+  Widget build(BuildContext context) {
+    final Color accent = LauncherTheme.accentOf(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(11, 2, 11, 7),
+      child: Row(
+        children: <Widget>[
+          content.dragHandle,
+          const SizedBox(width: 8),
+          Text(
+            '>_',
+            style: TextStyle(
+              color: accent,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1,
             ),
-            const SizedBox(width: 8),
-            Expanded(child: textField),
-            if (trailingBadge != null) trailingBadge!,
-            if (isSearching) ...<Widget>[
-              const SizedBox(width: 7),
-              SizedBox.square(
-                dimension: 12,
-                child: CircularProgressIndicator(strokeWidth: 1.2, color: accent),
-              ),
-            ],
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: content.textField),
+          if (content.trailingBadge != null) content.trailingBadge!,
+          if (content.isSearching) ...<Widget>[
+            const SizedBox(width: 7),
+            SizedBox.square(
+              dimension: 12,
+              child: CircularProgressIndicator(strokeWidth: 1.2, color: accent),
+            ),
           ],
-        ),
-      );
+        ],
+      ),
+    );
+  }
 }
 
 class MatrixLauncherHeader extends StatelessWidget {
