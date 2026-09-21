@@ -25,6 +25,20 @@ const double _kLabelBarSize = 40.0;
 class QuickClickOverlay extends StatefulWidget {
   const QuickClickOverlay({super.key});
 
+  /// Applies the native bounds before the shared QuickMenu show sequence
+  /// measures the window. QuickClick is rendered inside that same window, so
+  /// this must complete before the resize workaround captures its dimensions.
+  static Future<Square?> prepareWindowForCurrentMonitor() async {
+    if (Monitor.monitorSizes.isEmpty) Monitor.fetchMonitors();
+    final int monitor = Monitor.getCursorMonitor();
+    final Square? bounds = Monitor.monitorSizes[monitor];
+    if (bounds == null) return null;
+
+    await WindowManager.instance.setPosition(Offset(bounds.x.toDouble(), bounds.y.toDouble()));
+    await WindowManager.instance.setSize(Size(bounds.width.toDouble(), bounds.height.toDouble()));
+    return bounds;
+  }
+
   @override
   State<QuickClickOverlay> createState() => _QuickClickOverlayState();
 }
@@ -98,18 +112,15 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
   @override
   void initState() {
     super.initState();
-    Win32.setWindowInvisible(true);
     NativeHooks.addListener(this);
     QuickClick.setQuickClickHotkeys(user.quickClickConfig);
     QuickClick.enableQuickClick();
     _enableDpiAwareness();
+    Timer(const Duration(milliseconds: 100), WinKeys.releaseModifierKeys);
 
     currentMonitor = Monitor.getCursorMonitor();
     monitorData = Monitor.monitorSizes[currentMonitor]!;
-    WindowManager.instance.setPosition(Offset(monitorData.x.toDouble(), monitorData.y.toDouble()));
-    WindowManager.instance.setSize(Size(monitorData.width.toDouble(), monitorData.height.toDouble()));
     WinUtils.makeWindowClickThrough(true);
-    WinUtils.fixDrawBug();
     overlayVisible = Boxes.pref.getBool("quickClickOverlay") ?? true;
     screenWidth = monitorData.width.toDouble();
     screenHeight = monitorData.height.toDouble();
@@ -284,6 +295,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
     _cursorPollTimer?.cancel();
     NativeHooks.removeListener(this);
     QuickClick.disableQuickClick();
+    Timer(const Duration(milliseconds: 100), WinKeys.releaseModifierKeys);
     _refocusPreviousWindow();
     super.dispose();
   }

@@ -481,6 +481,10 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       _isClickThroughActive = false; // keep the poller's cache in sync
     }
 
+    if (visible && newType == QuickMenuPage.quickClick) {
+      await QuickClickOverlay.prepareWindowForCurrentMonitor();
+    }
+
     Globals.quickMenuPage = newType;
     if (mounted) setState(() {});
   }

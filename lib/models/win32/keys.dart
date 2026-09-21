@@ -389,6 +389,29 @@ class WinKeys {
     }
   }
 
+  /// Sends key-up events for every keyboard modifier, including both sides.
+  /// This clears modifier state left behind while a global hotkey is handing
+  /// control to or from an overlay such as QuickClick.
+  static void releaseModifierKeys() {
+    const List<String> modifiers = <String>[
+      VK.SHIFT,
+      VK.LSHIFT,
+      VK.RSHIFT,
+      VK.CONTROL,
+      VK.LCONTROL,
+      VK.RCONTROL,
+      VK.MENU,
+      VK.LMENU,
+      VK.RMENU,
+      VK.LWIN,
+      VK.RWIN,
+    ];
+
+    for (final String modifier in modifiers) {
+      single(modifier, KeySentMode.up);
+    }
+  }
+
   /// Releases a single key.
   static void releaseKey(int virtualKey) {
     final Pointer<INPUT> input = calloc<INPUT>();
