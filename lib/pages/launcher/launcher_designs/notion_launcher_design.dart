@@ -1,7 +1,7 @@
 part of '../launcher_design_builder.dart';
 
 BoxDecoration _notionOuterDecoration(Color surface) {
-  final bool isDark = surface.computeLuminance() < 0.5;
+  final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
   return BoxDecoration(
     color: NotionTokens.canvas(isDark),
     borderRadius: BorderRadius.circular(8),
@@ -120,7 +120,7 @@ class NotionLauncherFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
-    final bool isDark = surface.computeLuminance() < 0.5;
+    final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
     return Container(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _notionOuterDecoration(surface),

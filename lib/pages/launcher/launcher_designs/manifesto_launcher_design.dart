@@ -4,7 +4,8 @@ BoxDecoration _manifestoOuterDecoration(Color surface) {
   return BoxDecoration(
     borderRadius: BorderRadius.circular(Design.borderRadius),
     color: surface,
-    border: Border.all(color: ManifestoTokens.fg(surface.computeLuminance() < 0.5), width: 2),
+    border: Border.all(
+        color: ManifestoTokens.fg(ThemeData.estimateBrightnessForColor(surface) == Brightness.dark), width: 2),
     boxShadow: <BoxShadow>[
       BoxShadow(
         color: Colors.black.withAlpha(110),

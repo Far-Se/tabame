@@ -1,7 +1,7 @@
 part of '../launcher_design_builder.dart';
 
 BoxDecoration _terminal2OuterDecoration(Color surface) {
-  final bool isTerminalDark = surface.computeLuminance() < 0.5;
+  final bool isTerminalDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
   return BoxDecoration(
     borderRadius: BorderRadius.circular(2),
     color: surface,
@@ -150,7 +150,13 @@ class _Terminal2SpinnerState extends State<_Terminal2Spinner> with SingleTickerP
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 720),
-  )..repeat();
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncRepeatingAnimation(_controller, context);
+  }
 
   @override
   void dispose() {

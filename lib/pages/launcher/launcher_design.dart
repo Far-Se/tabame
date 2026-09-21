@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../models/classes/saved_maps.dart';
 import '../../models/design_settings.dart';
 import '../../models/settings.dart';
+
+part 'launcher_design_config.dart';
+part 'launcher_palette.dart';
 
 abstract final class ThermalTokens {
   static Color get background => user.launcherThemeColors.background;
@@ -524,24 +528,25 @@ abstract final class FluentTokens {
 }
 
 /// Windows XP Luna palette and Tahoma typography.
-///
-/// Unlike theme-adaptive designs, this remains the canonical blue/olive-ivory
-/// Luna shell in both host brightness modes. XP had no dark system appearance.
+/// Blue Luna chrome with launcher colors for dark surfaces.
 abstract final class WindowsXpTokens {
-  static bool get _isDark => Design.background.computeLuminance() < 0.5;
-  static Color get surface => _isDark ? Design.background : const Color(0xFFECE9D8);
-  static Color get paper =>
-      _isDark ? Color.alphaBlend(Design.text.withAlpha(10), Design.background) : const Color(0xFFFFFEF5);
+  static bool get _isDark =>
+      ThemeData.estimateBrightnessForColor(user.launcherThemeColors.background) == Brightness.dark;
+  static Color get surface => _isDark ? user.launcherThemeColors.background : const Color(0xFFECE9D8);
+  static Color get paper => _isDark
+      ? Color.alphaBlend(user.launcherThemeColors.text.withAlpha(10), user.launcherThemeColors.background)
+      : const Color(0xFFFFFEF5);
   static const Color blueDark = Color(0xFF003399);
   static const Color blue = Color(0xFF245EDC);
   static const Color blueLight = Color(0xFF5A8CF0);
   static const Color blueHighlight = Color(0xFF7AA5F7);
   static const Color selection = Color(0xFF316AC5);
-  static Color get foreground => _isDark ? Design.text : const Color(0xFF000000);
-  static Color get dim => _isDark ? Design.text.withAlpha(170) : const Color(0xFF5D5D5D);
+  static Color get foreground => _isDark ? user.launcherThemeColors.text : const Color(0xFF000000);
+  static Color get dim => _isDark ? user.launcherThemeColors.text.withAlpha(170) : const Color(0xFF5D5D5D);
   static const Color controlShadow = Color(0xFF716F64);
-  static Color get controlLight =>
-      _isDark ? Color.alphaBlend(Design.text.withAlpha(12), Design.background) : const Color(0xFFFFFFFF);
+  static Color get controlLight => _isDark
+      ? Color.alphaBlend(user.launcherThemeColors.text.withAlpha(12), user.launcherThemeColors.background)
+      : const Color(0xFFFFFFFF);
   static const Color orange = Color(0xFFFF8C00);
   static const Color green = Color(0xFF4BAE31);
 
@@ -566,19 +571,21 @@ abstract final class WindowsXpTokens {
 
 /// Windows 98 shell palette, beveled control colors and bitmap-era type.
 abstract final class Windows98Tokens {
-  static bool get _isDark => Design.background.computeLuminance() < 0.5;
-  static Color get face => _isDark ? Design.background : const Color(0xFFC0C0C0);
-  static Color get field =>
-      _isDark ? Color.alphaBlend(Design.text.withAlpha(12), Design.background) : const Color(0xFFFFFFFF);
-  static Color get light => _isDark ? Design.text.withAlpha(220) : const Color(0xFFFFFFFF);
-  static Color get highlight => _isDark ? Design.text.withAlpha(150) : const Color(0xFFDFDFDF);
-  static Color get shadow => _isDark ? Design.text.withAlpha(80) : const Color(0xFF808080);
-  static Color get dark => _isDark ? Design.text.withAlpha(45) : const Color(0xFF000000);
+  static bool get _isDark =>
+      ThemeData.estimateBrightnessForColor(user.launcherThemeColors.background) == Brightness.dark;
+  static Color get face => _isDark ? user.launcherThemeColors.background : const Color(0xFFC0C0C0);
+  static Color get field => _isDark
+      ? Color.alphaBlend(user.launcherThemeColors.text.withAlpha(12), user.launcherThemeColors.background)
+      : const Color(0xFFFFFFFF);
+  static Color get light => _isDark ? user.launcherThemeColors.text.withAlpha(220) : const Color(0xFFFFFFFF);
+  static Color get highlight => _isDark ? user.launcherThemeColors.text.withAlpha(150) : const Color(0xFFDFDFDF);
+  static Color get shadow => _isDark ? user.launcherThemeColors.text.withAlpha(80) : const Color(0xFF808080);
+  static Color get dark => _isDark ? user.launcherThemeColors.text.withAlpha(45) : const Color(0xFF000000);
   static const Color title = Color(0xFF000080);
   static const Color titleLight = Color(0xFF1084D0);
   static const Color selection = Color(0xFF000080);
-  static Color get foreground => _isDark ? Design.text : const Color(0xFF000000);
-  static Color get dim => _isDark ? Design.text.withAlpha(170) : const Color(0xFF5A5A5A);
+  static Color get foreground => _isDark ? user.launcherThemeColors.text : const Color(0xFF000000);
+  static Color get dim => _isDark ? user.launcherThemeColors.text.withAlpha(170) : const Color(0xFF5A5A5A);
 
   static TextStyle system({
     double? fontSize,
@@ -945,6 +952,8 @@ class LauncherThemeData {
 
   final LauncherDesign design;
 
+  LauncherDesignConfig get config => LauncherDesignConfig.forDesign(design);
+
   bool get isSerene => design == LauncherDesign.serene;
   bool get isClassic => design == LauncherDesign.classic;
   bool get isCommand => design == LauncherDesign.command;
@@ -966,240 +975,25 @@ class LauncherThemeData {
   bool get isRaycast => design == LauncherDesign.newCast;
   bool get isRetro => design == LauncherDesign.retro;
   bool get isToon => design == LauncherDesign.toon;
-  bool get isQuickMenuInspired => switch (design) {
-        LauncherDesign.tech ||
-        LauncherDesign.vector ||
-        LauncherDesign.outrun ||
-        LauncherDesign.matrix ||
-        LauncherDesign.steam ||
-        LauncherDesign.cyber ||
-        LauncherDesign.manga =>
-          true,
-        _ => false,
-      };
+  bool get isQuickMenuInspired => config.isQuickMenuInspired;
 
   /// Leading glyph in the search bar — a chevron prompt for the Command/Terminal
   /// consoles, a leaf for Zen, a drafting compass for Blueprint, a radar scope
   /// for Orbit, a magnifier otherwise.
-  IconData get searchIcon => switch (design) {
-        LauncherDesign.thermal => Icons.search_rounded,
-        LauncherDesign.capillary => Icons.search_rounded,
-        LauncherDesign.liquidMetal => Icons.search_rounded,
-        LauncherDesign.opticalGlass => Icons.search_rounded,
-        LauncherDesign.command => Icons.chevron_right_rounded,
-        LauncherDesign.terminal => Icons.chevron_right_rounded,
-        LauncherDesign.zen => Icons.eco_rounded,
-        LauncherDesign.serene => Icons.search_rounded,
-        LauncherDesign.glass => Icons.search_rounded,
-        LauncherDesign.classic => Icons.search_rounded,
-        LauncherDesign.blueprint => Icons.architecture_rounded,
-        LauncherDesign.transit => Icons.near_me_rounded,
-        LauncherDesign.fluent => Icons.search_rounded,
-        LauncherDesign.manifesto => Icons.arrow_forward,
-        LauncherDesign.orbit => Icons.radar,
-        LauncherDesign.anime => Icons.auto_awesome_rounded,
-        LauncherDesign.tech => Icons.memory_rounded,
-        LauncherDesign.vector => Icons.radar_rounded,
-        LauncherDesign.outrun => Icons.bolt_rounded,
-        LauncherDesign.matrix => Icons.terminal_rounded,
-        LauncherDesign.steam => Icons.settings_rounded,
-        LauncherDesign.cyber => Icons.hub_rounded,
-        LauncherDesign.manga => Icons.auto_stories_rounded,
-        LauncherDesign.windowsXp => Icons.search,
-        LauncherDesign.windows98 => Icons.search,
-        LauncherDesign.notion => Icons.search_rounded,
-        LauncherDesign.switchboard => Icons.tune_rounded,
-        LauncherDesign.relay => Icons.alt_route_rounded,
-        LauncherDesign.terminal2 => Icons.terminal_rounded,
-        LauncherDesign.newCast => Icons.chevron_right_rounded,
-        LauncherDesign.omarchy => Icons.drag_indicator,
-        LauncherDesign.aurora => Icons.search_rounded,
-        LauncherDesign.crt || LauncherDesign.phosphor => Icons.search_rounded,
-        LauncherDesign.retro => Icons.videogame_asset_rounded,
-        LauncherDesign.toon => Icons.auto_awesome_rounded,
-        LauncherDesign.strata => Icons.search_rounded,
-        LauncherDesign.tui => Icons.terminal,
-      };
+  IconData get searchIcon => config.searchIcon;
 
-  double get searchIconSize => switch (design) {
-        LauncherDesign.thermal => 20.0,
-        LauncherDesign.capillary => 20.0,
-        LauncherDesign.liquidMetal => 22.0,
-        LauncherDesign.opticalGlass => 22.0,
-        LauncherDesign.serene => 22.0,
-        LauncherDesign.command => 22.0,
-        LauncherDesign.terminal => 20.0,
-        LauncherDesign.zen => 20.0,
-        LauncherDesign.glass => 20.0,
-        LauncherDesign.classic => 20.0,
-        LauncherDesign.blueprint => 20.0,
-        LauncherDesign.transit => 16.0,
-        LauncherDesign.fluent => 18.0,
-        LauncherDesign.manifesto => 18.0,
-        LauncherDesign.orbit => 19.0,
-        LauncherDesign.anime => 19.0,
-        LauncherDesign.tech => 19.0,
-        LauncherDesign.vector => 18.0,
-        LauncherDesign.outrun => 20.0,
-        LauncherDesign.matrix => 18.0,
-        LauncherDesign.steam => 18.0,
-        LauncherDesign.cyber => 19.0,
-        LauncherDesign.manga => 19.0,
-        LauncherDesign.windowsXp => 18.0,
-        LauncherDesign.windows98 => 16.0,
-        LauncherDesign.notion => 17.0,
-        LauncherDesign.switchboard => 18.0,
-        LauncherDesign.relay => 18.0,
-        LauncherDesign.terminal2 => 20.0,
-        LauncherDesign.newCast => 18.0,
-        LauncherDesign.omarchy => 16.0,
-        LauncherDesign.aurora => 28.0,
-        LauncherDesign.crt || LauncherDesign.phosphor => 20.0,
-        LauncherDesign.retro => 20.0,
-        LauncherDesign.toon => 20.0,
-        LauncherDesign.strata => 28.0,
-        LauncherDesign.tui => 16.0,
-      };
+  double get searchIconSize => config.searchIconSize;
 
-  bool get searchIconUsesOnSurface => isSerene || isGlass || isFluent || isNotion || isRaycast;
+  bool get searchIconUsesOnSurface => config.searchIconUsesOnSurface;
 
-  double get searchFontSize => switch (design) {
-        LauncherDesign.thermal => 18.0,
-        LauncherDesign.capillary => 18.0,
-        LauncherDesign.liquidMetal => 20.0,
-        LauncherDesign.opticalGlass => 20.0,
-        LauncherDesign.serene => 16.0,
-        LauncherDesign.command => 15.0,
-        LauncherDesign.terminal => 14.0,
-        LauncherDesign.zen => 15.0,
-        LauncherDesign.glass => 16.0,
-        LauncherDesign.classic => 15.0,
-        LauncherDesign.blueprint => 15.0,
-        LauncherDesign.transit => 15.0,
-        LauncherDesign.fluent => 15.0,
-        LauncherDesign.manifesto => 17.0,
-        LauncherDesign.orbit => 15.0,
-        LauncherDesign.anime => 16.0,
-        LauncherDesign.tech => 15.0,
-        LauncherDesign.vector => 15.0,
-        LauncherDesign.outrun => 16.0,
-        LauncherDesign.matrix => 14.0,
-        LauncherDesign.steam => 15.0,
-        LauncherDesign.cyber => 15.0,
-        LauncherDesign.manga => 16.0,
-        LauncherDesign.windowsXp => 14.0,
-        LauncherDesign.windows98 => 13.0,
-        LauncherDesign.notion => 15.0,
-        LauncherDesign.switchboard => 15.0,
-        LauncherDesign.relay => 16.0,
-        LauncherDesign.terminal2 => 14.0,
-        LauncherDesign.newCast => 15.0,
-        LauncherDesign.omarchy => 16.0,
-        LauncherDesign.aurora => 23.0,
-        LauncherDesign.crt || LauncherDesign.phosphor => 23.0,
-        LauncherDesign.retro => 20.0,
-        LauncherDesign.toon => 18.0,
-        LauncherDesign.strata => 23.0,
-        LauncherDesign.tui => TuiTokens.fontSize,
-      };
-  FontWeight? get searchFontWeight => switch (design) {
-        LauncherDesign.thermal => FontWeight.w500,
-        LauncherDesign.capillary => FontWeight.w400,
-        LauncherDesign.liquidMetal => FontWeight.w500,
-        LauncherDesign.opticalGlass => FontWeight.w500,
-        LauncherDesign.serene => FontWeight.w400,
-        LauncherDesign.command => FontWeight.w500,
-        LauncherDesign.terminal => FontWeight.w500,
-        LauncherDesign.zen => FontWeight.w500,
-        LauncherDesign.glass => FontWeight.w500,
-        LauncherDesign.classic => null,
-        LauncherDesign.blueprint => FontWeight.w500,
-        LauncherDesign.transit => FontWeight.w600,
-        LauncherDesign.fluent => FontWeight.w400,
-        LauncherDesign.manifesto => FontWeight.w600,
-        LauncherDesign.orbit => FontWeight.w500,
-        LauncherDesign.anime => FontWeight.w500,
-        LauncherDesign.tech => FontWeight.w600,
-        LauncherDesign.vector => FontWeight.w600,
-        LauncherDesign.outrun => FontWeight.w700,
-        LauncherDesign.matrix => FontWeight.w500,
-        LauncherDesign.steam => FontWeight.w600,
-        LauncherDesign.cyber => FontWeight.w600,
-        LauncherDesign.manga => FontWeight.w700,
-        LauncherDesign.windowsXp => FontWeight.w400,
-        LauncherDesign.windows98 => FontWeight.w400,
-        LauncherDesign.notion => FontWeight.w400,
-        LauncherDesign.switchboard => FontWeight.w500,
-        LauncherDesign.relay => FontWeight.w600,
-        LauncherDesign.terminal2 => FontWeight.w500,
-        LauncherDesign.newCast => FontWeight.w400,
-        LauncherDesign.omarchy => FontWeight.w500,
-        LauncherDesign.aurora => FontWeight.w400,
-        LauncherDesign.crt || LauncherDesign.phosphor => FontWeight.w400,
-        LauncherDesign.retro => FontWeight.w400,
-        LauncherDesign.toon => FontWeight.w700,
-        LauncherDesign.strata => FontWeight.w400,
-        LauncherDesign.tui => FontWeight.w400,
-      };
+  double get searchFontSize => config.searchFontSize;
+  FontWeight? get searchFontWeight => config.searchFontWeight;
 
-  String? get searchHint => design == LauncherDesign.tui
-      ? ''
-      : isRaycast
-          ? 'Search apps, files, and commands...'
-          : isRetro
-              ? 'TYPE TO SEARCH...'
-              : isToon
-                  ? 'SEARCH THE ARCHIVE...'
-                  : null;
+  String? get searchHint => config.searchHint;
 
-  double get frameRadius => switch (design) {
-        LauncherDesign.thermal => 10.0,
-        LauncherDesign.capillary => 8.0,
-        LauncherDesign.liquidMetal => 16.0,
-        LauncherDesign.opticalGlass => 24.0,
-        LauncherDesign.serene => 14.0,
-        LauncherDesign.command => 12.0,
-        LauncherDesign.terminal => 6.0,
-        LauncherDesign.zen => 26.0,
-        LauncherDesign.glass => 28.0,
-        LauncherDesign.classic => 18.0,
-        LauncherDesign.blueprint => 3.0,
-        LauncherDesign.transit => 16.0,
-        LauncherDesign.fluent => 8.0,
-        LauncherDesign.manifesto => 0.0,
-        LauncherDesign.orbit => 10.0,
-        LauncherDesign.anime => 16.0,
-        LauncherDesign.tech => 10.0,
-        LauncherDesign.vector => 4.0,
-        LauncherDesign.outrun => 0.0,
-        LauncherDesign.matrix => 2.0,
-        LauncherDesign.steam => 6.0,
-        LauncherDesign.cyber => 4.0,
-        LauncherDesign.manga => 14.0,
-        LauncherDesign.windowsXp => 7.0,
-        LauncherDesign.windows98 => 0.0,
-        LauncherDesign.notion => 8.0,
-        LauncherDesign.switchboard => 4.0,
-        LauncherDesign.relay => 7.0,
-        LauncherDesign.terminal2 => 2.0,
-        LauncherDesign.newCast => 14.0,
-        LauncherDesign.omarchy => 0.0,
-        LauncherDesign.aurora => 18.0,
-        LauncherDesign.crt => 18.0,
-        LauncherDesign.retro => 8.0,
-        LauncherDesign.toon => 8.0,
-        LauncherDesign.phosphor => 0.0,
-        LauncherDesign.strata => 12.0,
-        LauncherDesign.tui => 0.0,
-      };
+  double get frameRadius => config.frameRadius;
 
-  EdgeInsets get resultsListPadding => design == LauncherDesign.tui
-      ? const EdgeInsets.symmetric(horizontal: 8, vertical: 2)
-      : design == LauncherDesign.retro
-          ? const EdgeInsets.symmetric(horizontal: 4, vertical: 6)
-          : design == LauncherDesign.toon
-              ? const EdgeInsets.symmetric(horizontal: 6, vertical: 4)
-              : const EdgeInsets.all(8.0);
+  EdgeInsets get resultsListPadding => config.resultsListPadding;
 
   @override
   bool operator ==(Object other) =>
@@ -1214,17 +1008,19 @@ class LauncherTheme extends InheritedWidget {
   const LauncherTheme({
     super.key,
     required this.data,
-    required this.accent,
+    required this.palette,
     required super.child,
   });
 
   final LauncherThemeData data;
 
-  /// The design accent can differ from Material's primary color.
-  final Color accent;
+  final LauncherPalette palette;
+
+  static LauncherPalette? maybePaletteOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<LauncherTheme>()?.palette;
 
   static Color accentOf(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<LauncherTheme>()?.accent ?? Theme.of(context).colorScheme.primary;
+      maybePaletteOf(context)?.accent ?? Theme.of(context).colorScheme.primary;
 
   static LauncherThemeData of(BuildContext context) {
     final LauncherTheme? theme = context.dependOnInheritedWidgetOfExactType<LauncherTheme>();
@@ -1236,7 +1032,7 @@ class LauncherTheme extends InheritedWidget {
       context.dependOnInheritedWidgetOfExactType<LauncherTheme>()?.data;
 
   @override
-  bool updateShouldNotify(LauncherTheme oldWidget) => data != oldWidget.data || accent != oldWidget.accent;
+  bool updateShouldNotify(LauncherTheme oldWidget) => data != oldWidget.data || palette != oldWidget.palette;
 }
 
 /// Reference palette for the Aurora night landscape design.

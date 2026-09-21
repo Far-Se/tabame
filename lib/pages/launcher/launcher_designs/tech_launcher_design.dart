@@ -20,7 +20,7 @@ class TechLauncherFrame extends StatelessWidget {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color accent = LauncherTheme.accentOf(context);
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final bool isDark = surface.computeLuminance() < .5;
+    final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
     return Container(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _techOuterDecoration(surface, accent),

@@ -44,12 +44,7 @@ class _TuiSearchSpinnerState extends State<_TuiSearchSpinner> with SingleTickerP
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
-      _controller.stop();
-      _controller.value = 0;
-    } else if (!_controller.isAnimating) {
-      _controller.repeat();
-    }
+    _syncRepeatingAnimation(_controller, context);
   }
 
   @override

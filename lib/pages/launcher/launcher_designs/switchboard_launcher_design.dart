@@ -1,7 +1,7 @@
 part of '../launcher_design_builder.dart';
 
 BoxDecoration _switchboardOuterDecoration(Color surface) {
-  final bool isDark = surface.computeLuminance() < 0.5;
+  final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
   return BoxDecoration(
     color: SwitchboardTokens.canvas(isDark),
     borderRadius: BorderRadius.circular(math.min(Design.borderRadius, 8)),
@@ -120,7 +120,7 @@ class SwitchboardLauncherFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
-    final bool isDark = surface.computeLuminance() < 0.5;
+    final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
     final double radius = math.min(Design.borderRadius, 8);
     return Container(
       constraints: const BoxConstraints(minHeight: 360),

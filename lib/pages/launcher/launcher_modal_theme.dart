@@ -12,293 +12,29 @@ import 'widgets/thermal_surface.dart';
 import 'widgets/liquid_metal_surface.dart';
 import 'widgets/crt_surface.dart';
 
-/// Resolved visual tokens for the Ctrl+K actions modal so it follows the
-/// active launcher design.
-///
-/// The modal lives in its own route — outside the launcher's [LauncherTheme]
-/// and outside the forced [Theme] the Terminal/Zen/Blueprint designs apply in
-/// the launcher page — so the per-design palette is re-derived here from the
-/// same token classes the launcher frame uses.
+/// Presentation tokens for the actions modal. The route can live outside
+/// LauncherTheme, so it uses the same palette resolver as the launcher page.
 class LauncherModalTokens {
-  const LauncherModalTokens._({
-    required this.design,
-    required this.isDark,
-    required this.surface,
-    required this.accent,
-    required this.onSurface,
-    required this.dim,
-  });
+  const LauncherModalTokens._({required this.design, required LauncherPalette palette}) : _palette = palette;
 
   factory LauncherModalTokens.of(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final bool isDark = theme.brightness == Brightness.dark;
     final LauncherDesign design = user.launcherDesign;
-    switch (design) {
-      case LauncherDesign.thermal:
-        return LauncherModalTokens._(
-          design: LauncherDesign.thermal,
-          isDark: ThermalTokens.isDark,
-          surface: ThermalTokens.background,
-          accent: ThermalTokens.accent,
-          onSurface: ThermalTokens.foreground,
-          dim: ThermalTokens.dim,
-        );
-      case LauncherDesign.capillary:
-        final CapillaryTokens capillary = CapillaryTokens.resolve(isDark);
-        return LauncherModalTokens._(
-          design: LauncherDesign.capillary,
-          isDark: isDark,
-          surface: capillary.background,
-          accent: capillary.accent,
-          onSurface: capillary.foreground,
-          dim: capillary.dim,
-        );
-      case LauncherDesign.opticalGlass:
-        return LauncherModalTokens._(
-          design: LauncherDesign.opticalGlass,
-          isDark: OpticalGlassTokens.isDark,
-          surface: OpticalGlassTokens.background,
-          accent: OpticalGlassTokens.accent,
-          onSurface: OpticalGlassTokens.foreground,
-          dim: OpticalGlassTokens.dim,
-        );
-      case LauncherDesign.liquidMetal:
-        return LauncherModalTokens._(
-          design: LauncherDesign.liquidMetal,
-          isDark: LiquidMetalTokens.isDark,
-          surface: LiquidMetalTokens.background,
-          accent: LiquidMetalTokens.accent,
-          onSurface: LiquidMetalTokens.foreground,
-          dim: LiquidMetalTokens.dim,
-        );
-      case LauncherDesign.crt:
-        return LauncherModalTokens._(
-            design: LauncherDesign.crt,
-            isDark: CrtTokens.isDark,
-            surface: CrtTokens.background,
-            accent: CrtTokens.accent,
-            onSurface: CrtTokens.foreground,
-            dim: CrtTokens.dim);
-      case LauncherDesign.toon:
-        return LauncherModalTokens._(
-          design: LauncherDesign.toon,
-          isDark: ToonTokens.isDark,
-          surface: ToonTokens.background,
-          accent: ToonTokens.orange,
-          onSurface: ToonTokens.foreground,
-          dim: ToonTokens.dim,
-        );
-      case LauncherDesign.retro:
-        return LauncherModalTokens._(
-          design: LauncherDesign.retro,
-          isDark: RetroTokens.isDark,
-          surface: RetroTokens.background,
-          accent: RetroTokens.accent,
-          onSurface: RetroTokens.foreground,
-          dim: RetroTokens.dim,
-        );
-      case LauncherDesign.phosphor:
-        return LauncherModalTokens._(
-            design: LauncherDesign.phosphor,
-            isDark: PhosphorTokens.isDark,
-            surface: PhosphorTokens.background,
-            accent: PhosphorTokens.accent,
-            onSurface: PhosphorTokens.foreground,
-            dim: PhosphorTokens.dim);
-      case LauncherDesign.strata:
-        return LauncherModalTokens._(
-            design: LauncherDesign.strata,
-            isDark: StrataTokens.isDark,
-            surface: StrataTokens.background,
-            accent: StrataTokens.accent,
-            onSurface: StrataTokens.foreground,
-            dim: StrataTokens.dim);
-      case LauncherDesign.aurora:
-        return const LauncherModalTokens._(
-            design: LauncherDesign.aurora,
-            isDark: true,
-            surface: AuroraTokens.background,
-            accent: AuroraTokens.accent,
-            onSurface: AuroraTokens.foreground,
-            dim: AuroraTokens.dim);
-      case LauncherDesign.tui:
-        return LauncherModalTokens._(
-          design: design,
-          isDark: isDark,
-          surface: TuiTokens.background,
-          accent: TuiTokens.accent,
-          onSurface: TuiTokens.foreground,
-          dim: TuiTokens.dim,
-        );
-      case LauncherDesign.omarchy:
-        return LauncherModalTokens._(
-          design: design,
-          isDark: isDark,
-          surface: OmarchyTokens.bg,
-          accent: OmarchyTokens.accent,
-          onSurface: OmarchyTokens.fg,
-          dim: OmarchyTokens.dim,
-        );
-      case LauncherDesign.terminal:
-        return LauncherModalTokens._(
-          design: design,
-          isDark: isDark,
-          surface: TerminalTokens.bg(isDark),
-          accent: Design.accent,
-          onSurface: TerminalTokens.fg(isDark),
-          dim: TerminalTokens.dim(isDark),
-        );
-      case LauncherDesign.terminal2:
-        return LauncherModalTokens._(
-          design: design,
-          isDark: isDark,
-          surface: Terminal2Tokens.bg(isDark),
-          accent: Design.accent,
-          onSurface: Terminal2Tokens.fg(isDark),
-          dim: Terminal2Tokens.dim(isDark),
-        );
-      case LauncherDesign.zen:
-        return LauncherModalTokens._(
-          design: design,
-          isDark: isDark,
-          surface: ZenTokens.bg(isDark),
-          accent: ZenTokens.accent(isDark),
-          onSurface: ZenTokens.fg(isDark),
-          dim: ZenTokens.dim(isDark),
-        );
-      case LauncherDesign.blueprint:
-        return LauncherModalTokens._(
-          design: design,
-          isDark: isDark,
-          surface: BlueprintTokens.bg(isDark),
-          accent: BlueprintTokens.accent(isDark),
-          onSurface: BlueprintTokens.fg(isDark),
-          dim: BlueprintTokens.dim(isDark),
-        );
-      case LauncherDesign.transit:
-        return LauncherModalTokens._(
-          design: design,
-          isDark: isDark,
-          surface: TransitTokens.bg(isDark),
-          accent: Design.accent,
-          onSurface: TransitTokens.fg(isDark),
-          dim: TransitTokens.dim(isDark),
-        );
-      case LauncherDesign.fluent:
-        return LauncherModalTokens._(
-          design: design,
-          isDark: isDark,
-          surface: FluentTokens.bg(isDark),
-          accent: Design.accent,
-          onSurface: FluentTokens.fg(isDark),
-          dim: FluentTokens.dim(isDark),
-        );
-      case LauncherDesign.manifesto:
-        return LauncherModalTokens._(
-          design: design,
-          isDark: isDark,
-          surface: ManifestoTokens.bg(isDark),
-          accent: ManifestoTokens.accent(isDark),
-          onSurface: ManifestoTokens.fg(isDark),
-          dim: ManifestoTokens.dim(isDark),
-        );
-      case LauncherDesign.orbit:
-        return LauncherModalTokens._(
-          design: design,
-          isDark: isDark,
-          surface: OrbitTokens.bg(isDark),
-          accent: Design.accent,
-          onSurface: OrbitTokens.fg(isDark),
-          dim: OrbitTokens.dim(isDark),
-        );
-      case LauncherDesign.windowsXp:
-        return LauncherModalTokens._(
-          design: LauncherDesign.windowsXp,
-          isDark: false,
-          surface: WindowsXpTokens.surface,
-          accent: WindowsXpTokens.selection,
-          onSurface: WindowsXpTokens.foreground,
-          dim: WindowsXpTokens.dim,
-        );
-      case LauncherDesign.windows98:
-        return LauncherModalTokens._(
-          design: LauncherDesign.windows98,
-          isDark: false,
-          surface: Windows98Tokens.face,
-          accent: Windows98Tokens.selection,
-          onSurface: Windows98Tokens.foreground,
-          dim: Windows98Tokens.dim,
-        );
-      case LauncherDesign.notion:
-        return LauncherModalTokens._(
-          design: design,
-          isDark: isDark,
-          surface: NotionTokens.canvas(isDark),
-          accent: NotionTokens.blue(isDark),
-          onSurface: NotionTokens.foreground(isDark),
-          dim: NotionTokens.dim(isDark),
-        );
-      case LauncherDesign.switchboard:
-        return LauncherModalTokens._(
-          design: design,
-          isDark: isDark,
-          surface: SwitchboardTokens.panel(isDark),
-          accent: Design.accent,
-          onSurface: SwitchboardTokens.foreground(isDark),
-          dim: SwitchboardTokens.dim(isDark),
-        );
-      case LauncherDesign.relay:
-        return LauncherModalTokens._(
-          design: design,
-          isDark: isDark,
-          surface: RelayTokens.panel(isDark, Design.accent),
-          accent: Design.accent,
-          onSurface: RelayTokens.foreground(isDark),
-          dim: RelayTokens.dim(isDark),
-        );
-      case LauncherDesign.newCast:
-        return LauncherModalTokens._(
-          design: LauncherDesign.newCast,
-          isDark: isDark,
-          surface: RaycastTokens.surface(isDark),
-          accent: RaycastTokens.primary(isDark),
-          onSurface: RaycastTokens.primary(isDark),
-          dim: RaycastTokens.dim(isDark),
-        );
-      case LauncherDesign.classic:
-      case LauncherDesign.serene:
-      case LauncherDesign.command:
-      case LauncherDesign.glass:
-      case LauncherDesign.anime:
-      case LauncherDesign.tech:
-      case LauncherDesign.vector:
-      case LauncherDesign.outrun:
-      case LauncherDesign.matrix:
-      case LauncherDesign.steam:
-      case LauncherDesign.cyber:
-      case LauncherDesign.manga:
-        final Color onSurface = theme.colorScheme.onSurface;
-        return LauncherModalTokens._(
-          design: design,
-          isDark: isDark,
-          surface: theme.colorScheme.surface,
-          accent: Design.accent,
-          onSurface: onSurface,
-          dim: onSurface.withAlpha(120),
-        );
-    }
+    final LauncherPalette? inherited =
+        LauncherTheme.maybeOf(context)?.design == design ? LauncherTheme.maybePaletteOf(context) : null;
+    return LauncherModalTokens._(
+      design: design,
+      palette: inherited ?? LauncherPalette.resolve(design, brightness: Theme.of(context).brightness),
+    );
   }
 
   final LauncherDesign design;
-  final bool isDark;
+  final LauncherPalette _palette;
 
-  /// Card background (forced palette for Terminal/Zen/Blueprint).
-  final Color surface;
-  final Color accent;
-  final Color onSurface;
-
-  /// Secondary/dimmed foreground.
-  final Color dim;
+  bool get isDark => _palette.isDark;
+  Color get surface => _palette.modalSurface;
+  Color get accent => _palette.modalAccent;
+  Color get onSurface => _palette.onSurface;
+  Color get dim => _palette.dim;
 
   /// Foreground used by controls while they carry the design's selection
   /// highlight. Legacy Windows palettes use a dark blue highlight, so their
@@ -313,65 +49,11 @@ class LauncherModalTokens {
   double get frameRadius => LauncherThemeData(design: design).frameRadius;
 
   /// Radius for inner controls (search field, chips).
-  double get controlRadius => switch (design) {
-        LauncherDesign.thermal => 5.0,
-        LauncherDesign.capillary => 4.0,
-        LauncherDesign.opticalGlass => 12.0,
-        LauncherDesign.liquidMetal => 8.0,
-        LauncherDesign.terminal => 3.0,
-        LauncherDesign.blueprint => 2.0,
-        LauncherDesign.command => 6.0,
-        LauncherDesign.zen => 16.0,
-        LauncherDesign.glass => 14.0,
-        LauncherDesign.serene => 10.0,
-        LauncherDesign.classic => 10.0,
-        LauncherDesign.transit => 8.0,
-        LauncherDesign.fluent => 4.0,
-        LauncherDesign.manifesto => 0.0,
-        LauncherDesign.orbit => 4.0,
-        LauncherDesign.anime => 12.0,
-        LauncherDesign.tech => 8.0,
-        LauncherDesign.vector => 4.0,
-        LauncherDesign.outrun => 0.0,
-        LauncherDesign.matrix => 2.0,
-        LauncherDesign.steam => 6.0,
-        LauncherDesign.cyber => 4.0,
-        LauncherDesign.manga => 10.0,
-        LauncherDesign.windowsXp => 0.0,
-        LauncherDesign.windows98 => 0.0,
-        LauncherDesign.notion => 4.0,
-        LauncherDesign.switchboard => 3.0,
-        LauncherDesign.relay => 3.0,
-        LauncherDesign.terminal2 => 2.0,
-        LauncherDesign.newCast => 8.0,
-        LauncherDesign.omarchy => 0.0,
-        LauncherDesign.aurora => 10.0,
-        LauncherDesign.crt => 2.0,
-        LauncherDesign.toon => 5.0,
-        LauncherDesign.retro => 0.0,
-        LauncherDesign.phosphor => 0.0,
-        LauncherDesign.strata => 8.0,
-        LauncherDesign.tui => 0.0,
-      };
+  double get controlRadius => LauncherThemeData(design: design).config.controlRadius;
 
   /// Designs whose controls carry a visible accent outline (console/drafting
   /// looks); the soft designs use borderless fills instead.
-  bool get outlinedControls =>
-      design == LauncherDesign.crt ||
-      design == LauncherDesign.retro ||
-      design == LauncherDesign.tui ||
-      design == LauncherDesign.omarchy ||
-      design == LauncherDesign.command ||
-      design == LauncherDesign.terminal ||
-      design == LauncherDesign.terminal2 ||
-      design == LauncherDesign.blueprint ||
-      design == LauncherDesign.orbit ||
-      design == LauncherDesign.manifesto ||
-      design == LauncherDesign.windowsXp ||
-      design == LauncherDesign.windows98 ||
-      design == LauncherDesign.switchboard ||
-      design == LauncherDesign.relay ||
-      design == LauncherDesign.toon;
+  bool get outlinedControls => LauncherThemeData(design: design).config.outlinedControls;
 
   /// The design voice — same font family the launcher rows use.
   TextStyle text({

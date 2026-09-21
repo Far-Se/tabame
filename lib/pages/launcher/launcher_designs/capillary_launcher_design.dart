@@ -3,7 +3,8 @@ part of '../launcher_design_builder.dart';
 BoxDecoration _capillaryOuterDecoration(Color surface) {
   return BoxDecoration(
     borderRadius: BorderRadius.circular(8),
-    border: Border.all(color: CapillaryTokens.resolve(surface.computeLuminance() < 0.5).border),
+    border: Border.all(
+        color: CapillaryTokens.resolve(ThemeData.estimateBrightnessForColor(surface) == Brightness.dark).border),
   );
 }
 

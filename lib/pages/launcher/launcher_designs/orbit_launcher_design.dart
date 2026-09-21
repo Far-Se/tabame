@@ -99,20 +99,15 @@ class _OrbitScanScopeState extends State<_OrbitScanScope> with SingleTickerProvi
   );
 
   @override
-  void initState() {
-    super.initState();
-    if (widget.active) _controller.repeat();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncRepeatingAnimation(_controller, context, active: widget.active);
   }
 
   @override
   void didUpdateWidget(_OrbitScanScope oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.active && !_controller.isAnimating) {
-      _controller.repeat();
-    } else if (!widget.active && _controller.isAnimating) {
-      _controller.stop();
-      _controller.value = 0;
-    }
+    _syncRepeatingAnimation(_controller, context, active: widget.active);
   }
 
   @override
@@ -394,7 +389,13 @@ class _OrbitStatusDotState extends State<_OrbitStatusDot> with SingleTickerProvi
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1400),
-  )..repeat();
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncRepeatingAnimation(_controller, context);
+  }
 
   @override
   void dispose() {

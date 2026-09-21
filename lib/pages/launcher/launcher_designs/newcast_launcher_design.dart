@@ -1,7 +1,7 @@
 part of '../launcher_design_builder.dart';
 
 BoxDecoration _newCastOuterDecoration(Color surface) {
-  final bool isDark = surface.computeLuminance() < 0.5;
+  final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
   return BoxDecoration(
     borderRadius: BorderRadius.circular(14),
     color: surface.withAlpha(236),
@@ -76,7 +76,7 @@ class RaycastLauncherFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     const BorderRadius radius = BorderRadius.all(Radius.circular(14));
-    final bool isDark = surface.computeLuminance() < 0.5;
+    final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
     final Color sheen = isDark ? Colors.white : Colors.black;
 
     return Container(
@@ -140,8 +140,7 @@ class _RaycastFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final bool isDark = onSurface.computeLuminance() > 0.5;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final TextStyle labelStyle = RaycastTokens.ui(
       fontSize: 13,
       color: RaycastTokens.dim(isDark),

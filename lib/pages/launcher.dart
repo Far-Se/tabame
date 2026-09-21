@@ -87,6 +87,7 @@ export 'launcher/result/result_item_bookmark.dart' show BookmarkSearchResult, Bo
 part 'launcher/launcher_helpers.dart';
 part 'launcher/widgets/aurora_launcher_controls.dart';
 part 'launcher/state/launcher_theme_mixin.dart';
+part 'launcher/state/launcher_layout_mixin.dart';
 part 'launcher/widgets/launcher_window_preview_panel.dart';
 part 'launcher/widgets/launcher_file_preview_panel.dart';
 part 'launcher/widgets/launcher_status_badges.dart';
@@ -119,6 +120,7 @@ class LauncherState extends State<Launcher>
         SingleTickerProviderStateMixin,
         _LauncherStateMembersMixin,
         _LauncherThemeMixin,
+        _LauncherLayoutMixin,
         _PluginHostMixin,
         _KeyboardNavigationMixin,
         _SearchMixin,
@@ -760,67 +762,18 @@ class LauncherState extends State<Launcher>
   @override
   Widget build(BuildContext context) {
     final ThemeData appTheme = Theme.of(context);
-    final ThemeData baseTheme = appTheme.copyWith(
-      colorScheme: appTheme.colorScheme.copyWith(
-        surface: Design.background,
-        onSurface: Design.text,
-        primary: Design.accent,
-      ),
-      highlightColor: Design.accent.withAlpha(30),
-    );
-    final bool isDark = baseTheme.brightness == Brightness.dark;
-    final bool isTerminal = _design == LauncherDesign.terminal;
+    final LauncherPalette palette = LauncherPalette.resolve(_design, brightness: appTheme.brightness);
+    final bool isDark = palette.isDark;
     final bool isOmarchy = _design == LauncherDesign.omarchy;
     final bool isTui = _design == LauncherDesign.tui;
     final bool isTerminal2 = _design == LauncherDesign.terminal2;
     final bool isRetro = _design == LauncherDesign.retro;
     final bool usesBlockCursor = isTerminal2 || isOmarchy || isTui || isRetro;
-    final bool isZen = _design == LauncherDesign.zen;
-    final bool isGlass = _design == LauncherDesign.glass;
-    final bool isBlueprint = _design == LauncherDesign.blueprint;
-    final bool isTransit = _design == LauncherDesign.transit;
-    final bool isFluent = _design == LauncherDesign.fluent;
-    final bool isManifesto = _design == LauncherDesign.manifesto;
-    final bool isOrbit = _design == LauncherDesign.orbit;
-    final bool isAnime = _design == LauncherDesign.anime;
-    final bool isWindowsXp = _design == LauncherDesign.windowsXp;
-    final bool isWindows98 = _design == LauncherDesign.windows98;
-    final bool isNotion = _design == LauncherDesign.notion;
     final bool isSwitchboard = _design == LauncherDesign.switchboard;
     final bool isRelay = _design == LauncherDesign.relay;
     final bool isRaycast = _design == LauncherDesign.newCast;
-    // Terminal, Zen, Blueprint, Transit and Fluent force their own palette +
-    // text theme. Every result builder reads its colors from this theme, so
-    // they all inherit the look without per-builder branching. Terminal,
-    // Transit and Fluent keep the user accent (phosphor / line color / Windows
-    // accent); Zen replaces it with a calm moss, Blueprint with drafting ink.
-    // Glass keeps the theme colors (its glass picks them up) and only forces
-    // Inter for the iOS feel.
-    final Color accent = switch (_design) {
-      LauncherDesign.thermal => ThermalTokens.accent,
-      LauncherDesign.capillary => CapillaryTokens.resolve(isDark).accent,
-      LauncherDesign.liquidMetal => LiquidMetalTokens.accent,
-      LauncherDesign.opticalGlass => OpticalGlassTokens.accent,
-      LauncherDesign.aurora => AuroraTokens.accent,
-      LauncherDesign.crt => CrtTokens.accent,
-      LauncherDesign.retro => RetroTokens.accent,
-      LauncherDesign.phosphor => PhosphorTokens.accent,
-      LauncherDesign.strata => StrataTokens.accent,
-      LauncherDesign.tui => TuiTokens.accent,
-      LauncherDesign.omarchy => OmarchyTokens.accent,
-      LauncherDesign.zen => ZenTokens.accent(isDark),
-      LauncherDesign.blueprint => BlueprintTokens.accent(isDark),
-      LauncherDesign.manifesto => ManifestoTokens.accent(isDark),
-      LauncherDesign.windowsXp => WindowsXpTokens.selection,
-      LauncherDesign.windows98 => Windows98Tokens.selection,
-      LauncherDesign.notion => NotionTokens.blue(isDark),
-      _ => Design.accent,
-    };
-    final ThemeData designTheme = _buildDesignTheme(
-      baseTheme: baseTheme,
-      isDark: isDark,
-      accent: accent,
-    );
+    final Color accent = palette.accent;
+    final ThemeData designTheme = _buildDesignTheme(baseTheme: appTheme, palette: palette);
     final ThemeData theme =
         Design.useCustomFont ? designTheme.copyWith(textTheme: launcherTextTheme(designTheme.textTheme)) : designTheme;
     final Color onSurface = theme.colorScheme.onSurface;
@@ -835,7 +788,6 @@ class LauncherState extends State<Launcher>
           behavior: HitTestBehavior.translucent,
           onPanStart: (_) => windowManager.startDragging(),
           child: Icon(
-            // Token-driven: no inline ternary on _design.
             launcherTheme.searchIcon,
             size: launcherTheme.searchIconSize,
             color: launcherTheme.searchIconUsesOnSurface ? onSurface.withAlpha(160) : accent,
@@ -1164,116 +1116,13 @@ class LauncherState extends State<Launcher>
         ),
       ),
     );
-    final Widget layoutContent = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        searchContent,
-        // if (_design == LauncherDesign.aurora && _activePlugin == null)
-        // _AuroraControls(
-        //     query: _controller.text,
-        //     results: _results,
-        //     isSearching: _isSearching,
-        //     onQuery: (String value) {
-        //       _controller.text = value;
-        //       _controller.selection = TextSelection.collapsed(offset: value.length);
-        //       _onSearchChanged(value);
-        //       _searchFocusNode.requestFocus();
-        //     },
-        //     onOpen: () => _onSubmitted(_controller.text)),
-        if (_design == LauncherDesign.phosphor && _activePlugin == null)
-          _PhosphorControls(
-              query: _controller.text,
-              results: _results,
-              onQuery: (String value) {
-                _controller.text = value;
-                _controller.selection = TextSelection.collapsed(offset: value.length);
-                _onSearchChanged(value);
-                _searchFocusNode.requestFocus();
-              }),
-        if (_design == LauncherDesign.phosphor ||
-            _design == LauncherDesign.crt ||
-            _design == LauncherDesign.toon ||
-            isRetro)
-          Flexible(
-              fit: FlexFit.loose,
-              child: Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), child: resultsContent))
-        else if (_design == LauncherDesign.strata)
-          Flexible(
-              fit: FlexFit.loose, child: Padding(padding: const EdgeInsets.fromLTRB(3, 0, 3, 6), child: resultsContent))
-        else if (_design == LauncherDesign.aurora)
-          Flexible(
-            fit: FlexFit.loose,
-            child: Container(
-                margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                decoration: BoxDecoration(
-                    color: AuroraTokens.background.withAlpha(70),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AuroraTokens.border)),
-                child: resultsContent),
-          )
-        else
-          resultsContent,
-      ],
-    );
-    final Widget innerContent = Stack(
-      children: <Widget>[
-        layoutContent,
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: _buildHeightResizeHandle(accent, onSurface),
-        ),
-      ],
-    );
-
-    final Widget frame = _design.buildFrame(
-      child: innerContent,
+    final Widget frame = _buildLauncherFrame(
       searchContent: searchContent,
-      resultsContent: Stack(
-        children: <Widget>[
-          resultsContent,
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildHeightResizeHandle(accent, onSurface),
-          ),
-        ],
-      ),
-      resultCount: _results.length,
-      queryController: _controller,
+      resultsContent: resultsContent,
+      resizeHandle: _buildHeightResizeHandle(accent, onSurface),
     );
 
-    final bool usesDesignFont = _design == LauncherDesign.liquidMetal ||
-        _design == LauncherDesign.thermal ||
-        _design == LauncherDesign.capillary ||
-        _design == LauncherDesign.opticalGlass ||
-        _design == LauncherDesign.phosphor ||
-        _design == LauncherDesign.crt ||
-        isRetro ||
-        _design == LauncherDesign.toon ||
-        _design == LauncherDesign.strata ||
-        _design == LauncherDesign.aurora ||
-        isTerminal ||
-        isTui ||
-        isOmarchy ||
-        isTerminal2 ||
-        isZen ||
-        isGlass ||
-        isBlueprint ||
-        isTransit ||
-        isFluent ||
-        isManifesto ||
-        isOrbit ||
-        isAnime ||
-        isWindowsXp ||
-        isWindows98 ||
-        isNotion ||
-        isSwitchboard ||
-        isRelay ||
-        isRaycast;
-    final ThemeData launcherThemeData = !Design.useCustomFont || usesDesignFont
+    final ThemeData launcherThemeData = !Design.useCustomFont || launcherTheme.config.usesDesignFont
         ? theme
         : theme.copyWith(
             textTheme: GoogleFonts.getTextTheme(Design.entryFontFamily, theme.textTheme),
@@ -1286,7 +1135,7 @@ class LauncherState extends State<Launcher>
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onSecondaryTap: _openActionsForActiveResult,
-        child: LauncherTheme(data: launcherTheme, accent: accent, child: appearanceFrame),
+        child: LauncherTheme(data: launcherTheme, palette: palette, child: appearanceFrame),
       ),
     );
   }

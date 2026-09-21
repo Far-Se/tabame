@@ -4,7 +4,8 @@ BoxDecoration _relayOuterDecoration(Color surface, Color accent) {
   return BoxDecoration(
     borderRadius: BorderRadius.circular(Design.borderRadius),
     color: surface,
-    border: Border.all(color: RelayTokens.border(surface.computeLuminance() < 0.5, accent)),
+    border:
+        Border.all(color: RelayTokens.border(ThemeData.estimateBrightnessForColor(surface) == Brightness.dark, accent)),
     boxShadow: <BoxShadow>[
       BoxShadow(
         color: Colors.black.withAlpha(82),
@@ -31,26 +32,16 @@ class _RelaySearchBarState extends State<_RelaySearchBar> with SingleTickerProvi
     duration: const Duration(milliseconds: 900),
   );
 
-  void _syncAnimation() {
-    final bool reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    if (widget.content.isSearching && !reduceMotion) {
-      if (!_controller.isAnimating) _controller.repeat();
-    } else if (_controller.isAnimating) {
-      _controller.stop();
-      _controller.value = 0;
-    }
-  }
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _syncAnimation();
+    _syncRepeatingAnimation(_controller, context, active: widget.content.isSearching);
   }
 
   @override
   void didUpdateWidget(_RelaySearchBar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _syncAnimation();
+    _syncRepeatingAnimation(_controller, context, active: widget.content.isSearching);
   }
 
   @override

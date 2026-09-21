@@ -55,6 +55,7 @@ part 'launcher_designs/vector_launcher_design.dart';
 part 'launcher_designs/windows_98_launcher_design.dart';
 part 'launcher_designs/windows_xp_launcher_design.dart';
 part 'launcher_designs/zen_launcher_design.dart';
+part 'widgets/launcher_animation.dart';
 part 'widgets/launcher_search_field.dart';
 part 'widgets/launcher_section_header.dart';
 
@@ -158,54 +159,4 @@ extension LauncherDesignBuilder on LauncherDesign {
 
   Widget buildSectionHeader({required String label, Color? accent}) =>
       _LauncherSectionHeader(design: this, label: label, accent: accent);
-
-  Widget buildFrame({
-    required Widget child,
-    required Widget searchContent,
-    required Widget resultsContent,
-    required int resultCount,
-    required TextEditingController queryController,
-  }) =>
-      switch (this) {
-        LauncherDesign.anime => AnimeLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.aurora => AuroraLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.blueprint => BlueprintLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.capillary =>
-          CapillaryLauncherFrame(child: child, resultCount: resultCount, queryController: queryController),
-        LauncherDesign.classic => ClassicLauncherFrame(child: child),
-        LauncherDesign.command => CommandLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.crt => CrtLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.cyber => CyberLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.fluent => FluentLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.glass => GlassLauncherFrame(child: child),
-        LauncherDesign.liquidMetal => LiquidMetalLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.manga => MangaLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.manifesto => ManifestoLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.matrix =>
-          MatrixLauncherFrame(searchChild: searchContent, resultsChild: resultsContent, resultCount: resultCount),
-        LauncherDesign.newCast => RaycastLauncherFrame(child: child),
-        LauncherDesign.notion => NotionLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.omarchy => OmarchyLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.opticalGlass => OpticalGlassLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.orbit => OrbitLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.outrun => Outrun2LauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.phosphor => PhosphorLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.relay => RelayLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.retro => RetroLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.serene => SereneLauncherFrame(child: child),
-        LauncherDesign.steam => SteamLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.strata => StrataLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.switchboard => SwitchboardLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.tech => TechLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.terminal => TerminalLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.terminal2 => Terminal2LauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.thermal => ThermalLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.toon => ToonLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.transit => TransitLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.tui => TuiLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.vector => VectorLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.windows98 => Windows98LauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.windowsXp => WindowsXpLauncherFrame(child: child, resultCount: resultCount),
-        LauncherDesign.zen => ZenLauncherFrame(child: child, resultCount: resultCount),
-      };
 }

@@ -4,7 +4,7 @@ Color _steamLauncherLift(Color base, double amount) => Color.alphaBlend(Colors.w
 Color _steamLauncherSink(Color base, double amount) => Color.alphaBlend(Colors.black.withValues(alpha: amount), base);
 
 BoxDecoration _steamOuterDecoration(Color surface) {
-  final bool isDark = surface.computeLuminance() < .5;
+  final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
   return BoxDecoration(
     borderRadius: BorderRadius.circular(Design.borderRadius),
     color: surface,
@@ -24,7 +24,7 @@ class SteamLauncherFrame extends StatelessWidget {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color accent = LauncherTheme.accentOf(context);
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final bool isDark = surface.computeLuminance() < .5;
+    final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
     final Color header = _steamLauncherSink(surface, isDark ? .32 : .06);
     final Color footer = _steamLauncherSink(surface, isDark ? .26 : .05);
     final Color panel = Color.alphaBlend(accent.withAlpha(15), _steamLauncherLift(surface, isDark ? .055 : .35));

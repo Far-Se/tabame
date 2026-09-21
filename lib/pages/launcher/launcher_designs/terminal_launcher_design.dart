@@ -68,7 +68,13 @@ class _TerminalBlinkCursorState extends State<_TerminalBlinkCursor> with SingleT
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1060),
-  )..repeat();
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncRepeatingAnimation(_controller, context);
+  }
 
   @override
   void dispose() {

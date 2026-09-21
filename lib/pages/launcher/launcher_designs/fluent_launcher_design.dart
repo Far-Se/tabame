@@ -4,7 +4,7 @@ BoxDecoration _fluentOuterDecoration(Color surface) {
   // Mica window — [surface] is the forced Win11 neutral. The 8px corner,
   // a hairline stroke, and the broad soft shadow Windows 11 puts under
   // every flyout.
-  final bool fluentDark = surface.computeLuminance() < 0.5;
+  final bool fluentDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
   return BoxDecoration(
     borderRadius: BorderRadius.circular(Design.borderRadius),
     color: surface,
