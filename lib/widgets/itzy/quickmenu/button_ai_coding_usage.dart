@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../../models/classes/boxes/quick_menu_box.dart';
+import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../../services/ai_coding_usage_service.dart';
 import '../../../services/claude_usage_service.dart';
@@ -21,20 +25,56 @@ class CodexUsageButton extends StatelessWidget {
   Widget build(BuildContext context) => const _UsageButton(codex: true);
 }
 
-class _UsageButton extends StatelessWidget {
+class _UsageButton extends StatefulWidget {
   const _UsageButton({required this.codex});
 
   final bool codex;
 
   @override
+  State<_UsageButton> createState() => _UsageButtonState();
+}
+
+class _UsageButtonState extends State<_UsageButton> with QuickMenuTriggers {
+  final GlobalKey<TooltipState> _tooltipKey = GlobalKey<TooltipState>();
+  Timer? _countdownTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    QuickMenuFunctions.addListener(this);
+  }
+
+  void checkTimer() {
+    if (!mounted) return;
+    final _UsageSnapshot usage = _UsageSnapshot(widget.codex);
+    if (usage.five != null && usage.five! <= 0 && usage.fiveReset != null) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    QuickMenuFunctions.removeListener(this);
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
+    if (visible) {
+      checkTimer();
+      _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) => checkTimer());
+    } else {
+      _countdownTimer?.cancel();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final GlobalKey<TooltipState> tooltipKey = GlobalKey<TooltipState>();
     return ListenableBuilder(
       listenable: AiCodingUsageService.instance,
       builder: (BuildContext context, Widget? child) {
-        final _UsageSnapshot usage = _UsageSnapshot(codex);
+        final _UsageSnapshot usage = _UsageSnapshot(widget.codex);
         return Tooltip(
-          key: tooltipKey,
+          key: _tooltipKey,
           ignorePointer: false,
           enableTapToDismiss: false,
           preferBelow: !user.quickActionsAtBottom,
@@ -50,7 +90,7 @@ class _UsageButton extends StatelessWidget {
           richMessage: WidgetSpan(
             child: ListenableBuilder(
               listenable: AiCodingUsageService.instance,
-              builder: (BuildContext context, Widget? child) => _UsageDetails(codex: codex),
+              builder: (BuildContext context, Widget? child) => _UsageDetails(codex: widget.codex),
             ),
           ),
           child: Semantics(
@@ -58,7 +98,7 @@ class _UsageButton extends StatelessWidget {
             button: true,
             child: QuickActionItem(
               message: '',
-              onTap: () => tooltipKey.currentState?.ensureTooltipVisible(),
+              onTap: () => _tooltipKey.currentState?.ensureTooltipVisible(),
               icon: Center(
                 child: SizedBox.square(
                   dimension: 18,
@@ -76,7 +116,11 @@ class _UsageButton extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        codex ? 'C' : 'Cl',
+                        usage.five != null && usage.five! <= 0 && usage.fiveReset != null
+                            ? _resetCountdown(usage.fiveReset!)
+                            : widget.codex
+                                ? 'C'
+                                : 'Cl',
                         style: TextStyle(fontSize: Design.baseFontSize - 3, color: Design.text),
                       ),
                     ],
@@ -214,6 +258,16 @@ String _timeUntil(DateTime reset) {
   }
 
   return '${remaining.inMinutes.clamp(1, 59)}m';
+}
+
+String _resetCountdown(DateTime reset) {
+  final Duration remaining = reset.difference(DateTime.now());
+  if (remaining.isNegative || remaining == Duration.zero) return '0s';
+
+  final int totalSeconds = (remaining.inMilliseconds / Duration.millisecondsPerSecond).ceil();
+  if (totalSeconds >= Duration.secondsPerHour) return '${totalSeconds ~/ Duration.secondsPerHour}h';
+  if (totalSeconds >= Duration.secondsPerMinute) return '${totalSeconds ~/ Duration.secondsPerMinute}m';
+  return '${totalSeconds}s';
 }
 
 class _UsageSnapshot {
