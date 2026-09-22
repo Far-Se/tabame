@@ -8,6 +8,45 @@ import '../../models/settings.dart';
 part 'launcher_design_config.dart';
 part 'launcher_palette.dart';
 
+/// Electric light on a midnight canvas. Both default modes use the reference's
+/// dark palette; custom launcher colors and fonts still apply.
+abstract final class RadiantTokens {
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: 0.7), background);
+  static Color get border => accent.withValues(alpha: 0.35);
+
+  static TextStyle font({double size = 14, Color? color, FontWeight weight = FontWeight.w500, double spacing = 0}) =>
+      launcherTextStyle(GoogleFonts.mulish(
+        fontSize: size,
+        color: color ?? foreground,
+        fontWeight: weight,
+        letterSpacing: spacing,
+        height: 1.3,
+      ));
+}
+
+/// Botanical ink on warm paper; launcher color and font overrides stay active.
+abstract final class NouveauTokens {
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: 0.7), background);
+  static Color get border => Color.alphaBlend(accent.withValues(alpha: 0.32), background);
+  static Color get brass => isDark ? const Color(0xFFC9A36B) : const Color(0xFFA1763D);
+
+  static TextStyle font({double size = 14, Color? color, FontWeight weight = FontWeight.w400, double spacing = 0}) =>
+      launcherTextStyle(GoogleFonts.commissioner(
+        fontSize: size,
+        color: color ?? foreground,
+        fontWeight: weight,
+        letterSpacing: spacing,
+        height: 1.3,
+      ));
+}
+
 /// Matte, low-chroma materials; user palette and font overrides remain active.
 abstract final class SatinTokens {
   static Color get background => user.launcherThemeColors.background;

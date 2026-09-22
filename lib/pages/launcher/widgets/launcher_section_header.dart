@@ -13,6 +13,25 @@ class _LauncherSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color accent = this.accent ?? LauncherTheme.accentOf(context);
     switch (design) {
+      case LauncherDesign.radiant:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+          child: Text(label, style: RadiantTokens.font(size: 11, color: RadiantTokens.dim, spacing: 1.3)),
+        );
+      case LauncherDesign.nouveau:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+          child: Row(children: <Widget>[
+            Text(label, style: NouveauTokens.font(size: 11, color: NouveauTokens.dim, spacing: 1.7)),
+            const SizedBox(width: 12),
+            Expanded(child: Divider(height: 1, color: NouveauTokens.border)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 7),
+              child: _NouveauDiamond(color: NouveauTokens.brass),
+            ),
+            SizedBox(width: 24, child: Divider(height: 1, color: NouveauTokens.border)),
+          ]),
+        );
       case LauncherDesign.satin:
         return Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),

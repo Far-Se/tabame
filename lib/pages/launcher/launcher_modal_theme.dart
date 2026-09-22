@@ -66,6 +66,18 @@ class LauncherModalTokens {
     double? height,
   }) {
     return switch (design) {
+      LauncherDesign.radiant => RadiantTokens.font(
+          size: fontSize ?? 14,
+          color: color ?? onSurface,
+          weight: fontWeight ?? FontWeight.w500,
+          spacing: letterSpacing ?? 0,
+        ).copyWith(height: height),
+      LauncherDesign.nouveau => NouveauTokens.font(
+          size: fontSize ?? 14,
+          color: color ?? onSurface,
+          weight: fontWeight ?? FontWeight.w400,
+          spacing: letterSpacing ?? 0,
+        ).copyWith(height: height),
       LauncherDesign.satin => SatinTokens.font(
           size: fontSize ?? 14,
           color: color ?? onSurface,
@@ -281,6 +293,8 @@ class LauncherModalFrame extends StatelessWidget {
 
   Color _surfaceColor(BuildContext context) {
     return switch (design) {
+      LauncherDesign.radiant => tokens.surface,
+      LauncherDesign.nouveau => tokens.surface,
       LauncherDesign.satin => Colors.transparent,
       LauncherDesign.thermal => Colors.transparent,
       LauncherDesign.capillary => Colors.transparent,

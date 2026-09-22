@@ -796,7 +796,6 @@ class LauncherState extends State<Launcher>
     final bool usesBlockCursor = isTerminal2 || isOmarchy || isTui || isRetro;
     final bool isSwitchboard = _design == LauncherDesign.switchboard;
     final bool isRelay = _design == LauncherDesign.relay;
-    final bool isRaycast = _design == LauncherDesign.newCast;
     final Color accent = palette.accent;
     final ThemeData designTheme = _buildDesignTheme(baseTheme: appTheme, palette: palette);
     final ThemeData theme =
@@ -853,17 +852,17 @@ class LauncherState extends State<Launcher>
               launcherTheme.searchHint ??
               (isTerminal2 ? 'type a command or search the system...' : 'Search applications, files, bookmarks...'),
           hintStyle: TextStyle(
-              color: _design == LauncherDesign.satin
-                  ? SatinTokens.dim
-                  : _design == LauncherDesign.thermal
-                      ? ThermalTokens.dim
-                      : _design == LauncherDesign.capillary
-                          ? CapillaryTokens.resolve(isDark).dim
-                          : isOmarchy
-                              ? OmarchyTokens.dim
-                              : isRaycast
-                                  ? RaycastTokens.muted(isDark)
-                                  : onSurface.withAlpha(70)),
+            color: switch (_design) {
+              LauncherDesign.radiant => RadiantTokens.dim,
+              LauncherDesign.nouveau => NouveauTokens.dim,
+              LauncherDesign.satin => SatinTokens.dim,
+              LauncherDesign.thermal => ThermalTokens.dim,
+              LauncherDesign.capillary => CapillaryTokens.resolve(isDark).dim,
+              LauncherDesign.omarchy => OmarchyTokens.dim,
+              LauncherDesign.newCast => RaycastTokens.muted(isDark),
+              _ => onSurface.withAlpha(70),
+            },
+          ),
           border: InputBorder.none,
           isDense: true,
           contentPadding: EdgeInsets.only(

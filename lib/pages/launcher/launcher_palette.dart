@@ -39,6 +39,18 @@ class LauncherPalette {
     final ThemeColors colors = user.launcherThemeColors;
     final CapillaryTokens capillary = CapillaryTokens.resolve(isDark);
     return switch (design) {
+      LauncherDesign.radiant => LauncherPalette._(
+          surface: RadiantTokens.background,
+          accent: RadiantTokens.accent,
+          onSurface: RadiantTokens.foreground,
+          dim: RadiantTokens.dim,
+        ),
+      LauncherDesign.nouveau => LauncherPalette._(
+          surface: NouveauTokens.background,
+          accent: NouveauTokens.accent,
+          onSurface: NouveauTokens.foreground,
+          dim: NouveauTokens.dim,
+        ),
       LauncherDesign.satin => LauncherPalette._(
           surface: SatinTokens.background,
           accent: SatinTokens.accent,

@@ -10,6 +10,7 @@ import '../launcher_corners.dart';
 import '../launcher_design.dart';
 import '../widgets/capillary_surface.dart';
 import '../widgets/thermal_surface.dart';
+import '../widgets/radiant_surface.dart';
 import '../widgets/liquid_metal_surface.dart';
 import 'inline_markup.dart';
 
@@ -25,6 +26,8 @@ part 'designs/glass_result_row.dart';
 part 'designs/liquid_metal_result_row.dart';
 part 'designs/manifesto_result_row.dart';
 part 'designs/notion_result_row.dart';
+part 'designs/nouveau_result_row.dart';
+part 'designs/radiant_result_row.dart';
 part 'designs/omarchy_result_row.dart';
 part 'designs/optical_glass_result_row.dart';
 part 'designs/orbit_result_row.dart';
@@ -107,6 +110,8 @@ class LauncherResultRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final LauncherDesign design = LauncherTheme.maybeOf(context)?.design ?? user.launcherDesign;
     return switch (design) {
+      LauncherDesign.radiant => _buildRadiant(context),
+      LauncherDesign.nouveau => _buildNouveau(context),
       LauncherDesign.satin => _buildSatin(context),
       LauncherDesign.thermal => _buildThermal(context),
       LauncherDesign.capillary => _buildCapillary(context),

@@ -94,7 +94,9 @@ enum LauncherDesign {
   toon,
   capillary,
   thermal,
-  satin;
+  satin,
+  nouveau,
+  radiant;
 
   String get displayName => switch (this) {
         LauncherDesign.crt => 'CRT',
@@ -445,6 +447,50 @@ class DesignSettings {
           entryFontFamily: 'Encode Sans',
           entryFontWeight: 600,
           borderRadius: 7,
+        ),
+      ),
+      LauncherDesign.radiant.displayName: LauncherDesignThemeSet(
+        lightTheme: defaultThemeColors(
+          background: const Color(0xFFD5E0FB),
+          textColor: const Color(0xFF3F4ED9),
+          accentColor: const Color(0xFF168BFF),
+          gradientAlpha: 0,
+          uiFontFamily: 'Mulish',
+          entryFontFamily: 'Mulish',
+          entryFontWeight: 500,
+          borderRadius: 22,
+        ),
+        darkTheme: defaultThemeColors(
+          background: const Color(0xFF03091F),
+          textColor: const Color(0xFFDCE8FF),
+          accentColor: const Color(0xFF168BFF),
+          gradientAlpha: 0,
+          uiFontFamily: 'Mulish',
+          entryFontFamily: 'Mulish',
+          entryFontWeight: 500,
+          borderRadius: 22,
+        ),
+      ),
+      LauncherDesign.nouveau.displayName: LauncherDesignThemeSet(
+        lightTheme: defaultThemeColors(
+          background: const Color(0xFFF5F1E8),
+          textColor: const Color(0xFF30352B),
+          accentColor: const Color(0xFF60684D),
+          gradientAlpha: 0,
+          uiFontFamily: 'Commissioner',
+          entryFontFamily: 'Commissioner',
+          entryFontWeight: 500,
+          borderRadius: 18,
+        ),
+        darkTheme: defaultThemeColors(
+          background: const Color(0xFF23271F),
+          textColor: const Color(0xFFF0EBDD),
+          accentColor: const Color(0xFFB9C39B),
+          gradientAlpha: 0,
+          uiFontFamily: 'Commissioner',
+          entryFontFamily: 'Commissioner',
+          entryFontWeight: 500,
+          borderRadius: 18,
         ),
       ),
       LauncherDesign.satin.displayName: LauncherDesignThemeSet(

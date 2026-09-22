@@ -19,6 +19,8 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
         _design == LauncherDesign.tui ||
         _design == LauncherDesign.capillary ||
         _design == LauncherDesign.satin ||
+        _design == LauncherDesign.nouveau ||
+        _design == LauncherDesign.radiant ||
         _design == LauncherDesign.thermal) {
       return LauncherResultRow(
         isSelected: isSelected,
@@ -146,6 +148,8 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
         _design == LauncherDesign.tui ||
         _design == LauncherDesign.capillary ||
         _design == LauncherDesign.satin ||
+        _design == LauncherDesign.nouveau ||
+        _design == LauncherDesign.radiant ||
         _design == LauncherDesign.thermal) {
       return LauncherResultRow(
         isSelected: isSelected,
@@ -229,6 +233,8 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
         _design == LauncherDesign.tui ||
         _design == LauncherDesign.capillary ||
         _design == LauncherDesign.satin ||
+        _design == LauncherDesign.nouveau ||
+        _design == LauncherDesign.radiant ||
         _design == LauncherDesign.thermal) {
       return LauncherResultRow(
         isSelected: isSelected,
@@ -308,6 +314,8 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
         _design == LauncherDesign.tui ||
         _design == LauncherDesign.capillary ||
         _design == LauncherDesign.satin ||
+        _design == LauncherDesign.nouveau ||
+        _design == LauncherDesign.radiant ||
         _design == LauncherDesign.thermal) {
       final Widget icon = result.coverPath != null
           ? ClipRRect(
@@ -420,6 +428,8 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
         _design == LauncherDesign.tui ||
         _design == LauncherDesign.capillary ||
         _design == LauncherDesign.satin ||
+        _design == LauncherDesign.nouveau ||
+        _design == LauncherDesign.radiant ||
         _design == LauncherDesign.thermal) {
       return LauncherResultRow(
         isSelected: isSelected,
@@ -499,6 +509,8 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
         _design == LauncherDesign.tui ||
         _design == LauncherDesign.capillary ||
         _design == LauncherDesign.satin ||
+        _design == LauncherDesign.nouveau ||
+        _design == LauncherDesign.radiant ||
         _design == LauncherDesign.thermal) {
       final Widget resultRow = LauncherResultRow(
         isSelected: isSelected,

@@ -32,6 +32,24 @@ class LauncherDesignConfig {
   final bool outlinedControls;
 
   factory LauncherDesignConfig.forDesign(LauncherDesign design) => switch (design) {
+        LauncherDesign.radiant => const LauncherDesignConfig(
+            searchFontSize: 18,
+            searchFontWeight: FontWeight.w400,
+            searchHint: 'Search apps, files, and commands...',
+            frameRadius: 22,
+            controlRadius: 8,
+            resultsListPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            usesDesignFont: true,
+          ),
+        LauncherDesign.nouveau => const LauncherDesignConfig(
+            searchFontSize: 17,
+            searchFontWeight: FontWeight.w400,
+            searchHint: 'Search apps, files, and commands...',
+            frameRadius: 18,
+            controlRadius: 7,
+            resultsListPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            usesDesignFont: true,
+          ),
         LauncherDesign.satin => const LauncherDesignConfig(
             searchFontSize: 18,
             searchFontWeight: FontWeight.w400,

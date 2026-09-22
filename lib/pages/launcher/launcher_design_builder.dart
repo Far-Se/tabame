@@ -18,6 +18,7 @@ import 'widgets/crt_surface.dart';
 import 'widgets/liquid_metal_surface.dart';
 import 'widgets/thermal_surface.dart';
 import 'widgets/satin_surface.dart';
+import 'widgets/radiant_surface.dart';
 
 part 'launcher_designs/anime_launcher_design.dart';
 part 'launcher_designs/aurora_launcher_design.dart';
@@ -35,6 +36,8 @@ part 'launcher_designs/manifesto_launcher_design.dart';
 part 'launcher_designs/matrix_launcher_design.dart';
 part 'launcher_designs/newcast_launcher_design.dart';
 part 'launcher_designs/notion_launcher_design.dart';
+part 'launcher_designs/nouveau_launcher_design.dart';
+part 'launcher_designs/radiant_launcher_design.dart';
 part 'launcher_designs/omarchy_launcher_design.dart';
 part 'launcher_designs/optical_glass_launcher_design.dart';
 part 'launcher_designs/orbit_launcher_design.dart';
@@ -96,6 +99,8 @@ extension LauncherDesignBuilder on LauncherDesign {
         LauncherDesign.tech => _techOuterDecoration(surface, accent),
         LauncherDesign.terminal => _terminalOuterDecoration(surface, accent),
         LauncherDesign.terminal2 => _terminal2OuterDecoration(surface),
+        LauncherDesign.radiant => _radiantOuterDecoration(),
+        LauncherDesign.nouveau => _nouveauOuterDecoration(),
         LauncherDesign.satin => _satinOuterDecoration(),
         LauncherDesign.thermal => _thermalOuterDecoration(),
         LauncherDesign.toon => _toonOuterDecoration(),
@@ -150,6 +155,8 @@ extension LauncherDesignBuilder on LauncherDesign {
       LauncherDesign.tech => _TechLauncherSearchBar(content),
       LauncherDesign.terminal => _TerminalSearchBar(content),
       LauncherDesign.terminal2 => _Terminal2SearchBar(content),
+      LauncherDesign.radiant => _RadiantSearchBar(content),
+      LauncherDesign.nouveau => _NouveauSearchBar(content),
       LauncherDesign.satin => _SatinSearchBar(content),
       LauncherDesign.thermal => _ThermalSearchBar(content),
       LauncherDesign.toon => _ToonSearchBar(content),
