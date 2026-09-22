@@ -757,6 +757,30 @@ class FancyshotState extends State<Fancyshot> {
                     max: 28,
                     onChanged: (double v) => _updateFilters(() => filters.shadowRadius = v),
                   ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        child: _CompactSlider(
+                          label: 'Shadow X',
+                          value: filters.shadowOffsetX,
+                          min: -40,
+                          max: 40,
+                          onChanged: (double v) => _updateFilters(() => filters.shadowOffsetX = v),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _CompactSlider(
+                          label: 'Shadow Y',
+                          value: filters.shadowOffsetY,
+                          min: -40,
+                          max: 40,
+                          onChanged: (double v) => _updateFilters(() => filters.shadowOffsetY = v),
+                        ),
+                      ),
+                    ],
+                  ),
                   _CompactSlider(
                     label: 'Shadow Spread',
                     value: filters.shadowSpread,
@@ -2166,6 +2190,8 @@ class FancyShotProfile {
   double frameBorderWidth = 0;
   double shadowSpread = 0;
   double shadowRadius = 0;
+  double shadowOffsetX = 0;
+  double shadowOffsetY = 14;
   double shadowOpacity = 0.35;
   double backgroundBlur = 0;
   double backgroundTintOpacity = 0;
@@ -2192,6 +2218,8 @@ class FancyShotProfile {
     this.frameBorderWidth = 0,
     this.shadowSpread = 0,
     this.shadowRadius = 0,
+    this.shadowOffsetX = 0,
+    this.shadowOffsetY = 14,
     this.shadowOpacity = 0.35,
     this.backgroundBlur = 0,
     this.backgroundTintOpacity = 0,
@@ -2220,6 +2248,8 @@ class FancyShotProfile {
     double? frameBorderWidth,
     double? shadowSpread,
     double? shadowRadius,
+    double? shadowOffsetX,
+    double? shadowOffsetY,
     double? shadowOpacity,
     double? backgroundBlur,
     double? backgroundTintOpacity,
@@ -2247,6 +2277,8 @@ class FancyShotProfile {
       frameBorderWidth: frameBorderWidth ?? this.frameBorderWidth,
       shadowSpread: shadowSpread ?? this.shadowSpread,
       shadowRadius: shadowRadius ?? this.shadowRadius,
+      shadowOffsetX: shadowOffsetX ?? this.shadowOffsetX,
+      shadowOffsetY: shadowOffsetY ?? this.shadowOffsetY,
       shadowOpacity: shadowOpacity ?? this.shadowOpacity,
       backgroundBlur: backgroundBlur ?? this.backgroundBlur,
       backgroundTintOpacity: backgroundTintOpacity ?? this.backgroundTintOpacity,
@@ -2277,6 +2309,8 @@ class FancyShotProfile {
       'frameBorderWidth': frameBorderWidth,
       'shadowSpread': shadowSpread,
       'shadowRadius': shadowRadius,
+      'shadowOffsetX': shadowOffsetX,
+      'shadowOffsetY': shadowOffsetY,
       'shadowOpacity': shadowOpacity,
       'backgroundBlur': backgroundBlur,
       'backgroundTintOpacity': backgroundTintOpacity,
@@ -2307,6 +2341,8 @@ class FancyShotProfile {
       frameBorderWidth: ((map['frameBorderWidth'] ?? 0.0) as num).toDouble(),
       shadowSpread: ((map['shadowSpread'] ?? 0.0) as num).toDouble(),
       shadowRadius: ((map['shadowRadius'] ?? 0.0) as num).toDouble(),
+      shadowOffsetX: ((map['shadowOffsetX'] ?? 0.0) as num).toDouble(),
+      shadowOffsetY: ((map['shadowOffsetY'] ?? 14.0) as num).toDouble(),
       shadowOpacity: ((map['shadowOpacity'] ?? 0.35) as num).toDouble(),
       backgroundBlur: ((map['backgroundBlur'] ?? 0.0) as num).toDouble(),
       backgroundTintOpacity: ((map['backgroundTintOpacity'] ?? 0.0) as num).toDouble(),
@@ -2332,7 +2368,7 @@ class FancyShotProfile {
 
   @override
   String toString() {
-    return 'FancyShotProfile(name: $name, backgroundPadding: $backgroundPadding, imagePadding: $imagePadding, imageScale: $imageScale, backgroundType: $backgroundType, backgroundImage: $backgroundImage, borderRadius: $borderRadius, frameBorderWidth: $frameBorderWidth, shadowSpread: $shadowSpread, shadowRadius: $shadowRadius, shadowOpacity: $shadowOpacity, backgroundBlur: $backgroundBlur, backgroundTintOpacity: $backgroundTintOpacity, skewX: $skewX, skewY: $skewY, skewPerspective: $skewPerspective, rotation: $rotation, background: $background, aspectRatio: $aspectRatio, watermark: $watermark, watermarkOpacity: $watermarkOpacity, watermarkSize: $watermarkSize, showBrowserFrame: $showBrowserFrame, width: $width, height: $height)';
+    return 'FancyShotProfile(name: $name, backgroundPadding: $backgroundPadding, imagePadding: $imagePadding, imageScale: $imageScale, backgroundType: $backgroundType, backgroundImage: $backgroundImage, borderRadius: $borderRadius, frameBorderWidth: $frameBorderWidth, shadowSpread: $shadowSpread, shadowRadius: $shadowRadius, shadowOffsetX: $shadowOffsetX, shadowOffsetY: $shadowOffsetY, shadowOpacity: $shadowOpacity, backgroundBlur: $backgroundBlur, backgroundTintOpacity: $backgroundTintOpacity, skewX: $skewX, skewY: $skewY, skewPerspective: $skewPerspective, rotation: $rotation, background: $background, aspectRatio: $aspectRatio, watermark: $watermark, watermarkOpacity: $watermarkOpacity, watermarkSize: $watermarkSize, showBrowserFrame: $showBrowserFrame, width: $width, height: $height)';
   }
 
   @override
@@ -2349,6 +2385,8 @@ class FancyShotProfile {
         other.frameBorderWidth == frameBorderWidth &&
         other.shadowSpread == shadowSpread &&
         other.shadowRadius == shadowRadius &&
+        other.shadowOffsetX == shadowOffsetX &&
+        other.shadowOffsetY == shadowOffsetY &&
         other.shadowOpacity == shadowOpacity &&
         other.backgroundBlur == backgroundBlur &&
         other.backgroundTintOpacity == backgroundTintOpacity &&
@@ -2378,6 +2416,8 @@ class FancyShotProfile {
         frameBorderWidth.hashCode ^
         shadowSpread.hashCode ^
         shadowRadius.hashCode ^
+        shadowOffsetX.hashCode ^
+        shadowOffsetY.hashCode ^
         shadowOpacity.hashCode ^
         backgroundBlur.hashCode ^
         backgroundTintOpacity.hashCode ^
@@ -2804,7 +2844,7 @@ class _FancyShotFrameSurface extends StatelessWidget {
         boxShadow: (profile.shadowRadius > 0 || profile.shadowSpread > 0)
             ? <BoxShadow>[
                 BoxShadow(
-                  offset: Offset(0, 14 * scale),
+                  offset: Offset(profile.shadowOffsetX * scale, profile.shadowOffsetY * scale),
                   spreadRadius: profile.shadowSpread * scale,
                   blurRadius: profile.shadowRadius * scale,
                   color: Colors.black.withValues(alpha: profile.shadowOpacity),

@@ -89,6 +89,8 @@ class _MetalClock extends InheritedWidget {
 
 /// Actual fragment-shader metal, with an independent shader per paint surface.
 /// [overlay] adds a restrained reflection to opaque plugin/preview controls.
+/// Dense result rows use [LiquidMetalFrostedSurface] so the animated metal
+/// remains a frame treatment instead of being repeated for every item.
 class LiquidMetalSurface extends StatefulWidget {
   const LiquidMetalSurface({
     super.key,
@@ -276,6 +278,55 @@ class _LiquidMetalPainter extends CustomPainter {
       background != oldDelegate.background ||
       foreground != oldDelegate.foreground ||
       accent != oldDelegate.accent;
+}
+
+/// A quiet frosted surface for repeated result rows.
+///
+/// The launcher frame still provides the animated metal behind this layer. A
+/// small backdrop blur and translucent tint keep that material present without
+/// repeating a high-contrast fragment shader for every result.
+class LiquidMetalFrostedSurface extends StatelessWidget {
+  const LiquidMetalFrostedSurface({
+    super.key,
+    required this.child,
+    this.selected = false,
+    this.radius = 10,
+  });
+
+  final Widget child;
+  final bool selected;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color background = LiquidMetalTokens.background;
+    final Color foreground = LiquidMetalTokens.foreground;
+    final Color tint = selected ? LiquidMetalTokens.accent : foreground;
+    final int baseAlpha = isDark ? 148 : 116;
+    final Color top = Color.alphaBlend(foreground.withAlpha(isDark ? 22 : 58), background.withAlpha(baseAlpha));
+    final Color bottom = Color.alphaBlend(
+      tint.withAlpha(isDark ? (selected ? 42 : 12) : (selected ? 34 : 18)),
+      background.withAlpha(isDark ? 132 : 104),
+    );
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 7, sigmaY: 7),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: <Color>[top, bottom],
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
 }
 
 /// Optical material uses the same clock and resource lifecycle as Liquid Metal.

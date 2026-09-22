@@ -11,7 +11,9 @@ part 'launcher_palette.dart';
 abstract final class ThermalTokens {
   static Color get background => user.launcherThemeColors.background;
   static Color get foreground => user.launcherThemeColors.text;
-  static Color get accent => user.launcherThemeColors.accent;
+  // Thermal's heat response is intentionally a subdued version of the user
+  // accent so focus stays visible without becoming the brightest surface.
+  static Color get accent => Color.alphaBlend(user.launcherThemeColors.accent.withValues(alpha: 0.5), background);
   static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
   static Color get dim => Color.alphaBlend(foreground.withValues(alpha: isDark ? 0.8 : 0.64), background);
   static Color get border => Color.alphaBlend(foreground.withValues(alpha: isDark ? 0.18 : 0.2), background);

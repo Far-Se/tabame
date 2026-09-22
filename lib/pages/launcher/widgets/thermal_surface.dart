@@ -381,7 +381,7 @@ class _ThermalField extends ChangeNotifier {
   double get selectionHeat => selectionRect == null
       ? 0
       : enabled
-          ? 0.2 + 0.38 * (1 - math.exp(-math.min(time - _selectedAt, 1.4) * 5))
+          ? 0.04 + 0.54 * (1 - math.exp(-math.min(time - _selectedAt, 1.2) * 4))
           : 0.58;
   double get hoverHeat => pointer == null ? 0 : 0.72 * (1 - math.exp(-math.min(time - _hoveredAt, 1.4) * 3.8));
 
@@ -443,7 +443,7 @@ class _ThermalField extends ChangeNotifier {
       }
       _selection = next;
       _selectedAt = time;
-      _wake(1.5);
+      _wake(1.3);
     }
     selectionRect = bounds;
     notifyListeners();

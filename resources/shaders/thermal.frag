@@ -68,7 +68,16 @@ void main() {
   float grain = hash(floor(p * 1.25));
   vec2 warp = vec2(strata - 0.5, stone - 0.5) * 8.0;
 
-  float heat = heatSource(p, uSelection, uSelectionState, warp);
+  // Keep the active row full-width and let the heat appear across the sheet
+  // through a soft, lightly pixelated fade instead of a directional front.
+  vec4 selectionBounds = uSelection;
+  selectionBounds.x = uSize.x * 0.5;
+  selectionBounds.z = uSize.x * 0.5;
+  float selectionProgress = smoothstep(0.035, 0.58, uSelectionState.x);
+  float selectionPixels = hash(floor(p / 2.5));
+  float selectionFade = smoothstep(
+      0.0, 1.0, selectionProgress + (selectionPixels - 0.5) * 0.1 + (grain - 0.5) * 0.05);
+  float heat = heatSource(p, selectionBounds, uSelectionState, warp) * selectionFade;
   heat += heatSource(p, uHover, uHoverState, warp);
   heat += heatSource(p, uRow0, uRow0State, warp);
   heat += heatSource(p, uRow1, uRow1State, warp);
@@ -93,8 +102,9 @@ void main() {
   mineral -= seam * 0.009;
 
   vec3 slate = mix(uBackground, uForeground, dark * 0.16 + (1.0 - dark) * 0.12);
-  vec3 rust = mix(uAccent, vec3(0.34, 0.143, 0.086), 0.28);
-  vec3 amber = mix(uAccent, vec3(0.96, 0.57, 0.19), 0.35);
+  vec3 quietAccent = mix(uBackground, uAccent, 0.20);
+  vec3 rust = mix(uBackground, mix(quietAccent, vec3(0.34, 0.143, 0.086), 0.28), 0.20);
+  vec3 amber = mix(uBackground, mix(quietAccent, vec3(0.96, 0.57, 0.19), 0.35), 0.20);
   vec3 color = mix(mineral, slate, smoothstep(0.0, 0.23, temperature));
   color = mix(color, rust, smoothstep(0.18, 0.58, temperature));
   color = mix(color, amber, smoothstep(0.56, 0.94, temperature));

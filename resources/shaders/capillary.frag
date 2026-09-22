@@ -70,17 +70,22 @@ void main() {
 
   float ink = 0.0;
   float wet = 0.0;
-  float selection = mix(1.0 - smoothstep(0.0, 1.1, uReleaseAge), 1.0, uSelected);
-  if (uKind > 0.5 && uKind < 1.5 && selection > 0.001) {
-    float growth = 1.0 - exp(-uSelectionAge * 8.0);
-    float width = mix(min(46.0, uSize.x - 8.0), uSize.x - 12.0, sqrt(growth));
-    vec2 center = vec2(6.0 + width * 0.5, uSize.y * 0.5);
-    float distance = roundedBox(p - center, vec2(width * 0.5, max(2.0, uSize.y * 0.5 - 6.0)), 5.0);
-    distance += feather * 3.0;
+  // The wash settles over the whole row at once. A low-resolution noise field
+  // keeps the fade tactile without bringing back a directional sweep.
+  float selectionFade = uSelected > 0.5
+      ? 1.0 - exp(-uSelectionAge * 4.0)
+      : 1.0 - smoothstep(0.0, 1.25, uReleaseAge);
+  if (uKind > 0.5 && uKind < 1.5 && selectionFade > 0.001) {
+    float pixelNoise = hash(floor(p / 2.5));
+    float fade = smoothstep(0.02, 0.98, selectionFade + (pixelNoise - 0.5) * 0.12 + feather * 0.035);
+    vec2 center = uSize * 0.5;
+    float distance = roundedBox(
+        p - center, vec2(max(0.0, uSize.x * 0.5 - 1.0), max(2.0, uSize.y * 0.5 - 6.0)), 5.0);
+    distance += feather * 1.5;
     float fill = 1.0 - smoothstep(-1.5, 3.5, distance);
     float edge = exp(-abs(distance + 1.0) * 0.65);
     wet = exp(-uSelectionAge * 2.8) * uSelected;
-    ink += selection * (fill * (0.12 + wet * 0.055 + grain * 0.025) + edge * 0.045);
+    ink += fade * (fill * (0.12 + wet * 0.055 + grain * 0.025) + edge * 0.045);
   }
 
   float hover = mix(1.0 - smoothstep(0.0, 0.55, uLeaveAge),

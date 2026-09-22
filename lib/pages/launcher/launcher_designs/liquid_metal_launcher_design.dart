@@ -73,13 +73,13 @@ class LiquidMetalLauncherFrame extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text('LIQUID METAL', style: LiquidMetalTokens.font(size: 10, spacing: 2)),
                     ]))),
-                    _windowControl('Minimize', Icons.remove_rounded, () {
-                      windowManager.minimize();
-                    }),
-                    const SizedBox(width: 4),
-                    _windowControl('Hide launcher', Icons.close_rounded, () {
-                      windowManager.hide();
-                    }),
+                    // _windowControl('Minimize', Icons.remove_rounded, () {
+                    //   windowManager.minimize();
+                    // }),
+                    // const SizedBox(width: 4),
+                    // _windowControl('Hide launcher', Icons.close_rounded, () {
+                    //   windowManager.hide();
+                    // }),
                   ]),
                 ),
               Flexible(fit: FlexFit.loose, child: child),
@@ -111,6 +111,7 @@ class LiquidMetalLauncherFrame extends StatelessWidget {
     );
   }
 
+  // ignore: unused_element
   Widget _windowControl(String label, IconData icon, VoidCallback onPressed) => LiquidMetalSurface(
         radius: 5,
         child: SizedBox(
