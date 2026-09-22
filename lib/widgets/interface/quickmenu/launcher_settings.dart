@@ -9,6 +9,7 @@ import '../../../models/db/file_index_db.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/file_extension_filter.dart';
 import '../../../services/file_indexer.dart';
+import '../../../pages/launcher/quicklinks/quicklink_ui.dart';
 
 class InterfaceQMSearchSettings extends StatefulWidget {
   const InterfaceQMSearchSettings({super.key});
@@ -72,6 +73,17 @@ class _InterfaceQMSearchSettingsState extends State<InterfaceQMSearchSettings> {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 80),
             child: Column(
               children: <Widget>[
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.link_rounded, color: Theme.of(context).colorScheme.primary),
+                  title: const Text('Quicklinks'),
+                  subtitle: const Text('Save websites, searches, files, and folders. Open with a name or alias.'),
+                  trailing: OutlinedButton(
+                    onPressed: () => QuicklinkUi.showManager(context),
+                    child: const Text('Manage'),
+                  ),
+                ),
+                const Divider(height: 24),
                 if (_isAdding)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),

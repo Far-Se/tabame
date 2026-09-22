@@ -25,6 +25,10 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
 
     // Shortcuts and info rows have no meaningful actions.
     if (item.isShortcut || item.isInfo) return;
+    if (item.quicklinkResult?.quicklink != null) {
+      unawaited(Clipboard.setData(ClipboardData(text: item.quicklinkResult!.quicklink!.link)));
+      return;
+    }
     if (item.isFile && item.entity != null) {
       final String path = item.entity!.path;
 
@@ -58,6 +62,16 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
 
     // Shortcuts and info rows have no meaningful actions.
     if (item.isShortcut || item.isInfo) return;
+    if (item.quicklinkResult != null) {
+      unawaited(QuicklinkUi.showActions(context, item.quicklinkResult!).whenComplete(() {
+        if (mounted) {
+          if (user.launcherSearchText.isEmpty) _controller.clear();
+          _onSearchChanged(_controller.text);
+          if (_canFocusLauncher) _focusSearch();
+        }
+      }));
+      return;
+    }
 
     showModalBottomSheet<void>(
       context: context,

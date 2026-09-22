@@ -46,9 +46,10 @@ mixin _ResultActionsMixin on _LauncherStateMembersMixin {
       onOpenObsidian: _openObsidianResult,
       onOpenSteam: _openSteamResult,
       onRunAction: _executeLauncherActionResult,
+      onOpenQuicklink: _openQuicklink,
     ).execute(result);
 
-    _focusSearch();
+    if (result.quicklinkResult == null) _focusSearch();
   }
 
   void _executeLauncherActionResult(QuickActionMenuEntry action) {

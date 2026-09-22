@@ -38,8 +38,10 @@ import 'launcher_search_models.dart';
 part 'launcher/services/launcher_actions_service.dart';
 
 class ActionsPanelScaffold extends StatefulWidget {
-  const ActionsPanelScaffold({required this.item});
+  const ActionsPanelScaffold({required this.item, this.actions, this.hideLauncherAfterAction = true});
   final LauncherSearchResultItem item;
+  final List<LauncherAction>? actions;
+  final bool hideLauncherAfterAction;
 
   @override
   State<ActionsPanelScaffold> createState() => _ActionsPanelScaffoldState();
@@ -118,7 +120,7 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
   }
 
   Future<void> _loadActions() async {
-    final List<LauncherAction> actions = await LauncherActionsBuilder.build(context, widget.item);
+    final List<LauncherAction> actions = widget.actions ?? await LauncherActionsBuilder.build(context, widget.item);
     if (!mounted) return;
     setState(() {
       _actions = actions;
@@ -212,7 +214,7 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
     }
 
     await action.onExecute(context);
-    if (!kDebugMode) QuickMenuFunctions.hideQuickMenu();
+    if (!kDebugMode && widget.hideLauncherAfterAction) QuickMenuFunctions.hideQuickMenu();
   }
 
   @override
@@ -412,6 +414,9 @@ class _ActionsHeader extends StatelessWidget {
   }
 
   (IconData, String, String) _resolveIdentity() {
+    if (item.quicklinkResult != null) {
+      return (Icons.link_rounded, item.quicklinkResult!.title, item.quicklinkResult!.subtitle);
+    }
     if (item.isFile) {
       final bool isDir = item.entity is Directory;
       return (

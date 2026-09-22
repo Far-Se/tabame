@@ -82,6 +82,9 @@ import 'launcher/plugins/plugin_shortcut.dart';
 import 'launcher/plugins/plugin_view.dart';
 import 'launcher/services/launcher_app_catalog_service.dart';
 import 'launcher/services/windows_terminal_service.dart';
+import 'launcher/quicklinks/quicklink_search.dart';
+import 'launcher/quicklinks/quicklink_ui.dart';
+import 'launcher/quicklinks/quicklink_store.dart';
 
 export 'launcher/result/result_item_bookmark.dart' show BookmarkSearchResult, BookmarkResultKind;
 part 'launcher/launcher_helpers.dart';
@@ -185,6 +188,19 @@ class LauncherState extends State<Launcher>
 
   final List<String> _folderBrowsingStack = <String>[];
   final List<String> _folderBrowsingQueryStack = <String>[];
+
+  Future<void> _openQuicklink(LauncherQuicklinkResult result) async {
+    await QuicklinkUi.execute(context, result);
+    if (mounted) {
+      if (user.launcherSearchText.isEmpty) _controller.clear();
+      _onSearchChanged(_controller.text);
+      if (_canFocusLauncher) _focusSearch();
+    }
+  }
+
+  void _reloadQuicklinks() {
+    if (mounted) _onSearchChanged(_controller.text);
+  }
 
   List<LauncherSearchResultItem> _results = <LauncherSearchResultItem>[];
   String? _keyboardSelectedResultId;
@@ -340,6 +356,12 @@ class LauncherState extends State<Launcher>
       icon: Icons.bookmark_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'ql ',
+      caption: 'Quicklinks',
+      prefix: 'ql ',
+      icon: Icons.link_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: 'b ',
       caption: 'Bookmarks  ·  "b add <url>" to save',
       prefix: 'b ',
@@ -450,6 +472,7 @@ class LauncherState extends State<Launcher>
   @override
   void initState() {
     super.initState();
+    QuicklinkStore.changes.addListener(_reloadQuicklinks);
     _pluginWindowTransitionController = AnimationController(vsync: this);
     _scrollController.addListener(_updateResultsSectionHeader);
     QuickMenuFunctions.addListener(this);
@@ -540,6 +563,7 @@ class LauncherState extends State<Launcher>
 
   @override
   void dispose() {
+    QuicklinkStore.changes.removeListener(_reloadQuicklinks);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     WindowManager.instance.removeListener(this);
     QuickMenuFunctions.removeListener(this);
@@ -957,7 +981,24 @@ class LauncherState extends State<Launcher>
                                                 final LauncherSearchResultItem result = _results[index];
                                                 final bool isSelected = index == activeIndex;
                                                 late final Widget resultWidget;
-                                                if (result.isShortcut) {
+                                                if (result.quicklinkResult != null) {
+                                                  final LauncherQuicklinkResult quicklink = result.quicklinkResult!;
+                                                  resultWidget = LauncherResultRow(
+                                                    isSelected: isSelected,
+                                                    isRepeating: isRepeatingKey,
+                                                    accent: accent,
+                                                    onSurface: onSurface,
+                                                    onTap: () => _openQuicklink(quicklink),
+                                                    onHover: () => _selectResultFromMouse(index),
+                                                    icon: Icon(QuicklinkUi.iconFor(quicklink), size: 18, color: accent),
+                                                    title: quicklink.title,
+                                                    subtitle: quicklink.subtitle,
+                                                    badge: quicklink.quicklink?.pinned == true
+                                                        ? Icon(Icons.push_pin_outlined,
+                                                            size: 13, color: onSurface.withAlpha(160))
+                                                        : null,
+                                                  );
+                                                } else if (result.isShortcut) {
                                                   resultWidget = _buildShortcutResult(context, theme, result.shortcut!,
                                                       index, isSelected, isRepeatingKey);
                                                 } else if (result.isFile) {

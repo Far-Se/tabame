@@ -52,6 +52,19 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
     _scrollResultsToTopForQuery(query);
     _searchDebounce?.cancel();
 
+    final List<LauncherSearchResultItem>? quicklinks = QuicklinkSearch.ownedResults(query);
+    if (quicklinks != null) {
+      _folderBrowsingStack.clear();
+      _folderBrowsingQueryStack.clear();
+      ++_searchGeneration;
+      setState(() {
+        _searchMode = LauncherSearchMode.mixed;
+        _isSearching = false;
+      });
+      _setResults(quicklinks, isSearching: false);
+      return;
+    }
+
     final List<LauncherSearchResultItem>? pluginSuggestions = _pluginKeywordSuggestions(query);
     if (pluginSuggestions != null) {
       _folderBrowsingStack.clear();

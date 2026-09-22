@@ -9,6 +9,9 @@ import '../../../widgets/itzy/quickmenu/button_obsidian.dart';
 import '../../../widgets/itzy/quickmenu/button_quickactions.dart';
 import '../../../widgets/itzy/quickmenu/button_steam.dart';
 import '../result/result_item_bookmark.dart';
+import '../quicklinks/quicklink.dart';
+
+enum QuicklinkCommand { create, search, importFile, exportFile }
 
 class LauncherShortcut {
   final String label;
@@ -90,6 +93,7 @@ sealed class LauncherSearchResultItem {
   SteamGame? get steamResult => null;
   LauncherInfoResult? get infoResult => null;
   LauncherShortcut? get shortcut => null;
+  LauncherQuicklinkResult? get quicklinkResult => null;
 
   bool get isFile => false;
   bool get isApp => false;
@@ -103,6 +107,42 @@ sealed class LauncherSearchResultItem {
   bool get isShortcut => false;
 
   String get id;
+}
+
+final class LauncherQuicklinkResult extends LauncherSearchResultItem {
+  const LauncherQuicklinkResult.link(this.quicklink, {this.argument = ''}) : command = null;
+  const LauncherQuicklinkResult.command(this.command)
+      : quicklink = null,
+        argument = '';
+
+  final Quicklink? quicklink;
+  final QuicklinkCommand? command;
+  final String argument;
+
+  @override
+  LauncherQuicklinkResult get quicklinkResult => this;
+
+  @override
+  String get id => quicklink != null ? 'quicklink:${quicklink!.id}' : 'quicklink-command:${command!.name}';
+
+  String get title =>
+      quicklink?.name ??
+      switch (command!) {
+        QuicklinkCommand.create => 'Create Quicklink',
+        QuicklinkCommand.search => 'Search Quicklinks',
+        QuicklinkCommand.importFile => 'Import Quicklinks',
+        QuicklinkCommand.exportFile => 'Export Quicklinks',
+      };
+
+  String get subtitle => quicklink != null
+      ? <String>[if (quicklink!.alias.isNotEmpty) quicklink!.alias, argument.isNotEmpty ? argument : quicklink!.link]
+          .join(' · ')
+      : switch (command!) {
+          QuicklinkCommand.create => 'Save a website, search, file, folder, or app deeplink',
+          QuicklinkCommand.search => 'Browse and manage your quicklinks · ql',
+          QuicklinkCommand.importFile => 'Import a Tabame or Raycast JSON file',
+          QuicklinkCommand.exportFile => 'Back up your quicklinks to a JSON file',
+        };
 }
 
 final class LauncherFileResult extends LauncherSearchResultItem {

@@ -26,6 +26,7 @@ class LauncherResultExecutor {
     required this.onOpenObsidian,
     required this.onOpenSteam,
     required this.onRunAction,
+    this.onOpenQuicklink,
   });
 
   final void Function(LauncherShortcut shortcut) onShortcut;
@@ -39,9 +40,12 @@ class LauncherResultExecutor {
   final void Function(ObsidianNote result) onOpenObsidian;
   final void Function(SteamGame result) onOpenSteam;
   final void Function(QuickActionMenuEntry action) onRunAction;
+  final void Function(LauncherQuicklinkResult result)? onOpenQuicklink;
 
   void execute(LauncherSearchResultItem result) {
     switch (result) {
+      case LauncherQuicklinkResult():
+        onOpenQuicklink?.call(result);
       case LauncherUtilityResult(shortcut: final LauncherShortcut shortcut?) when result.isShortcut:
         onShortcut(shortcut);
       case LauncherFileResult(entity: final FileSystemEntity entity?) when result.isFile:

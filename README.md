@@ -225,6 +225,7 @@ By default it blends results from files, windows and apps. If you want to narrow
 | `>` `?` or a space  | Deep file search (your indexed folders)  |
 | `'`                 | Apps + bookmarks + CLI together          |
 | `b `                | Bookmarks only                           |
+| `ql `               | Quicklinks: websites, searches, files, and folders |
 | `cli `              | Your CLI snippet book                    |
 | `app `              | Apps only                                |
 | `;`                 | Desktop files                            |
@@ -237,6 +238,8 @@ By default it blends results from files, windows and apps. If you want to narrow
 | `sp `               | Spotify commands                         |
 | `$`                 | Function commands (see below)            |
 | `timer `            | Make a timer right away                  |
+
+Save your everyday destinations with **[Quicklinks](docs/quicklinks.md)**. Search **Create Quicklink** to add one, use aliases such as `google flutter widgets` for parameterized searches, and open **Search Quicklinks** to manage your library.
 
 ## Function commands (`$`)
 

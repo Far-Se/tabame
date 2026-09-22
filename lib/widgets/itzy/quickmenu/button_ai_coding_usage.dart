@@ -248,7 +248,10 @@ String _timeUntil(DateTime reset) {
 
   if (remaining.isNegative || remaining == Duration.zero) return '0m';
 
-  if (remaining.inDays > 0) return '${remaining.inDays}d';
+  if (remaining.inDays > 0) {
+    final int hours = remaining.inHours % 24;
+    return hours > 0 ? '${remaining.inDays}d ${hours}h' : '${remaining.inDays}d';
+  }
 
   if (remaining.inHours > 0) {
     final int hours = remaining.inHours;

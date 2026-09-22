@@ -388,4 +388,5 @@ mixin _LauncherStateMembersMixin on State<Launcher> {
   PluginAction get _launcherWindowAction;
   PluginEventScope get _topPluginScope;
   void _openLauncherPanel(BuildContext context, Widget child);
+  Future<void> _openQuicklink(LauncherQuicklinkResult result);
 }

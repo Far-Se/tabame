@@ -12,6 +12,7 @@ import '../../launcher_search_models.dart';
 import 'desktop_search_handler.dart';
 import 'launcher_search_context.dart';
 import 'search_utils.dart';
+import '../quicklinks/quicklink_search.dart';
 
 class MixedSearchHandler {
   static void handle(LauncherSearchContext context, LauncherSearchMode searchMode) {
@@ -93,12 +94,15 @@ class MixedSearchHandler {
 
     final List<LauncherSearchResultItem> results = searchMode == LauncherSearchMode.filesOnly
         ? initialFileResults
-        : composeResults(
-            quickActionMatches: quickActionMatches,
-            windowMatches: windowMatches,
-            fileMatches: initialFileResults,
-            bookmarkMatches: bookmarkMatches,
-          );
+        : <LauncherSearchResultItem>[
+            ...QuicklinkSearch.results(context.normalizedQuery),
+            ...composeResults(
+              quickActionMatches: quickActionMatches,
+              windowMatches: windowMatches,
+              fileMatches: initialFileResults,
+              bookmarkMatches: bookmarkMatches,
+            ),
+          ];
 
     // Show initial results immediately
     context.setResults(results, isSearching: shouldRunFilesystem, resetSelection: false);
@@ -180,12 +184,15 @@ class MixedSearchHandler {
 
       final List<LauncherSearchResultItem> finalResults = searchMode == LauncherSearchMode.filesOnly
           ? combinedFileResults
-          : composeResults(
-              quickActionMatches: quickActionMatches,
-              windowMatches: phase2WindowMatches,
-              fileMatches: combinedFileResults,
-              bookmarkMatches: phase2BookmarkMatches,
-            );
+          : <LauncherSearchResultItem>[
+              ...QuicklinkSearch.results(context.normalizedQuery),
+              ...composeResults(
+                quickActionMatches: quickActionMatches,
+                windowMatches: phase2WindowMatches,
+                fileMatches: combinedFileResults,
+                bookmarkMatches: phase2BookmarkMatches,
+              ),
+            ];
 
       // setResults is a no-op if isDisposed, so this is safe.
       context.setResults(finalResults, isSearching: false, resetSelection: false);
