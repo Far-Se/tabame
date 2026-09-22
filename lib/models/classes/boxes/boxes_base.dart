@@ -4,7 +4,6 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import '../../../platform/windows/tabamewin32_api.dart';
 import '../../../platform/windows/win32_api.dart';
 
@@ -346,7 +345,6 @@ class Boxes {
         WinUtils.setVolumeOSDStyle(type: user.volumeOSDStyle, applyStyle: true);
         Debug.add("Registered: Volume");
       }
-      if (user.autoCheckForUpdates) checkForUpdates(autoInstall: false);
       if (user.pluginAutoUpdate) unawaited(PluginAutoUpdater.checkAndUpdate());
 
       if (user.autoOpenTaskManager) {
@@ -1270,77 +1268,5 @@ class Boxes {
       });
     }
     Boxes.pref.setString("lastQuickTimers", jsonEncode(serializedTimerHistory));
-  }
-
-  // --------------------------------------------------------------------------
-  // Group: Application update workflow
-  // Purpose: Check GitHub releases and install downloaded updates.
-  // --------------------------------------------------------------------------
-
-  static String? updateDownloadLink;
-  static Future<int> checkForUpdates({bool autoInstall = false}) async {
-    try {
-      final http.Response githubResponse =
-          await http.get(Uri.parse("https://api.github.com/repos/far-se/tabame/releases"));
-      if (githubResponse.statusCode != 200) return -1;
-      final List<dynamic> releasePayload = jsonDecode(githubResponse.body);
-      if (releasePayload.isEmpty) return -1;
-
-      final Map<String, dynamic> latestRelease = releasePayload[0];
-      if (latestRelease["tag_name"] == Globals.version) return 0;
-      if (latestRelease["tag_name"] == "Nightly" || latestRelease["tag_name"] == "nightly") {
-        return 0;
-      }
-
-      String assetDownloadLink = "";
-      for (final Map<String, dynamic> releaseAsset in latestRelease["assets"]) {
-        if (!releaseAsset["name"].endsWith("zip")) continue;
-        if (releaseAsset.containsKey("browser_download_url")) {
-          assetDownloadLink = releaseAsset["browser_download_url"];
-          break;
-        }
-      }
-      if (assetDownloadLink == "") return -1;
-
-      updateDownloadLink = assetDownloadLink;
-      user.newVersion = latestRelease["tag_name"];
-      pref.setString("newVersion", user.newVersion);
-
-      if (autoInstall) {
-        unawaited(installUpdate(assetDownloadLink, user.newVersion));
-      }
-      Debug.add("Updates: Checked");
-      return 1;
-    } catch (e) {
-      WinUtils.msgBox("Tabame", "Update Error: $e");
-      Debug.error("Updates Error: $e");
-      return -1;
-    }
-  }
-
-  static Future<void> installUpdate(String downloadLink, String tagName) async {
-    try {
-      final String updateArchivePath = AppPaths.temporaryPath('tabame_$tagName.zip');
-      await WinUtils.downloadFile(downloadLink, updateArchivePath, () {
-        final String installDirectory = File(Platform.resolvedExecutable).parent.path;
-        WinUtils.open(
-          'powershell.exe',
-          arguments: '-Command "Start-Sleep -Seconds 1; '
-              'Expand-Archive '
-              '-LiteralPath \\"$updateArchivePath\\" '
-              '-DestinationPath \\"$installDirectory\\" -Force; '
-              'Invoke-Item \\"$installDirectory\\tabame.exe\\";"',
-        );
-        if (kReleaseMode) {
-          Timer(const Duration(milliseconds: 100), () {
-            WinUtils.closeAllTabameExProcesses();
-            exit(0);
-          });
-        }
-      });
-    } catch (e) {
-      WinUtils.msgBox("Tabame", "Update Error: $e");
-      Debug.add("Updates Error: $e");
-    }
   }
 }

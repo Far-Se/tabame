@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
-import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
@@ -28,15 +27,11 @@ class OpenSettingsButton extends StatelessWidget {
             );
           },
           child: CustomTooltip(
-            message: user.autoCheckForUpdates && Globals.version != user.newVersion
-                ? "New Version Available\nRight-click for power"
-                : "Settings\nRight-click for power",
+            message: "Settings\nRight-click for power",
             child: IconButton(
               padding: const EdgeInsets.all(0),
               splashRadius: 25,
-              icon: user.autoCheckForUpdates && Globals.version != user.newVersion
-                  ? const Icon(Icons.new_releases)
-                  : const Icon(Icons.settings),
+              icon: const Icon(Icons.settings),
               onPressed: () {
                 // if (Boxes.quickTimers.isNotEmpty) {
                 //   WinUtils.msgBox("You Have Running Timers", "You Have Running Timers and you can not open Settings because you will loose them.");

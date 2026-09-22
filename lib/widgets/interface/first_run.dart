@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../platform/windows/tabamewin32_api.dart';
 
 import '../../models/classes/boxes.dart';
@@ -977,9 +976,9 @@ class FirstRunState extends State<FirstRun> {
                     _toggleCard(
                       theme,
                       accent: accent,
-                      title: "Auto check for updates",
+                      title: "Automatic updates",
                       description:
-                          "Tabame will check for new versions on startup and notify you if an update is available.",
+                          "Download updates in the background and apply them automatically at the next app launch.",
                       value: user.autoCheckForUpdates,
                       onChanged: (bool value) async {
                         user.autoCheckForUpdates = value;
@@ -1027,20 +1026,20 @@ class FirstRunState extends State<FirstRun> {
                         });
                       },
                     ),
-                    const SizedBox(height: 14),
-                    _toggleCard(
-                      theme,
-                      accent: accent,
-                      title: "Add Wizardly to folder context menu",
-                      description:
-                          "Adds quick file and folder tools like search, rename helpers, project overview, and folder-size scanning.",
-                      value: wizardlyContextMenu.isWizardlyInstalledInContextMenu(),
-                      onChanged: (bool value) async {
-                        wizardlyContextMenu.toggleWizardlyToContextMenu();
-                        if (!mounted) return;
-                        setState(() {});
-                      },
-                    ),
+                    // const SizedBox(height: 14),
+                    // _toggleCard(
+                    //   theme,
+                    //   accent: accent,
+                    //   title: "Add Wizardly to folder context menu",
+                    //   description:
+                    //       "Adds quick file and folder tools like search, rename helpers, project overview, and folder-size scanning.",
+                    //   value: wizardlyContextMenu.isWizardlyInstalledInContextMenu(),
+                    //   onChanged: (bool value) async {
+                    //     wizardlyContextMenu.toggleWizardlyToContextMenu();
+                    //     if (!mounted) return;
+                    //     setState(() {});
+                    //   },
+                    // ),
                   ],
                 ),
               ),
@@ -1392,30 +1391,6 @@ class FirstRunState extends State<FirstRun> {
       setState(() {});
       Globals.mainPageViewController.jumpToPage(Pages.quickmenu.index);
     }
-  }
-
-  void downloadTabame() async {
-    final http.Response response = await http.get(Uri.parse("https://api.github.com/repos/far-se/tabame/releases"));
-    if (response.statusCode != 200) return;
-    final List<dynamic> json = jsonDecode(response.body);
-    if (json.isEmpty) return;
-    final Map<String, dynamic> lastVersion = json[0];
-    String downloadLink = "";
-    for (Map<String, dynamic> x in lastVersion["assets"]) {
-      if (!x["name"].endsWith("zip")) continue;
-      if (x.containsKey("browser_download_url")) {
-        downloadLink = x["browser_download_url"];
-        break;
-      }
-    }
-    final String fileName = AppPaths.temporaryPath('tabame_${lastVersion["tag_name"]}.zip');
-    await WinUtils.downloadFile(downloadLink, fileName, () {
-      final String dir = AppPaths.root;
-      WinUtils.runPowerShell(<String>[
-        'Expand-Archive -LiteralPath "$fileName" -DestinationPath "$dir" -Force;',
-        'Remove-Item -LiteralPath "$fileName" -Force;',
-      ]);
-    });
   }
 }
 

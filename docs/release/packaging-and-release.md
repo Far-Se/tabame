@@ -118,6 +118,9 @@ check fail instead of producing a smoke artifact.
 
 ## Windows release compatibility
 
+Windows automatic update behavior, release version requirements, recovery limits,
+and the rollout checklist are documented in [automatic-updates.md](automatic-updates.md).
+
 `.github/workflows/windows-build.yml` is the source of truth for Windows
 release publication:
 

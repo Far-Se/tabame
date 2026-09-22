@@ -31,7 +31,7 @@ try {
     }
 
     $releaseRoot = $executable.Directory.FullName
-    foreach ($required in @('flutter_windows.dll', 'data')) {
+    foreach ($required in @('flutter_windows.dll', 'data', 'data\flutter_assets\pubspec.yaml', 'data\flutter_assets\resources\updater\apply-update.ps1')) {
         if (-not (Test-Path -LiteralPath (Join-Path $releaseRoot $required))) {
             throw "Windows package is missing $required beside tabame.exe."
         }

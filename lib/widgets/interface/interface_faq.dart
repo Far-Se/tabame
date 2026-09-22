@@ -54,7 +54,7 @@ Go to Settings → Configuration and enable "Launch at Startup". Tabame will reg
   _FaqItem(
       question: "How do I update Tabame?",
       answer:
-          """Open Settings → System Status and press "Check for Updates". If a new version is available you can install it with one click via PowerShell, or download it manually from GitHub Releases."""),
+          """Enable Auto Update in Settings → System Status. Tabame downloads stable releases in the background and applies them at the next app launch, without a weekly update prompt. With Auto Update off, use "Check for Updates" to prepare a release manually. Updates wait until other Tabame windows are closed. You can also download releases from GitHub."""),
   _FaqItem(
       question: "What is the Light Switch feature?",
       answer:

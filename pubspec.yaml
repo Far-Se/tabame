@@ -86,6 +86,8 @@ flutter:
     - resources/shaders/satin.frag
 
   assets:
+    - pubspec.yaml
+    - resources/updater/apply-update.ps1
     # - resources/logo.png
     - resources/logo_light.png
     - resources/logo_dark.png

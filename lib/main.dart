@@ -8,7 +8,10 @@ import 'package:flutter/material.dart';
 
 import 'logic/app_startup.dart';
 import 'logic/error_handler.dart';
+import 'services/app_update_service.dart';
 import 'models/classes/save_settings.dart';
+import 'models/globals.dart';
+import 'models/settings.dart';
 import 'platform/app_paths.dart';
 import 'platform/platform_bootstrap.dart';
 import 'platform/portable_application.dart';
@@ -30,6 +33,7 @@ import 'test.dart';
 Future<void> main(List<String> arguments) async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppPaths.initialize();
+  await AppUpdateService.initialize();
   AppStartup.parseArguments(arguments);
   await PlatformBootstrap.initialize();
 
@@ -57,14 +61,25 @@ Future<void> main(List<String> arguments) async {
       WidgetsFlutterBinding.ensureInitialized();
       SaveSettings.suppressWrites = !AppPaths.hasSettingsFile;
       await AppStartup.registerServices();
-      AppStartup.registerHooks();
       if (await AppStartup.checkAdminAndRestart()) return;
+      await AppUpdateService.applyOnLaunch(arguments);
+      AppStartup.registerHooks();
       await AppStartup.setupWindow(arguments);
       await AppStartup.finalizeStartup();
       PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
       await AppStartup.initialize();
       await TimestampLogger.init();
       runApp(const Tabame());
+      await WidgetsBinding.instance.endOfFrame;
+      void completeUpdateStartup() {
+        if (!Globals.fullLoaded.value) return;
+        Globals.fullLoaded.removeListener(completeUpdateStartup);
+        unawaited(AppUpdateService.acknowledgeLaunch(arguments));
+        if (user.page == TPage.quickmenu && !Globals.isStandaloneLauncher) AppUpdateService.start();
+      }
+
+      Globals.fullLoaded.addListener(completeUpdateStartup);
+      completeUpdateStartup();
     },
     (Object error, StackTrace stack) async {
       await ErrorLogger.log('ZoneError', error.toString(), stack);

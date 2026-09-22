@@ -95,6 +95,7 @@ docs/*
 !packaging/**
 !tool/release/
 !tool/release/**
+!resources/updater/apply-update.ps1
 # website/
 .agent/
 ISSUES.md

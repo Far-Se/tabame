@@ -112,6 +112,9 @@ jobs:
             if ($tagName -eq "nightly") {
               throw "The nightly tag is reserved for nightly releases."
             }
+            if ($appVersion -notmatch '^\d+\.\d+\.\d+$' -or $tagName -cne "v$appVersion") {
+              throw "Official updates require a v<major>.<minor>.<patch> tag matching pubspec.yaml exactly."
+            }
           } else {
             if ([string]::IsNullOrWhiteSpace($tagName)) {
               $tagName = "nightly"

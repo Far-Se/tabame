@@ -9,6 +9,7 @@ import '../../platform/windows/win32_api.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
+import '../../services/app_update_service.dart';
 import '../../models/util/solar_calculator.dart';
 import '../../models/win32/win32.dart';
 import '../../models/win32/win_utils.dart';
@@ -35,8 +36,7 @@ class SettingsPage extends StatefulWidget {
 class SettingsPageState extends State<SettingsPage> {
   final WizardlyContextMenu wizardlyContextMenu = WizardlyContextMenu();
 
-  String updateResponse = "Check for Updates";
-  bool showUpdateButtons = false;
+  bool _checkingUpdates = false;
   final Set<String> _expandedCards = <String>{"maintenance"};
   final GlobalKey _uninstallKey = GlobalKey();
 
@@ -181,15 +181,21 @@ class SettingsPageState extends State<SettingsPage> {
                       Text("Current Version: ${Globals.version}",
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       const SizedBox(height: 2),
-                      Text(updateResponse,
+                      ValueListenableBuilder<String>(
+                        valueListenable: AppUpdateService.status,
+                        builder: (BuildContext context, String status, Widget? child) => Text(
+                          status,
                           style: TextStyle(
-                              fontSize: Design.baseFontSize + 2,
-                              color: onSurface.withValues(alpha: _AppOpacity.textSecondary))),
+                            fontSize: Design.baseFontSize + 2,
+                            color: onSurface.withValues(alpha: _AppOpacity.textSecondary),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: _checkForUpdates,
+                  onPressed: _checkingUpdates || !AppUpdateService.supported ? null : _checkForUpdates,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: accent,
                     foregroundColor: background,
@@ -197,63 +203,19 @@ class SettingsPageState extends State<SettingsPage> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text("Check for Updates"),
+                  label: Text(_checkingUpdates ? "Preparing update…" : "Check for Updates"),
                 ),
               ],
             ),
           ),
-          if (showUpdateButtons) ...<Widget>[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: _AppOpacity.subtle),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: accent.withValues(alpha: _AppOpacity.borderEmphasis)),
-              ),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        if (Boxes.updateDownloadLink != null && user.newVersion != Globals.version) {
-                          Boxes.installUpdate(Boxes.updateDownloadLink!, user.newVersion);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accent,
-                        foregroundColor: background,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      icon: const Icon(Icons.bolt_rounded, size: 18),
-                      label: const Text("Install (PowerShell)"),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => WinUtils.open("https://github.com/Far-Se/tabame/releases/"),
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        side: BorderSide(color: onSurface.withValues(alpha: 0.2)),
-                      ),
-                      icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                      label: const Text("View on GitHub"),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
           const SizedBox(height: 12),
           _toggleTile(
             title: "Auto Update",
-            subtitle: "Download new releases automatically when available.",
+            subtitle: "Download updates in the background and apply them at the next app launch.",
             value: user.autoCheckForUpdates,
             onChanged: (bool value) async {
               setState(() => user.autoCheckForUpdates = value);
-              Boxes.updateSettings("autoUpdate", user.autoCheckForUpdates);
+              await Boxes.updateSettings("autoUpdate", user.autoCheckForUpdates);
             },
           ),
           const SizedBox(height: 8),
@@ -867,22 +829,9 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
   }
 
   Future<void> _checkForUpdates() async {
-    final int r = await Boxes.checkForUpdates(autoInstall: false);
-    if (r == -1) {
-      updateResponse = "Failed to fetch updates.";
-      showUpdateButtons = false;
-      setState(() {});
-      // WinUtils.open("https://github.com/Far-Se/tabame/releases/");
-      return;
-    }
-    if (r == 0) {
-      updateResponse = "Latest version installed!";
-      showUpdateButtons = false;
-    } else {
-      updateResponse = "New version ${user.newVersion} detected!";
-      showUpdateButtons = true;
-    }
-    setState(() {});
+    setState(() => _checkingUpdates = true);
+    await AppUpdateService.check();
+    if (mounted) setState(() => _checkingUpdates = false);
   }
 
   Future<void> _pickThemeStart() async {
