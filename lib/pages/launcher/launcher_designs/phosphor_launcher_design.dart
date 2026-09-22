@@ -46,7 +46,7 @@ class PhosphorLauncherFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return LauncherSurface(
         decoration: _phosphorOuterDecoration(),
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
           Flexible(fit: FlexFit.loose, child: child),

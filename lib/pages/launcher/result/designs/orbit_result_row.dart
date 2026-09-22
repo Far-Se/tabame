@@ -15,7 +15,7 @@ extension _OrbitResultRow on LauncherResultRow {
           decoration: BoxDecoration(
             color: isSelected ? accent.withAlpha(18) : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
-          ),
+          ).withLauncherCorners(),
           child: CustomPaint(
             foregroundPainter: isSelected ? _OrbitReticlePainter(color: accent) : null,
             child: Padding(
@@ -46,7 +46,7 @@ extension _OrbitResultRow on LauncherResultRow {
                       color: accent.withAlpha(isSelected ? 24 : 10),
                       borderRadius: BorderRadius.circular(3),
                       border: Border.all(color: accent.withAlpha(isSelected ? 90 : 36)),
-                    ),
+                    ).withLauncherCorners(),
                     child: icon,
                   ),
                   const SizedBox(width: 10),

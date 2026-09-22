@@ -41,7 +41,7 @@ class _ZenSearchBar extends StatelessWidget {
           color: accent.withAlpha(18),
           borderRadius: BorderRadius.circular(22),
           border: Border.all(color: accent.withAlpha(36)),
-        ),
+        ).withLauncherCorners(),
         child: Row(
           children: <Widget>[
             content.dragHandle,
@@ -77,37 +77,34 @@ class ZenLauncherFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color accent = LauncherTheme.accentOf(context);
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 340),
       decoration: _zenOuterDecoration(surface, accent),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            // Soft dawn glow drifting in from the top-left.
-            Positioned.fill(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: const Alignment(-0.7, -0.9),
-                      radius: 1.3,
-                      colors: <Color>[accent.withAlpha(22), accent.withAlpha(0)],
-                    ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          // Soft dawn glow drifting in from the top-left.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(-0.7, -0.9),
+                    radius: 1.3,
+                    colors: <Color>[accent.withAlpha(22), accent.withAlpha(0)],
                   ),
                 ),
               ),
             ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                child,
-                _ZenFooter(resultCount: resultCount),
-              ],
-            ),
-          ],
-        ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              child,
+              _ZenFooter(resultCount: resultCount),
+            ],
+          ),
+        ],
       ),
     );
   }

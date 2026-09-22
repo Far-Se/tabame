@@ -87,11 +87,11 @@ class SereneLauncherFrame extends StatelessWidget {
     final Color surface = Theme.of(context).colorScheme.surface;
     final bool hasBackdrop = Design.hasBackdrop;
 
-    return ClipRRect(
+    return LauncherClip(
       borderRadius: BorderRadius.circular(Design.borderRadius),
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-        child: Container(
+        child: LauncherSurface(
           constraints: const BoxConstraints(minHeight: 360),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(Design.borderRadius),
@@ -106,25 +106,22 @@ class SereneLauncherFrame extends StatelessWidget {
               ),
             ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(Design.borderRadius),
-            child: Stack(
-              children: <Widget>[
-                if (Design.hasBackdrop) const StableBackdrop(),
-                child,
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: DateTimeWidget(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
-                    ),
+          child: Stack(
+            children: <Widget>[
+              if (Design.hasBackdrop) const StableBackdrop(),
+              child,
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: DateTimeWidget(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
                   ),
-                )
-              ],
-            ),
+                ),
+              )
+            ],
           ),
         ),
       ),

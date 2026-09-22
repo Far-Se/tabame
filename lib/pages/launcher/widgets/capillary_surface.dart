@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../launcher_corners.dart';
 import '../launcher_design.dart';
 
 /// A single, demand-driven clock for all the paper in a launcher or dialog.
@@ -325,7 +326,7 @@ class _CapillarySurfaceState extends State<CapillarySurface> {
       pigment: capillary.accent,
     );
     final Widget paper = RepaintBoundary(
-      child: ClipRRect(
+      child: LauncherClip(
         borderRadius: BorderRadius.circular(widget.radius),
         child: CustomPaint(
           painter: overlay ? null : painter,

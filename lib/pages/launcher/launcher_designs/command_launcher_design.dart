@@ -68,7 +68,7 @@ class _CommandSearchBar extends StatelessWidget {
               gradient: LinearGradient(
                 colors: <Color>[accent.withAlpha(100), accent.withAlpha(30)],
               ),
-            ),
+            ).withLauncherCorners(),
           ),
         ],
       ),
@@ -86,36 +86,33 @@ class CommandLauncherFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color accent = LauncherTheme.accentOf(context);
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _commandOuterDecoration(surface, accent),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                // Top accent rail.
-                Container(
-                  height: 2,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: <Color>[
-                        accent.withAlpha(200),
-                        accent.withAlpha(40),
-                        Colors.transparent,
-                      ],
-                    ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              // Top accent rail.
+              Container(
+                height: 2,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      accent.withAlpha(200),
+                      accent.withAlpha(40),
+                      Colors.transparent,
+                    ],
                   ),
                 ),
-                child,
-                _CommandFooter(resultCount: resultCount),
-              ],
-            ),
-          ],
-        ),
+              ),
+              child,
+              _CommandFooter(resultCount: resultCount),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -188,7 +185,7 @@ class _KbdHint extends StatelessWidget {
             color: onSurface.withAlpha(12),
             borderRadius: BorderRadius.circular(4),
             border: Border.all(color: onSurface.withAlpha(28)),
-          ),
+          ).withLauncherCorners(),
           child: Text(
             label,
             style: TextStyle(

@@ -79,7 +79,7 @@ class _WindowsXpLauncherSearchBar extends StatelessWidget {
                         boxShadow: const <BoxShadow>[
                           BoxShadow(color: Color(0xFF7E1D10), offset: Offset(1, 1)),
                         ],
-                      ),
+                      ).withLauncherCorners(),
                       child: const Icon(Icons.close, size: 15, color: Color(0xFFFFF8F5)),
                     ),
                   ),
@@ -194,20 +194,17 @@ class WindowsXpLauncherFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _windowsXpOuterDecoration(),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(5),
-        child: ColoredBox(
-          color: WindowsXpTokens.paper,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              child,
-              _WindowsXpFooter(resultCount: resultCount),
-            ],
-          ),
+      child: ColoredBox(
+        color: WindowsXpTokens.paper,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            child,
+            _WindowsXpFooter(resultCount: resultCount),
+          ],
         ),
       ),
     );

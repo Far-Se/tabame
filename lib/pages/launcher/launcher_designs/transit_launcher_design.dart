@@ -103,23 +103,20 @@ class TransitLauncherFrame extends StatelessWidget {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color accent = LauncherTheme.accentOf(context);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _transitOuterDecoration(surface, accent),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                child,
-                _TransitFooter(resultCount: resultCount, isDark: isDark),
-              ],
-            ),
-          ],
-        ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              child,
+              _TransitFooter(resultCount: resultCount, isDark: isDark),
+            ],
+          ),
+        ],
       ),
     );
   }

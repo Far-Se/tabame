@@ -20,7 +20,7 @@ extension _RelayResultRow on LauncherResultRow {
             border: Border.all(
               color: isSelected ? RelayTokens.border(isDark, accent) : Colors.transparent,
             ),
-          ),
+          ).withLauncherCorners(),
           child: CustomPaint(
             foregroundPainter: _RelayRowPainter(
               color: accent,
@@ -43,7 +43,7 @@ extension _RelayResultRow on LauncherResultRow {
                       border: Border.all(
                         color: isSelected ? accent.withAlpha(120) : RelayTokens.border(isDark, accent),
                       ),
-                    ),
+                    ).withLauncherCorners(),
                     child: icon,
                   ),
                   const SizedBox(width: 10),

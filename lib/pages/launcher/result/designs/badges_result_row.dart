@@ -27,7 +27,7 @@ class LauncherKindBadge extends StatelessWidget {
         color: color.withAlpha(60),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: accent.withAlpha(40)),
-      ),
+      ).withLauncherCorners(),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[

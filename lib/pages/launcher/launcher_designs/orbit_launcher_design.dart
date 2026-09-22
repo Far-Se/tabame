@@ -229,29 +229,26 @@ class OrbitLauncherFrame extends StatelessWidget {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color accent = LauncherTheme.accentOf(context);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _orbitOuterDecoration(surface, accent),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            // Range rings + bearing ticks.
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(painter: _OrbitRangePainter(ink: accent, isDark: isDark)),
-              ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          // Range rings + bearing ticks.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: _OrbitRangePainter(ink: accent, isDark: isDark)),
             ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                child,
-                _OrbitTelemetryFooter(resultCount: resultCount, isDark: isDark),
-              ],
-            ),
-          ],
-        ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              child,
+              _OrbitTelemetryFooter(resultCount: resultCount, isDark: isDark),
+            ],
+          ),
+        ],
       ),
     );
   }

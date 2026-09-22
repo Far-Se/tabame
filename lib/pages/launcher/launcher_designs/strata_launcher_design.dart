@@ -54,32 +54,30 @@ class StrataLauncherFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return LauncherSurface(
       decoration: _strataOuterDecoration(),
-      child: ClipRRect(
-          borderRadius: BorderRadius.circular(11),
-          child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-            Flexible(fit: FlexFit.loose, child: child),
-            Container(
-                height: 42,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(border: Border(top: BorderSide(color: StrataTokens.border))),
-                child: LayoutBuilder(
-                    builder: (BuildContext context, BoxConstraints constraints) => Row(children: <Widget>[
-                          _hint('↑↓ ', 'Navigate'),
-                          const SizedBox(width: 18),
-                          _hint('↵ ', 'Open'),
-                          if (constraints.maxWidth > 650) ...<Widget>[
-                            const SizedBox(width: 18),
-                            _hint('Ctrl C', 'Copy'),
-                            const SizedBox(width: 18),
-                          ],
-                          const Spacer(),
-                          const Icon(Icons.circle, size: 8, color: Color(0xFF80F454)),
-                          const SizedBox(width: 8),
-                          Text('$resultCount results', style: StrataTokens.font(size: 11, color: StrataTokens.dim)),
-                        ]))),
-          ])),
+      child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+        Flexible(fit: FlexFit.loose, child: child),
+        Container(
+            height: 42,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(border: Border(top: BorderSide(color: StrataTokens.border))),
+            child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) => Row(children: <Widget>[
+                      _hint('↑↓ ', 'Navigate'),
+                      const SizedBox(width: 18),
+                      _hint('↵ ', 'Open'),
+                      if (constraints.maxWidth > 650) ...<Widget>[
+                        const SizedBox(width: 18),
+                        _hint('Ctrl C', 'Copy'),
+                        const SizedBox(width: 18),
+                      ],
+                      const Spacer(),
+                      const Icon(Icons.circle, size: 8, color: Color(0xFF80F454)),
+                      const SizedBox(width: 8),
+                      Text('$resultCount results', style: StrataTokens.font(size: 11, color: StrataTokens.dim)),
+                    ]))),
+      ]),
     );
   }
 
@@ -87,9 +85,10 @@ class StrataLauncherFrame extends StatelessWidget {
         Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             decoration: BoxDecoration(
-                color: StrataTokens.foreground,
-                border: Border.all(color: StrataTokens.border),
-                borderRadius: BorderRadius.circular(4)),
+                    color: StrataTokens.foreground,
+                    border: Border.all(color: StrataTokens.border),
+                    borderRadius: BorderRadius.circular(4))
+                .withLauncherCorners(),
             child: Text(key, style: StrataTokens.font(size: 11, color: StrataTokens.dim))),
         const SizedBox(width: 9),
         Text(label, style: StrataTokens.font(size: 11, color: StrataTokens.dim)),
@@ -130,9 +129,10 @@ class StrataResultsPanel extends StatelessWidget {
     if (!enabled) return child;
     return Container(
       decoration: BoxDecoration(
-          color: StrataTokens.panel,
-          border: Border.all(color: StrataTokens.border),
-          borderRadius: BorderRadius.circular(8)),
+              color: StrataTokens.panel,
+              border: Border.all(color: StrataTokens.border),
+              borderRadius: BorderRadius.circular(8))
+          .withLauncherCorners(),
       child: Column(children: <Widget>[
         Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),

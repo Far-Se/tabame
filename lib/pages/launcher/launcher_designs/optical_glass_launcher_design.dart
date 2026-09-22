@@ -19,7 +19,8 @@ class _OpticalGlassSearchBar extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18), border: Border.all(color: OpticalGlassTokens.border)),
+                  borderRadius: BorderRadius.circular(18), border: Border.all(color: OpticalGlassTokens.border))
+              .withLauncherCorners(),
           child: Row(children: <Widget>[
             content.dragHandle,
             const SizedBox(width: 14),
@@ -54,7 +55,7 @@ class OpticalGlassLauncherFrame extends StatelessWidget {
         child: OpticalGlassSurface(
           overlay: true,
           radius: 24,
-          child: Container(
+          child: LauncherSurface(
             decoration: _opticalGlassOuterDecoration(),
             child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
               if (user.launcherShowTitlebar)

@@ -42,7 +42,7 @@ class _AuroraSearchBar extends StatelessWidget {
               boxShadow: <BoxShadow>[
                 BoxShadow(color: AuroraTokens.accent.withAlpha(42), blurRadius: 14, spreadRadius: 1)
               ],
-            ),
+            ).withLauncherCorners(),
             child: Row(children: <Widget>[
               content.dragHandle,
               const SizedBox(width: 15),
@@ -68,53 +68,51 @@ class AuroraLauncherFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return LauncherSurface(
       decoration: _auroraOuterDecoration(),
-      child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: Stack(children: <Widget>[
-            if (Design.hasBackdrop)
-              const StableBackdrop()
-            else
-              Positioned.fill(
-                  child: Image.asset('resources/images/aurora_launcher.png',
-                      fit: BoxFit.cover,
-                      alignment: Alignment.bottomCenter,
-                      errorBuilder: (BuildContext context, Object error, StackTrace? stack) =>
-                          const ColoredBox(color: AuroraTokens.background))),
-            const Positioned.fill(
-                child: DecoratedBox(
-                    decoration: BoxDecoration(
-                        gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: <Color>[Color(0xF2031722), Color(0x99031722), Color(0x77031722)],
-              stops: <double>[0, .45, 1],
-            )))),
-            Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-              Flexible(fit: FlexFit.loose, child: child),
-              Container(
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  decoration: const BoxDecoration(
-                      color: Color(0xDF031722), border: Border(top: BorderSide(color: AuroraTokens.border))),
-                  child: Row(children: <Widget>[
-                    Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                            color: Color(0xFF00EF96),
-                            shape: BoxShape.circle,
-                            boxShadow: <BoxShadow>[BoxShadow(color: Color(0x6600EF96), blurRadius: 8)])),
-                    const SizedBox(width: 10),
-                    Text('Ready', style: AuroraTokens.font(size: 11, color: AuroraTokens.dim)),
-                    const SizedBox(width: 22),
-                    Text('$resultCount results', style: AuroraTokens.font(size: 11, color: AuroraTokens.dim)),
-                    const Spacer(),
-                    Text('Ctrl K  Actions     Esc  Close', style: AuroraTokens.font(size: 11, color: AuroraTokens.dim)),
-                  ])),
-            ]),
-          ])),
+      child: Stack(children: <Widget>[
+        if (Design.hasBackdrop)
+          const StableBackdrop()
+        else
+          Positioned.fill(
+              child: Image.asset('resources/images/aurora_launcher.png',
+                  fit: BoxFit.cover,
+                  alignment: Alignment.bottomCenter,
+                  errorBuilder: (BuildContext context, Object error, StackTrace? stack) =>
+                      const ColoredBox(color: AuroraTokens.background))),
+        const Positioned.fill(
+            child: DecoratedBox(
+                decoration: BoxDecoration(
+                    gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[Color(0xF2031722), Color(0x99031722), Color(0x77031722)],
+          stops: <double>[0, .45, 1],
+        )))),
+        Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          Flexible(fit: FlexFit.loose, child: child),
+          Container(
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              decoration: const BoxDecoration(
+                  color: Color(0xDF031722), border: Border(top: BorderSide(color: AuroraTokens.border))),
+              child: Row(children: <Widget>[
+                Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                        color: Color(0xFF00EF96),
+                        shape: BoxShape.circle,
+                        boxShadow: <BoxShadow>[BoxShadow(color: Color(0x6600EF96), blurRadius: 8)])),
+                const SizedBox(width: 10),
+                Text('Ready', style: AuroraTokens.font(size: 11, color: AuroraTokens.dim)),
+                const SizedBox(width: 22),
+                Text('$resultCount results', style: AuroraTokens.font(size: 11, color: AuroraTokens.dim)),
+                const Spacer(),
+                Text('Ctrl K  Actions     Esc  Close', style: AuroraTokens.font(size: 11, color: AuroraTokens.dim)),
+              ])),
+        ]),
+      ]),
     );
   }
 }

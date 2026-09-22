@@ -55,7 +55,7 @@ class ThermalLauncherFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ThermalSurface(
-      child: Container(
+      child: LauncherSurface(
         decoration: _thermalOuterDecoration(),
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
           Flexible(fit: FlexFit.loose, child: child),

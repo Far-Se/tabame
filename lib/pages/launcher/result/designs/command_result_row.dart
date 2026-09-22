@@ -18,7 +18,7 @@ extension _CommandResultRow on LauncherResultRow {
                     colors: <Color>[accent.withAlpha(48), accent.withAlpha(14)],
                   )
                 : null,
-          ),
+          ).withLauncherCorners(),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(6, 5, 8, 5),
             child: Row(
@@ -33,7 +33,7 @@ extension _CommandResultRow on LauncherResultRow {
                   decoration: BoxDecoration(
                     color: accent,
                     borderRadius: BorderRadius.circular(2),
-                  ),
+                  ).withLauncherCorners(),
                 ),
                 // Bordered square icon chip.
                 Container(
@@ -44,7 +44,7 @@ extension _CommandResultRow on LauncherResultRow {
                     color: accent.withAlpha(isSelected ? 26 : 14),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(color: accent.withAlpha(isSelected ? 70 : 36)),
-                  ),
+                  ).withLauncherCorners(),
                   child: icon,
                 ),
                 const SizedBox(width: 10),
@@ -86,7 +86,7 @@ extension _CommandResultRow on LauncherResultRow {
                               color: accent.withAlpha(30),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(color: accent.withAlpha(80)),
-                            ),
+                            ).withLauncherCorners(),
                             child: Text(
                               '↵',
                               style: TextStyle(

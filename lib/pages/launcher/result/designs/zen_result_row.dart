@@ -16,7 +16,7 @@ extension _ZenResultRow on LauncherResultRow {
           decoration: BoxDecoration(
             color: isSelected ? accent.withAlpha(30) : Colors.transparent,
             borderRadius: BorderRadius.circular(18),
-          ),
+          ).withLauncherCorners(),
           child: Row(
             children: <Widget>[
               // Soft rounded "stem" that grows on selection.
@@ -29,7 +29,7 @@ extension _ZenResultRow on LauncherResultRow {
                 decoration: BoxDecoration(
                   color: accent.withAlpha(180),
                   borderRadius: BorderRadius.circular(3),
-                ),
+                ).withLauncherCorners(),
               ),
               // Soft squircle icon nest.
               Container(
@@ -39,7 +39,7 @@ extension _ZenResultRow on LauncherResultRow {
                 decoration: BoxDecoration(
                   color: accent.withAlpha(isSelected ? 34 : 20),
                   borderRadius: BorderRadius.circular(13),
-                ),
+                ).withLauncherCorners(),
                 child: icon,
               ),
               const SizedBox(width: 12),

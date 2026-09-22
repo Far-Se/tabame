@@ -11,12 +11,13 @@ extension _StrataResultRow on LauncherResultRow {
           color: isSelected ? const Color(0xFF15323C) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: isSelected ? StrataTokens.accent : StrataTokens.border.withAlpha(120)),
-        ),
+        ).withLauncherCorners(),
         child: Row(children: <Widget>[
           Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(color: const Color(0xFF183547), borderRadius: BorderRadius.circular(6)),
+              decoration: BoxDecoration(color: const Color(0xFF183547), borderRadius: BorderRadius.circular(6))
+                  .withLauncherCorners(),
               child: Center(child: icon)),
           const SizedBox(width: 15),
           Expanded(

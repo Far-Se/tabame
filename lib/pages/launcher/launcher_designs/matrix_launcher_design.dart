@@ -93,7 +93,7 @@ class _MatrixLauncherFrameState extends State<MatrixLauncherFrame> {
     final double radius = Design.borderRadius;
     final Color text = Theme.of(context).colorScheme.onSurface;
 
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _matrixOuterDecoration(),
       child: Stack(
@@ -169,7 +169,7 @@ class _MatrixLauncherFrameState extends State<MatrixLauncherFrame> {
           color: text.withAlpha(8),
           borderRadius: BorderRadius.circular(radius),
           border: Border.all(color: text.withAlpha(18)),
-        ),
+        ).withLauncherCorners(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -227,7 +227,7 @@ class _MatrixLauncherGround extends StatelessWidget {
           surface.withValues(alpha: Design.hasBackdrop ? .72 : 1),
         ),
         borderRadius: BorderRadius.circular(radius),
-      ),
+      ).withLauncherCorners(),
       child: Stack(
         children: <Widget>[
           if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
@@ -309,23 +309,24 @@ class MatrixLauncherHeader extends StatelessWidget {
 }
 
 class _MatrixLauncherSectionsClipper extends CustomClipper<Path> {
-  const _MatrixLauncherSectionsClipper(this.rects, this.radius);
+  _MatrixLauncherSectionsClipper(this.rects, double radius)
+      : shape = LauncherCorners.shape(BorderRadius.circular(LauncherCorners.radiusOverride ?? radius));
 
   final List<Rect> rects;
-  final double radius;
+  final ShapeBorder shape;
 
   @override
   Path getClip(Size size) {
     final Path path = Path();
     for (final Rect rect in rects) {
-      path.addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
+      path.addPath(shape.getOuterPath(rect), Offset.zero);
     }
     return path;
   }
 
   @override
   bool shouldReclip(covariant _MatrixLauncherSectionsClipper oldClipper) =>
-      oldClipper.radius != radius || !_sameRectLists(oldClipper.rects, rects);
+      oldClipper.shape != shape || !_sameRectLists(oldClipper.rects, rects);
 
   bool _sameRectLists(List<Rect> a, List<Rect> b) {
     if (a.length != b.length) return false;

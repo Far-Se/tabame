@@ -15,7 +15,7 @@ extension _FluentResultRow on LauncherResultRow {
           decoration: BoxDecoration(
             color: isSelected ? onSurface.withAlpha(isDark ? 18 : 14) : Colors.transparent,
             borderRadius: BorderRadius.circular(5),
-          ),
+          ).withLauncherCorners(),
           child: Stack(
             alignment: Alignment.centerLeft,
             children: <Widget>[
@@ -63,7 +63,7 @@ extension _FluentResultRow on LauncherResultRow {
                 decoration: BoxDecoration(
                   color: accent,
                   borderRadius: BorderRadius.circular(2),
-                ),
+                ).withLauncherCorners(),
               ),
             ],
           ),

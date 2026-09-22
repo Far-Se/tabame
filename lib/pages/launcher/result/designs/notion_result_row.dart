@@ -14,7 +14,7 @@ extension _NotionResultRow on LauncherResultRow {
           decoration: BoxDecoration(
             color: isSelected ? NotionTokens.selection(isDark) : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
-          ),
+          ).withLauncherCorners(),
           child: Row(
             children: <Widget>[
               SizedBox(

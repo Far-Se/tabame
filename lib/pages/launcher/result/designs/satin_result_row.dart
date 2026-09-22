@@ -17,7 +17,7 @@ extension _SatinResultRow on LauncherResultRow {
                   ? SatinTokens.accent.withValues(alpha: MediaQuery.highContrastOf(context) ? 0.85 : 0.32)
                   : Colors.transparent,
             ),
-          ),
+          ).withLauncherCorners(),
           child: Row(children: <Widget>[
             SizedBox(width: 28, height: 28, child: Center(child: icon)),
             const SizedBox(width: 12),

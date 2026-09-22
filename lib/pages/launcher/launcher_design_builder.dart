@@ -11,6 +11,7 @@ import '../../models/settings.dart';
 import '../../models/win32/win_utils.dart';
 import '../../widgets/widgets/date_time_widget.dart';
 import '../quickmenu_designs/design_backdrop_stable.dart';
+import 'launcher_corners.dart';
 import 'launcher_design.dart';
 import 'widgets/capillary_surface.dart';
 import 'widgets/crt_surface.dart';

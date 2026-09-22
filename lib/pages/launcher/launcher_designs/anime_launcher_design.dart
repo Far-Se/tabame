@@ -33,65 +33,62 @@ class AnimeLauncherFrame extends StatelessWidget {
     final int ribbonAlpha = hasBackdrop ? (isDark ? 216 : 224) : 255;
     final Color card = Color.alphaBlend(Colors.white.withAlpha(isDark ? 13 : 105), surface).withAlpha(cardAlpha);
     final Color ribbon = Color.alphaBlend(accent.withAlpha(isDark ? 76 : 48), surface).withAlpha(ribbonAlpha);
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _animeOuterDecoration(surface, accent),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(painter: _AnimeLauncherSparklePainter(accent: accent)),
-              ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: _AnimeLauncherSparklePainter(accent: accent)),
             ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                if (user.launcherShowTitlebar)
-                  Container(
-                    height: 25,
-                    color: ribbon,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: <Widget>[
-                        Icon(Icons.auto_awesome_rounded, size: 13, color: onSurface.withAlpha(190)),
-                        const Spacer(),
-                        Icon(Icons.star_rounded, size: 10, color: onSurface.withAlpha(160)),
-                        const SizedBox(width: 3),
-                        Icon(Icons.star_rounded, size: 8, color: onSurface.withAlpha(120)),
-                      ],
-                    ),
-                  ),
-                Container(color: card, child: child),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (user.launcherShowTitlebar)
                 Container(
-                  margin: const EdgeInsets.fromLTRB(9, 0, 9, 7),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: ribbon,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: accent.withAlpha(55)),
-                  ),
+                  height: 25,
+                  color: ribbon,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
                     children: <Widget>[
-                      Icon(Icons.favorite_rounded, size: 10, color: accent.withAlpha(210)),
-                      const SizedBox(width: 6),
-                      Text('ENTER  OPEN   •   ESC  CLOSE',
-                          style: TextStyle(fontSize: 10, color: onSurface.withAlpha(150))),
+                      Icon(Icons.auto_awesome_rounded, size: 13, color: onSurface.withAlpha(190)),
                       const Spacer(),
-                      Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount MATCHES',
-                          style: TextStyle(fontSize: 10, color: onSurface.withAlpha(150))),
-                      DateTimeWidget(
-                          padding: const EdgeInsets.only(left: 10),
-                          style: TextStyle(fontSize: 10, color: onSurface.withAlpha(150))),
+                      Icon(Icons.star_rounded, size: 10, color: onSurface.withAlpha(160)),
+                      const SizedBox(width: 3),
+                      Icon(Icons.star_rounded, size: 8, color: onSurface.withAlpha(120)),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ],
-        ),
+              Container(color: card, child: child),
+              Container(
+                margin: const EdgeInsets.fromLTRB(9, 0, 9, 7),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: ribbon,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: accent.withAlpha(55)),
+                ).withLauncherCorners(),
+                child: Row(
+                  children: <Widget>[
+                    Icon(Icons.favorite_rounded, size: 10, color: accent.withAlpha(210)),
+                    const SizedBox(width: 6),
+                    Text('ENTER  OPEN   •   ESC  CLOSE',
+                        style: TextStyle(fontSize: 10, color: onSurface.withAlpha(150))),
+                    const Spacer(),
+                    Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount MATCHES',
+                        style: TextStyle(fontSize: 10, color: onSurface.withAlpha(150))),
+                    DateTimeWidget(
+                        padding: const EdgeInsets.only(left: 10),
+                        style: TextStyle(fontSize: 10, color: onSurface.withAlpha(150))),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -112,7 +109,7 @@ class _AnimeSearchBar extends StatelessWidget {
         color: Colors.white.withAlpha(28),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: accent.withAlpha(60)),
-      ),
+      ).withLauncherCorners(),
       child: Row(
         children: <Widget>[
           content.dragHandle,

@@ -5,6 +5,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../../models/design_settings.dart';
 import '../../models/settings.dart';
+import 'launcher_corners.dart';
 import 'launcher_design.dart';
 import 'launcher_design_builder.dart';
 import 'widgets/capillary_surface.dart';
@@ -186,8 +187,6 @@ class LauncherModalFrame extends StatelessWidget {
   LauncherDesign get design => tokens.design;
   Color get accent => tokens.accent;
 
-  BorderRadius get radius => BorderRadius.circular(tokens.frameRadius);
-
   @override
   Widget build(BuildContext context) {
     Widget core = _buildCore(context);
@@ -248,7 +247,7 @@ class LauncherModalFrame extends StatelessWidget {
       );
     }
 
-    return Container(
+    return LauncherSurface(
       width: width,
       constraints: constraints ?? BoxConstraints(maxHeight: maxHeight),
       margin: margin,
@@ -256,11 +255,7 @@ class LauncherModalFrame extends StatelessWidget {
         surface: tokens.surface,
         accent: accent,
       ),
-      child: ClipRRect(
-        borderRadius: radius,
-        child: core,
-        clipBehavior: Clip.antiAlias,
-      ),
+      child: core,
     );
   }
 
@@ -432,7 +427,7 @@ class LauncherModalFrame extends StatelessWidget {
       ),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: radius,
+          borderRadius: BorderRadius.circular(tokens.frameRadius),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -458,7 +453,7 @@ class LauncherModalFrame extends StatelessWidget {
             ),
             width: 1.2,
           ),
-        ),
+        ).withLauncherCorners(),
         child: core,
       ),
     );
@@ -536,19 +531,19 @@ class LauncherModalHeader extends StatelessWidget {
   final String subtitle;
   final String? badgeLabel;
 
-  BoxDecoration _chipDecoration() {
+  Decoration _chipDecoration() {
     final Color accent = tokens.accent;
     return switch (tokens.design) {
       LauncherDesign.command => BoxDecoration(
           color: accent.withAlpha(14),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: accent.withAlpha(50)),
-        ),
+        ).withLauncherCorners(),
       LauncherDesign.terminal => BoxDecoration(
           color: accent.withAlpha(20),
           borderRadius: BorderRadius.circular(3),
           border: Border.all(color: accent.withAlpha(60)),
-        ),
+        ).withLauncherCorners(),
       LauncherDesign.retro => BoxDecoration(
           color: RetroTokens.panel,
           border: Border.all(color: RetroTokens.cyan.withAlpha(150)),
@@ -557,16 +552,16 @@ class LauncherModalHeader extends StatelessWidget {
           color: Terminal2Tokens.raised(tokens.isDark),
           borderRadius: BorderRadius.circular(2),
           border: Border.all(color: accent.withAlpha(80)),
-        ),
+        ).withLauncherCorners(),
       LauncherDesign.zen => BoxDecoration(
           color: accent.withAlpha(26),
           borderRadius: BorderRadius.circular(13),
-        ),
+        ).withLauncherCorners(),
       LauncherDesign.glass => BoxDecoration(
           color: Colors.white.withAlpha(tokens.isDark ? 22 : 120),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white.withAlpha(tokens.isDark ? 40 : 140), width: 0.8),
-        ),
+        ).withLauncherCorners(),
       // Part-reference balloon, like the Blueprint result rows.
       LauncherDesign.blueprint => BoxDecoration(
           shape: BoxShape.circle,
@@ -582,7 +577,7 @@ class LauncherModalHeader extends StatelessWidget {
           color: tokens.onSurface.withAlpha(14),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: FluentTokens.stroke(tokens.isDark)),
-        ),
+        ).withLauncherCorners(),
       LauncherDesign.manifesto => BoxDecoration(
           color: tokens.onSurface,
           border: Border.all(color: tokens.onSurface, width: 1.5),
@@ -592,7 +587,7 @@ class LauncherModalHeader extends StatelessWidget {
           color: tokens.accent.withAlpha(16),
           borderRadius: BorderRadius.circular(4),
           border: Border.all(color: tokens.accent.withAlpha(70)),
-        ),
+        ).withLauncherCorners(),
       LauncherDesign.windowsXp => BoxDecoration(
           color: WindowsXpTokens.paper,
           border: Border(
@@ -615,21 +610,21 @@ class LauncherModalHeader extends StatelessWidget {
           color: NotionTokens.selection(tokens.isDark),
           borderRadius: BorderRadius.circular(4),
           border: Border.all(color: NotionTokens.border(tokens.isDark)),
-        ),
+        ).withLauncherCorners(),
       LauncherDesign.switchboard => BoxDecoration(
           color: SwitchboardTokens.raised(tokens.isDark),
           borderRadius: BorderRadius.circular(3),
           border: Border.all(color: SwitchboardTokens.border(tokens.isDark)),
-        ),
+        ).withLauncherCorners(),
       LauncherDesign.relay => BoxDecoration(
           color: RelayTokens.raised(tokens.isDark, accent),
           borderRadius: BorderRadius.circular(2),
           border: Border.all(color: RelayTokens.border(tokens.isDark, accent)),
-        ),
+        ).withLauncherCorners(),
       _ => BoxDecoration(
           color: accent.withAlpha(28),
           borderRadius: BorderRadius.circular(8),
-        ),
+        ).withLauncherCorners(),
     };
   }
 
@@ -700,7 +695,7 @@ class LauncherModalHeader extends StatelessWidget {
                 color: accent.withAlpha(20),
                 borderRadius: BorderRadius.circular(tokens.controlRadius),
                 border: tokens.outlinedControls ? Border.all(color: accent.withAlpha(60)) : null,
-              ),
+              ).withLauncherCorners(),
               child: Text(
                 _uppercaseVoice ? badgeLabel!.toUpperCase() : badgeLabel!,
                 style: tokens.text(
@@ -840,7 +835,7 @@ class LauncherModalKbd extends StatelessWidget {
             border: Border.all(
               color: tokens.outlinedControls ? tokens.accent.withAlpha(70) : onSurface.withAlpha(28),
             ),
-          ),
+          ).withLauncherCorners(),
           child: Text(
             keyLabel,
             style: tokens.text(

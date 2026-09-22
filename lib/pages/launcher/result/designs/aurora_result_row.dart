@@ -13,7 +13,7 @@ extension _AuroraResultRow on LauncherResultRow {
           border: Border.all(color: isSelected ? AuroraTokens.accent : Colors.transparent),
           boxShadow:
               isSelected ? <BoxShadow>[BoxShadow(color: AuroraTokens.accent.withAlpha(45), blurRadius: 10)] : null,
-        ),
+        ).withLauncherCorners(),
         child: Row(children: <Widget>[
           SizedBox(width: 30, height: 32, child: Center(child: icon)),
           const SizedBox(width: 15),

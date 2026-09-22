@@ -460,6 +460,8 @@ class BookmarkInfo {
   int get hashCode => emoji.hashCode ^ title.hashCode ^ stringToExecute.hashCode ^ preferInputIcon.hashCode;
 }
 
+enum ThemeCornerShape { round, squircle, bevel }
+
 class ThemeColors {
   Color background;
   Color text;
@@ -479,6 +481,7 @@ class ThemeColors {
   String panelOpacityBegin;
   String panelOpacityEnd;
   double borderRadius;
+  ThemeCornerShape cornerShape;
   double baseFontSize;
   ThemeColors({
     required this.background,
@@ -499,6 +502,7 @@ class ThemeColors {
     this.panelOpacityBegin = 'Top Left',
     this.panelOpacityEnd = 'Bottom Right',
     this.borderRadius = 10.0,
+    this.cornerShape = ThemeCornerShape.squircle,
     this.baseFontSize = 10.0,
   });
 
@@ -524,6 +528,7 @@ class ThemeColors {
     String? panelOpacityBegin,
     String? panelOpacityEnd,
     double? borderRadius,
+    ThemeCornerShape? cornerShape,
     double? baseFontSize,
   }) {
     return ThemeColors(
@@ -545,6 +550,7 @@ class ThemeColors {
       panelOpacityBegin: panelOpacityBegin ?? this.panelOpacityBegin,
       panelOpacityEnd: panelOpacityEnd ?? this.panelOpacityEnd,
       borderRadius: borderRadius ?? this.borderRadius,
+      cornerShape: cornerShape ?? this.cornerShape,
       baseFontSize: baseFontSize ?? this.baseFontSize,
     );
   }
@@ -569,6 +575,7 @@ class ThemeColors {
       'panelOpacityBegin': panelOpacityBegin,
       'panelOpacityEnd': panelOpacityEnd,
       'borderRadius': borderRadius,
+      'cornerShape': cornerShape.name,
       'baseFontSize': baseFontSize,
     };
   }
@@ -595,6 +602,10 @@ class ThemeColors {
       panelOpacityBegin: (map['panelOpacityBegin'] ?? 'Top Left') as String,
       panelOpacityEnd: (map['panelOpacityEnd'] ?? 'Bottom Right') as String,
       borderRadius: (map['borderRadius'] as num?)?.toDouble() ?? 10.0,
+      cornerShape: ThemeCornerShape.values.firstWhere(
+        (ThemeCornerShape shape) => shape.name == map['cornerShape'],
+        orElse: () => ThemeCornerShape.squircle,
+      ),
       baseFontSize: (map['baseFontSize'] as num?)?.toDouble() ?? 10.0,
     );
   }
@@ -605,7 +616,7 @@ class ThemeColors {
 
   @override
   String toString() {
-    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $text, accentColor: $accent, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropPath: $backdropPath, backdropOpacity: $backdropOpacity, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd, borderRadius: $borderRadius, baseFontSize: $baseFontSize)';
+    return 'ThemeColors(background: $background, gradientAlpha: $gradientAlpha, textColor: $text, accentColor: $accent, uiFontFamily: $uiFontFamily, uiFontWeight: $uiFontWeight, uiFontItalic: $uiFontItalic, entryFontFamily: $entryFontFamily, entryFontWeight: $entryFontWeight, entryFontItalic: $entryFontItalic, backdropImages: $backdropImages, backdropType: $backdropType, backdropPath: $backdropPath, backdropOpacity: $backdropOpacity, panelOpacityPoints: $panelOpacityPoints, panelOpacityBegin: $panelOpacityBegin, panelOpacityEnd: $panelOpacityEnd, borderRadius: $borderRadius, cornerShape: $cornerShape, baseFontSize: $baseFontSize)';
   }
 
   @override
@@ -629,6 +640,7 @@ class ThemeColors {
         listEquals(other.panelOpacityPoints, panelOpacityPoints) &&
         other.panelOpacityBegin == panelOpacityBegin &&
         other.borderRadius == borderRadius &&
+        other.cornerShape == cornerShape &&
         other.baseFontSize == baseFontSize &&
         other.panelOpacityEnd == panelOpacityEnd;
   }
@@ -649,6 +661,7 @@ class ThemeColors {
         backdropType.hashCode ^
         backdropPath.hashCode ^
         borderRadius.hashCode ^
+        cornerShape.hashCode ^
         baseFontSize.hashCode ^
         panelOpacityPoints.hashCode;
   }

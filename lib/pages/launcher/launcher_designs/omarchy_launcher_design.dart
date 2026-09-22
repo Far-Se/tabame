@@ -74,7 +74,7 @@ class OmarchyLauncherFrame extends StatelessWidget {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final TextStyle label =
         OmarchyTokens.mono(fontSize: Design.baseFontSize + 1, color: OmarchyTokens.dim, height: 1.2);
-    return Container(
+    return LauncherSurface(
       decoration: _omarchyOuterDecoration(surface),
       child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
         if (user.launcherShowTitlebar)

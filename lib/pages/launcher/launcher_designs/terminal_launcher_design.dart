@@ -97,7 +97,7 @@ class _TerminalBlinkCursorState extends State<_TerminalBlinkCursor> with SingleT
             decoration: BoxDecoration(
               color: lit ? widget.color.withAlpha(90) : widget.color.withAlpha(0),
               borderRadius: BorderRadius.circular(1),
-            ),
+            ).withLauncherCorners(),
           );
         },
       ),
@@ -118,30 +118,27 @@ class TerminalLauncherFrame extends StatelessWidget {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color accent = LauncherTheme.accentOf(context);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _terminalOuterDecoration(surface, accent),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                if (user.launcherShowTitlebar) _TerminalTitleBar(isDark: isDark),
-                child,
-                _TerminalStatusBar(resultCount: resultCount, isDark: isDark),
-              ],
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (user.launcherShowTitlebar) _TerminalTitleBar(isDark: isDark),
+              child,
+              _TerminalStatusBar(resultCount: resultCount, isDark: isDark),
+            ],
+          ),
+          // CRT scanlines.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: _ScanlinePainter(isDark: isDark)),
             ),
-            // CRT scanlines.
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(painter: _ScanlinePainter(isDark: isDark)),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

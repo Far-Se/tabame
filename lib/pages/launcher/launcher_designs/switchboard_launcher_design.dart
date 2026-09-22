@@ -40,7 +40,7 @@ class _SwitchboardLauncherSearchBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: accent,
                   borderRadius: BorderRadius.circular(2),
-                ),
+                ).withLauncherCorners(),
                 child: Text(
                   'ROUTE',
                   style: SwitchboardTokens.label(
@@ -121,27 +121,23 @@ class SwitchboardLauncherFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
-    final double radius = math.min(Design.borderRadius, 8);
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _switchboardOuterDecoration(surface),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(math.max(0, radius - 1)),
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            ColoredBox(
-              color: SwitchboardTokens.canvas(isDark).withAlpha(Design.hasBackdrop ? (isDark ? 224 : 232) : 255),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  child,
-                  _SwitchboardFooter(isDark: isDark, resultCount: resultCount),
-                ],
-              ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          ColoredBox(
+            color: SwitchboardTokens.canvas(isDark).withAlpha(Design.hasBackdrop ? (isDark ? 224 : 232) : 255),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                child,
+                _SwitchboardFooter(isDark: isDark, resultCount: resultCount),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

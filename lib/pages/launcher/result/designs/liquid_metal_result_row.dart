@@ -21,14 +21,14 @@ extension _LiquidMetalResultRow on LauncherResultRow {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: isSelected ? LiquidMetalTokens.accent.withAlpha(150) : iconBorder),
-            ),
+            ).withLauncherCorners(),
             child: Row(children: <Widget>[
               DecoratedBox(
                 decoration: BoxDecoration(
                   color: iconFill,
                   borderRadius: BorderRadius.circular(7),
                   border: Border.all(color: iconBorder),
-                ),
+                ).withLauncherCorners(),
                 child: SizedBox(width: 34, height: 34, child: Center(child: icon)),
               ),
               const SizedBox(width: 12),

@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../launcher_corners.dart';
 import '../launcher_design.dart';
 
 /// One clock per launcher. Painters listen directly without rebuilding content.
@@ -178,7 +179,7 @@ class _LiquidMetalSurfaceState extends State<LiquidMetalSurface> {
     return MouseRegion(
       onHover: reduceMotion ? null : (PointerEvent event) => _pointer.value = event.localPosition,
       onExit: (PointerEvent event) => _pointer.value = null,
-      child: ClipRRect(
+      child: LauncherClip(
         borderRadius: BorderRadius.circular(widget.radius),
         child: CustomPaint(
           painter: widget.overlay ? null : painter,
@@ -310,7 +311,7 @@ class LiquidMetalFrostedSurface extends StatelessWidget {
       background.withAlpha(isDark ? 132 : 104),
     );
 
-    return ClipRRect(
+    return LauncherClip(
       borderRadius: BorderRadius.circular(radius),
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 7, sigmaY: 7),

@@ -66,10 +66,10 @@ class RetroLauncherFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    return Container(
+    return LauncherSurface(
       padding: const EdgeInsets.all(7),
       decoration: _retroOuterDecoration(),
-      child: ClipRRect(
+      child: LauncherClip(
         borderRadius: BorderRadius.circular(4),
         child: RetroSurface(
           background: RetroTokens.background,

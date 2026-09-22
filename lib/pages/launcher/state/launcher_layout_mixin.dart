@@ -38,9 +38,10 @@ mixin _LauncherLayoutMixin on _LauncherStateMembersMixin {
               child: Container(
                   margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
                   decoration: BoxDecoration(
-                      color: AuroraTokens.background.withAlpha(70),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AuroraTokens.border)),
+                          color: AuroraTokens.background.withAlpha(70),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AuroraTokens.border))
+                      .withLauncherCorners(),
                   child: resultsContent),
             )
           else

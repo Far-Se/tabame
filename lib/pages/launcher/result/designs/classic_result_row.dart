@@ -14,7 +14,7 @@ extension _ClassicResultRow on LauncherResultRow {
           decoration: BoxDecoration(
             color: isSelected ? accent.withAlpha(55) : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
-          ),
+          ).withLauncherCorners(),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             child: Row(
@@ -28,7 +28,7 @@ extension _ClassicResultRow on LauncherResultRow {
                   decoration: BoxDecoration(
                     color: accent,
                     borderRadius: BorderRadius.circular(2),
-                  ),
+                  ).withLauncherCorners(),
                 ),
                 icon,
                 const SizedBox(width: 8),

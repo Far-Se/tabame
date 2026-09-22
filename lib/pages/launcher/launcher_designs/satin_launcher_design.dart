@@ -48,7 +48,7 @@ class SatinLauncherFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SatinSurface(
-        child: Container(
+        child: LauncherSurface(
           decoration: _satinOuterDecoration(),
           child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
             Flexible(fit: FlexFit.loose, child: child),

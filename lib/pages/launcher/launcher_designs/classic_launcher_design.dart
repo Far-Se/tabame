@@ -39,7 +39,7 @@ class _ClassicSearchBar extends StatelessWidget {
         // borderRadius: BorderRadius.circular(14),
         borderRadius: BorderRadius.circular(Design.borderRadius),
         border: Border.all(color: accent.withAlpha(32)),
-      ),
+      ).withLauncherCorners(),
       child: Row(
         children: <Widget>[
           content.dragHandle,
@@ -71,28 +71,25 @@ class ClassicLauncherFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color accent = LauncherTheme.accentOf(context);
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _classicOuterDecoration(surface, accent),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            child,
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: DateTimeWidget(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
-                ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          child,
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: DateTimeWidget(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              style: TextStyle(
+                fontSize: 10,
+                color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
               ),
-            )
-          ],
-        ),
+            ),
+          )
+        ],
       ),
     );
   }

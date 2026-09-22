@@ -108,38 +108,35 @@ class ManifestoLauncherFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _manifestoOuterDecoration(surface),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(painter: _ManifestoGridPainter(color: onSurface.withAlpha(18))),
-              ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: _ManifestoGridPainter(color: onSurface.withAlpha(18))),
             ),
-            Padding(
-              padding: const EdgeInsets.only(left: 22),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  child,
-                  _ManifestoFooter(paper: surface, ink: onSurface, resultCount: resultCount),
-                ],
-              ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                child,
+                _ManifestoFooter(paper: surface, ink: onSurface, resultCount: resultCount),
+              ],
             ),
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 22,
-              child: _ManifestoIssueRail(paper: surface, ink: onSurface),
-            ),
-          ],
-        ),
+          ),
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 22,
+            child: _ManifestoIssueRail(paper: surface, ink: onSurface),
+          ),
+        ],
       ),
     );
   }

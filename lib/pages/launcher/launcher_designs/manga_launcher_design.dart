@@ -21,32 +21,30 @@ class MangaLauncherFrame extends StatelessWidget {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final double intensity = Design.gradientAlpha.clamp(0, 255) / 255;
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _mangaOuterDecoration(surface),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: Stack(children: <Widget>[
-          Positioned.fill(child: ColoredBox(color: surface.withAlpha(250))),
-          if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
-          Positioned.fill(
-              child: IgnorePointer(
-                  child: CustomPaint(
-                      painter: _MangaLauncherHalftonePainter(onSurface.withValues(alpha: .05 + intensity * .05))))),
-          Positioned.fill(
-              child: IgnorePointer(
-                  child: Container(
-                      margin: const EdgeInsets.all(3.5),
-                      decoration: BoxDecoration(
-                          border: Border.all(color: onSurface.withAlpha(75), width: .9),
-                          borderRadius: BorderRadius.circular(11))))),
-          Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-            if (user.launcherShowTitlebar)
-              _MangaLauncherMasthead(ink: onSurface, paper: surface, resultCount: resultCount),
-            child,
-          ]),
+      child: Stack(children: <Widget>[
+        Positioned.fill(child: ColoredBox(color: surface.withAlpha(250))),
+        if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
+        Positioned.fill(
+            child: IgnorePointer(
+                child: CustomPaint(
+                    painter: _MangaLauncherHalftonePainter(onSurface.withValues(alpha: .05 + intensity * .05))))),
+        Positioned.fill(
+            child: IgnorePointer(
+                child: Container(
+                    margin: const EdgeInsets.all(3.5),
+                    decoration: BoxDecoration(
+                            border: Border.all(color: onSurface.withAlpha(75), width: .9),
+                            borderRadius: BorderRadius.circular(11))
+                        .withLauncherCorners()))),
+        Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          if (user.launcherShowTitlebar)
+            _MangaLauncherMasthead(ink: onSurface, paper: surface, resultCount: resultCount),
+          child,
         ]),
-      ),
+      ]),
     );
   }
 }

@@ -19,52 +19,46 @@ class CyberLauncherFrame extends StatelessWidget {
     final Color accent = LauncherTheme.accentOf(context);
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _cyberOuterDecoration(surface, accent),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: ClipPath(
-          clipper: _CyberLauncherClipper(),
-          child: Stack(children: <Widget>[
-            Positioned.fill(child: ColoredBox(color: surface.withAlpha(248))),
-            if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
-            Positioned.fill(
-                child: IgnorePointer(
-                    child: CustomPaint(painter: _CyberLauncherGridPainter(accent.withAlpha(isDark ? 16 : 10))))),
-            Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-              if (user.launcherShowTitlebar)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(13, 7, 13, 0),
-                  child: Row(children: <Widget>[
-                    Text('「 TABAME // LAUNCHER 』',
-                        style: TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
-                    const Spacer(),
-                    Container(width: 5, height: 5, color: accent),
-                    const SizedBox(width: 5),
-                    Text(Globals.isLauncherPluginActive ? "PLUGIN" : 'SYNC $resultCount',
-                        style: TextStyle(
-                            color: onSurface.withAlpha(125),
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.1)),
-                    DateTimeWidget(
-                      padding: const EdgeInsets.only(left: 10),
+      child: ClipPath(
+        clipper: _CyberLauncherClipper(),
+        child: Stack(children: <Widget>[
+          Positioned.fill(child: ColoredBox(color: surface.withAlpha(248))),
+          if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
+          Positioned.fill(
+              child: IgnorePointer(
+                  child: CustomPaint(painter: _CyberLauncherGridPainter(accent.withAlpha(isDark ? 16 : 10))))),
+          Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            if (user.launcherShowTitlebar)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(13, 7, 13, 0),
+                child: Row(children: <Widget>[
+                  Text('「 TABAME // LAUNCHER 』',
+                      style: TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
+                  const Spacer(),
+                  Container(width: 5, height: 5, color: accent),
+                  const SizedBox(width: 5),
+                  Text(Globals.isLauncherPluginActive ? "PLUGIN" : 'SYNC $resultCount',
                       style: TextStyle(
                           color: onSurface.withAlpha(125),
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
-                          letterSpacing: 1.1),
-                    ),
-                  ]),
-                ),
-              child,
-            ]),
-            Positioned.fill(
-                child: IgnorePointer(
-                    child: CustomPaint(painter: _CyberLauncherFramePainter(neon: accent, isDark: isDark)))),
+                          letterSpacing: 1.1)),
+                  DateTimeWidget(
+                    padding: const EdgeInsets.only(left: 10),
+                    style: TextStyle(
+                        color: onSurface.withAlpha(125), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 1.1),
+                  ),
+                ]),
+              ),
+            child,
           ]),
-        ),
+          Positioned.fill(
+              child:
+                  IgnorePointer(child: CustomPaint(painter: _CyberLauncherFramePainter(neon: accent, isDark: isDark)))),
+        ]),
       ),
     );
   }

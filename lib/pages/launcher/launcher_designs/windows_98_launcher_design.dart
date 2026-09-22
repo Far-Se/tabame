@@ -156,7 +156,7 @@ class Windows98LauncherFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _windows98OuterDecoration(),
       child: Padding(

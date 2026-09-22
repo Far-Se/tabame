@@ -23,49 +23,46 @@ class VectorLauncherFrame extends StatelessWidget {
     final Color accent = LauncherTheme.accentOf(context);
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _vectorOuterDecoration(surface),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: Stack(children: <Widget>[
-          Positioned.fill(child: ColoredBox(color: surface.withAlpha(247))),
-          if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
-          Positioned.fill(
-              child: IgnorePointer(
-                  child: CustomPaint(painter: _VectorLauncherScanPainter(onSurface.withAlpha(isDark ? 12 : 9))))),
-          Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-            if (user.launcherShowTitlebar)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 7, 12, 0),
-                child: Row(children: <Widget>[
-                  Container(width: 4, height: 4, color: accent),
-                  const SizedBox(width: 6),
-                  Text('VEC / 01',
-                      style: TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
-                  const SizedBox(width: 7),
-                  Text('TARGET INDEX',
-                      style: TextStyle(
-                          color: onSurface.withAlpha(120), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 2)),
-                  const Spacer(),
-                  Text(resultCount.toString().padLeft(3, '0'),
-                      style: TextStyle(
-                          color: accent.withAlpha(190), fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
-                  DateTimeWidget(
-                    padding: const EdgeInsets.only(left: 10),
+      child: Stack(children: <Widget>[
+        Positioned.fill(child: ColoredBox(color: surface.withAlpha(247))),
+        if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
+        Positioned.fill(
+            child: IgnorePointer(
+                child: CustomPaint(painter: _VectorLauncherScanPainter(onSurface.withAlpha(isDark ? 12 : 9))))),
+        Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          if (user.launcherShowTitlebar)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 7, 12, 0),
+              child: Row(children: <Widget>[
+                Container(width: 4, height: 4, color: accent),
+                const SizedBox(width: 6),
+                Text('VEC / 01',
+                    style: TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
+                const SizedBox(width: 7),
+                Text('TARGET INDEX',
                     style: TextStyle(
-                        color: accent.withAlpha(190), fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4),
-                  ),
-                ]),
-              ),
-            child,
-          ]),
-          Positioned.fill(
-              child: IgnorePointer(
-                  child: CustomPaint(
-                      painter: _VectorLauncherReticlePainter(accent: accent, tick: onSurface.withAlpha(100))))),
+                        color: onSurface.withAlpha(120), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 2)),
+                const Spacer(),
+                Text(resultCount.toString().padLeft(3, '0'),
+                    style: TextStyle(
+                        color: accent.withAlpha(190), fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
+                DateTimeWidget(
+                  padding: const EdgeInsets.only(left: 10),
+                  style: TextStyle(
+                      color: accent.withAlpha(190), fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.4),
+                ),
+              ]),
+            ),
+          child,
         ]),
-      ),
+        Positioned.fill(
+            child: IgnorePointer(
+                child: CustomPaint(
+                    painter: _VectorLauncherReticlePainter(accent: accent, tick: onSurface.withAlpha(100))))),
+      ]),
     );
   }
 }

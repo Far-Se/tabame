@@ -86,7 +86,7 @@ class TuiLauncherFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    return Container(
+    return LauncherSurface(
       decoration: _tuiOuterDecoration(surface),
       child: Column(
         mainAxisSize: MainAxisSize.min,

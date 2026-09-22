@@ -38,8 +38,8 @@ class _FluentSearchBar extends StatelessWidget {
           color: FluentTokens.fill(isDark),
           borderRadius: BorderRadius.circular(4),
           border: Border.all(color: FluentTokens.stroke(isDark)),
-        ),
-        child: ClipRRect(
+        ).withLauncherCorners(),
+        child: LauncherClip(
           borderRadius: BorderRadius.circular(4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -87,23 +87,20 @@ class FluentLauncherFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _fluentOuterDecoration(surface),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                child,
-                _FluentFooter(resultCount: resultCount, isDark: isDark),
-              ],
-            ),
-          ],
-        ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              child,
+              _FluentFooter(resultCount: resultCount, isDark: isDark),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -131,7 +128,7 @@ class _FluentFooter extends StatelessWidget {
               color: onSurface.withAlpha(12),
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: FluentTokens.stroke(isDark)),
-            ),
+            ).withLauncherCorners(),
             child: Text(
               keyLabel,
               style: FluentTokens.segoe(

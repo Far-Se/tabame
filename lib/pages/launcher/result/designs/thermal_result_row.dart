@@ -14,7 +14,7 @@ extension _ThermalResultRow on LauncherResultRow {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(5),
                 border: Border.all(color: isSelected ? ThermalTokens.accent.withAlpha(95) : Colors.transparent),
-              ),
+              ).withLauncherCorners(),
               child: Row(children: <Widget>[
                 SizedBox(width: 28, height: 28, child: Center(child: icon)),
                 const SizedBox(width: 12),

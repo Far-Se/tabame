@@ -198,26 +198,23 @@ class Terminal2LauncherFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _terminal2OuterDecoration(surface),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(2),
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            ColoredBox(
-              color: surface.withAlpha(Design.hasBackdrop ? 224 : 255),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  child,
-                  DragToMoveArea(child: _Terminal2StatusBar(resultCount: resultCount, isDark: isDark)),
-                ],
-              ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          ColoredBox(
+            color: surface.withAlpha(Design.hasBackdrop ? 224 : 255),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                child,
+                DragToMoveArea(child: _Terminal2StatusBar(resultCount: resultCount, isDark: isDark)),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

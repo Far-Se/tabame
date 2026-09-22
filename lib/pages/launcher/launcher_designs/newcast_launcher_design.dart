@@ -75,61 +75,57 @@ class RaycastLauncherFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
-    const BorderRadius radius = BorderRadius.all(Radius.circular(14));
     final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
     final Color sheen = isDark ? Colors.white : Colors.black;
 
-    return Container(
+    return LauncherSurface(
       decoration: _newCastOuterDecoration(surface),
-      child: ClipRRect(
-        borderRadius: radius,
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topRight,
-                      end: const Alignment(-0.18, 0.38),
-                      colors: <Color>[
-                        sheen.withAlpha(isDark ? 26 : 10),
-                        sheen.withAlpha(isDark ? 8 : 4),
-                        Colors.transparent,
-                      ],
-                      stops: const <double>[0, 0.28, 1],
-                    ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topRight,
+                    end: const Alignment(-0.18, 0.38),
+                    colors: <Color>[
+                      sheen.withAlpha(isDark ? 26 : 10),
+                      sheen.withAlpha(isDark ? 8 : 4),
+                      Colors.transparent,
+                    ],
+                    stops: const <double>[0, 0.28, 1],
                   ),
                 ),
               ),
             ),
-            Positioned(
-              top: -74,
-              right: -34,
-              width: 250,
-              height: 170,
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment.topRight,
-                      radius: 1.0,
-                      colors: <Color>[sheen.withAlpha(isDark ? 10 : 5), Colors.transparent],
-                    ),
+          ),
+          Positioned(
+            top: -74,
+            right: -34,
+            width: 250,
+            height: 170,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.topRight,
+                    radius: 1.0,
+                    colors: <Color>[sheen.withAlpha(isDark ? 10 : 5), Colors.transparent],
                   ),
                 ),
               ),
             ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                child,
-                const _RaycastFooter(),
-              ],
-            ),
-          ],
-        ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              child,
+              const _RaycastFooter(),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -182,7 +178,7 @@ class _RaycastFooter extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: RaycastTokens.badge(isDark),
                     borderRadius: BorderRadius.circular(4),
-                  ),
+                  ).withLauncherCorners(),
                   child: Text(
                     '⌘K',
                     style: RaycastTokens.mono(

@@ -788,6 +788,36 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
               await _persistThemeChanges();
             },
           ),
+          if (_designTarget == _DesignTarget.launcher)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: ThemeCornerShape.values.map((ThemeCornerShape shape) {
+                  final bool selected = _selectedTheme.cornerShape == shape;
+                  return ChoiceChip(
+                    label: Text(shape.name.toUpperCaseFirst()),
+                    selected: selected,
+                    onSelected: (bool value) async {
+                      if (!value || selected) return;
+                      await _updateTheme(() => _selectedTheme.cornerShape = shape);
+                    },
+                    visualDensity: VisualDensity.compact,
+                    labelStyle: TextStyle(
+                      fontSize: Design.baseFontSize + 1.5,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: selected ? Design.accent : Design.text,
+                    ),
+                    labelPadding: EdgeInsets.zero,
+                    showCheckmark: false,
+                    selectedColor: Design.accent.withAlpha(18),
+                    backgroundColor: Design.text.withAlpha(8),
+                    side: BorderSide(color: selected ? Design.accent.withAlpha(70) : Design.text.withAlpha(20)),
+                  );
+                }).toList(),
+              ),
+            ),
         ],
       ),
     );

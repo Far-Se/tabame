@@ -121,26 +121,23 @@ class NotionLauncherFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _notionOuterDecoration(surface),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(7),
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            ColoredBox(
-              color: NotionTokens.canvas(isDark).withAlpha(Design.hasBackdrop ? (isDark ? 224 : 232) : 255),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  child,
-                  _NotionLauncherFooter(isDark: isDark, resultCount: resultCount),
-                ],
-              ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          ColoredBox(
+            color: NotionTokens.canvas(isDark).withAlpha(Design.hasBackdrop ? (isDark ? 224 : 232) : 255),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                child,
+                _NotionLauncherFooter(isDark: isDark, resultCount: resultCount),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -220,7 +217,7 @@ class _NotionKeycap extends StatelessWidget {
         color: NotionTokens.selection(isDark),
         borderRadius: BorderRadius.circular(3),
         border: Border.all(color: NotionTokens.border(isDark)),
-      ),
+      ).withLauncherCorners(),
       child: Text(
         label,
         style: NotionTokens.ui(
@@ -249,7 +246,7 @@ class _NotionLauncherMark extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(3),
         border: Border.all(color: NotionTokens.foreground(isDark).withAlpha(190)),
-      ),
+      ).withLauncherCorners(),
       child: Text(
         'T',
         style: TextStyle(

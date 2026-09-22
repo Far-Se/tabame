@@ -24,7 +24,7 @@ class _LiquidMetalSearchBar extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: LiquidMetalTokens.border),
-          ),
+          ).withLauncherCorners(),
           child: Row(children: <Widget>[
             content.dragHandle,
             const SizedBox(width: 12),
@@ -59,7 +59,7 @@ class LiquidMetalLauncherFrame extends StatelessWidget {
         child: LiquidMetalSurface(
           radius: 16,
           overlay: true,
-          child: Container(
+          child: LauncherSurface(
             decoration: _liquidMetalOuterDecoration(),
             child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
               if (user.launcherShowTitlebar)

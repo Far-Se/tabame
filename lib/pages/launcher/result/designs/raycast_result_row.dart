@@ -39,7 +39,7 @@ extension _RaycastResultRow on LauncherResultRow {
           decoration: BoxDecoration(
             color: isSelected ? RaycastTokens.selected(isDark) : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
-          ),
+          ).withLauncherCorners(),
           child: Row(
             children: <Widget>[
               Container(
@@ -49,7 +49,7 @@ extension _RaycastResultRow on LauncherResultRow {
                 decoration: BoxDecoration(
                   color: (isDark ? Colors.white : Colors.black).withAlpha(isSelected ? 18 : 10),
                   borderRadius: BorderRadius.circular(5),
-                ),
+                ).withLauncherCorners(),
                 child: icon,
               ),
               const SizedBox(width: 10),
@@ -102,7 +102,7 @@ class _RaycastShortcutBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: RaycastTokens.badge(isDark),
         borderRadius: BorderRadius.circular(4),
-      ),
+      ).withLauncherCorners(),
       child: Text(
         '⌘${index + 1}',
         style: RaycastTokens.mono(

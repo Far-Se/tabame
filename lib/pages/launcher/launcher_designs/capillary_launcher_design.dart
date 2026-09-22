@@ -63,7 +63,7 @@ class CapillaryLauncherFrame extends StatelessWidget {
         child: CapillarySurface(
           kind: CapillarySurfaceKind.overlay,
           radius: 8,
-          child: Container(
+          child: LauncherSurface(
             decoration: _capillaryOuterDecoration(surface),
             child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
               Flexible(fit: FlexFit.loose, child: child),

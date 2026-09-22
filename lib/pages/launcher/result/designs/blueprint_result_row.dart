@@ -14,7 +14,7 @@ extension _BlueprintResultRow on LauncherResultRow {
           decoration: BoxDecoration(
             color: isSelected ? accent.withAlpha(18) : Colors.transparent,
             borderRadius: BorderRadius.circular(3),
-          ),
+          ).withLauncherCorners(),
           child: CustomPaint(
             foregroundPainter: isSelected ? _BlueprintCalloutPainter(color: accent) : null,
             child: Padding(

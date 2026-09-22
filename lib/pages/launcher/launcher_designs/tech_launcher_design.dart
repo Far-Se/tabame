@@ -21,42 +21,39 @@ class TechLauncherFrame extends StatelessWidget {
     final Color accent = LauncherTheme.accentOf(context);
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
     final bool isDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _techOuterDecoration(surface, accent),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: Stack(
-          children: <Widget>[
-            Positioned.fill(child: ColoredBox(color: surface.withAlpha(246))),
-            if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(painter: _TechLauncherDotPainter(accent.withAlpha(isDark ? 22 : 14))),
+      child: Stack(
+        children: <Widget>[
+          Positioned.fill(child: ColoredBox(color: surface.withAlpha(246))),
+          if (Design.hasBackdrop) const Positioned.fill(child: StableBackdrop()),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: _TechLauncherDotPainter(accent.withAlpha(isDark ? 22 : 14))),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: onSurface.withAlpha(isDark ? 8 : 5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: accent.withAlpha(38)),
+              ).withLauncherCorners(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (user.launcherShowTitlebar) _TechLauncherStatus(resultCount: resultCount),
+                  child,
+                ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: onSurface.withAlpha(isDark ? 8 : 5),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: accent.withAlpha(38)),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    if (user.launcherShowTitlebar) _TechLauncherStatus(resultCount: resultCount),
-                    child,
-                  ],
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: IgnorePointer(child: CustomPaint(painter: _TechLauncherHudPainter(accent: accent))),
-            ),
-          ],
-        ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(child: CustomPaint(painter: _TechLauncherHudPainter(accent: accent))),
+          ),
+        ],
       ),
     );
   }
@@ -112,7 +109,7 @@ class _TechLauncherSearchBar extends StatelessWidget {
         color: onSurface.withAlpha(8),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: accent.withAlpha(52)),
-      ),
+      ).withLauncherCorners(),
       child: Row(children: <Widget>[
         content.dragHandle,
         const SizedBox(width: 9),
@@ -136,7 +133,9 @@ class TechLauncherHeader extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 9, 16, 3),
         child: Row(children: <Widget>[
           Container(
-              width: 6, height: 6, decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(3))),
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(3)).withLauncherCorners()),
           const SizedBox(width: 6),
           Text(label.toUpperCase(),
               style: TextStyle(

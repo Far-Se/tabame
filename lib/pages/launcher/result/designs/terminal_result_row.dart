@@ -22,7 +22,7 @@ extension _TerminalResultRow on LauncherResultRow {
                 width: 2.5,
               ),
             ),
-          ),
+          ).withLauncherCorners(),
           child: Row(
             children: <Widget>[
               SizedBox(

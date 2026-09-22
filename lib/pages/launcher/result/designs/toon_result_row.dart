@@ -15,7 +15,7 @@ extension _ToonResultRow on LauncherResultRow {
             border: Border.all(
               color: isSelected ? ToonTokens.cream : ToonTokens.orange.withAlpha(80),
             ),
-          ),
+          ).withLauncherCorners(),
           child: Row(
             children: <Widget>[
               SizedBox(
@@ -35,7 +35,7 @@ extension _ToonResultRow on LauncherResultRow {
                   border: Border.all(
                     color: isSelected ? ToonTokens.orange : ToonTokens.red.withAlpha(150),
                   ),
-                ),
+                ).withLauncherCorners(),
                 child: icon,
               ),
               const SizedBox(width: 11),

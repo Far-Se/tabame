@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../launcher_corners.dart';
 import '../launcher_design.dart';
 
 /// A single matte shader behind the content. Light moves only after input and
@@ -130,7 +131,7 @@ class _SatinSurfaceState extends State<SatinSurface>
         child: MouseRegion(
           onHover: _hover,
           onExit: (_) => _aim(Offset.zero),
-          child: ClipRRect(
+          child: LauncherClip(
             borderRadius: BorderRadius.circular(widget.radius),
             child: CustomPaint(
               painter: _SatinPainter(

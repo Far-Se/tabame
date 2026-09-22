@@ -72,7 +72,7 @@ class _SereneIconWell extends StatelessWidget {
       decoration: BoxDecoration(
         color: accent.withAlpha(isSelected ? 36 : 20),
         borderRadius: BorderRadius.circular(_SereneTokens.iconWellRadius),
-      ),
+      ).withLauncherCorners(),
       child: child,
     );
   }
@@ -105,7 +105,7 @@ class _SereneRowContainer extends StatelessWidget {
       decoration: BoxDecoration(
         color: isSelected ? accent.withAlpha(_SereneTokens.selectionFillAlpha) : Colors.transparent,
         borderRadius: BorderRadius.circular(_SereneTokens.rowRadius),
-      ),
+      ).withLauncherCorners(),
       child: child,
     );
   }
@@ -130,7 +130,7 @@ class LauncherSereneBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withAlpha(28),
         borderRadius: BorderRadius.circular(_SereneTokens.badgeRadius),
-      ),
+      ).withLauncherCorners(),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[

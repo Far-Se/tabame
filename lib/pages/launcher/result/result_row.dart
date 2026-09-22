@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../../models/design_settings.dart';
 import '../../../models/settings.dart';
+import '../launcher_corners.dart';
 import '../launcher_design.dart';
 import '../widgets/capillary_surface.dart';
 import '../widgets/thermal_surface.dart';

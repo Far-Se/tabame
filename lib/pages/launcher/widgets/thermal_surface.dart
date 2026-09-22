@@ -7,6 +7,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../launcher_corners.dart';
 import '../launcher_design.dart';
 
 /// One continuous mineral sheet, with a bounded history in panel coordinates.
@@ -138,7 +139,7 @@ class _ThermalSurfaceState extends State<ThermalSurface>
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: (PointerDownEvent event) => _field.press(event.localPosition),
                 child: RepaintBoundary(
-                  child: ClipRRect(
+                  child: LauncherClip(
                     borderRadius: BorderRadius.circular(widget.radius),
                     child: CustomPaint(
                       key: _sheetKey,

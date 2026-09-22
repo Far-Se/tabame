@@ -123,29 +123,26 @@ class BlueprintLauncherFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color accent = LauncherTheme.accentOf(context);
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _blueprintOuterDecoration(surface, accent),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            // Grid paper + inner sheet border + corner registration marks.
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(painter: _BlueprintSheetPainter(ink: accent)),
-              ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          // Grid paper + inner sheet border + corner registration marks.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: _BlueprintSheetPainter(ink: accent)),
             ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                child,
-                _BlueprintTitleBlock(resultCount: resultCount),
-              ],
-            ),
-          ],
-        ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              child,
+              _BlueprintTitleBlock(resultCount: resultCount),
+            ],
+          ),
+        ],
       ),
     );
   }

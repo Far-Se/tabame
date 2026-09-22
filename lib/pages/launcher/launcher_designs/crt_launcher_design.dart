@@ -41,11 +41,11 @@ class CrtLauncherFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return LauncherSurface(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
           color: CrtTokens.bezel, borderRadius: BorderRadius.circular(18), border: Border.all(color: CrtTokens.border)),
-      child: ClipRRect(
+      child: LauncherClip(
           borderRadius: BorderRadius.circular(12),
           child: CrtSurface(
             background: CrtTokens.background,

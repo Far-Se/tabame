@@ -65,6 +65,7 @@ import 'launcher/search/search_handler.dart';
 import 'launcher/search/search_utils.dart';
 import 'launcher/search/windows_search_handler.dart';
 import 'launcher_search_models.dart';
+import 'launcher/launcher_corners.dart';
 import 'launcher/launcher_design.dart';
 import 'launcher/widgets/capillary_surface.dart';
 import 'launcher/widgets/thermal_surface.dart';

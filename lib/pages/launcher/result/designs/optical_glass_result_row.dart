@@ -14,7 +14,7 @@ extension _OpticalGlassResultRow on LauncherResultRow {
                 borderRadius: BorderRadius.circular(14),
                 border:
                     Border.all(color: isSelected ? OpticalGlassTokens.accent : OpticalGlassTokens.border.withAlpha(85)),
-              ),
+              ).withLauncherCorners(),
               child: Row(children: <Widget>[
                 OpticalGlassSurface(
                     radius: 17,

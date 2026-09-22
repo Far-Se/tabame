@@ -33,7 +33,7 @@ extension _GlassResultRow on LauncherResultRow {
                       offset: const Offset(0, 4),
                     ),
                   ],
-                )
+                ).withLauncherCorners()
               : null,
           child: Row(
             children: <Widget>[
@@ -46,7 +46,7 @@ extension _GlassResultRow on LauncherResultRow {
                   borderRadius: BorderRadius.circular(12),
                   color: Colors.white.withAlpha(isDark ? (isSelected ? 24 : 14) : (isSelected ? 150 : 100)),
                   border: Border.all(color: Colors.white.withAlpha(isDark ? 34 : 130), width: 0.8),
-                ),
+                ).withLauncherCorners(),
                 child: icon,
               ),
               const SizedBox(width: 12),

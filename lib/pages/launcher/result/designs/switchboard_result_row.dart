@@ -20,7 +20,7 @@ extension _SwitchboardResultRow on LauncherResultRow {
             border: Border.all(
               color: isSelected ? accent.withAlpha(150) : Colors.transparent,
             ),
-          ),
+          ).withLauncherCorners(),
           child: Row(
             children: <Widget>[
               AnimatedContainer(
@@ -34,7 +34,7 @@ extension _SwitchboardResultRow on LauncherResultRow {
                   border: Border.all(
                     color: isSelected ? accent.withAlpha(110) : SwitchboardTokens.border(isDark),
                   ),
-                ),
+                ).withLauncherCorners(),
                 child: icon,
               ),
               const SizedBox(width: 10),

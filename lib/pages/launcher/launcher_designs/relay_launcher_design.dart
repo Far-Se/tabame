@@ -105,7 +105,7 @@ class _RelaySearchBarState extends State<_RelaySearchBar> with SingleTickerProvi
                   color: RelayTokens.raised(isDark, accent),
                   borderRadius: BorderRadius.circular(3),
                   border: Border.all(color: RelayTokens.border(isDark, accent)),
-                ),
+                ).withLauncherCorners(),
                 child: widget.content.dragHandle,
               ),
               const SizedBox(width: 10),
@@ -196,28 +196,25 @@ class RelayLauncherFrame extends StatelessWidget {
     final Color surface = Theme.of(context).colorScheme.surface;
     final Color accent = LauncherTheme.accentOf(context);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
+    return LauncherSurface(
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _relayOuterDecoration(surface, accent),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(Design.borderRadius),
-        child: Stack(
-          children: <Widget>[
-            if (Design.hasBackdrop) const StableBackdrop(),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(painter: _RelayBackplanePainter(color: accent, isDark: isDark)),
-              ),
+      child: Stack(
+        children: <Widget>[
+          if (Design.hasBackdrop) const StableBackdrop(),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: _RelayBackplanePainter(color: accent, isDark: isDark)),
             ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                child,
-                _RelayFooter(resultCount: resultCount, isDark: isDark),
-              ],
-            ),
-          ],
-        ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              child,
+              _RelayFooter(resultCount: resultCount, isDark: isDark),
+            ],
+          ),
+        ],
       ),
     );
   }

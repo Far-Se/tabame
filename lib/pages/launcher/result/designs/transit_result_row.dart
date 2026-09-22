@@ -30,7 +30,7 @@ extension _TransitResultRow on LauncherResultRow {
               decoration: BoxDecoration(
                 color: isSelected ? accent.withAlpha(26) : Colors.transparent,
                 borderRadius: BorderRadius.circular(10),
-              ),
+              ).withLauncherCorners(),
               child: Row(
                 children: <Widget>[
                   // Station marker — a stop dot that grows into an
