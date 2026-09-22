@@ -37,6 +37,7 @@ part 'designs/switchboard_result_row.dart';
 part 'designs/terminal_result_row.dart';
 part 'designs/terminal2_result_row.dart';
 part 'designs/thermal_result_row.dart';
+part 'designs/satin_result_row.dart';
 part 'designs/toon_result_row.dart';
 part 'designs/transit_result_row.dart';
 part 'designs/tui_result_row.dart';
@@ -105,6 +106,7 @@ class LauncherResultRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final LauncherDesign design = LauncherTheme.maybeOf(context)?.design ?? user.launcherDesign;
     return switch (design) {
+      LauncherDesign.satin => _buildSatin(context),
       LauncherDesign.thermal => _buildThermal(context),
       LauncherDesign.capillary => _buildCapillary(context),
       LauncherDesign.liquidMetal => _buildLiquidMetal(context),

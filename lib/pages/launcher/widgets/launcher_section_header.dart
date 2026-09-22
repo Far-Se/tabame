@@ -13,6 +13,11 @@ class _LauncherSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color accent = this.accent ?? LauncherTheme.accentOf(context);
     switch (design) {
+      case LauncherDesign.satin:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+          child: Text(label, style: SatinTokens.font(size: 11, color: SatinTokens.dim, weight: FontWeight.w600)),
+        );
       case LauncherDesign.thermal:
         return Padding(
           padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),

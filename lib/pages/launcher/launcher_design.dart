@@ -8,6 +8,31 @@ import '../../models/settings.dart';
 part 'launcher_design_config.dart';
 part 'launcher_palette.dart';
 
+/// Matte, low-chroma materials; user palette and font overrides remain active.
+abstract final class SatinTokens {
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: 0.72), background);
+  static Color get border => Color.alphaBlend(foreground.withValues(alpha: 0.16), background);
+
+  static TextStyle font({double size = 14, Color? color, FontWeight weight = FontWeight.w500, double spacing = 0}) =>
+      launcherTextStyle(GoogleFonts.barlow(
+        fontSize: size,
+        color: color ?? foreground,
+        fontWeight: weight,
+        letterSpacing: spacing,
+        height: 1.3,
+      ));
+
+  static TextStyle label() => launcherTextStyle(GoogleFonts.archivo(
+        fontSize: 10,
+        color: dim,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 1.8,
+      ));
+}
+
 abstract final class ThermalTokens {
   static Color get background => user.launcherThemeColors.background;
   static Color get foreground => user.launcherThemeColors.text;

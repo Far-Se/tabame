@@ -28,7 +28,6 @@ enum QuickMenuDesigns {
   cyber,
   tech,
   manga,
-  // impact,
   outrun,
   outrun2,
   winamp,
@@ -37,10 +36,8 @@ enum QuickMenuDesigns {
   notion,
   rundown,
   commandDeck,
-  // Persisted by index: new designs must remain append-only.
   switchboard,
   orbit,
-  // familyGuy,
   tui,
   crt,
   retro,
@@ -96,7 +93,8 @@ enum LauncherDesign {
   retro,
   toon,
   capillary,
-  thermal;
+  thermal,
+  satin;
 
   String get displayName => switch (this) {
         LauncherDesign.crt => 'CRT',
@@ -447,6 +445,30 @@ class DesignSettings {
           entryFontFamily: 'Encode Sans',
           entryFontWeight: 600,
           borderRadius: 7,
+        ),
+      ),
+      LauncherDesign.satin.displayName: LauncherDesignThemeSet(
+        lightTheme: defaultThemeColors(
+          background: const Color(0xFFF0EFE9),
+          textColor: const Color(0xFF303A36),
+          accentColor: const Color(0xFF667C6E),
+          gradientAlpha: 0,
+          uiFontFamily: 'Barlow',
+          uiFontWeight: 500,
+          entryFontFamily: 'Barlow',
+          entryFontWeight: 500,
+          borderRadius: 14,
+        ),
+        darkTheme: defaultThemeColors(
+          background: const Color(0xFF1C2320),
+          textColor: const Color(0xFFE7EBE3),
+          accentColor: const Color(0xFFA7BBA8),
+          gradientAlpha: 0,
+          uiFontFamily: 'Barlow',
+          uiFontWeight: 500,
+          entryFontFamily: 'Barlow',
+          entryFontWeight: 500,
+          borderRadius: 14,
         ),
       ),
       LauncherDesign.thermal.displayName: LauncherDesignThemeSet(

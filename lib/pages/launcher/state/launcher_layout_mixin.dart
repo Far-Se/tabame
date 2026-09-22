@@ -81,6 +81,7 @@ mixin _LauncherLayoutMixin on _LauncherStateMembersMixin {
       LauncherDesign.tech => TechLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.terminal => TerminalLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.terminal2 => Terminal2LauncherFrame(child: buildBody(), resultCount: resultCount),
+      LauncherDesign.satin => SatinLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.thermal => ThermalLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.toon => ToonLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.transit => TransitLauncherFrame(child: buildBody(), resultCount: resultCount),

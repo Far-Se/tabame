@@ -300,7 +300,7 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
                               hintText: 'Search actions...',
                               hintStyle: tokens.text(
                                 fontSize: Design.baseFontSize + 3,
-                                color: tokens.design == LauncherDesign.thermal
+                                color: tokens.design == LauncherDesign.thermal || tokens.design == LauncherDesign.satin
                                     ? tokens.dim
                                     : tokens.onSurface.withAlpha(70),
                               ),

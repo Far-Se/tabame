@@ -9,6 +9,7 @@ import 'launcher_design.dart';
 import 'launcher_design_builder.dart';
 import 'widgets/capillary_surface.dart';
 import 'widgets/thermal_surface.dart';
+import 'widgets/satin_surface.dart';
 import 'widgets/liquid_metal_surface.dart';
 import 'widgets/crt_surface.dart';
 
@@ -64,6 +65,12 @@ class LauncherModalTokens {
     double? height,
   }) {
     return switch (design) {
+      LauncherDesign.satin => SatinTokens.font(
+          size: fontSize ?? 14,
+          color: color ?? onSurface,
+          weight: fontWeight ?? FontWeight.w500,
+          spacing: letterSpacing ?? 0,
+        ).copyWith(height: height),
       LauncherDesign.thermal => ThermalTokens.font(
           size: fontSize ?? 14,
           color: color ?? onSurface,
@@ -187,6 +194,10 @@ class LauncherModalFrame extends StatelessWidget {
 
     core = _applyBackdropEffect(core);
 
+    if (design == LauncherDesign.satin) {
+      core = SatinSurface(radius: tokens.frameRadius, child: core);
+    }
+
     if (design == LauncherDesign.thermal) {
       core = ThermalSurface(radius: tokens.frameRadius, child: core);
     }
@@ -275,6 +286,7 @@ class LauncherModalFrame extends StatelessWidget {
 
   Color _surfaceColor(BuildContext context) {
     return switch (design) {
+      LauncherDesign.satin => Colors.transparent,
       LauncherDesign.thermal => Colors.transparent,
       LauncherDesign.capillary => Colors.transparent,
       LauncherDesign.opticalGlass => Colors.transparent,

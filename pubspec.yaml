@@ -83,6 +83,7 @@ flutter:
     - resources/shaders/toon.frag
     - resources/shaders/capillary.frag
     - resources/shaders/thermal.frag
+    - resources/shaders/satin.frag
 
   assets:
     # - resources/logo.png

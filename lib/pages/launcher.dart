@@ -852,15 +852,17 @@ class LauncherState extends State<Launcher>
               launcherTheme.searchHint ??
               (isTerminal2 ? 'type a command or search the system...' : 'Search applications, files, bookmarks...'),
           hintStyle: TextStyle(
-              color: _design == LauncherDesign.thermal
-                  ? ThermalTokens.dim
-                  : _design == LauncherDesign.capillary
-                      ? CapillaryTokens.resolve(isDark).dim
-                      : isOmarchy
-                          ? OmarchyTokens.dim
-                          : isRaycast
-                              ? RaycastTokens.muted(isDark)
-                              : onSurface.withAlpha(70)),
+              color: _design == LauncherDesign.satin
+                  ? SatinTokens.dim
+                  : _design == LauncherDesign.thermal
+                      ? ThermalTokens.dim
+                      : _design == LauncherDesign.capillary
+                          ? CapillaryTokens.resolve(isDark).dim
+                          : isOmarchy
+                              ? OmarchyTokens.dim
+                              : isRaycast
+                                  ? RaycastTokens.muted(isDark)
+                                  : onSurface.withAlpha(70)),
           border: InputBorder.none,
           isDense: true,
           contentPadding: EdgeInsets.only(

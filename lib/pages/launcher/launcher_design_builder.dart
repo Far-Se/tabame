@@ -16,6 +16,7 @@ import 'widgets/capillary_surface.dart';
 import 'widgets/crt_surface.dart';
 import 'widgets/liquid_metal_surface.dart';
 import 'widgets/thermal_surface.dart';
+import 'widgets/satin_surface.dart';
 
 part 'launcher_designs/anime_launcher_design.dart';
 part 'launcher_designs/aurora_launcher_design.dart';
@@ -48,6 +49,7 @@ part 'launcher_designs/tech_launcher_design.dart';
 part 'launcher_designs/terminal2_launcher_design.dart';
 part 'launcher_designs/terminal_launcher_design.dart';
 part 'launcher_designs/thermal_launcher_design.dart';
+part 'launcher_designs/satin_launcher_design.dart';
 part 'launcher_designs/toon_launcher_design.dart';
 part 'launcher_designs/transit_launcher_design.dart';
 part 'launcher_designs/tui_launcher_design.dart';
@@ -93,6 +95,7 @@ extension LauncherDesignBuilder on LauncherDesign {
         LauncherDesign.tech => _techOuterDecoration(surface, accent),
         LauncherDesign.terminal => _terminalOuterDecoration(surface, accent),
         LauncherDesign.terminal2 => _terminal2OuterDecoration(surface),
+        LauncherDesign.satin => _satinOuterDecoration(),
         LauncherDesign.thermal => _thermalOuterDecoration(),
         LauncherDesign.toon => _toonOuterDecoration(),
         LauncherDesign.transit => _transitOuterDecoration(surface, accent),
@@ -146,6 +149,7 @@ extension LauncherDesignBuilder on LauncherDesign {
       LauncherDesign.tech => _TechLauncherSearchBar(content),
       LauncherDesign.terminal => _TerminalSearchBar(content),
       LauncherDesign.terminal2 => _Terminal2SearchBar(content),
+      LauncherDesign.satin => _SatinSearchBar(content),
       LauncherDesign.thermal => _ThermalSearchBar(content),
       LauncherDesign.toon => _ToonSearchBar(content),
       LauncherDesign.transit => _TransitSearchBar(content),

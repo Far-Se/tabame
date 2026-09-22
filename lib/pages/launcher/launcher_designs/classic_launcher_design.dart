@@ -36,7 +36,8 @@ class _ClassicSearchBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: surface.withAlpha(100),
-        borderRadius: BorderRadius.circular(14),
+        // borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(Design.borderRadius),
         border: Border.all(color: accent.withAlpha(32)),
       ),
       child: Row(
