@@ -66,7 +66,10 @@ class RadiantLauncherFrame extends StatelessWidget {
                     scrollDirection: Axis.horizontal,
                     reverse: true,
                     child: Row(children: <Widget>[
-                      Text('$resultCount ${resultCount == 1 ? 'result' : 'results'}',
+                      Text(
+                          Globals.isLauncherPluginActive
+                              ? "PLUGIN"
+                              : '$resultCount ${resultCount == 1 ? 'result' : 'results'}',
                           style: RadiantTokens.font(size: 11, color: RadiantTokens.dim)),
                       const SizedBox(width: 12),
                       _hint('↑ ↓', 'Navigate'),

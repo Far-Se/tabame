@@ -13,6 +13,18 @@ class _LauncherSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color accent = this.accent ?? LauncherTheme.accentOf(context);
     switch (design) {
+      case LauncherDesign.ivoryGrove:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 5),
+          child: Row(children: <Widget>[
+            Icon(Icons.eco_outlined, size: 13, color: accent),
+            const SizedBox(width: 7),
+            Expanded(
+                child: Text(label,
+                    overflow: TextOverflow.ellipsis,
+                    style: IvoryGroveTokens.font(size: Design.baseFontSize + 1, weight: FontWeight.w700))),
+          ]),
+        );
       case LauncherDesign.ukiyoe:
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),

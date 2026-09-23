@@ -66,7 +66,7 @@ class PhosphorLauncherFrame extends StatelessWidget {
                                   _hint('Ctrl + ↵ ', 'Open Folder'),
                                 ]))),
                         const SizedBox(width: 12),
-                        Text('$resultCount results',
+                        Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount results',
                             style: PhosphorTokens.font(size: 12, color: PhosphorTokens.accent)),
                       ]))),
         ]));

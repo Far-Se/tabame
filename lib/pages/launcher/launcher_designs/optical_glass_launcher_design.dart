@@ -104,7 +104,7 @@ class OpticalGlassLauncherFrame extends StatelessWidget {
                                 _hint('Ctrl P', 'Preview'),
                               ]))),
                       const SizedBox(width: 8),
-                      Text('$resultCount results',
+                      Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount results',
                           style: OpticalGlassTokens.font(size: 11, color: OpticalGlassTokens.dim)),
                     ]),
                   ),

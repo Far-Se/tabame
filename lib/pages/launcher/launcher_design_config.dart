@@ -32,6 +32,16 @@ class LauncherDesignConfig {
   final bool outlinedControls;
 
   factory LauncherDesignConfig.forDesign(LauncherDesign design) => switch (design) {
+        LauncherDesign.ivoryGrove => const LauncherDesignConfig(
+            searchFontSize: 17,
+            searchFontWeight: FontWeight.w400,
+            searchIconUsesOnSurface: true,
+            searchHint: 'Search apps, files, and commands...',
+            frameRadius: 20,
+            controlRadius: 8,
+            resultsListPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            usesDesignFont: true,
+          ),
         LauncherDesign.ukiyoe => const LauncherDesignConfig(
             searchFontSize: 22,
             searchFontWeight: FontWeight.w700,

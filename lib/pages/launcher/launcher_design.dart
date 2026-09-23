@@ -8,6 +8,29 @@ import '../../models/settings.dart';
 part 'launcher_design_config.dart';
 part 'launcher_palette.dart';
 
+/// Warm ivory, pressed foliage, and muted gold, derived from the live palette.
+abstract final class IvoryGroveTokens {
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: 0.72), background);
+  static Color get border => Color.alphaBlend(foreground.withValues(alpha: 0.14), background);
+  static Color get panel => Color.alphaBlend(foreground.withValues(alpha: 0.025), background);
+  static Color get highlight => Color.alphaBlend(accent.withValues(alpha: isDark ? 0.20 : 0.24), background);
+  static Color get edge =>
+      Color.alphaBlend((isDark ? foreground : Colors.white).withValues(alpha: isDark ? 0.22 : 0.65), background);
+
+  static TextStyle font({double size = 14, Color? color, FontWeight weight = FontWeight.w400, double spacing = 0}) =>
+      launcherTextStyle(GoogleFonts.mulish(
+        fontSize: size,
+        color: color ?? foreground,
+        fontWeight: weight,
+        letterSpacing: spacing,
+        height: 1.3,
+      ));
+}
+
 /// Paper, indigo and a small vermilion seal, with user palette overrides intact.
 abstract final class UkiyoeTokens {
   static Color get background => user.launcherThemeColors.background;

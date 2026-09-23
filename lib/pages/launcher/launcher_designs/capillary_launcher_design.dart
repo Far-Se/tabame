@@ -83,7 +83,10 @@ class CapillaryLauncherFrame extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Text('$resultCount ${resultCount == 1 ? 'result' : 'results'}',
+                  Text(
+                      Globals.isLauncherPluginActive
+                          ? "PLUGIN"
+                          : '$resultCount ${resultCount == 1 ? 'result' : 'results'}',
                       style: capillary.font(size: 11, color: capillary.dim)),
                 ]),
               ),

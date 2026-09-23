@@ -75,7 +75,8 @@ class StrataLauncherFrame extends StatelessWidget {
                       const Spacer(),
                       const Icon(Icons.circle, size: 8, color: Color(0xFF80F454)),
                       const SizedBox(width: 8),
-                      Text('$resultCount results', style: StrataTokens.font(size: 11, color: StrataTokens.dim)),
+                      Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount results',
+                          style: StrataTokens.font(size: 11, color: StrataTokens.dim)),
                     ]))),
       ]),
     );

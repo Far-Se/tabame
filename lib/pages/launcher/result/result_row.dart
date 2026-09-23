@@ -16,6 +16,7 @@ import '../widgets/liquid_metal_surface.dart';
 import 'inline_markup.dart';
 
 part 'designs/aurora_result_row.dart';
+part 'designs/ivory_grove_result_row.dart';
 part 'designs/badges_result_row.dart';
 part 'designs/blueprint_result_row.dart';
 part 'designs/capillary_result_row.dart';
@@ -112,6 +113,7 @@ class LauncherResultRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final LauncherDesign design = LauncherTheme.maybeOf(context)?.design ?? user.launcherDesign;
     return switch (design) {
+      LauncherDesign.ivoryGrove => _buildIvoryGrove(context),
       LauncherDesign.ukiyoe => _buildUkiyoe(context),
       LauncherDesign.radiant => _buildRadiant(context),
       LauncherDesign.nouveau => _buildNouveau(context),

@@ -39,6 +39,13 @@ class LauncherPalette {
     final ThemeColors colors = user.launcherThemeColors;
     final CapillaryTokens capillary = CapillaryTokens.resolve(isDark);
     return switch (design) {
+      LauncherDesign.ivoryGrove => LauncherPalette._(
+          surface: IvoryGroveTokens.background,
+          accent: IvoryGroveTokens.accent,
+          onSurface: IvoryGroveTokens.foreground,
+          dim: IvoryGroveTokens.dim,
+          highlightColor: IvoryGroveTokens.highlight,
+        ),
       LauncherDesign.ukiyoe => LauncherPalette._(
           surface: UkiyoeTokens.background,
           accent: UkiyoeTokens.accent,

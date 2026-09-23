@@ -14,6 +14,7 @@ import 'widgets/satin_surface.dart';
 import 'widgets/ukiyoe_surface.dart';
 import 'widgets/liquid_metal_surface.dart';
 import 'widgets/crt_surface.dart';
+import 'widgets/ivory_grove_surface.dart';
 
 /// Presentation tokens for the actions modal. The route can live outside
 /// LauncherTheme, so it uses the same palette resolver as the launcher page.
@@ -67,6 +68,12 @@ class LauncherModalTokens {
     double? height,
   }) {
     return switch (design) {
+      LauncherDesign.ivoryGrove => IvoryGroveTokens.font(
+          size: fontSize ?? 14,
+          color: color ?? onSurface,
+          weight: fontWeight ?? FontWeight.w400,
+          spacing: letterSpacing ?? 0,
+        ).copyWith(height: height),
       LauncherDesign.ukiyoe => UkiyoeTokens.font(
           size: fontSize ?? 14,
           color: color ?? onSurface,
@@ -212,6 +219,10 @@ class LauncherModalFrame extends StatelessWidget {
 
     core = _applyBackdropEffect(core);
 
+    if (design == LauncherDesign.ivoryGrove) {
+      core = IvoryGroveSurface(ink: tokens.onSurface, child: core);
+    }
+
     if (design == LauncherDesign.ukiyoe) {
       core = UkiyoeSurface(radius: tokens.frameRadius, child: core);
     }
@@ -304,6 +315,7 @@ class LauncherModalFrame extends StatelessWidget {
 
   Color _surfaceColor(BuildContext context) {
     return switch (design) {
+      LauncherDesign.ivoryGrove => Colors.transparent,
       LauncherDesign.ukiyoe => Colors.transparent,
       LauncherDesign.radiant => tokens.surface,
       LauncherDesign.nouveau => tokens.surface,
@@ -560,6 +572,11 @@ class LauncherModalHeader extends StatelessWidget {
   Decoration _chipDecoration() {
     final Color accent = tokens.accent;
     return switch (tokens.design) {
+      LauncherDesign.ivoryGrove => BoxDecoration(
+          color: Color.alphaBlend(accent.withValues(alpha: 0.20), tokens.surface),
+          borderRadius: BorderRadius.circular(tokens.controlRadius),
+          border: Border.all(color: IvoryGroveTokens.edge),
+        ).withLauncherCorners(),
       LauncherDesign.command => BoxDecoration(
           color: accent.withAlpha(14),
           borderRadius: BorderRadius.circular(6),
@@ -758,6 +775,7 @@ class LauncherModalFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color lineColor = switch (tokens.design) {
+      LauncherDesign.ivoryGrove => IvoryGroveTokens.border,
       LauncherDesign.terminal => tokens.accent.withAlpha(40),
       LauncherDesign.terminal2 => tokens.dim.withAlpha(72),
       LauncherDesign.retro => tokens.accent.withAlpha(100),

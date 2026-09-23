@@ -28,6 +28,19 @@ mixin _LauncherLayoutMixin on _LauncherStateMembersMixin {
             Flexible(
                 fit: FlexFit.loose,
                 child: Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), child: resultsContent))
+          else if (_design == LauncherDesign.ivoryGrove)
+            Flexible(
+              fit: FlexFit.loose,
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                decoration: BoxDecoration(
+                  color: IvoryGroveTokens.panel.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: IvoryGroveTokens.border),
+                ).withLauncherCorners(),
+                child: resultsContent,
+              ),
+            )
           else if (_design == LauncherDesign.strata)
             Flexible(
                 fit: FlexFit.loose,
@@ -52,6 +65,7 @@ mixin _LauncherLayoutMixin on _LauncherStateMembersMixin {
     }
 
     return switch (_design) {
+      LauncherDesign.ivoryGrove => IvoryGroveLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.anime => AnimeLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.aurora => AuroraLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.blueprint => BlueprintLauncherFrame(child: buildBody(), resultCount: resultCount),

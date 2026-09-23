@@ -20,6 +20,9 @@ import 'widgets/thermal_surface.dart';
 import 'widgets/satin_surface.dart';
 import 'widgets/radiant_surface.dart';
 import 'widgets/ukiyoe_surface.dart';
+import 'widgets/ivory_grove_surface.dart';
+
+part 'launcher_designs/ivory_grove_launcher_design.dart';
 
 part 'launcher_designs/anime_launcher_design.dart';
 part 'launcher_designs/aurora_launcher_design.dart';
@@ -71,6 +74,7 @@ part 'widgets/launcher_section_header.dart';
 extension LauncherDesignBuilder on LauncherDesign {
   /// Shared by launcher frames and action dialogs.
   BoxDecoration outerDecoration({required Color surface, required Color accent}) => switch (this) {
+        LauncherDesign.ivoryGrove => _ivoryGroveOuterDecoration(surface, accent),
         LauncherDesign.anime => _animeOuterDecoration(surface, accent),
         LauncherDesign.aurora => _auroraOuterDecoration(),
         LauncherDesign.blueprint => _blueprintOuterDecoration(surface, accent),
@@ -128,6 +132,7 @@ extension LauncherDesignBuilder on LauncherDesign {
       isSearching: isSearching,
     );
     return switch (this) {
+      LauncherDesign.ivoryGrove => _IvoryGroveSearchBar(content),
       LauncherDesign.anime => _AnimeSearchBar(content),
       LauncherDesign.aurora => _AuroraSearchBar(content),
       LauncherDesign.blueprint => _BlueprintSearchBar(content),

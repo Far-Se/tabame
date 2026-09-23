@@ -97,9 +97,11 @@ enum LauncherDesign {
   satin,
   nouveau,
   radiant,
-  ukiyoe;
+  ukiyoe,
+  ivoryGrove;
 
   String get displayName => switch (this) {
+        LauncherDesign.ivoryGrove => 'Ivory Grove',
         LauncherDesign.ukiyoe => 'Ukiyo-e',
         LauncherDesign.crt => 'CRT',
         LauncherDesign.retro => 'Retro',
@@ -156,6 +158,30 @@ class DesignSettings {
     }
 
     return <String, LauncherDesignThemeSet>{
+      LauncherDesign.ivoryGrove.displayName: LauncherDesignThemeSet(
+        lightTheme: defaultThemeColors(
+          background: const Color(0xFFF0EADF),
+          textColor: const Color(0xFF39362F),
+          accentColor: const Color(0xFFAC8845),
+          gradientAlpha: 0,
+          uiFontFamily: 'Mulish',
+          entryFontFamily: 'Mulish',
+          entryFontWeight: 600,
+          borderRadius: 20,
+          baseFontSize: 10,
+        ),
+        darkTheme: defaultThemeColors(
+          background: const Color(0xFF292720),
+          textColor: const Color(0xFFF0E9DC),
+          accentColor: const Color(0xFFD0B477),
+          gradientAlpha: 0,
+          uiFontFamily: 'Mulish',
+          entryFontFamily: 'Mulish',
+          entryFontWeight: 600,
+          borderRadius: 20,
+          baseFontSize: 10,
+        ),
+      ),
       LauncherDesign.classic.displayName: LauncherDesignThemeSet(
         lightTheme: defaultThemeColors(
           background: const Color(0xffD5E0FB),

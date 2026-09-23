@@ -59,7 +59,10 @@ class SatinLauncherFrame extends StatelessWidget {
               child: Row(children: <Widget>[
                 Text('SATIN', style: SatinTokens.label()),
                 const SizedBox(width: 12),
-                Text('$resultCount ${resultCount == 1 ? 'result' : 'results'}',
+                Text(
+                    Globals.isLauncherPluginActive
+                        ? "PLUGIN"
+                        : '$resultCount ${resultCount == 1 ? 'result' : 'results'}',
                     style: SatinTokens.font(size: 11, color: SatinTokens.dim)),
                 const SizedBox(width: 16),
                 Expanded(

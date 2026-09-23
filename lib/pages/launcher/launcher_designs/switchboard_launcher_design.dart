@@ -226,7 +226,7 @@ class _SwitchboardFooter extends StatelessWidget {
           Container(width: 5, height: 5, decoration: BoxDecoration(color: accent, shape: BoxShape.circle)),
           const SizedBox(width: 7),
           Text(
-            resultCount == 1 ? '1 route' : '$resultCount routes',
+            Globals.isLauncherPluginActive ? "PLUGIN" : (resultCount == 1 ? '1 route' : '$resultCount routes'),
             style: SwitchboardTokens.body(fontSize: Design.baseFontSize - 1, color: dim),
           ),
         ],

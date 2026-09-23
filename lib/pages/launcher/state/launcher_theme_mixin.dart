@@ -3,6 +3,7 @@ part of '../../launcher.dart';
 mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
   ThemeData _buildDesignTheme({required ThemeData baseTheme, required LauncherPalette palette}) {
     final TextTheme textTheme = switch (_design) {
+      LauncherDesign.ivoryGrove => GoogleFonts.mulishTextTheme(baseTheme.textTheme),
       LauncherDesign.ukiyoe => GoogleFonts.zenKakuGothicNewTextTheme(baseTheme.textTheme),
       LauncherDesign.radiant => GoogleFonts.mulishTextTheme(baseTheme.textTheme),
       LauncherDesign.nouveau => GoogleFonts.commissionerTextTheme(baseTheme.textTheme),

@@ -109,7 +109,11 @@ class OmarchyLauncherFrame extends StatelessWidget {
               runSpacing: 6,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: <Widget>[
-                Text('$resultCount ${resultCount == 1 ? 'result' : 'results'}', style: label.copyWith(color: accent)),
+                Text(
+                    Globals.isLauncherPluginActive
+                        ? "PLUGIN"
+                        : '$resultCount ${resultCount == 1 ? 'result' : 'results'}',
+                    style: label.copyWith(color: accent)),
                 if (constraints.maxWidth > 460) Text('↑↓ move', style: label),
                 Text('↵ open', style: label),
                 Text('ctrl+k actions', style: label),

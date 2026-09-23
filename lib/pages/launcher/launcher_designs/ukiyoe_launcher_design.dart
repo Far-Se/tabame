@@ -64,7 +64,10 @@ class UkiyoeLauncherFrame extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 11),
               decoration: BoxDecoration(border: Border(top: BorderSide(color: UkiyoeTokens.border))),
               child: Row(children: <Widget>[
-                Text('$resultCount ${resultCount == 1 ? 'result' : 'results'}',
+                Text(
+                    Globals.isLauncherPluginActive
+                        ? "PLUGIN"
+                        : '$resultCount ${resultCount == 1 ? 'result' : 'results'}',
                     style: UkiyoeTokens.font(size: 11, color: UkiyoeTokens.dim)),
                 const SizedBox(width: 20),
                 Expanded(

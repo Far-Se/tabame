@@ -75,7 +75,8 @@ class ThermalLauncherFrame extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Text('$resultCount ${resultCount == 1 ? 'result' : 'results'}',
+              Text(
+                  Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount ${resultCount == 1 ? 'result' : 'results'}',
                   style: ThermalTokens.font(size: 11, color: ThermalTokens.dim)),
               const SizedBox(width: 12),
               Text('THERMAL', style: ThermalTokens.label()),
