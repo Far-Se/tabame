@@ -11,6 +11,7 @@ import 'launcher_design_builder.dart';
 import 'widgets/capillary_surface.dart';
 import 'widgets/thermal_surface.dart';
 import 'widgets/satin_surface.dart';
+import 'widgets/ukiyoe_surface.dart';
 import 'widgets/liquid_metal_surface.dart';
 import 'widgets/crt_surface.dart';
 
@@ -66,6 +67,12 @@ class LauncherModalTokens {
     double? height,
   }) {
     return switch (design) {
+      LauncherDesign.ukiyoe => UkiyoeTokens.font(
+          size: fontSize ?? 14,
+          color: color ?? onSurface,
+          weight: fontWeight ?? FontWeight.w500,
+          spacing: letterSpacing ?? 0,
+        ).copyWith(height: height),
       LauncherDesign.radiant => RadiantTokens.font(
           size: fontSize ?? 14,
           color: color ?? onSurface,
@@ -205,6 +212,10 @@ class LauncherModalFrame extends StatelessWidget {
 
     core = _applyBackdropEffect(core);
 
+    if (design == LauncherDesign.ukiyoe) {
+      core = UkiyoeSurface(radius: tokens.frameRadius, child: core);
+    }
+
     if (design == LauncherDesign.satin) {
       core = SatinSurface(radius: tokens.frameRadius, child: core);
     }
@@ -293,6 +304,7 @@ class LauncherModalFrame extends StatelessWidget {
 
   Color _surfaceColor(BuildContext context) {
     return switch (design) {
+      LauncherDesign.ukiyoe => Colors.transparent,
       LauncherDesign.radiant => tokens.surface,
       LauncherDesign.nouveau => tokens.surface,
       LauncherDesign.satin => Colors.transparent,

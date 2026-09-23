@@ -1267,7 +1267,7 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
 
     LauncherDesign? findDesign(String name) {
       for (final LauncherDesign d in LauncherDesign.values) {
-        if (d.name.toLowerCase() == name) return d;
+        if (d.name.toLowerCase() == name || d.displayName.toLowerCase() == name) return d;
       }
       return null;
     }
@@ -1294,7 +1294,7 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
         return <LauncherSearchResultItem>[
           LauncherSearchResultItem.quickAction(_buildFunctionAction(
             id: 'function-design-apply:${matched.name}',
-            title: 'Switch to ${matched.name[0].toUpperCase()}${matched.name.substring(1)} design',
+            title: 'Switch to ${matched.displayName} design',
             subtitle: matched == _design ? 'Currently active' : 'Launcher design',
             icon: Icons.palette_outlined,
             searchTerms: <String>['design', matched.name],
@@ -1308,7 +1308,7 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
       final bool isActive = d == _design;
       return LauncherSearchResultItem.quickAction(_buildFunctionAction(
         id: 'function-design:${d.name}',
-        title: '${d.name[0].toUpperCase()}${d.name.substring(1)}',
+        title: d.displayName,
         subtitle: isActive ? 'Currently active' : 'Switch to this design',
         icon: isActive ? Icons.check_circle_outline_rounded : Icons.palette_outlined,
         searchTerms: <String>['design', d.name],

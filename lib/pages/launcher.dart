@@ -853,6 +853,7 @@ class LauncherState extends State<Launcher>
               (isTerminal2 ? 'type a command or search the system...' : 'Search applications, files, bookmarks...'),
           hintStyle: TextStyle(
             color: switch (_design) {
+              LauncherDesign.ukiyoe => UkiyoeTokens.dim,
               LauncherDesign.radiant => RadiantTokens.dim,
               LauncherDesign.nouveau => NouveauTokens.dim,
               LauncherDesign.satin => SatinTokens.dim,

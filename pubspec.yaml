@@ -85,6 +85,7 @@ flutter:
     - resources/shaders/thermal.frag
     - resources/shaders/satin.frag
     - resources/shaders/radiant.frag
+    - resources/shaders/ukiyoe.frag
 
   assets:
     - pubspec.yaml

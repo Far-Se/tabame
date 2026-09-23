@@ -13,6 +13,15 @@ class _LauncherSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color accent = this.accent ?? LauncherTheme.accentOf(context);
     switch (design) {
+      case LauncherDesign.ukiyoe:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+          child: Row(children: <Widget>[
+            Text(label, style: UkiyoeTokens.font(size: 11, color: UkiyoeTokens.dim, spacing: 1.4)),
+            const SizedBox(width: 12),
+            Expanded(child: Divider(height: 1, color: UkiyoeTokens.border)),
+          ]),
+        );
       case LauncherDesign.radiant:
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),

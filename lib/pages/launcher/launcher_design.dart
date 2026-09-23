@@ -8,6 +8,34 @@ import '../../models/settings.dart';
 part 'launcher_design_config.dart';
 part 'launcher_palette.dart';
 
+/// Paper, indigo and a small vermilion seal, with user palette overrides intact.
+abstract final class UkiyoeTokens {
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: 0.74), background);
+  static Color get border => Color.alphaBlend(accent.withValues(alpha: 0.35), background);
+  static Color get vermilion => isDark ? const Color(0xFFD18A70) : const Color(0xFFAD4737);
+
+  static TextStyle font({double size = 14, Color? color, FontWeight weight = FontWeight.w500, double spacing = 0}) =>
+      launcherTextStyle(GoogleFonts.zenKakuGothicNew(
+        fontSize: size,
+        color: color ?? foreground,
+        fontWeight: weight,
+        letterSpacing: spacing,
+        height: 1.3,
+      ));
+
+  static TextStyle title() => launcherTextStyle(GoogleFonts.shipporiMincho(
+        fontSize: 23,
+        fontWeight: FontWeight.w600,
+        color: foreground,
+        height: 1.15,
+        letterSpacing: 0.5,
+      ));
+}
+
 /// Electric light on a midnight canvas. Both default modes use the reference's
 /// dark palette; custom launcher colors and fonts still apply.
 abstract final class RadiantTokens {

@@ -96,9 +96,11 @@ enum LauncherDesign {
   thermal,
   satin,
   nouveau,
-  radiant;
+  radiant,
+  ukiyoe;
 
   String get displayName => switch (this) {
+        LauncherDesign.ukiyoe => 'Ukiyo-e',
         LauncherDesign.crt => 'CRT',
         LauncherDesign.retro => 'Retro',
         LauncherDesign.liquidMetal => 'Liquid Metal',
@@ -447,6 +449,28 @@ class DesignSettings {
           entryFontFamily: 'Encode Sans',
           entryFontWeight: 600,
           borderRadius: 7,
+        ),
+      ),
+      LauncherDesign.ukiyoe.displayName: LauncherDesignThemeSet(
+        lightTheme: defaultThemeColors(
+          background: const Color(0xFFF2E6CB),
+          textColor: const Color(0xFF243C48),
+          accentColor: const Color(0xFF244F6A),
+          gradientAlpha: 0,
+          uiFontFamily: 'Zen Kaku Gothic New',
+          entryFontFamily: 'Zen Kaku Gothic New',
+          entryFontWeight: 500,
+          borderRadius: 6,
+        ),
+        darkTheme: defaultThemeColors(
+          background: const Color(0xFF1D2C35),
+          textColor: const Color(0xFFE9DCC0),
+          accentColor: const Color(0xFF8DAFBE),
+          gradientAlpha: 0,
+          uiFontFamily: 'Zen Kaku Gothic New',
+          entryFontFamily: 'Zen Kaku Gothic New',
+          entryFontWeight: 500,
+          borderRadius: 6,
         ),
       ),
       LauncherDesign.radiant.displayName: LauncherDesignThemeSet(
