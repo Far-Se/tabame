@@ -382,6 +382,9 @@ Notes:
 | `tab`              | **Tab** pressed                                                                                                  | `id`: the highlighted item's id (`""` if none); `rev` — typically answered with a `setQuery` command                                                                                                                      |
 | `close`            | When the plugin is being shut down                                                                               | —                                                                                                                                                                                                                         |
 
+Retained plugins also receive `{"type":"detach"}` when the launcher closes and
+`{"type":"attach"}` when it reopens. The host sends a fresh `query` after `attach`.
+
 Example stdin lines:
 
 ```json
@@ -441,6 +444,13 @@ Instead of shelling out to `clip`/`start` yourself, ask the host:
 | `background`       | `timeout`?                                               | Requests shutdown grace: after the launcher hides / the user leaves, the process is **not killed** for up to `timeout` seconds (default 30, max 300) so it can finish work. While detached it can still use `storage` and `notify`, but frames and UI commands are dropped. Send it **before** `hide`.                                                                                               |
 | `oauth`            | `authorizationUrl`, `requestId`?, `timeout`?             | Starts a host-owned ephemeral loopback callback listener and opens the authorization URL. `authorizationUrl` **must** include the literal `{redirectUri}` placeholder; Tabame URL-encodes and substitutes it. It replies with `{"type":"oauth",...}`. Exchange the returned code yourself and store tokens using `storage` with `secret: true`.                                                      |
 | `browserBridge`    | `op`, `requestId`, `method`?, `params`?, `timeoutMs`?    | Uses Tabame's optional persistent Chromium connector. `op:"status"` returns enabled/running/connected state plus pairing metadata. `op:"request"` forwards an allowlisted browser method—including generic `javascript.execute`—and replies with `{"type":"browserBridge","requestId","ok","result"}` (or `error`). Connection and tab-change events arrive as unsolicited `browserBridge` messages. |
+
+The `sound` command plays a Tabame sound (`{"type":"command","command":"sound","name":"beep"}`).
+It works while a retained process is detached. `background` also accepts
+`{"retain":true}` to keep a plugin process alive and reattach it on the next
+launch, or `{"retain":false}` to return to ordinary shutdown. Retained processes
+can use `storage`, `notify`, and `sound` while detached; frames and UI commands
+are dropped. They stop on natural exit, plugin disable, or Tabame exit.
 
 Example stdout lines:
 
@@ -532,7 +542,11 @@ slow response to "rom" from overwriting the fresh results for "rome".
 3. User moves the selection → you get `select` events.
 4. User presses Enter or picks a Ctrl+K action → you get `action`.
 5. User leaves the keyword / presses Esc / closes the launcher → you get `close`,
-   then the process is terminated (~2s grace period, then killed).
+   then the process is terminated (~2s grace period, then killed). A plugin that
+   requested `background` with `retain:true` receives `detach` instead; it gets
+   `attach` and `query` when reopened, or `close` when disabled or Tabame exits.
+   A disable sends `close` with `"reason":"disabled"`, so a timer can pause
+   and persist its remaining duration before exiting.
 
 **Handle shutdown:** exit on `close`, and also exit when stdin reaches EOF.
 

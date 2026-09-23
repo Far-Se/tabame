@@ -17,6 +17,10 @@ import 'plugin_manifest.dart';
 abstract final class PluginRegistry {
   static const String shortcutSettingKey = 'pluginShortcut';
 
+  /// Hosts use this to stop retained processes when a plugin is disabled or removed.
+  static final StreamController<List<PluginManifest>> _changes = StreamController<List<PluginManifest>>.broadcast();
+  static Stream<List<PluginManifest>> get changes => _changes.stream;
+
   static List<PluginManifest> _manifests = <PluginManifest>[];
   static Map<String, PluginManifest> _byKeyword = <String, PluginManifest>{};
   static bool _loaded = false;
@@ -90,6 +94,7 @@ abstract final class PluginRegistry {
       if (manifest.enabled) _byKeyword.putIfAbsent(manifest.keywordLower, () => manifest);
     }
     _loaded = true;
+    _changes.add(_manifests);
   }
 
   /// Renames later duplicate keywords and persists the correction to their

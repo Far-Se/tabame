@@ -328,6 +328,24 @@
       }
     },
     {
+      "id": "pomodoro",
+      "name": "Pomodoro",
+      "category": "Productivity",
+      "keyword": "pomodoro",
+      "description": "A compact focus and break timer with daily Pomodoro counts.",
+      "icon": "timer",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/pomodoro",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/pomodoro/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/pomodoro/main.py",
+        "controller.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/pomodoro/controller.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/pomodoro/README.md"
+      }
+    },
+    {
       "id": "crypto",
       "name": "Crypto",
       "category": "Finance",

@@ -1,0 +1,13 @@
+{
+  "id": "pomodoro",
+  "name": "Pomodoro",
+  "category": "Productivity",
+  "description": "A compact focus and break timer with daily Pomodoro counts.",
+  "keyword": "pomodoro",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "icon": "timer",
+  "enabled": true,
+  "dev": false
+}

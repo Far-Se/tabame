@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:just_audio/just_audio.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../logic/error_handler.dart';
@@ -14,7 +15,18 @@ import '../../../services/notification_coordinator.dart';
 import 'plugin_debug.dart';
 import 'plugin_manifest.dart';
 import 'plugin_protocol.dart';
+import 'plugin_registry.dart';
 import 'plugin_storage.dart';
+
+class _RetainedPluginProcess {
+  const _RetainedPluginProcess(this.process, this.stdoutSub, this.stderrSub, this.stdoutDone, this.stderrDone);
+
+  final Process process;
+  final StreamSubscription<String>? stdoutSub;
+  final StreamSubscription<String>? stderrSub;
+  final Completer<void>? stdoutDone;
+  final Completer<void>? stderrDone;
+}
 
 /// Owns the lifecycle of a single running plugin process and the newline-
 /// delimited JSON conversation with it.
@@ -30,6 +42,7 @@ import 'plugin_storage.dart';
 class LauncherPluginHost {
   LauncherPluginHost({required this.onFrame, required this.onCommand}) {
     _browserBridgeSub = BrowserBridgeService.instance.events.listen(_handleBrowserBridgeEvent);
+    _registrySub = PluginRegistry.changes.listen(_stopDisabledRetained);
   }
 
   /// Called on the UI isolate with every accepted render frame (and with an
@@ -53,6 +66,9 @@ class LauncherPluginHost {
   Completer<void>? _stdoutDone;
   Completer<void>? _stderrDone;
   late final StreamSubscription<BrowserBridgeEvent> _browserBridgeSub;
+  late final StreamSubscription<List<PluginManifest>> _registrySub;
+  final Map<String, _RetainedPluginProcess> _retained = <String, _RetainedPluginProcess>{};
+  bool _disposed = false;
 
   /// Dev mode: watches the plugin folder and hot-restarts the process on save.
   StreamSubscription<FileSystemEvent>? _devWatchSub;
@@ -73,23 +89,22 @@ class LauncherPluginHost {
   /// never forwarded to a plugin process.
   static const String _installDependenciesAction = 'tabame.installDependencies';
 
-  /// Activation generation. Bumped on every activate/deactivate so stdout
-  /// lines from a superseded (background-finishing) process can be told apart
-  /// from the live plugin's: detached processes keep their storage/notify
-  /// abilities but can no longer render frames or drive the UI.
-  int _generation = 0;
-
   /// Extra shutdown grace requested via the `background` command: instead of
   /// being killed ~2s after `close`, the process gets this long to finish its
   /// work (uploads, syncs) — still able to write storage and fire native
   /// notifications, but detached from the UI.
   Duration? _backgroundGrace;
 
+  /// A plugin can opt into an idle, reattachable process while a timer or other
+  /// ongoing task is active. Detached processes can only persist and notify.
+  bool _retainInBackground = false;
+
   /// Serializes stdin writes. Each `writeln` + `flush` must fully complete
   /// before the next starts: `flush()` temporarily marks the sink as "bound to
   /// a stream", and writing during that window throws `StateError`. Chaining
   /// through this future guarantees writes never overlap.
   Future<void> _writeChain = Future<void>.value();
+  Future<void> _deactivationChain = Future<void>.value();
 
   PluginManifest? get activeManifest => _active;
   bool get isActive => _process != null && _active != null;
@@ -110,7 +125,22 @@ class LauncherPluginHost {
     _active = manifest;
     _lastQuery = initialQuery;
     _backgroundGrace = null;
-    final int generation = ++_generation;
+    _rev = 0;
+
+    final _RetainedPluginProcess? retained = _retained.remove(manifest.id);
+    if (retained != null) {
+      _process = retained.process;
+      _stdoutSub = retained.stdoutSub;
+      _stderrSub = retained.stderrSub;
+      _stdoutDone = retained.stdoutDone;
+      _stderrDone = retained.stderrDone;
+      _retainInBackground = true;
+      if (manifest.dev) _startDevWatcher(manifest);
+      _send(<String, Object?>{'type': 'attach'});
+      sendQuery(initialQuery);
+      return;
+    }
+    _retainInBackground = false;
 
     // Do not begin a potentially slow network install merely because the user
     // typed this plugin's keyword. Instead, make the missing packages explicit
@@ -137,7 +167,7 @@ class LauncherPluginHost {
       _stderrDone = stderrDone;
       _stdoutSub =
           process.stdout.transform(const Utf8Decoder(allowMalformed: true)).transform(const LineSplitter()).listen(
-        (String line) => _handleStdoutLine(generation, manifest, line),
+        (String line) => _handleStdoutLine(process, manifest, line),
         onDone: () {
           if (!stdoutDone.isCompleted) stdoutDone.complete();
         },
@@ -155,7 +185,7 @@ class LauncherPluginHost {
         },
       );
 
-      unawaited(process.exitCode.then((int code) => _handleExit(generation, process, manifest, code)));
+      unawaited(process.exitCode.then((int code) => _handleExit(process, manifest, code)));
 
       debugLog.add(PluginDebugKind.info,
           'Started ${manifest.runtime} ${manifest.args.isEmpty ? '' : '${manifest.args.join(' ')} '}${manifest.entry} (pid ${process.pid})');
@@ -682,14 +712,14 @@ class LauncherPluginHost {
     _send(<String, Object?>{'type': 'tab', 'id': id, 'rev': _rev, ...scope.fields});
   }
 
-  void _handleStdoutLine(int generation, PluginManifest manifest, String line) {
+  void _handleStdoutLine(Process process, PluginManifest manifest, String line) {
     final String trimmed = line.trim();
     if (trimmed.isEmpty) return;
 
     // A line from a superseded process (the user left the plugin while it
     // finishes in the background): it may still persist state and notify, but
     // can no longer render frames or drive the launcher UI.
-    final bool live = generation == _generation && _process != null;
+    final bool live = _process == process && !_closing;
 
     Map<String, dynamic>? message;
     if (trimmed.startsWith('{')) {
@@ -783,8 +813,22 @@ class LauncherPluginHost {
           body: command.text ?? '',
         ));
         return true;
+      case 'sound':
+        if (command.data['name'] == 'beep') unawaited(_playPluginBeep());
+        return true;
       case 'background':
         if (!live) return true;
+        if (command.data['retain'] == true) {
+          _retainInBackground = true;
+          _backgroundGrace = null;
+          debugLog.add(PluginDebugKind.info, 'Retain process while launcher is closed');
+          return true;
+        }
+        _retainInBackground = false;
+        if (command.data['retain'] == false) {
+          _backgroundGrace = null;
+          return true;
+        }
         final Object? timeout = command.data['timeout'];
         final int seconds = (timeout is num ? timeout.toInt() : 30).clamp(5, 300);
         _backgroundGrace = Duration(seconds: seconds);
@@ -800,6 +844,19 @@ class LauncherPluginHost {
         return true;
     }
     return false;
+  }
+
+  Future<void> _playPluginBeep() async {
+    final AudioPlayer player = AudioPlayer();
+    try {
+      await player.setAsset('resources/beep.mp3');
+      await player.seek(Duration.zero);
+      await player.play().timeout(const Duration(seconds: 2), onTimeout: () {});
+    } catch (_) {
+      // Audio feedback is best-effort, like native notifications.
+    } finally {
+      await player.dispose();
+    }
   }
 
   void _handleBrowserBridgeCommand(PluginCommand command) {
@@ -1047,11 +1104,18 @@ class LauncherPluginHost {
 
   static String _truncate(String value) => value.length <= 120 ? value : '${value.substring(0, 120)}…';
 
-  void _handleExit(int generation, Process process, PluginManifest manifest, int code) {
+  void _handleExit(Process process, PluginManifest manifest, int code) {
     // A process that was detached for background work may exit after another
     // plugin has already been activated. It must not clear or report against
     // the newer live process.
-    if (generation != _generation || _process != process) {
+    final _RetainedPluginProcess? retained = _retained[manifest.id];
+    if (retained != null && retained.process == process) {
+      _retained.remove(manifest.id);
+      unawaited(_drainAndCancelRetained(retained));
+      debugLog.add(PluginDebugKind.info, 'Retained process exited (code $code)');
+      return;
+    }
+    if (_process != process) {
       debugLog.add(PluginDebugKind.info, 'Background process exited (code $code)');
       return;
     }
@@ -1079,20 +1143,30 @@ class LauncherPluginHost {
     });
   }
 
-  /// Gracefully stops the current plugin: send `close`, then kill after a short
-  /// grace period if it does not exit on its own. A plugin that requested
-  /// `background` finishing instead keeps running (detached from the UI) for
-  /// its granted grace period — still able to write storage and notify.
-  Future<void> deactivate() async {
+  /// Stops the current plugin. Short background jobs get bounded finish time;
+  /// retained processes receive `detach` and can be reattached later.
+  Future<void> deactivate() {
+    final Future<void> next = _deactivationChain.then((_) => _deactivateActive());
+    _deactivationChain = next.catchError((Object error, StackTrace stack) {
+      unawaited(ErrorLogger.log('LauncherPluginHost', 'Deactivate failed: $error', stack));
+    });
+    return next;
+  }
+
+  Future<void> _deactivateActive() async {
     for (final HttpServer server in _oauthServers.toList()) {
       await server.close(force: true);
     }
     _oauthServers.clear();
     final Process? process = _process;
+    final PluginManifest? manifest = _active;
+    final bool retain = _retainInBackground && !_disposed && process != null && manifest != null;
+    if (retain) {
+      _retained[manifest.id] = _RetainedPluginProcess(process, _stdoutSub, _stderrSub, _stdoutDone, _stderrDone);
+    }
     _process = null;
     _active = null;
     _closing = true;
-    _generation++;
 
     _devReloadDebounce?.cancel();
     _devReloadDebounce = null;
@@ -1101,8 +1175,10 @@ class LauncherPluginHost {
 
     final StreamSubscription<String>? stdoutSub = _stdoutSub;
     final StreamSubscription<String>? stderrSub = _stderrSub;
-    final Future<void>? stdoutDone = _stdoutDone?.future;
-    final Future<void>? stderrDone = _stderrDone?.future;
+    final Completer<void>? stdoutCompleter = _stdoutDone;
+    final Completer<void>? stderrCompleter = _stderrDone;
+    final Future<void>? stdoutDone = stdoutCompleter?.future;
+    final Future<void>? stderrDone = stderrCompleter?.future;
     _stdoutSub = null;
     _stderrSub = null;
     _stdoutDone = null;
@@ -1110,6 +1186,7 @@ class LauncherPluginHost {
 
     final Duration? backgroundGrace = _backgroundGrace;
     _backgroundGrace = null;
+    _retainInBackground = false;
 
     if (process == null) {
       await stdoutSub?.cancel();
@@ -1119,6 +1196,18 @@ class LauncherPluginHost {
     // Let any in-flight write drain before sending `close`, so the two don't
     // overlap on the sink (see _send).
     await _writeChain.catchError((Object _) {});
+    if (retain) {
+      // Keep the same process and its state machine alive, without a visible UI.
+      // Re-entry attaches to this process so there is never a second timer.
+      if (_retained[manifest.id]?.process != process) return;
+      try {
+        process.stdin.writeln(jsonEncode(<String, Object?>{'type': 'detach'}));
+        await process.stdin.flush();
+      } catch (_) {
+        // Exit handling will remove a process whose pipe already closed.
+      }
+      return;
+    }
     try {
       process.stdin.writeln(jsonEncode(<String, Object?>{'type': 'close'}));
       await process.stdin.flush();
@@ -1129,7 +1218,7 @@ class LauncherPluginHost {
     if (backgroundGrace != null) {
       // Detached finish: keep the stdout listener alive (storage writes and
       // notify commands still work; frames and UI commands are dropped by the
-      // generation guard) and only kill once the grace runs out. Don't await —
+      // process identity guard) and only kill once the grace runs out. Don't await —
       // a switch to another plugin must not block on this.
       debugLog.add(PluginDebugKind.info, 'Finishing in background (up to ${backgroundGrace.inSeconds}s)');
       unawaited(_finishDetachedProcess(
@@ -1157,6 +1246,42 @@ class LauncherPluginHost {
     await _drainProcessOutput(stdoutDone, stderrDone);
     await stdoutSub?.cancel();
     await stderrSub?.cancel();
+  }
+
+  void _stopDisabledRetained(List<PluginManifest> manifests) {
+    final Set<String> enabled = manifests
+        .where((PluginManifest manifest) => manifest.enabled)
+        .map((PluginManifest manifest) => manifest.id)
+        .toSet();
+    for (final String id in _retained.keys.toList()) {
+      if (!enabled.contains(id)) unawaited(_stopRetained(id, reason: 'disabled'));
+    }
+  }
+
+  Future<void> _drainAndCancelRetained(_RetainedPluginProcess retained) async {
+    await _drainProcessOutput(retained.stdoutDone?.future, retained.stderrDone?.future);
+    await retained.stdoutSub?.cancel();
+    await retained.stderrSub?.cancel();
+  }
+
+  Future<void> _stopRetained(String id, {String reason = 'shutdown'}) async {
+    final _RetainedPluginProcess? retained = _retained.remove(id);
+    if (retained == null) return;
+    try {
+      retained.process.stdin.writeln(jsonEncode(<String, Object?>{'type': 'close', 'reason': reason}));
+      await retained.process.stdin.flush();
+    } catch (_) {
+      // The process may already have exited.
+    }
+    try {
+      await retained.process.exitCode.timeout(const Duration(seconds: 2), onTimeout: () {
+        retained.process.kill();
+        return -1;
+      });
+    } catch (_) {
+      retained.process.kill();
+    }
+    await _drainAndCancelRetained(retained);
   }
 
   /// Waits for the child's pipes to deliver all buffered lines before the
@@ -1201,7 +1326,14 @@ class LauncherPluginHost {
 
   /// Fire-and-forget shutdown for [State.dispose].
   void dispose() {
+    _disposed = true;
     unawaited(_browserBridgeSub.cancel());
-    unawaited(deactivate());
+    unawaited(_registrySub.cancel());
+    unawaited(() async {
+      await deactivate();
+      for (final String id in _retained.keys.toList()) {
+        await _stopRetained(id);
+      }
+    }());
   }
 }
