@@ -10,6 +10,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
+import '../../widgets/widgets/glass_surface.dart';
 import '../../models/util/quick_action_list.dart';
 import '../../models/util/quickmenu_modal.dart';
 import '../../models/util/theme_colors.dart';
@@ -140,7 +141,7 @@ class _MainMenuCommandDeckWidgetState extends State<MainMenuCommandDeckWidget> {
         minHeight: 290,
         maxHeight: MediaQuery.of(context).size.height - 50,
       ),
-      child: ClipRRect(
+      child: GlassClipRRect(
         borderRadius: BorderRadius.circular(Design.borderRadius),
         child: Stack(
           children: <Widget>[

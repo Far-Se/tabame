@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../../widgets/widgets/custom_border.dart';
+import '../../../widgets/widgets/glass_surface.dart';
 import '../launcher_corners.dart';
 import '../launcher_design.dart';
 
@@ -175,7 +176,9 @@ class _RadiantSurfaceState extends State<RadiantSurface> {
         // the painter's outside halo free to radiate beyond that outline.
         child: widget.kind == RadiantSurfaceKind.symbols
             ? content
-            : ClipPath(clipper: _RadiantContentClipper(outline, inset), child: content),
+            : widget.kind == RadiantSurfaceKind.frame
+                ? GlassClipPath(clipper: _RadiantContentClipper(outline, inset), child: content)
+                : ClipPath(clipper: _RadiantContentClipper(outline, inset), child: content),
       ),
     );
   }

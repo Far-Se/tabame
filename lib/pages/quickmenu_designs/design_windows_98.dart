@@ -37,7 +37,7 @@ class MainMenuWindows98Widget extends StatelessWidget {
         child: _Win98Bevel(
           raised: true,
           child: ColoredBox(
-            color: _Win98Colors.face,
+            color: Design.glassColor(_Win98Colors.face),
             child: Padding(
               padding: const EdgeInsets.all(2),
               child: Column(

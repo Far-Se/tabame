@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/settings.dart';
+import '../../widgets/widgets/glass_surface.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
 import 'design_backdrop_stable.dart';
@@ -94,7 +95,7 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
           // Background Layer (Clipped to floating cards)
           if (_itemRects.isNotEmpty)
             Positioned.fill(
-              child: ClipPath(
+              child: GlassClipPath(
                 clipper: MatrixFloatingClipper(_itemRects, Design.borderRadius),
                 child: RepaintBoundary(
                   child: ShaderMask(

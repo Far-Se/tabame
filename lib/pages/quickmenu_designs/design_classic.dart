@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/settings.dart';
+import '../../widgets/widgets/glass_surface.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
 import 'design_backdrop_stable.dart';
@@ -30,7 +31,7 @@ class MainMenuClassicWidget extends StatelessWidget {
         minHeight: 203,
         maxHeight: MediaQuery.of(context).size.height - 100,
       ),
-      child: ClipRRect(
+      child: GlassClipRRect(
         borderRadius: BorderRadius.circular(Design.borderRadius),
         child: Stack(
           children: <Widget>[

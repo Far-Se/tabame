@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import '../../../platform/file_picker_service.dart';
@@ -8,6 +9,7 @@ import '../../../models/util/icon_from_code.dart';
 import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/globals.dart';
+import '../../../models/glass_effect.dart';
 import '../../../models/settings.dart';
 import '../../../models/tray_watcher.dart';
 import '../../../models/util/quick_action_list.dart';
@@ -178,14 +180,271 @@ class _BehaviorTab extends StatefulWidget {
 }
 
 class _BehaviorTabState extends State<_BehaviorTab> {
+  final ScrollController _scrollController = ScrollController();
+  bool _savingBackground = false;
+  String? _backgroundError;
+  Future<void> Function()? _retryBackgroundSave;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _setBackground(GlassEffect effect) async {
+    if (_savingBackground || effect == user.glassEffect) return;
+    await _saveBackground(() => Boxes.setGlassEffect(effect));
+  }
+
+  Future<void> _saveBackground(Future<void> Function() save) async {
+    if (_savingBackground) return;
+    setState(() {
+      _savingBackground = true;
+      _backgroundError = null;
+      _retryBackgroundSave = null;
+    });
+    try {
+      await save();
+    } catch (error) {
+      debugPrint('Unable to save glass background: $error');
+      if (mounted) {
+        setState(() {
+          _backgroundError = 'Could not save background settings.';
+          _retryBackgroundSave = save;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _savingBackground = false);
+    }
+  }
+
+  void _previewBackground(GlassEffectOptions options, {bool persist = false}) {
+    if (_savingBackground || !Platform.isWindows) return;
+    setState(() {
+      user.glassEffectOptions[user.glassEffect] = options;
+      _backgroundError = null;
+      _retryBackgroundSave = null;
+    });
+    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+    unawaited(QuickMenuFunctions.refreshQuickMenu());
+    if (persist) unawaited(_saveBackground(Boxes.saveGlassEffectOptions));
+  }
+
+  Widget _backgroundChoice({required String label, required bool selected, required VoidCallback onSelected}) =>
+      ChoiceChip(
+        label: Text(label),
+        labelStyle: TextStyle(fontSize: Design.baseFontSize + 1.5),
+        visualDensity: VisualDensity.compact,
+        selectedColor: Design.accent.withAlpha(18),
+        selected: selected,
+        onSelected: Platform.isWindows && !_savingBackground ? (_) => onSelected() : null,
+      );
+
+  Widget _backgroundSlider({
+    required String label,
+    required String description,
+    required double value,
+    required ValueChanged<double> onChanged,
+    double minimum = 0,
+  }) =>
+      Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                    child:
+                        Text(label, style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600))),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Design.accent.withAlpha(18),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text('${(value * 100).round()}%',
+                      style:
+                          TextStyle(fontSize: Design.baseFontSize, fontWeight: FontWeight.w700, color: Design.accent)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(description, style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: Design.text.withAlpha(150))),
+            const SizedBox(height: 8),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 2,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                activeTrackColor: Design.accent.withAlpha(200),
+                inactiveTrackColor: Design.text.withAlpha(20),
+                thumbColor: Design.accent,
+              ),
+              child: SizedBox(
+                height: 20,
+                child: Semantics(
+                  label: label,
+                  child: Slider(
+                    min: minimum,
+                    divisions: ((1 - minimum) * 100).round(),
+                    value: value,
+                    label: '${(value * 100).round()}%',
+                    semanticFormatterCallback: (double value) => '${(value * 100).round()} percent',
+                    onChanged: Platform.isWindows && !_savingBackground ? onChanged : null,
+                    onChangeEnd: (_) => unawaited(_saveBackground(Boxes.saveGlassEffectOptions)),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _backgroundSettings() {
+    final GlassEffect effect = user.glassEffect;
+    final GlassEffectOptions options = user.activeGlassOptions;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: Design.text.withAlpha(7),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Design.text.withAlpha(16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                  child: Text('Glass background',
+                      style: TextStyle(fontSize: Design.baseFontSize + 2, fontWeight: FontWeight.w600))),
+              if (effect != GlassEffect.none)
+                TextButton(
+                  onPressed: Platform.isWindows && !_savingBackground
+                      ? () => _previewBackground(const GlassEffectOptions(), persist: true)
+                      : null,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Design.accent,
+                    minimumSize: const Size(0, 26),
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: const Text('Reset'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text('Applies to QuickMenu and Launcher',
+              style: TextStyle(fontSize: Design.baseFontSize + 1, color: Design.text.withAlpha(150))),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: GlassEffect.values
+                .map((GlassEffect choice) => _backgroundChoice(
+                      label: choice.label,
+                      selected: effect == choice,
+                      onSelected: () => unawaited(_setBackground(choice)),
+                    ))
+                .toList(),
+          ),
+          if (effect != GlassEffect.none)
+            _backgroundSlider(
+              label: 'Panel opacity',
+              description: 'Theme fill over the glass. Lower values reveal more of the material.',
+              value: options.panelOpacity,
+              onChanged: (double value) => _previewBackground(options.copyWith(panelOpacity: value)),
+            ),
+          if (effect == GlassEffect.acrylic) ...<Widget>[
+            const SizedBox(height: 10),
+            Text('Acrylic tint', style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: <Widget>[
+                _backgroundChoice(
+                  label: 'System',
+                  selected: !options.customAcrylicTint,
+                  onSelected: () => _previewBackground(options.copyWith(customAcrylicTint: false), persist: true),
+                ),
+                _backgroundChoice(
+                  label: 'Custom',
+                  selected: options.customAcrylicTint,
+                  onSelected: () => _previewBackground(options.copyWith(customAcrylicTint: true), persist: true),
+                ),
+              ],
+            ),
+            if (options.customAcrylicTint)
+              _backgroundSlider(
+                label: 'Tint opacity',
+                description: 'Uses your theme background color. Lower values show more of the blurred desktop.',
+                value: options.acrylicTintOpacity,
+                minimum: 0.01,
+                onChanged: (double value) => _previewBackground(options.copyWith(acrylicTintOpacity: value)),
+              ),
+          ],
+          if (effect == GlassEffect.mica) ...<Widget>[
+            const SizedBox(height: 10),
+            Text('Mica appearance', style: TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: <Widget>[
+                _backgroundChoice(
+                  label: 'Standard',
+                  selected: !options.micaAlt,
+                  onSelected: () => _previewBackground(options.copyWith(micaAlt: false), persist: true),
+                ),
+                _backgroundChoice(
+                  label: 'Alternate',
+                  selected: options.micaAlt,
+                  onSelected: () => _previewBackground(options.copyWith(micaAlt: true), persist: true),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 6),
+          Text(
+              !Platform.isWindows
+                  ? 'Glass backgrounds are available on Windows.'
+                  : switch (effect) {
+                      GlassEffect.none => r'Also available in Launcher: $background',
+                      GlassEffect.blur || GlassEffect.acrylic => 'Blur strength is controlled by Windows.',
+                      GlassEffect.mica => 'Mica uses your wallpaper. Older Windows versions use Acrylic.',
+                    },
+              style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(140))),
+          if (_backgroundError != null) ...<Widget>[
+            const SizedBox(height: 6),
+            Row(
+              children: <Widget>[
+                Expanded(child: Text(_backgroundError!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+                TextButton(
+                  onPressed: _retryBackgroundSave == null || _savingBackground
+                      ? null
+                      : () => unawaited(_saveBackground(_retryBackgroundSave!)),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return WindowsScrollView(
-      controller: ScrollController(),
+      controller: _scrollController,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           children: <Widget>[
+            _backgroundSettings(),
+            const SizedBox(height: 8),
             _toggle(
               context: context,
               title: "Hide when losing focus",

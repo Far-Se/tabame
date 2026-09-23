@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
+import '../../widgets/widgets/glass_surface.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
 import 'design_backdrop_stable.dart';
 import '../../widgets/quickmenu/info_bar.dart';
@@ -101,7 +102,7 @@ class MainMenuConsole2Widget extends StatelessWidget {
     // Terminal windows are opaque — no translucency curve needed, but we
     // keep the shape so a user-adjusted opacity setting still applies.
     final double baseAlpha = user.activeBackdropPath.isNotEmpty ? 0.94 : 1.0;
-    final Color panelBase = surface.withValues(alpha: baseAlpha);
+    final Color panelBase = Design.glassColor(surface.withValues(alpha: baseAlpha));
     final Color borderColor = accent.withValues(alpha: isDark ? 0.55 : 0.45);
     final Color dividerColor = theme.colorScheme.onSurface.withValues(alpha: 0.16);
     final Color scanColor = theme.colorScheme.onSurface.withValues(alpha: isDark ? 0.05 : 0.035);
@@ -114,7 +115,7 @@ class MainMenuConsole2Widget extends StatelessWidget {
         maxHeight: MediaQuery.of(context).size.height - 50,
       ),
       child: RepaintBoundary(
-        child: ClipRRect(
+        child: GlassClipRRect(
           borderRadius: BorderRadius.circular(radius),
           child: Stack(
             children: <Widget>[

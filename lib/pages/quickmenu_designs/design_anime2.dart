@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
+import '../../widgets/widgets/glass_surface.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
 import '../../widgets/quickmenu/info_bar.dart';
@@ -32,7 +33,7 @@ class MainMenuAnime2Widget extends StatelessWidget {
         minHeight: 203,
         maxHeight: MediaQuery.of(context).size.height - 50,
       ),
-      child: ClipRRect(
+      child: GlassClipRRect(
         borderRadius: BorderRadius.circular(Design.borderRadius),
         child: Stack(
           children: <Widget>[

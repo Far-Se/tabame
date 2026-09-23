@@ -94,6 +94,7 @@ class _MatrixLauncherFrameState extends State<MatrixLauncherFrame> {
     final Color text = Theme.of(context).colorScheme.onSurface;
 
     return LauncherSurface(
+      glass: false,
       constraints: const BoxConstraints(minHeight: 360),
       decoration: _matrixOuterDecoration(),
       child: Stack(
@@ -101,7 +102,7 @@ class _MatrixLauncherFrameState extends State<MatrixLauncherFrame> {
         children: <Widget>[
           if (_sectionRects.isNotEmpty)
             Positioned.fill(
-              child: ClipPath(
+              child: GlassClipPath(
                 clipper: _MatrixLauncherSectionsClipper(_sectionRects, radius),
                 child: RepaintBoundary(
                   child: _MatrixLauncherGround(radius: radius),
@@ -222,10 +223,10 @@ class _MatrixLauncherGround extends StatelessWidget {
     final Color accent = LauncherTheme.accentOf(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Color.alphaBlend(
+        color: Design.glassColor(Color.alphaBlend(
           accent.withValues(alpha: Design.gradientAlpha / 255),
           surface.withValues(alpha: Design.hasBackdrop ? .72 : 1),
-        ),
+        )),
         borderRadius: BorderRadius.circular(radius),
       ).withLauncherCorners(),
       child: Stack(

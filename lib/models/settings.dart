@@ -17,12 +17,14 @@ import 'package:intl/intl_standalone.dart';
 import '../platform/audio_system_service.dart';
 import '../platform/monitor_service.dart';
 import '../platform/quick_snap_service.dart';
+import '../platform/glass_effect_service.dart';
 import '../platform/windows/tabamewin32_api.dart';
 import '../services/rewindly_service.dart';
 import 'classes/boxes.dart';
 import 'classes/saved_maps.dart';
 import 'design_settings.dart';
 import 'globals.dart';
+import 'glass_effect.dart';
 import '../platform/app_paths.dart';
 import 'util/solar_calculator.dart';
 
@@ -60,7 +62,19 @@ class Design {
   static String get backdropType => _colors.backdropType;
   static String get backdropPath => _colors.backdropPath;
   static double get backdropOpacity => _colors.backdropOpacity;
-  static List<double> get panelOpacityPoints => _colors.panelOpacityPoints;
+  static bool get glassEnabled =>
+      GlassEffectService.supported &&
+      user.glassEffect != GlassEffect.none &&
+      user.page == TPage.quickmenu &&
+      !user.previewTheme;
+  static double get glassOpacity => glassEnabled ? user.activeGlassOptions.panelOpacity : 1;
+  static Color glassColor(Color color) => glassEnabled ? color.withValues(alpha: color.a * glassOpacity) : color;
+  static List<double> get panelOpacityPoints => glassEnabled
+      ? <double>[
+          for (int i = 0; i < _colors.panelOpacityPoints.length; i++)
+            _colors.panelOpacityPoints[i] * (i.isOdd ? glassOpacity : 1)
+        ]
+      : _colors.panelOpacityPoints;
   static String get panelOpacityBegin => _colors.panelOpacityBegin;
   static String get panelOpacityEnd => _colors.panelOpacityEnd;
   static double get borderRadius => _colors.borderRadius;
@@ -153,6 +167,9 @@ class Settings {
   bool dragPopupsByIconOnly = true;
   bool keepPopupOpenOnDemand = false;
   bool quickActionsAtBottom = false;
+  GlassEffect glassEffect = GlassEffect.none;
+  Map<GlassEffect, GlassEffectOptions> glassEffectOptions = <GlassEffect, GlassEffectOptions>{};
+  GlassEffectOptions get activeGlassOptions => glassEffectOptions[glassEffect] ?? const GlassEffectOptions();
   int quickMenuDesign = Random().nextInt(QuickMenuDesigns.values.length);
   LauncherDesign launcherDesign = LauncherDesign.values[Random().nextInt(LauncherDesign.values.length)];
   QuickClickConfig quickClickConfig = QuickClickConfig();

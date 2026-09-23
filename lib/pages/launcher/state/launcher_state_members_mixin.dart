@@ -257,6 +257,7 @@ mixin _LauncherStateMembersMixin on State<Launcher> {
   Future<List<LauncherSearchResultItem>> _buildFunctionReindexResults(String input);
   Future<List<LauncherSearchResultItem>> _buildFunctionCalculatorResults(String input);
   Future<List<LauncherSearchResultItem>> _buildFunctionDesignResults(String input);
+  Future<List<LauncherSearchResultItem>> _buildFunctionBackgroundResults(String input);
   Future<List<LauncherSearchResultItem>> _buildFunctionSystemResults(String input);
   Future<List<LauncherSearchResultItem>> _buildFunctionUnitResults(String input);
   Future<List<LauncherSearchResultItem>> _buildFunctionCurrencyResults(String input);
@@ -307,7 +308,7 @@ mixin _LauncherStateMembersMixin on State<Launcher> {
     bool resetSelection = true,
     bool? isSearching,
   });
-  int _activeDesignResultIndex(List<LauncherSearchResultItem> results);
+  int _activeAppearanceResultIndex(List<LauncherSearchResultItem> results);
   Future<void> _pruneStaleFileResults(List<LauncherSearchResultItem> snapshot);
   void _maybeExecutePendingLauncherQuickAction();
   void _onShortcutPressed(LauncherShortcut shortcut);

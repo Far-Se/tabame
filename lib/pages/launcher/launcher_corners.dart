@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../models/classes/saved_maps.dart';
 import '../../models/settings.dart';
 import '../../widgets/widgets/custom_border.dart';
+import '../../widgets/widgets/glass_surface.dart';
 
 /// Shared corner geometry from the active launcher theme.
 abstract final class LauncherCorners {
@@ -75,6 +76,7 @@ class LauncherSurface extends StatelessWidget {
     this.constraints,
     this.margin,
     this.padding,
+    this.glass = true,
   });
 
   final BoxDecoration decoration;
@@ -83,19 +85,19 @@ class LauncherSurface extends StatelessWidget {
   final BoxConstraints? constraints;
   final EdgeInsetsGeometry? margin;
   final EdgeInsetsGeometry? padding;
+  final bool glass;
 
   @override
   Widget build(BuildContext context) {
     final ShapeDecoration shaped = decoration.withLauncherCorners(textDirection: Directionality.of(context));
-    return Container(
+    final Widget surface = Container(
       width: width,
       constraints: constraints,
-      margin: margin,
       // The Material paints the outline in front of its children. The outside
       // decoration paints only the fill and shadow, without clipping the shadow.
       decoration: ShapeDecoration(
-        color: shaped.color,
-        gradient: shaped.gradient,
+        color: shaped.color == null ? null : Design.glassColor(shaped.color!),
+        gradient: Design.glassEnabled ? shaped.gradient?.scale(Design.glassOpacity) : shaped.gradient,
         image: shaped.image,
         shadows: shaped.shadows,
         shape: LauncherCorners.shape(
@@ -111,6 +113,11 @@ class LauncherSurface extends StatelessWidget {
           child: child,
         ),
       ),
+    );
+    // Matrix supplies disconnected section paths inside its transparent frame.
+    return Padding(
+      padding: margin ?? EdgeInsets.zero,
+      child: glass ? GlassSurface(shape: shaped.shape, child: surface) : surface,
     );
   }
 }

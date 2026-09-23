@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
+import '../../widgets/widgets/glass_surface.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
 import '../../widgets/quickmenu/info_bar.dart';
@@ -101,7 +102,7 @@ class MainMenuCassetteWidget extends StatelessWidget {
         maxHeight: MediaQuery.of(context).size.height - 50,
       ),
       child: RepaintBoundary(
-        child: ClipRRect(
+        child: GlassClipRRect(
           borderRadius: BorderRadius.circular(radius),
           child: Stack(
             children: <Widget>[

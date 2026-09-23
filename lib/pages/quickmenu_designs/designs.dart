@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../models/classes/boxes/quick_menu_box.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
+import '../../widgets/widgets/glass_surface.dart';
 import 'design_anime.dart';
 import 'design_anime2.dart';
 import 'design_console2.dart';
@@ -122,7 +123,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.aurora => MainMenuAuroraWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.terminal => MainMenuTerminalWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.terminal2 => MainMenuTerminal2Widget(key: ValueKey<int>(_refreshCounter)),
-      QuickMenuDesigns.tui => MainMenuTuiWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.tui => GlassSurface(child: MainMenuTuiWidget(key: ValueKey<int>(_refreshCounter))),
       QuickMenuDesigns.cassette => MainMenuCassetteWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.fluent => MainMenuFluentWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.gazette => MainMenuGazetteWidget(key: ValueKey<int>(_refreshCounter)),
@@ -143,7 +144,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.outrun2 => MainMenuOutrun2Widget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.winamp => MainMenuWinampWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.windowsXp => MainMenuWindowsXpWidget(key: ValueKey<int>(_refreshCounter)),
-      QuickMenuDesigns.windows98 => MainMenuWindows98Widget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.windows98 => GlassSurface(child: MainMenuWindows98Widget(key: ValueKey<int>(_refreshCounter))),
       QuickMenuDesigns.notion => MainMenuNotionWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.rundown => MainMenuRundownWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.commandDeck => MainMenuCommandDeckWidget(key: ValueKey<int>(_refreshCounter)),

@@ -1317,6 +1317,66 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
     }).toList(growable: false);
   }
 
+  Future<List<LauncherSearchResultItem>> _buildFunctionBackgroundResults(String input) async {
+    if (!Platform.isWindows) {
+      //TODO: Implement multiplatform
+      return <LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'function-background-unavailable',
+          title: 'Glass backgrounds are available on Windows',
+          subtitle: 'Your current design stays active.',
+          icon: Icons.blur_off_rounded,
+        )),
+      ];
+    }
+    final String query = input.trim().toLowerCase();
+    final List<GlassEffect> matches =
+        GlassEffect.values.where((GlassEffect effect) => effect.name.startsWith(query)).toList();
+    if (matches.isEmpty) {
+      return <LauncherSearchResultItem>[
+        const LauncherSearchResultItem.info(LauncherInfoResult(
+          id: 'function-background-help',
+          title: 'Choose None, Blur, Acrylic or Mica',
+          subtitle: r'Example: $background acrylic',
+          icon: Icons.blur_on_rounded,
+        )),
+      ];
+    }
+    return matches
+        .map((GlassEffect effect) => LauncherSearchResultItem.quickAction(_buildFunctionAction(
+              id: 'function-background:${effect.name}',
+              title: effect.label,
+              subtitle: effect == user.glassEffect
+                  ? 'Currently active · QuickMenu and Launcher'
+                  : effect == GlassEffect.mica
+                      ? 'Wallpaper material · Acrylic fallback on older Windows'
+                      : 'Apply to QuickMenu and Launcher',
+              icon: effect == user.glassEffect ? Icons.check_circle_outline_rounded : Icons.blur_on_rounded,
+              searchTerms: <String>['background', effect.name],
+              onExecute: () async {
+                try {
+                  await Boxes.setGlassEffect(effect);
+                } catch (error) {
+                  if (!mounted) return;
+                  _setResults(<LauncherSearchResultItem>[
+                    const LauncherSearchResultItem.info(LauncherInfoResult(
+                      id: 'function-background-save-error',
+                      title: 'Could not save background',
+                      subtitle: 'Try selecting the background again.',
+                      icon: Icons.error_outline_rounded,
+                    )),
+                  ], isSearching: false);
+                  debugPrint('Unable to save glass background: $error');
+                  return;
+                }
+                if (!mounted) return;
+                _onSearchChanged(_controller.text);
+                _focusSearch();
+              },
+            )))
+        .toList();
+  }
+
   Future<List<LauncherSearchResultItem>> _buildFunctionSystemResults(String input) async {
     final String trimmed = input.trim().toLowerCase();
 
@@ -1841,8 +1901,8 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
         _resultsQuery == _controller.text && (!resetSelection || _hasKeyboardNavigatedCurrentQuery);
     _resultsQuery = _controller.text;
 
-    final int activeDesignIndex = _activeDesignResultIndex(results);
-    int nextIndex = activeDesignIndex < 0 ? 0 : activeDesignIndex;
+    final int activeAppearanceIndex = _activeAppearanceResultIndex(results);
+    int nextIndex = activeAppearanceIndex < 0 ? 0 : activeAppearanceIndex;
     final bool hasKeyboardAnchor = _hasKeyboardNavigatedCurrentQuery && _keyboardSelectedResultId != null;
     final bool hasVisibleSelection = _results.isNotEmpty && _activeIndexNotifier.value < _results.length;
     if (keepSelection && (hasKeyboardAnchor || hasVisibleSelection)) {
@@ -1859,14 +1919,14 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
 
     setState(() {
       _results = results;
-      _activeIndexNotifier.value = activeDesignIndex >= 0 || keepSelection ? nextIndex : 0;
+      _activeIndexNotifier.value = activeAppearanceIndex >= 0 || keepSelection ? nextIndex : 0;
       if (isSearching != null) {
         _isSearching = isSearching;
       }
     });
 
-    if (activeDesignIndex >= 0) {
-      _scrollResultToCenter(activeDesignIndex);
+    if (activeAppearanceIndex >= 0) {
+      _scrollResultToCenter(activeAppearanceIndex);
     } else if (!keepSelection && _scrollController.hasClients) {
       _scrollController.jumpTo(0);
     }
@@ -1879,7 +1939,13 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
     unawaited(_pruneStaleFileResults(results));
   }
 
-  int _activeDesignResultIndex(List<LauncherSearchResultItem> results) {
+  int _activeAppearanceResultIndex(List<LauncherSearchResultItem> results) {
+    if (results.isNotEmpty &&
+        results.every(
+            (LauncherSearchResultItem result) => result.quickAction?.id.startsWith('function-background:') == true)) {
+      return results.indexWhere((LauncherSearchResultItem result) =>
+          result.quickAction?.id == 'function-background:${user.glassEffect.name}');
+    }
     if (results.length != LauncherDesign.values.length ||
         results
             .any((LauncherSearchResultItem result) => result.quickAction?.id.startsWith('function-design:') != true)) {

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../models/settings.dart';
+import '../../widgets/widgets/glass_surface.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
 import 'design_backdrop_stable.dart';
@@ -50,7 +51,7 @@ class MainMenuSereneWidget extends StatelessWidget {
         maxHeight: MediaQuery.of(context).size.height - 50,
       ),
       child: RepaintBoundary(
-        child: ClipRRect(
+        child: GlassClipRRect(
           borderRadius: BorderRadius.circular(radius),
           child: Stack(
             children: <Widget>[

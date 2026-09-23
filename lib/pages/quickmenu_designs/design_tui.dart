@@ -22,8 +22,9 @@ class MainMenuTuiWidget extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: 203, maxHeight: MediaQuery.sizeOf(context).height - 50),
         child: Container(
-          decoration:
-              BoxDecoration(color: QuickMenuTuiTheme.background, border: Border.all(color: QuickMenuTuiTheme.border)),
+          decoration: BoxDecoration(
+              color: Design.glassColor(QuickMenuTuiTheme.background),
+              border: Border.all(color: QuickMenuTuiTheme.border)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,

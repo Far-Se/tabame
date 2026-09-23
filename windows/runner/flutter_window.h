@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "win32_window.h"
+#include "glass_backdrop.h"
 
 // A window that does nothing but host a Flutter view.
 class FlutterWindow : public Win32Window {
@@ -30,6 +31,7 @@ class FlutterWindow : public Win32Window {
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+  std::unique_ptr<GlassBackdrop> glass_backdrop_;
 
   // Channel used by Dart to request a forced repaint, e.g. after the window
   // is shown again following a hide where DWM may have discarded the

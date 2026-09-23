@@ -7,6 +7,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
+import '../../widgets/widgets/glass_surface.dart';
 import '../../models/util/quick_action_list.dart';
 import '../../models/util/theme_colors.dart';
 import '../../models/win32/window.dart';
@@ -75,7 +76,7 @@ class _MainMenuSwitchboardWidgetState extends State<MainMenuSwitchboardWidget> {
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxHeight),
-      child: ClipRRect(
+      child: GlassClipRRect(
         borderRadius: BorderRadius.circular(Design.borderRadius),
         child: Stack(
           children: <Widget>[

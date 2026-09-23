@@ -14,6 +14,7 @@ import '../../../services/notification_coordinator.dart';
 import '../../../services/ai_coding_usage_service.dart';
 import '../../design_settings.dart';
 import '../../globals.dart';
+import '../../glass_effect.dart';
 import '../../settings.dart';
 import '../../util/quick_action_list.dart';
 import '../../win32/win32.dart';
@@ -136,6 +137,8 @@ class Boxes {
 
     // Fetch all settings
     user
+      ..glassEffect = GlassEffect.fromSetting(pref.getString('glassEffect'))
+      ..glassEffectOptions = GlassEffectOptions.decodeSettings(pref.getString('glassEffectOptions'))
       ..quickMenuDesign = pref.getInt("quickMenuDesign") ?? user.quickMenuDesign
       ..launcherDesign =
           LauncherDesign.values[(pref.getInt("launcherDesign") ?? 0).clamp(0, LauncherDesign.values.length - 1)]
@@ -488,6 +491,23 @@ class Boxes {
     pref = await SaveSettings.getInstance();
     if (key == 'topBarWidgets' && user.page == TPage.quickmenu && !user.previewTheme) {
       AiCodingUsageService.instance.configureTopBar(Boxes().topBarWidgets);
+    }
+  }
+
+  static Future<void> setGlassEffect(GlassEffect effect) async {
+    await updateSettings('glassEffect', effect.name);
+    user.glassEffect = effect;
+    Globals.themeChangeNotifier.value = !Globals.themeChangeNotifier.value;
+    await QuickMenuFunctions.refreshQuickMenu();
+  }
+
+  static Future<void> saveGlassEffectOptions() async {
+    final String encoded = jsonEncode(<String, Object>{
+      for (final MapEntry<GlassEffect, GlassEffectOptions> entry in user.glassEffectOptions.entries)
+        entry.key.name: entry.value.toMap(),
+    });
+    if (!await pref.setString('glassEffectOptions', encoded)) {
+      throw StateError('Unable to save glass background options.');
     }
   }
 

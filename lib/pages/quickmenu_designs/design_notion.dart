@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
+import '../../widgets/widgets/glass_surface.dart';
 import '../../models/win32/win_utils.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
 import '../../widgets/quickmenu/info_bar.dart';
@@ -26,8 +27,8 @@ class _NotionQuickMenuTokens {
     final Color text = isDark ? const Color(0xFFE6E6E6) : const Color(0xFF37352F);
     return _NotionQuickMenuTokens(
       isDark: isDark,
-      canvas: isDark ? const Color(0xFF202020) : const Color(0xFFFFFFFF),
-      sidebar: isDark ? const Color(0xFF191919) : const Color(0xFFF7F6F3),
+      canvas: Design.glassColor(isDark ? const Color(0xFF202020) : const Color(0xFFFFFFFF)),
+      sidebar: Design.glassColor(isDark ? const Color(0xFF191919) : const Color(0xFFF7F6F3)),
       text: text,
       dim: isDark ? const Color(0xFF9B9B9B) : const Color(0xFF787774),
       divider: text.withAlpha(isDark ? 22 : 18),
@@ -71,7 +72,7 @@ class MainMenuNotionWidget extends StatelessWidget {
               ),
             ],
           ),
-          child: ClipRRect(
+          child: GlassClipRRect(
             borderRadius: BorderRadius.circular(7),
             child: Column(
               mainAxisSize: MainAxisSize.min,

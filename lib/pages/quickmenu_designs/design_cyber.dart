@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
+import '../../widgets/widgets/glass_surface.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
 import '../../widgets/quickmenu/info_bar.dart';
@@ -31,7 +32,7 @@ class MainMenuCyberWidget extends StatelessWidget {
         minHeight: 203,
         maxHeight: MediaQuery.of(context).size.height - 40,
       ),
-      child: ClipPath(
+      child: GlassClipPath(
         clipper: _AnimeClipper(),
         child: Stack(
           children: <Widget>[

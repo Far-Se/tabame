@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
+import '../../widgets/widgets/glass_surface.dart';
 import '../../models/util/theme_colors.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
 import '../../widgets/quickmenu/info_bar.dart';
@@ -110,7 +111,7 @@ class _MainMenuConsoleWidgetState extends State<MainMenuConsoleWidget>
               borderRadius: BorderRadius.circular(radius - 1),
               color: bezelLight,
             ),
-            child: ClipRRect(
+            child: GlassClipRRect(
               borderRadius: BorderRadius.circular(radius - 2),
               child: Stack(
                 children: <Widget>[

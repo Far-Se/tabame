@@ -79,6 +79,7 @@ bool FlutterWindow::OnCreate() {
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
           flutter_controller_->engine()->messenger(), "tabame/native_window",
           &flutter::StandardMethodCodec::GetInstance());
+  glass_backdrop_ = std::make_unique<GlassBackdrop>(GetHandle());
   native_window_channel_->SetMethodCallHandler(
       [this](const flutter::MethodCall<flutter::EncodableValue> &call,
              std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
@@ -88,6 +89,14 @@ bool FlutterWindow::OnCreate() {
             flutter_controller_->ForceRedraw();
           }
           result->Success();
+        } else if (call.method_name() == "setGlassEffect") {
+          const auto* arguments = call.arguments()
+              ? std::get_if<flutter::EncodableMap>(call.arguments()) : nullptr;
+          if (arguments && glass_backdrop_ && glass_backdrop_->Update(*arguments)) {
+            result->Success();
+          } else {
+            result->Error("glass_effect", "Unable to apply the glass surface regions.");
+          }
         } else {
           result->NotImplemented();
         }
@@ -111,6 +120,8 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  glass_backdrop_.reset();
+  native_window_channel_.reset();
   if (legacy_file_drop_enabled_) {
     ::DragAcceptFiles(GetHandle(), FALSE);
   }
@@ -126,6 +137,23 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // Run before plugin dispatch: window_manager may consume these messages.
+  if (glass_backdrop_) {
+    switch (message) {
+      case WM_WINDOWPOSCHANGED:
+      case WM_SHOWWINDOW:
+      case WM_SIZE:
+      case WM_ACTIVATE:
+      case WM_STYLECHANGED:
+        glass_backdrop_->Sync();
+        break;
+      case WM_DWMCOMPOSITIONCHANGED:
+      case WM_SETTINGCHANGE:
+      case WM_THEMECHANGED:
+        glass_backdrop_->RefreshTheme();
+        break;
+    }
+  }
   if (message == WM_DROPFILES) {
     const HDROP drop = reinterpret_cast<HDROP>(wparam);
     POINT point = {};

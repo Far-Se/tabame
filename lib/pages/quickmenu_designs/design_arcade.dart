@@ -5,6 +5,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../models/classes/boxes/quick_menu_box.dart';
 import '../../models/design_settings.dart';
 import '../../models/settings.dart';
+import '../../widgets/widgets/glass_surface.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
 import '../../widgets/quickmenu/info_bar.dart';
 import '../../widgets/quickmenu/libre_stats.dart';
@@ -132,7 +133,7 @@ class MainMenuArcadeWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(radius),
                 border: Border.all(color: mario ? marioFrame : border, width: crt ? 1 : 2),
               ),
-        child: ClipRRect(
+        child: GlassClipRRect(
           borderRadius: BorderRadius.circular(crt ? (radius - 6).clamp(0, 100) : 0),
           child: crt
               ? CrtSurface(background: bg, accent: accent, child: screen)

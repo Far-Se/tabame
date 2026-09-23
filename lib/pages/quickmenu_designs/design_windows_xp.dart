@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../models/settings.dart';
+import '../../widgets/widgets/glass_surface.dart';
 import '../../widgets/quickmenu/bottom_bar.dart';
 import '../../widgets/quickmenu/info_bar.dart';
 import '../../widgets/quickmenu/libre_stats.dart';
@@ -42,7 +43,7 @@ class MainMenuWindowsXpWidget extends StatelessWidget {
       child: RepaintBoundary(
         child: Container(
           decoration: BoxDecoration(
-            color: _XpColors.cream,
+            color: Design.glassColor(_XpColors.cream),
             borderRadius: BorderRadius.circular(7),
             border: Border.all(color: _XpColors.blueDark, width: 2),
             boxShadow: const <BoxShadow>[
@@ -50,7 +51,7 @@ class MainMenuWindowsXpWidget extends StatelessWidget {
               BoxShadow(color: _XpColors.blueHighlight, offset: Offset(-1, -1)),
             ],
           ),
-          child: ClipRRect(
+          child: GlassClipRRect(
             borderRadius: BorderRadius.circular(5),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -67,7 +68,7 @@ class MainMenuWindowsXpWidget extends StatelessWidget {
                 else
                   const SizedBox(height: 3),
                 ColoredBox(
-                  color: _XpColors.creamLight,
+                  color: Design.glassColor(_XpColors.creamLight),
                   child: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 2),
                     child: TaskBar(),
