@@ -326,7 +326,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
-                hintText: 'Search emoji names or paste the emoji itself',
+                hintText: 'Search emoji or character names, or paste a symbol',
                 hintStyle: TextStyle(
                   fontSize: Design.baseFontSize + 2,
                   color: scheme.onSurface.withValues(alpha: 0.45),
@@ -351,7 +351,8 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
                 ),
               ),
             ),
-          CancelTraversal(child: _buildSkinToneSelector(accent, scheme)),
+          if (_searchController.text.isNotEmpty || _emojiCategoryGroups[_selectedCategoryIndex].label != 'Characters')
+            CancelTraversal(child: _buildSkinToneSelector(accent, scheme)),
           const SizedBox(width: 8),
         ],
       ),
@@ -478,7 +479,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
-                hintText: 'Type or paste your own emoji / custom token',
+                hintText: 'Type or paste your own emoji, character, or custom token',
                 hintStyle: TextStyle(
                   fontSize: Design.baseFontSize + 2,
                   color: scheme.onSurface.withValues(alpha: 0.45),
@@ -572,9 +573,11 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
     required int count,
   }) {
     final String query = _normalizedText(_searchController.text);
-    final String label = query.isEmpty
-        ? '${_emojiCategoryGroups[_selectedCategoryIndex].label} - $count emoji'
-        : 'Results - $count match${count == 1 ? '' : 'es'}';
+    final _EmojiCategoryGroup category = _emojiCategoryGroups[_selectedCategoryIndex];
+    final String itemCount =
+        category.label == 'Characters' ? '$count character${count == 1 ? '' : 's'}' : '$count emoji';
+    final String label =
+        query.isEmpty ? '${category.label} - $itemCount' : 'Results - $count match${count == 1 ? '' : 'es'}';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -613,7 +616,7 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Loading emoji catalog...',
+            'Loading emoji and character catalog...',
             style: TextStyle(fontSize: Design.baseFontSize + 2, color: scheme.onSurface.withValues(alpha: 0.6)),
           ),
         ],
@@ -629,12 +632,12 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
           Icon(Icons.error_outline_rounded, size: 26, color: accent.withValues(alpha: 0.8)),
           const SizedBox(height: 10),
           Text(
-            'Emoji data could not be loaded.',
+            'Emoji and character data could not be loaded.',
             style: TextStyle(fontSize: Design.baseFontSize + 2, color: scheme.onSurface.withValues(alpha: 0.72)),
           ),
           const SizedBox(height: 4),
           Text(
-            'You can still paste your own emoji above.',
+            'You can still paste an emoji or character above.',
             style: TextStyle(fontSize: Design.baseFontSize + 1, color: scheme.onSurface.withValues(alpha: 0.48)),
           ),
         ],
@@ -650,12 +653,12 @@ class _EmojiPickerModalState extends State<EmojiPickerModal> {
           Icon(Icons.search_off_rounded, size: 28, color: accent.withValues(alpha: 0.7)),
           const SizedBox(height: 10),
           Text(
-            'No emoji matched your search.',
+            'No emoji or characters matched your search.',
             style: TextStyle(fontSize: Design.baseFontSize + 2, color: scheme.onSurface.withValues(alpha: 0.72)),
           ),
           const SizedBox(height: 4),
           Text(
-            'Paste your own emoji or custom token above instead.',
+            'Paste a character, emoji, or custom token above instead.',
             style: TextStyle(fontSize: Design.baseFontSize + 1, color: scheme.onSurface.withValues(alpha: 0.48)),
           ),
         ],
@@ -840,6 +843,11 @@ const List<_EmojiCategoryGroup> _emojiCategoryGroups = <_EmojiCategoryGroup>[
     label: 'Symbols',
     icon: Icons.stars_rounded,
     categories: <String>['Symbols'],
+  ),
+  _EmojiCategoryGroup(
+    label: 'Characters',
+    icon: Icons.text_fields_rounded,
+    categories: <String>['Characters'],
   ),
   _EmojiCategoryGroup(
     label: 'Flags',

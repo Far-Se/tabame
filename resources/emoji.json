@@ -19268,5 +19268,2183 @@
     "sn": "secret",
     "so": 1570,
     "t": "alphanum circled ideograph secret"
+  },
+  {
+    "u": "2022",
+    "c": "Characters",
+    "sc": "dot",
+    "n": "Bullet",
+    "sn": "bullet",
+    "so": 1876,
+    "t": "bullet dot point black circle"
+  },
+  {
+    "u": "002E",
+    "c": "Characters",
+    "sc": "dot",
+    "n": "Full Stop",
+    "sn": "full_stop",
+    "so": 1877,
+    "t": "full stop dot point period stop"
+  },
+  {
+    "u": "25CB",
+    "c": "Characters",
+    "sc": "dot",
+    "n": "White Circle",
+    "sn": "white_circle",
+    "so": 1878,
+    "t": "white circle dot circle white empty large"
+  },
+  {
+    "u": "25E6",
+    "c": "Characters",
+    "sc": "dot",
+    "n": "White Bullet",
+    "sn": "white_bullet",
+    "so": 1879,
+    "t": "white bullet dot circle white small bullet"
+  },
+  {
+    "u": "26AB",
+    "c": "Characters",
+    "sc": "dot",
+    "n": "Black Circle",
+    "sn": "black_circle",
+    "so": 1880,
+    "t": "black circle dot circle black large filled"
+  },
+  {
+    "u": "26AA",
+    "c": "Characters",
+    "sc": "dot",
+    "n": "White Circle",
+    "sn": "white_circle",
+    "so": 1881,
+    "t": "white circle dot circle white large medium"
+  },
+  {
+    "u": "25A0",
+    "c": "Characters",
+    "sc": "square",
+    "n": "Black Square",
+    "sn": "black_square",
+    "so": 1882,
+    "t": "black square square black block dot filled"
+  },
+  {
+    "u": "00B1",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Plus Minus",
+    "sn": "plus_minus",
+    "so": 1883,
+    "t": "plus minus math plus minus plusminus"
+  },
+  {
+    "u": "00BD",
+    "c": "Characters",
+    "sc": "math",
+    "n": "One Half",
+    "sn": "one_half",
+    "so": 1884,
+    "t": "one half math fraction half 1/2"
+  },
+  {
+    "u": "2153",
+    "c": "Characters",
+    "sc": "math",
+    "n": "One Third",
+    "sn": "one_third",
+    "so": 1885,
+    "t": "one third math fraction third 1/3"
+  },
+  {
+    "u": "00BC",
+    "c": "Characters",
+    "sc": "math",
+    "n": "One Quarter",
+    "sn": "one_quarter",
+    "so": 1886,
+    "t": "one quarter math fraction quarter fourth 1/4"
+  },
+  {
+    "u": "00D7",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Multiplication",
+    "sn": "multiplication",
+    "so": 1887,
+    "t": "multiplication math multiply times cross x"
+  },
+  {
+    "u": "00F7",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Division",
+    "sn": "division",
+    "so": 1888,
+    "t": "division math divide obelus"
+  },
+  {
+    "u": "2260",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Not Equal",
+    "sn": "not_equal",
+    "so": 1889,
+    "t": "not equal math equal not different"
+  },
+  {
+    "u": "2264",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Less Than or Equal",
+    "sn": "less_than_or_equal",
+    "so": 1890,
+    "t": "less than or equal math less equal leq"
+  },
+  {
+    "u": "2265",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Greater Than or Equal",
+    "sn": "greater_than_or_equal",
+    "so": 1891,
+    "t": "greater than or equal math greater equal geq"
+  },
+  {
+    "u": "221E",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Infinity",
+    "sn": "infinity",
+    "so": 1892,
+    "t": "infinity math infinite loop"
+  },
+  {
+    "u": "221A",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Square Root",
+    "sn": "square_root",
+    "so": 1893,
+    "t": "square root math sqrt root square check"
+  },
+  {
+    "u": "2211",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Summation",
+    "sn": "summation",
+    "so": 1894,
+    "t": "summation math sum sigma addition"
+  },
+  {
+    "u": "222B",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Integral",
+    "sn": "integral",
+    "so": 1895,
+    "t": "integral math calculus"
+  },
+  {
+    "u": "03C0",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Pi",
+    "sn": "pi",
+    "so": 1896,
+    "t": "pi math greek 3.14 letter"
+  },
+  {
+    "u": "0394",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Delta",
+    "sn": "delta",
+    "so": 1897,
+    "t": "delta math triangle change greek"
+  },
+  {
+    "u": "2220",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Angle",
+    "sn": "angle",
+    "so": 1898,
+    "t": "angle math geometry"
+  },
+  {
+    "u": "2225",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Parallel To",
+    "sn": "parallel_to",
+    "so": 1899,
+    "t": "parallel to math parallel lines geometry"
+  },
+  {
+    "u": "0192",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Function",
+    "sn": "function",
+    "so": 1900,
+    "t": "function math f hook"
+  },
+  {
+    "u": "00B5",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Micro",
+    "sn": "micro",
+    "so": 1901,
+    "t": "micro math mu greek"
+  },
+  {
+    "u": "2192",
+    "c": "Characters",
+    "sc": "arrow",
+    "n": "Rightwards Arrow",
+    "sn": "rightwards_arrow",
+    "so": 1902,
+    "t": "rightwards arrow arrow right pointer"
+  },
+  {
+    "u": "2190",
+    "c": "Characters",
+    "sc": "arrow",
+    "n": "Leftwards Arrow",
+    "sn": "leftwards_arrow",
+    "so": 1903,
+    "t": "leftwards arrow arrow left pointer back"
+  },
+  {
+    "u": "2191",
+    "c": "Characters",
+    "sc": "arrow",
+    "n": "Upwards Arrow",
+    "sn": "upwards_arrow",
+    "so": 1904,
+    "t": "upwards arrow arrow up pointer"
+  },
+  {
+    "u": "2193",
+    "c": "Characters",
+    "sc": "arrow",
+    "n": "Downwards Arrow",
+    "sn": "downwards_arrow",
+    "so": 1905,
+    "t": "downwards arrow arrow down pointer"
+  },
+  {
+    "u": "2194",
+    "c": "Characters",
+    "sc": "arrow",
+    "n": "Left Right Arrow",
+    "sn": "left_right_arrow",
+    "so": 1906,
+    "t": "left right arrow arrow left right horizontal"
+  },
+  {
+    "u": "21AA",
+    "c": "Characters",
+    "sc": "arrow",
+    "n": "Rightwards Hook Arrow",
+    "sn": "rightwards_hook_arrow",
+    "so": 1907,
+    "t": "rightwards hook arrow arrow right hook return"
+  },
+  {
+    "u": "2014",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "Em Dash",
+    "sn": "em_dash",
+    "so": 1908,
+    "t": "em dash punctuation dash em long"
+  },
+  {
+    "u": "2013",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "En Dash",
+    "sn": "en_dash",
+    "so": 1909,
+    "t": "en dash punctuation dash en short"
+  },
+  {
+    "u": "2026",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "Ellipsis",
+    "sn": "ellipsis",
+    "so": 1910,
+    "t": "ellipsis punctuation dots three"
+  },
+  {
+    "u": "2020",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "Dagger",
+    "sn": "dagger",
+    "so": 1911,
+    "t": "dagger punctuation cross obelisk"
+  },
+  {
+    "u": "00B0",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "Degree",
+    "sn": "degree",
+    "so": 1912,
+    "t": "degree punctuation temperature circle"
+  },
+  {
+    "u": "2032",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "Prime",
+    "sn": "prime",
+    "so": 1913,
+    "t": "prime punctuation minute feet"
+  },
+  {
+    "u": "00A7",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "Section",
+    "sn": "section",
+    "so": 1914,
+    "t": "section punctuation legal s"
+  },
+  {
+    "u": "00B6",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "Pilcrow",
+    "sn": "pilcrow",
+    "so": 1915,
+    "t": "pilcrow punctuation paragraph p"
+  },
+  {
+    "u": "00DF",
+    "c": "Characters",
+    "sc": "language",
+    "n": "Sharp S",
+    "sn": "sharp_s",
+    "so": 1916,
+    "t": "sharp s language german sharp s eszett"
+  },
+  {
+    "u": "00E6",
+    "c": "Characters",
+    "sc": "language",
+    "n": "AE Ligature",
+    "sn": "ae_ligature",
+    "so": 1917,
+    "t": "ae ligature language latin ae ligature"
+  },
+  {
+    "u": "0153",
+    "c": "Characters",
+    "sc": "language",
+    "n": "OE Ligature",
+    "sn": "oe_ligature",
+    "so": 1918,
+    "t": "oe ligature language latin oe ligature"
+  },
+  {
+    "u": "00F8",
+    "c": "Characters",
+    "sc": "language",
+    "n": "Slashed O",
+    "sn": "slashed_o",
+    "so": 1919,
+    "t": "slashed o language norwegian danish o slash"
+  },
+  {
+    "u": "00E7",
+    "c": "Characters",
+    "sc": "language",
+    "n": "C with Cedilla",
+    "sn": "c_with_cedilla",
+    "so": 1920,
+    "t": "c with cedilla language french c cedilla"
+  },
+  {
+    "u": "00F1",
+    "c": "Characters",
+    "sc": "language",
+    "n": "N with Tilde",
+    "sn": "n_with_tilde",
+    "so": 1921,
+    "t": "n with tilde language spanish n tilde enye"
+  },
+  {
+    "u": "00E9",
+    "c": "Characters",
+    "sc": "language",
+    "n": "E with Acute",
+    "sn": "e_with_acute",
+    "so": 1922,
+    "t": "e with acute language french e acute accent"
+  },
+  {
+    "u": "00E8",
+    "c": "Characters",
+    "sc": "language",
+    "n": "E with Grave",
+    "sn": "e_with_grave",
+    "so": 1923,
+    "t": "e with grave language french e grave accent"
+  },
+  {
+    "u": "0142",
+    "c": "Characters",
+    "sc": "language",
+    "n": "L with Stroke",
+    "sn": "l_with_stroke",
+    "so": 1924,
+    "t": "l with stroke language polish l stroke slash"
+  },
+  {
+    "u": "00FE",
+    "c": "Characters",
+    "sc": "language",
+    "n": "Thorn",
+    "sn": "thorn",
+    "so": 1925,
+    "t": "thorn language icelandic th"
+  },
+  {
+    "u": "00F0",
+    "c": "Characters",
+    "sc": "language",
+    "n": "Eth",
+    "sn": "eth",
+    "so": 1926,
+    "t": "eth language icelandic edh"
+  },
+  {
+    "u": "025B",
+    "c": "Characters",
+    "sc": "language",
+    "n": "Open E",
+    "sn": "open_e",
+    "so": 1927,
+    "t": "open e language ipa phonetic epsilon open e"
+  },
+  {
+    "u": "0283",
+    "c": "Characters",
+    "sc": "language",
+    "n": "Esh",
+    "sn": "esh",
+    "so": 1928,
+    "t": "esh language ipa phonetic hook"
+  },
+  {
+    "u": "0292",
+    "c": "Characters",
+    "sc": "language",
+    "n": "Ezh",
+    "sn": "ezh",
+    "so": 1929,
+    "t": "ezh language ipa phonetic yogh"
+  },
+  {
+    "u": "0254",
+    "c": "Characters",
+    "sc": "language",
+    "n": "Open O",
+    "sn": "open_o",
+    "so": 1930,
+    "t": "open o language ipa phonetic open o"
+  },
+  {
+    "u": "028C",
+    "c": "Characters",
+    "sc": "language",
+    "n": "Open V",
+    "sn": "open_v",
+    "so": 1931,
+    "t": "open v language ipa phonetic turned v"
+  },
+  {
+    "u": "026A",
+    "c": "Characters",
+    "sc": "language",
+    "n": "Small Capital I",
+    "sn": "small_capital_i",
+    "so": 1932,
+    "t": "small capital i language ipa phonetic small i"
+  },
+  {
+    "u": "0263",
+    "c": "Characters",
+    "sc": "language",
+    "n": "Gamma",
+    "sn": "gamma",
+    "so": 1933,
+    "t": "gamma language ipa phonetic g"
+  },
+  {
+    "u": "00AC",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Not",
+    "sn": "not",
+    "so": 1934,
+    "t": "not math logic negation tilde"
+  },
+  {
+    "u": "2229",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Intersection",
+    "sn": "intersection",
+    "so": 1935,
+    "t": "intersection math set cap"
+  },
+  {
+    "u": "222A",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Union",
+    "sn": "union",
+    "so": 1936,
+    "t": "union math set cup"
+  },
+  {
+    "u": "2282",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subset",
+    "sn": "subset",
+    "so": 1937,
+    "t": "subset math set contained"
+  },
+  {
+    "u": "2283",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superset",
+    "sn": "superset",
+    "so": 1938,
+    "t": "superset math set contains"
+  },
+  {
+    "u": "2208",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Element Of",
+    "sn": "element_of",
+    "so": 1939,
+    "t": "element of math set element member in"
+  },
+  {
+    "u": "2209",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Not Element Of",
+    "sn": "not_element_of",
+    "so": 1940,
+    "t": "not element of math set element not member"
+  },
+  {
+    "u": "2205",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Empty Set",
+    "sn": "empty_set",
+    "so": 1941,
+    "t": "empty set math set null empty zero slash"
+  },
+  {
+    "u": "223C",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Tilde Operator",
+    "sn": "tilde_operator",
+    "so": 1942,
+    "t": "tilde operator math tilde similar"
+  },
+  {
+    "u": "2245",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Congruent",
+    "sn": "congruent",
+    "so": 1943,
+    "t": "congruent math equal tilde"
+  },
+  {
+    "u": "2308",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Left Ceiling",
+    "sn": "left_ceiling",
+    "so": 1944,
+    "t": "left ceiling math ceiling bracket left"
+  },
+  {
+    "u": "2309",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Right Ceiling",
+    "sn": "right_ceiling",
+    "so": 1945,
+    "t": "right ceiling math ceiling bracket right"
+  },
+  {
+    "u": "230A",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Left Floor",
+    "sn": "left_floor",
+    "so": 1946,
+    "t": "left floor math floor bracket left"
+  },
+  {
+    "u": "230B",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Right Floor",
+    "sn": "right_floor",
+    "so": 1947,
+    "t": "right floor math floor bracket right"
+  },
+  {
+    "u": "03B1",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Alpha",
+    "sn": "alpha",
+    "so": 1948,
+    "t": "alpha greek letter math angle"
+  },
+  {
+    "u": "03B2",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Beta",
+    "sn": "beta",
+    "so": 1949,
+    "t": "beta greek letter math"
+  },
+  {
+    "u": "03B3",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Gamma",
+    "sn": "gamma",
+    "so": 1950,
+    "t": "gamma greek letter math radiation"
+  },
+  {
+    "u": "03B4",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Delta",
+    "sn": "delta",
+    "so": 1951,
+    "t": "delta greek letter math change"
+  },
+  {
+    "u": "03B5",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Epsilon",
+    "sn": "epsilon",
+    "so": 1952,
+    "t": "epsilon greek letter math small"
+  },
+  {
+    "u": "03B6",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Zeta",
+    "sn": "zeta",
+    "so": 1953,
+    "t": "zeta greek letter math"
+  },
+  {
+    "u": "03B7",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Eta",
+    "sn": "eta",
+    "so": 1954,
+    "t": "eta greek letter math"
+  },
+  {
+    "u": "03B8",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Theta",
+    "sn": "theta",
+    "so": 1955,
+    "t": "theta greek letter math angle"
+  },
+  {
+    "u": "03B9",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Iota",
+    "sn": "iota",
+    "so": 1956,
+    "t": "iota greek letter math"
+  },
+  {
+    "u": "03BA",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Kappa",
+    "sn": "kappa",
+    "so": 1957,
+    "t": "kappa greek letter math"
+  },
+  {
+    "u": "03BC",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Mu",
+    "sn": "mu",
+    "so": 1958,
+    "t": "mu greek letter math micro prefix"
+  },
+  {
+    "u": "03BD",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Nu",
+    "sn": "nu",
+    "so": 1959,
+    "t": "nu greek letter math"
+  },
+  {
+    "u": "03BE",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Xi",
+    "sn": "xi",
+    "so": 1960,
+    "t": "xi greek letter math"
+  },
+  {
+    "u": "03BF",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Omicron",
+    "sn": "omicron",
+    "so": 1961,
+    "t": "omicron greek letter math"
+  },
+  {
+    "u": "03C1",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Rho",
+    "sn": "rho",
+    "so": 1962,
+    "t": "rho greek letter math density"
+  },
+  {
+    "u": "03C5",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Upsilon",
+    "sn": "upsilon",
+    "so": 1963,
+    "t": "upsilon greek letter math"
+  },
+  {
+    "u": "03C6",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Phi",
+    "sn": "phi",
+    "so": 1964,
+    "t": "phi greek letter math golden ratio angle"
+  },
+  {
+    "u": "03C7",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Chi",
+    "sn": "chi",
+    "so": 1965,
+    "t": "chi greek letter math distribution"
+  },
+  {
+    "u": "03C8",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Psi",
+    "sn": "psi",
+    "so": 1966,
+    "t": "psi greek letter math quantum"
+  },
+  {
+    "u": "0398",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Capital Theta",
+    "sn": "capital_theta",
+    "so": 1967,
+    "t": "capital theta greek capital letter theta math"
+  },
+  {
+    "u": "039E",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Capital Xi",
+    "sn": "capital_xi",
+    "so": 1968,
+    "t": "capital xi greek capital letter xi math"
+  },
+  {
+    "u": "03A6",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Capital Phi",
+    "sn": "capital_phi",
+    "so": 1969,
+    "t": "capital phi greek capital letter phi math"
+  },
+  {
+    "u": "03A8",
+    "c": "Characters",
+    "sc": "greek",
+    "n": "Capital Psi",
+    "sn": "capital_psi",
+    "so": 1970,
+    "t": "capital psi greek capital letter psi math"
+  },
+  {
+    "u": "20AC",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Euro",
+    "sn": "euro",
+    "so": 1971,
+    "t": "euro currency money e"
+  },
+  {
+    "u": "00A3",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Pound",
+    "sn": "pound",
+    "so": 1972,
+    "t": "pound currency british money lira"
+  },
+  {
+    "u": "00A5",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Yen",
+    "sn": "yen",
+    "so": 1973,
+    "t": "yen currency yuan japanese chinese money"
+  },
+  {
+    "u": "20B9",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Indian Rupee",
+    "sn": "indian_rupee",
+    "so": 1974,
+    "t": "indian rupee currency indian rupee money"
+  },
+  {
+    "u": "20A9",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Won",
+    "sn": "won",
+    "so": 1975,
+    "t": "won currency korean money"
+  },
+  {
+    "u": "20BD",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Ruble",
+    "sn": "ruble",
+    "so": 1976,
+    "t": "ruble currency russian money"
+  },
+  {
+    "u": "20BA",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Turkish Lira",
+    "sn": "turkish_lira",
+    "so": 1977,
+    "t": "turkish lira currency turkish lira money"
+  },
+  {
+    "u": "20B4",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Hryvnia",
+    "sn": "hryvnia",
+    "so": 1978,
+    "t": "hryvnia currency ukrainian money"
+  },
+  {
+    "u": "20BF",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Bitcoin",
+    "sn": "bitcoin",
+    "so": 1979,
+    "t": "bitcoin currency crypto money"
+  },
+  {
+    "u": "00A2",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Cent",
+    "sn": "cent",
+    "so": 1980,
+    "t": "cent currency money c"
+  },
+  {
+    "u": "20B5",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Cedi",
+    "sn": "cedi",
+    "so": 1981,
+    "t": "cedi currency ghanaian money"
+  },
+  {
+    "u": "20A1",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Colon",
+    "sn": "colon",
+    "so": 1982,
+    "t": "colon currency costa rican money"
+  },
+  {
+    "u": "20AB",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Dong",
+    "sn": "dong",
+    "so": 1983,
+    "t": "dong currency vietnamese money"
+  },
+  {
+    "u": "20B1",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Peso",
+    "sn": "peso",
+    "so": 1984,
+    "t": "peso currency philippine mexican money"
+  },
+  {
+    "u": "20B2",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Guarani",
+    "sn": "guarani",
+    "so": 1985,
+    "t": "guarani currency paraguayan money"
+  },
+  {
+    "u": "20B8",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Tenge",
+    "sn": "tenge",
+    "so": 1986,
+    "t": "tenge currency kazakhstani money"
+  },
+  {
+    "u": "20BC",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Manat",
+    "sn": "manat",
+    "so": 1987,
+    "t": "manat currency azerbaijani money"
+  },
+  {
+    "u": "00A9",
+    "c": "Characters",
+    "sc": "typography",
+    "n": "Copyright",
+    "sn": "copyright",
+    "so": 1988,
+    "t": "copyright typography c law"
+  },
+  {
+    "u": "2122",
+    "c": "Characters",
+    "sc": "typography",
+    "n": "Trademark",
+    "sn": "trademark",
+    "so": 1989,
+    "t": "trademark typography tm law"
+  },
+  {
+    "u": "2120",
+    "c": "Characters",
+    "sc": "typography",
+    "n": "Service Mark",
+    "sn": "service_mark",
+    "so": 1990,
+    "t": "service mark typography service mark sm law"
+  },
+  {
+    "u": "2116",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "Numero",
+    "sn": "numero",
+    "so": 1991,
+    "t": "numero punctuation number"
+  },
+  {
+    "u": "2047",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "Double Question",
+    "sn": "double_question",
+    "so": 1992,
+    "t": "double question punctuation question double"
+  },
+  {
+    "u": "2E3B",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "Three Em Dash",
+    "sn": "three_em_dash",
+    "so": 1993,
+    "t": "three em dash punctuation dash long three em"
+  },
+  {
+    "u": "2325",
+    "c": "Characters",
+    "sc": "technical",
+    "n": "Option",
+    "sn": "option",
+    "so": 1994,
+    "t": "option technical mac apple alt"
+  },
+  {
+    "u": "21EA",
+    "c": "Characters",
+    "sc": "technical",
+    "n": "Caps Lock",
+    "sn": "caps_lock",
+    "so": 1995,
+    "t": "caps lock technical keyboard caps lock arrow"
+  },
+  {
+    "u": "238B",
+    "c": "Characters",
+    "sc": "technical",
+    "n": "Escape",
+    "sn": "escape",
+    "so": 1996,
+    "t": "escape technical keyboard esc"
+  },
+  {
+    "u": "23CE",
+    "c": "Characters",
+    "sc": "technical",
+    "n": "Return",
+    "sn": "return",
+    "so": 1997,
+    "t": "return technical keyboard enter"
+  },
+  {
+    "u": "2400",
+    "c": "Characters",
+    "sc": "technical",
+    "n": "Null",
+    "sn": "null",
+    "so": 1998,
+    "t": "null technical character symbol control"
+  },
+  {
+    "u": "21B9",
+    "c": "Characters",
+    "sc": "technical",
+    "n": "Tab",
+    "sn": "tab",
+    "so": 1999,
+    "t": "tab technical keyboard arrows"
+  },
+  {
+    "u": "21E5",
+    "c": "Characters",
+    "sc": "technical",
+    "n": "Right Tab",
+    "sn": "right_tab",
+    "so": 2000,
+    "t": "right tab technical keyboard tab right"
+  },
+  {
+    "u": "21E4",
+    "c": "Characters",
+    "sc": "technical",
+    "n": "Left Tab",
+    "sn": "left_tab",
+    "so": 2001,
+    "t": "left tab technical keyboard tab left"
+  },
+  {
+    "u": "2713",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "Check Mark",
+    "sn": "check_mark",
+    "so": 2002,
+    "t": "check mark symbol check mark tick yes"
+  },
+  {
+    "u": "2717",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "Ballot X",
+    "sn": "ballot_x",
+    "so": 2003,
+    "t": "ballot x symbol x mark cross no"
+  },
+  {
+    "u": "2718",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "Heavy Ballot X",
+    "sn": "heavy_ballot_x",
+    "so": 2004,
+    "t": "heavy ballot x symbol x mark heavy cross no"
+  },
+  {
+    "u": "2605",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "Black Star",
+    "sn": "black_star",
+    "so": 2005,
+    "t": "black star symbol star black filled"
+  },
+  {
+    "u": "2606",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "White Star",
+    "sn": "white_star",
+    "so": 2006,
+    "t": "white star symbol star white empty"
+  },
+  {
+    "u": "272A",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "Circled White Star",
+    "sn": "circled_white_star",
+    "so": 2007,
+    "t": "circled white star symbol star white circled"
+  },
+  {
+    "u": "204E",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "Low Asterisk",
+    "sn": "low_asterisk",
+    "so": 2008,
+    "t": "low asterisk symbol asterisk star low"
+  },
+  {
+    "u": "2660",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "Spade",
+    "sn": "spade",
+    "so": 2009,
+    "t": "spade symbol card game black"
+  },
+  {
+    "u": "2665",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "Heart",
+    "sn": "heart",
+    "so": 2010,
+    "t": "heart symbol card game love black"
+  },
+  {
+    "u": "2666",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "Diamond",
+    "sn": "diamond",
+    "so": 2011,
+    "t": "diamond symbol card game black"
+  },
+  {
+    "u": "2663",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "Club",
+    "sn": "club",
+    "so": 2012,
+    "t": "club symbol card game clover black"
+  },
+  {
+    "u": "266A",
+    "c": "Characters",
+    "sc": "music",
+    "n": "Eighth Note",
+    "sn": "eighth_note",
+    "so": 2013,
+    "t": "eighth note music note eighth single"
+  },
+  {
+    "u": "266D",
+    "c": "Characters",
+    "sc": "music",
+    "n": "Flat",
+    "sn": "flat",
+    "so": 2014,
+    "t": "flat music note b"
+  },
+  {
+    "u": "266E",
+    "c": "Characters",
+    "sc": "music",
+    "n": "Natural",
+    "sn": "natural",
+    "so": 2015,
+    "t": "natural music note"
+  },
+  {
+    "u": "266F",
+    "c": "Characters",
+    "sc": "music",
+    "n": "Sharp",
+    "sn": "sharp",
+    "so": 2016,
+    "t": "sharp music note hash"
+  },
+  {
+    "u": "0416",
+    "c": "Characters",
+    "sc": "cyrillic",
+    "n": "Zhe",
+    "sn": "zhe",
+    "so": 2017,
+    "t": "zhe cyrillic russian zh"
+  },
+  {
+    "u": "042F",
+    "c": "Characters",
+    "sc": "cyrillic",
+    "n": "Ya",
+    "sn": "ya",
+    "so": 2018,
+    "t": "ya cyrillic russian backwards r"
+  },
+  {
+    "u": "0403",
+    "c": "Characters",
+    "sc": "macedonian",
+    "n": "Gje",
+    "sn": "gje",
+    "so": 2019,
+    "t": "gje macedonian cyrillic g accent"
+  },
+  {
+    "u": "040C",
+    "c": "Characters",
+    "sc": "macedonian",
+    "n": "Kje",
+    "sn": "kje",
+    "so": 2020,
+    "t": "kje macedonian cyrillic k accent"
+  },
+  {
+    "u": "040F",
+    "c": "Characters",
+    "sc": "serbian",
+    "n": "Dzhe",
+    "sn": "dzhe",
+    "so": 2021,
+    "t": "dzhe serbian macedonian cyrillic"
+  },
+  {
+    "u": "04D8",
+    "c": "Characters",
+    "sc": "kazakh",
+    "n": "Schwa Cyrillic",
+    "sn": "schwa_cyrillic",
+    "so": 2022,
+    "t": "schwa cyrillic kazakh cyrillic schwa"
+  },
+  {
+    "u": "0492",
+    "c": "Characters",
+    "sc": "kazakh",
+    "n": "Ghayn",
+    "sn": "ghayn",
+    "so": 2023,
+    "t": "ghayn kazakh uzbek cyrillic g stroke"
+  },
+  {
+    "u": "2070",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript Zero",
+    "sn": "superscript_zero",
+    "so": 2024,
+    "t": "superscript zero math superscript raised exponent power zero 0"
+  },
+  {
+    "u": "00B9",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript One",
+    "sn": "superscript_one",
+    "so": 2025,
+    "t": "superscript one math superscript raised exponent power one 1"
+  },
+  {
+    "u": "00B2",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript Two",
+    "sn": "superscript_two",
+    "so": 2026,
+    "t": "superscript two math superscript raised exponent power squared 2"
+  },
+  {
+    "u": "00B3",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript Three",
+    "sn": "superscript_three",
+    "so": 2027,
+    "t": "superscript three math superscript raised exponent power cubed 3"
+  },
+  {
+    "u": "2074",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript Four",
+    "sn": "superscript_four",
+    "so": 2028,
+    "t": "superscript four math superscript raised exponent power four 4"
+  },
+  {
+    "u": "2075",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript Five",
+    "sn": "superscript_five",
+    "so": 2029,
+    "t": "superscript five math superscript raised exponent power five 5"
+  },
+  {
+    "u": "2076",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript Six",
+    "sn": "superscript_six",
+    "so": 2030,
+    "t": "superscript six math superscript raised exponent power six 6"
+  },
+  {
+    "u": "2077",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript Seven",
+    "sn": "superscript_seven",
+    "so": 2031,
+    "t": "superscript seven math superscript raised exponent power seven 7"
+  },
+  {
+    "u": "2078",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript Eight",
+    "sn": "superscript_eight",
+    "so": 2032,
+    "t": "superscript eight math superscript raised exponent power eight 8"
+  },
+  {
+    "u": "2079",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript Nine",
+    "sn": "superscript_nine",
+    "so": 2033,
+    "t": "superscript nine math superscript raised exponent power nine 9"
+  },
+  {
+    "u": "207A",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript Plus",
+    "sn": "superscript_plus",
+    "so": 2034,
+    "t": "superscript plus math superscript raised plus operator"
+  },
+  {
+    "u": "207B",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript Minus",
+    "sn": "superscript_minus",
+    "so": 2035,
+    "t": "superscript minus math superscript raised minus operator"
+  },
+  {
+    "u": "207C",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript Equals",
+    "sn": "superscript_equals",
+    "so": 2036,
+    "t": "superscript equals math superscript raised equals operator"
+  },
+  {
+    "u": "207D",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript Left Parenthesis",
+    "sn": "superscript_left_parenthesis",
+    "so": 2037,
+    "t": "superscript left parenthesis math superscript raised left parenthesis bracket"
+  },
+  {
+    "u": "207E",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript Right Parenthesis",
+    "sn": "superscript_right_parenthesis",
+    "so": 2038,
+    "t": "superscript right parenthesis math superscript raised right parenthesis bracket"
+  },
+  {
+    "u": "2071",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript I",
+    "sn": "superscript_i",
+    "so": 2039,
+    "t": "superscript i math superscript raised letter i"
+  },
+  {
+    "u": "207F",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Superscript N",
+    "sn": "superscript_n",
+    "so": 2040,
+    "t": "superscript n math superscript raised letter n"
+  },
+  {
+    "u": "2080",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript Zero",
+    "sn": "subscript_zero",
+    "so": 2041,
+    "t": "subscript zero math subscript lowered index zero 0"
+  },
+  {
+    "u": "2081",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript One",
+    "sn": "subscript_one",
+    "so": 2042,
+    "t": "subscript one math subscript lowered index one 1"
+  },
+  {
+    "u": "2082",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript Two",
+    "sn": "subscript_two",
+    "so": 2043,
+    "t": "subscript two math subscript lowered index two 2"
+  },
+  {
+    "u": "2083",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript Three",
+    "sn": "subscript_three",
+    "so": 2044,
+    "t": "subscript three math subscript lowered index three 3"
+  },
+  {
+    "u": "2084",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript Four",
+    "sn": "subscript_four",
+    "so": 2045,
+    "t": "subscript four math subscript lowered index four 4"
+  },
+  {
+    "u": "2085",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript Five",
+    "sn": "subscript_five",
+    "so": 2046,
+    "t": "subscript five math subscript lowered index five 5"
+  },
+  {
+    "u": "2086",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript Six",
+    "sn": "subscript_six",
+    "so": 2047,
+    "t": "subscript six math subscript lowered index six 6"
+  },
+  {
+    "u": "2087",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript Seven",
+    "sn": "subscript_seven",
+    "so": 2048,
+    "t": "subscript seven math subscript lowered index seven 7"
+  },
+  {
+    "u": "2088",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript Eight",
+    "sn": "subscript_eight",
+    "so": 2049,
+    "t": "subscript eight math subscript lowered index eight 8"
+  },
+  {
+    "u": "2089",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript Nine",
+    "sn": "subscript_nine",
+    "so": 2050,
+    "t": "subscript nine math subscript lowered index nine 9"
+  },
+  {
+    "u": "208A",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript Plus",
+    "sn": "subscript_plus",
+    "so": 2051,
+    "t": "subscript plus math subscript lowered plus operator"
+  },
+  {
+    "u": "208B",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript Minus",
+    "sn": "subscript_minus",
+    "so": 2052,
+    "t": "subscript minus math subscript lowered minus operator"
+  },
+  {
+    "u": "208C",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript Equals",
+    "sn": "subscript_equals",
+    "so": 2053,
+    "t": "subscript equals math subscript lowered equals operator"
+  },
+  {
+    "u": "208D",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript Left Parenthesis",
+    "sn": "subscript_left_parenthesis",
+    "so": 2054,
+    "t": "subscript left parenthesis math subscript lowered left parenthesis bracket"
+  },
+  {
+    "u": "208E",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript Right Parenthesis",
+    "sn": "subscript_right_parenthesis",
+    "so": 2055,
+    "t": "subscript right parenthesis math subscript lowered right parenthesis bracket"
+  },
+  {
+    "u": "1D62",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript I",
+    "sn": "subscript_i",
+    "so": 2056,
+    "t": "subscript i math subscript lowered letter i"
+  },
+  {
+    "u": "2099",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Subscript N",
+    "sn": "subscript_n",
+    "so": 2057,
+    "t": "subscript n math subscript lowered letter n"
+  },
+  {
+    "u": "2150",
+    "c": "Characters",
+    "sc": "math",
+    "n": "One Seventh",
+    "sn": "one_seventh",
+    "so": 2058,
+    "t": "one seventh math fraction 1/7 seventh"
+  },
+  {
+    "u": "2151",
+    "c": "Characters",
+    "sc": "math",
+    "n": "One Ninth",
+    "sn": "one_ninth",
+    "so": 2059,
+    "t": "one ninth math fraction 1/9 ninth"
+  },
+  {
+    "u": "2152",
+    "c": "Characters",
+    "sc": "math",
+    "n": "One Tenth",
+    "sn": "one_tenth",
+    "so": 2060,
+    "t": "one tenth math fraction 1/10 tenth"
+  },
+  {
+    "u": "2155",
+    "c": "Characters",
+    "sc": "math",
+    "n": "One Fifth",
+    "sn": "one_fifth",
+    "so": 2061,
+    "t": "one fifth math fraction 1/5 fifth"
+  },
+  {
+    "u": "2156",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Two Fifths",
+    "sn": "two_fifths",
+    "so": 2062,
+    "t": "two fifths math fraction 2/5 fifths"
+  },
+  {
+    "u": "2157",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Three Fifths",
+    "sn": "three_fifths",
+    "so": 2063,
+    "t": "three fifths math fraction 3/5 fifths"
+  },
+  {
+    "u": "2158",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Four Fifths",
+    "sn": "four_fifths",
+    "so": 2064,
+    "t": "four fifths math fraction 4/5 fifths"
+  },
+  {
+    "u": "2159",
+    "c": "Characters",
+    "sc": "math",
+    "n": "One Sixth",
+    "sn": "one_sixth",
+    "so": 2065,
+    "t": "one sixth math fraction 1/6 sixth"
+  },
+  {
+    "u": "215A",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Five Sixths",
+    "sn": "five_sixths",
+    "so": 2066,
+    "t": "five sixths math fraction 5/6 sixths"
+  },
+  {
+    "u": "215B",
+    "c": "Characters",
+    "sc": "math",
+    "n": "One Eighth",
+    "sn": "one_eighth",
+    "so": 2067,
+    "t": "one eighth math fraction 1/8 eighth"
+  },
+  {
+    "u": "215C",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Three Eighths",
+    "sn": "three_eighths",
+    "so": 2068,
+    "t": "three eighths math fraction 3/8 eighths"
+  },
+  {
+    "u": "215D",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Five Eighths",
+    "sn": "five_eighths",
+    "so": 2069,
+    "t": "five eighths math fraction 5/8 eighths"
+  },
+  {
+    "u": "215E",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Seven Eighths",
+    "sn": "seven_eighths",
+    "so": 2070,
+    "t": "seven eighths math fraction 7/8 eighths"
+  },
+  {
+    "u": "2154",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Two Thirds",
+    "sn": "two_thirds",
+    "so": 2071,
+    "t": "two thirds math fraction 2/3 thirds"
+  },
+  {
+    "u": "00BE",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Three Quarters",
+    "sn": "three_quarters",
+    "so": 2072,
+    "t": "three quarters math fraction 3/4 quarter fourth"
+  },
+  {
+    "u": "2197",
+    "c": "Characters",
+    "sc": "arrow",
+    "n": "North East Arrow",
+    "sn": "north_east_arrow",
+    "so": 2073,
+    "t": "north east arrow arrow diagonal up right northeast"
+  },
+  {
+    "u": "2198",
+    "c": "Characters",
+    "sc": "arrow",
+    "n": "South East Arrow",
+    "sn": "south_east_arrow",
+    "so": 2074,
+    "t": "south east arrow arrow diagonal down right southeast"
+  },
+  {
+    "u": "2199",
+    "c": "Characters",
+    "sc": "arrow",
+    "n": "South West Arrow",
+    "sn": "south_west_arrow",
+    "so": 2075,
+    "t": "south west arrow arrow diagonal down left southwest"
+  },
+  {
+    "u": "2196",
+    "c": "Characters",
+    "sc": "arrow",
+    "n": "North West Arrow",
+    "sn": "north_west_arrow",
+    "so": 2076,
+    "t": "north west arrow arrow diagonal up left northwest"
+  },
+  {
+    "u": "2195",
+    "c": "Characters",
+    "sc": "arrow",
+    "n": "Up Down Arrow",
+    "sn": "up_down_arrow",
+    "so": 2077,
+    "t": "up down arrow arrow vertical up down"
+  },
+  {
+    "u": "0024",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Dollar Sign",
+    "sn": "dollar_sign",
+    "so": 2078,
+    "t": "dollar sign currency dollar usd money"
+  },
+  {
+    "u": "20AA",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "New Sheqel",
+    "sn": "new_sheqel",
+    "so": 2079,
+    "t": "new sheqel currency israel israeli shekel sheqel money"
+  },
+  {
+    "u": "20A6",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Naira",
+    "sn": "naira",
+    "so": 2080,
+    "t": "naira currency nigerian money"
+  },
+  {
+    "u": "0E3F",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Thai Baht",
+    "sn": "thai_baht",
+    "so": 2081,
+    "t": "thai baht currency thailand thai baht money"
+  },
+  {
+    "u": "20AD",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Kip",
+    "sn": "kip",
+    "so": 2082,
+    "t": "kip currency laotian lao money"
+  },
+  {
+    "u": "20AE",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Tugrik",
+    "sn": "tugrik",
+    "so": 2083,
+    "t": "tugrik currency mongolian tögrög money"
+  },
+  {
+    "u": "20BE",
+    "c": "Characters",
+    "sc": "currency",
+    "n": "Lari",
+    "sn": "lari",
+    "so": 2084,
+    "t": "lari currency georgian money"
+  },
+  {
+    "u": "0040",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "At Sign",
+    "sn": "at_sign",
+    "so": 2085,
+    "t": "at sign punctuation at email mention keyboard"
+  },
+  {
+    "u": "0023",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "Number Sign",
+    "sn": "number_sign",
+    "so": 2086,
+    "t": "number sign punctuation number hash hashtag pound octothorpe"
+  },
+  {
+    "u": "0026",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "Ampersand",
+    "sn": "ampersand",
+    "so": 2087,
+    "t": "ampersand punctuation typography and keyboard"
+  },
+  {
+    "u": "0025",
+    "c": "Characters",
+    "sc": "punctuation",
+    "n": "Percent Sign",
+    "sn": "percent_sign",
+    "so": 2088,
+    "t": "percent sign punctuation percentage percent keyboard"
+  },
+  {
+    "u": "002B",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Plus Sign",
+    "sn": "plus_sign",
+    "so": 2089,
+    "t": "plus sign math addition plus keyboard"
+  },
+  {
+    "u": "003D",
+    "c": "Characters",
+    "sc": "math",
+    "n": "Equals Sign",
+    "sn": "equals_sign",
+    "so": 2090,
+    "t": "equals sign math equality equals keyboard"
+  },
+  {
+    "u": "2460",
+    "c": "Characters",
+    "sc": "number",
+    "n": "Circled One",
+    "sn": "circled_one",
+    "so": 2091,
+    "t": "circled one number circled list 1 first"
+  },
+  {
+    "u": "2461",
+    "c": "Characters",
+    "sc": "number",
+    "n": "Circled Two",
+    "sn": "circled_two",
+    "so": 2092,
+    "t": "circled two number circled list 2 second"
+  },
+  {
+    "u": "2462",
+    "c": "Characters",
+    "sc": "number",
+    "n": "Circled Three",
+    "sn": "circled_three",
+    "so": 2093,
+    "t": "circled three number circled list 3 third"
+  },
+  {
+    "u": "2463",
+    "c": "Characters",
+    "sc": "number",
+    "n": "Circled Four",
+    "sn": "circled_four",
+    "so": 2094,
+    "t": "circled four number circled list 4 fourth"
+  },
+  {
+    "u": "2464",
+    "c": "Characters",
+    "sc": "number",
+    "n": "Circled Five",
+    "sn": "circled_five",
+    "so": 2095,
+    "t": "circled five number circled list 5 fifth"
+  },
+  {
+    "u": "2465",
+    "c": "Characters",
+    "sc": "number",
+    "n": "Circled Six",
+    "sn": "circled_six",
+    "so": 2096,
+    "t": "circled six number circled list 6 sixth"
+  },
+  {
+    "u": "2466",
+    "c": "Characters",
+    "sc": "number",
+    "n": "Circled Seven",
+    "sn": "circled_seven",
+    "so": 2097,
+    "t": "circled seven number circled list 7 seventh"
+  },
+  {
+    "u": "2467",
+    "c": "Characters",
+    "sc": "number",
+    "n": "Circled Eight",
+    "sn": "circled_eight",
+    "so": 2098,
+    "t": "circled eight number circled list 8 eighth"
+  },
+  {
+    "u": "2468",
+    "c": "Characters",
+    "sc": "number",
+    "n": "Circled Nine",
+    "sn": "circled_nine",
+    "so": 2099,
+    "t": "circled nine number circled list 9 ninth"
+  },
+  {
+    "u": "2469",
+    "c": "Characters",
+    "sc": "number",
+    "n": "Circled Ten",
+    "sn": "circled_ten",
+    "so": 2100,
+    "t": "circled ten number circled list 10 tenth"
+  },
+  {
+    "u": "26A0",
+    "c": "Characters",
+    "sc": "sign",
+    "n": "Warning Sign",
+    "sn": "warning_sign",
+    "so": 2101,
+    "t": "warning sign sign caution warning alert danger"
+  },
+  {
+    "u": "267B",
+    "c": "Characters",
+    "sc": "sign",
+    "n": "Recycling Symbol",
+    "sn": "recycling_symbol",
+    "so": 2102,
+    "t": "recycling symbol sign recycle recycling environment"
+  },
+  {
+    "u": "26A1",
+    "c": "Characters",
+    "sc": "sign",
+    "n": "High Voltage",
+    "sn": "high_voltage",
+    "so": 2103,
+    "t": "high voltage sign lightning electricity electric danger"
+  },
+  {
+    "u": "260E",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "Telephone",
+    "sn": "telephone",
+    "so": 2104,
+    "t": "telephone symbol phone contact"
+  },
+  {
+    "u": "2709",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "Envelope",
+    "sn": "envelope",
+    "so": 2105,
+    "t": "envelope symbol mail email letter message"
+  },
+  {
+    "u": "2600",
+    "c": "Characters",
+    "sc": "weather",
+    "n": "Sun",
+    "sn": "sun",
+    "so": 2106,
+    "t": "sun weather sunny sunshine day"
+  },
+  {
+    "u": "2602",
+    "c": "Characters",
+    "sc": "weather",
+    "n": "Umbrella",
+    "sn": "umbrella",
+    "so": 2107,
+    "t": "umbrella weather rain"
+  },
+  {
+    "u": "262E",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "Peace",
+    "sn": "peace",
+    "so": 2108,
+    "t": "peace symbol sign"
+  },
+  {
+    "u": "2699",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "Gear",
+    "sn": "gear",
+    "so": 2109,
+    "t": "gear symbol settings cog"
+  },
+  {
+    "u": "2661",
+    "c": "Characters",
+    "sc": "symbol",
+    "n": "White Heart Suit",
+    "sn": "white_heart_suit",
+    "so": 2110,
+    "t": "white heart suit symbol heart love white outline"
+  },
+  {
+    "u": "25A1",
+    "c": "Characters",
+    "sc": "shape",
+    "n": "White Square",
+    "sn": "white_square",
+    "so": 2111,
+    "t": "white square shape square white outline empty"
+  },
+  {
+    "u": "25B2",
+    "c": "Characters",
+    "sc": "shape",
+    "n": "Black Up Triangle",
+    "sn": "black_up_triangle",
+    "so": 2112,
+    "t": "black up triangle shape triangle black up"
+  },
+  {
+    "u": "25B3",
+    "c": "Characters",
+    "sc": "shape",
+    "n": "White Up Triangle",
+    "sn": "white_up_triangle",
+    "so": 2113,
+    "t": "white up triangle shape triangle white up outline"
+  },
+  {
+    "u": "25BC",
+    "c": "Characters",
+    "sc": "shape",
+    "n": "Black Down Triangle",
+    "sn": "black_down_triangle",
+    "so": 2114,
+    "t": "black down triangle shape triangle black down"
+  },
+  {
+    "u": "25BD",
+    "c": "Characters",
+    "sc": "shape",
+    "n": "White Down Triangle",
+    "sn": "white_down_triangle",
+    "so": 2115,
+    "t": "white down triangle shape triangle white down outline"
+  },
+  {
+    "u": "25C6",
+    "c": "Characters",
+    "sc": "shape",
+    "n": "Black Diamond",
+    "sn": "black_diamond",
+    "so": 2116,
+    "t": "black diamond shape diamond black filled"
+  },
+  {
+    "u": "25C7",
+    "c": "Characters",
+    "sc": "shape",
+    "n": "White Diamond",
+    "sn": "white_diamond",
+    "so": 2117,
+    "t": "white diamond shape diamond white outline"
   }
 ]
