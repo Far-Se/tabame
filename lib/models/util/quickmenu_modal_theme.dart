@@ -1,4 +1,9 @@
 import '../../pages/launcher/widgets/crt_surface.dart';
+import '../../pages/launcher/widgets/ivory_grove_surface.dart';
+import '../../pages/launcher/widgets/liquid_metal_surface.dart';
+import '../../pages/launcher/widgets/radiant_surface.dart';
+import '../../pages/launcher/widgets/satin_surface.dart';
+import '../../pages/launcher/widgets/ukiyoe_surface.dart';
 // ignore_for_file: unused_import, unused_element
 
 import 'dart:async';
@@ -963,6 +968,145 @@ class QuickMenuModalFrame extends StatelessWidget {
             border: Border.all(color: accent.withAlpha(isDark ? 62 : 48)),
           ),
         ),
+      QuickMenuDesigns.ivoryGrove => _FrameSpec(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: radius,
+            border: Border.all(color: text.withValues(alpha: isDark ? 0.23 : 0.15)),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.1),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6)),
+            ],
+          ),
+          underlays: <Widget>[IvoryGroveSurface(ink: text.withValues(alpha: 0.44), child: const SizedBox.expand())],
+        ),
+      QuickMenuDesigns.ukiyoe => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(color: accent.withValues(alpha: 0.68)),
+          ),
+          underlays: <Widget>[
+            UkiyoeSurface(
+              material: UkiyoeMaterial.paper,
+              radius: r,
+              background: bg,
+              ink: accent,
+              vermilion: isDark ? const Color(0xFFD18A70) : const Color(0xFFAD4737),
+              surfaceOpacity: Design.glassOpacity,
+              useLauncherCorners: false,
+              child: const SizedBox.expand(),
+            ),
+            Positioned(
+              right: 0,
+              bottom: 0,
+              left: 0,
+              height: 48,
+              child: IgnorePointer(
+                child: Opacity(
+                  opacity: isDark ? 0.16 : 0.11,
+                  child: UkiyoeSurface(
+                    material: UkiyoeMaterial.landscape,
+                    radius: 0,
+                    background: bg,
+                    ink: accent,
+                    vermilion: isDark ? const Color(0xFFD18A70) : const Color(0xFFAD4737),
+                    surfaceOpacity: Design.glassOpacity,
+                    useLauncherCorners: false,
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      QuickMenuDesigns.radiant => _FrameSpec(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: radius,
+            border: Border.all(color: accent.withValues(alpha: isDark ? 0.48 : 0.34)),
+            boxShadow: <BoxShadow>[
+              BoxShadow(color: accent.withValues(alpha: isDark ? 0.15 : 0.11), blurRadius: 15, spreadRadius: -5),
+            ],
+          ),
+          underlays: _auroraBlobs(accent, intensity * 0.45),
+        ),
+      QuickMenuDesigns.nouveau => _FrameSpec(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: radius,
+            border: Border.all(color: accent.withValues(alpha: isDark ? 0.58 : 0.49)),
+          ),
+          overlays: <Widget>[
+            CustomPaint(
+              painter: _NouveauModalFramePainter(
+                ink: text.withValues(alpha: isDark ? 0.52 : 0.4),
+                brass: isDark ? const Color(0xFFC9A36B) : const Color(0xFFA1763D),
+              ),
+            ),
+          ],
+        ),
+      QuickMenuDesigns.satin => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(color: text.withValues(alpha: isDark ? 0.22 : 0.16)),
+          ),
+          underlays: <Widget>[
+            SatinSurface(
+              radius: r,
+              background: bg,
+              foreground: text,
+              accent: accent,
+              surfaceOpacity: Design.glassOpacity,
+              useLauncherCorners: false,
+              child: const SizedBox.expand(),
+            ),
+          ],
+        ),
+      QuickMenuDesigns.liquidMetal => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(color: text.withValues(alpha: isDark ? 0.26 : 0.3)),
+          ),
+          underlays: <Widget>[
+            LiquidMetalMotion(
+              child: LiquidMetalSurface(
+                radius: r,
+                raised: false,
+                background: bg,
+                foreground: text,
+                accent: accent,
+                surfaceOpacity: Design.glassOpacity,
+                useLauncherCorners: false,
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ],
+        ),
+      QuickMenuDesigns.opticalGlass => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(color: accent.withValues(alpha: isDark ? 0.48 : 0.42)),
+            boxShadow: <BoxShadow>[
+              BoxShadow(color: accent.withValues(alpha: isDark ? 0.12 : 0.08), blurRadius: 15, spreadRadius: -4),
+            ],
+          ),
+          underlays: <Widget>[
+            LiquidMetalMotion(
+              child: OpticalGlassSurface(
+                radius: r,
+                raised: false,
+                background: bg,
+                foreground: text,
+                accent: accent,
+                surfaceOpacity: Design.glassOpacity,
+                useLauncherCorners: false,
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ],
+        ),
       // QuickMenuDesigns.familyGuy => _FrameSpec(
       //     decoration: BoxDecoration(
       //       borderRadius: radius,
@@ -1125,6 +1269,55 @@ class _Windows98ModalBevelPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _Windows98ModalBevelPainter oldDelegate) => false;
+}
+
+class _NouveauModalFramePainter extends CustomPainter {
+  const _NouveauModalFramePainter({required this.ink, required this.brass});
+
+  final Color ink;
+  final Color brass;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width < 60 || size.height < 60) return;
+    final double scale = math.min(size.width / 360, size.height / 260).clamp(0.4, 1.0).toDouble();
+    final Paint rule = Paint()
+      ..color = ink
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(4, 4, size.width - 8, size.height - 8),
+        Radius.circular(math.max(2, scale * 9)),
+      ),
+      rule,
+    );
+    for (int corner = 0; corner < 4; corner++) {
+      canvas.save();
+      canvas.translate(corner.isOdd ? size.width - 4 : 4, corner >= 2 ? size.height - 4 : 4);
+      canvas.scale(corner.isOdd ? -scale : scale, corner >= 2 ? -scale : scale);
+      canvas.drawPath(
+        Path()
+          ..moveTo(2, 29)
+          ..lineTo(2, 15)
+          ..cubicTo(2, 6, 10, 5, 18, 5)
+          ..lineTo(29, 5)
+          ..cubicTo(23, 5, 23, 12, 28, 13)
+          ..cubicTo(33, 14, 34, 6, 29, 7),
+        rule,
+      );
+      final Paint brassPaint = Paint()
+        ..color = brass.withValues(alpha: 0.72)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1;
+      canvas.drawCircle(const Offset(24, 24), 2, brassPaint);
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _NouveauModalFramePainter oldDelegate) =>
+      oldDelegate.ink != ink || oldDelegate.brass != brass;
 }
 
 class _FrameSpec {

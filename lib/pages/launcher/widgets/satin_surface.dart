@@ -9,10 +9,24 @@ import '../launcher_design.dart';
 /// A single matte shader behind the content. Light moves only after input and
 /// settles in 360 ms; there is no ambient clock or texture capture.
 class SatinSurface extends StatefulWidget {
-  const SatinSurface({super.key, required this.child, this.radius = 14});
+  const SatinSurface({
+    super.key,
+    required this.child,
+    this.radius = 14,
+    this.background,
+    this.foreground,
+    this.accent,
+    this.surfaceOpacity = 1,
+    this.useLauncherCorners = true,
+  });
 
   final Widget child;
   final double radius;
+  final Color? background;
+  final Color? foreground;
+  final Color? accent;
+  final double surfaceOpacity;
+  final bool useLauncherCorners;
 
   @override
   State<SatinSurface> createState() => _SatinSurfaceState();
@@ -127,26 +141,29 @@ class _SatinSurfaceState extends State<SatinSurface>
   }
 
   @override
-  Widget build(BuildContext context) => RepaintBoundary(
-        child: MouseRegion(
-          onHover: _hover,
-          onExit: (_) => _aim(Offset.zero),
-          child: LauncherClip(
-            borderRadius: BorderRadius.circular(widget.radius),
-            child: CustomPaint(
-              painter: _SatinPainter(
-                shader: _shader,
-                light: _light,
-                background: SatinTokens.background,
-                foreground: SatinTokens.foreground,
-                accent: SatinTokens.accent,
-                highContrast: MediaQuery.highContrastOf(context),
-              ),
-              child: RepaintBoundary(child: widget.child),
-            ),
-          ),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final Widget surface = CustomPaint(
+      painter: _SatinPainter(
+        shader: _shader,
+        light: _light,
+        background: widget.background ?? SatinTokens.background,
+        foreground: widget.foreground ?? SatinTokens.foreground,
+        accent: widget.accent ?? SatinTokens.accent,
+        surfaceOpacity: widget.surfaceOpacity,
+        highContrast: MediaQuery.highContrastOf(context),
+      ),
+      child: RepaintBoundary(child: widget.child),
+    );
+    return RepaintBoundary(
+      child: MouseRegion(
+        onHover: _hover,
+        onExit: (_) => _aim(Offset.zero),
+        child: widget.useLauncherCorners
+            ? LauncherClip(borderRadius: BorderRadius.circular(widget.radius), child: surface)
+            : ClipRRect(borderRadius: BorderRadius.circular(widget.radius), child: surface),
+      ),
+    );
+  }
 }
 
 class _SatinPainter extends CustomPainter {
@@ -156,6 +173,7 @@ class _SatinPainter extends CustomPainter {
     required this.background,
     required this.foreground,
     required this.accent,
+    required this.surfaceOpacity,
     required this.highContrast,
   }) : super(repaint: light);
 
@@ -164,15 +182,22 @@ class _SatinPainter extends CustomPainter {
   final Color background;
   final Color foreground;
   final Color accent;
+  final double surfaceOpacity;
   final bool highContrast;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
     final Rect bounds = Offset.zero & size;
+    final double paintOpacity = surfaceOpacity.clamp(0.0, 1.0).toDouble();
+    final bool applyOpacity = paintOpacity < 1;
+    if (applyOpacity) {
+      canvas.saveLayer(bounds, Paint()..color = Colors.white.withValues(alpha: paintOpacity));
+    }
     final ui.FragmentShader? effect = shader;
     if (highContrast) {
       canvas.drawRect(bounds, Paint()..color = background);
+      if (applyOpacity) canvas.restore();
       return;
     }
     if (effect == null) {
@@ -189,6 +214,7 @@ class _SatinPainter extends CustomPainter {
             ],
           ).createShader(bounds),
       );
+      if (applyOpacity) canvas.restore();
       return;
     }
     // Float slots match satin.frag: size (2), light (2), three RGB colors (9).
@@ -205,6 +231,7 @@ class _SatinPainter extends CustomPainter {
         ..setFloat(slot++, color.b);
     }
     canvas.drawRect(bounds, Paint()..shader = effect);
+    if (applyOpacity) canvas.restore();
   }
 
   @override
@@ -214,5 +241,6 @@ class _SatinPainter extends CustomPainter {
       background != oldDelegate.background ||
       foreground != oldDelegate.foreground ||
       accent != oldDelegate.accent ||
+      surfaceOpacity != oldDelegate.surfaceOpacity ||
       highContrast != oldDelegate.highContrast;
 }

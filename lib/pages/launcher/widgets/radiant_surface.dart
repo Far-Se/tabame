@@ -112,10 +112,23 @@ enum RadiantSurfaceKind { frame, selection, symbols }
 
 /// Paints light behind ordinary widgets, without capturing or blurring text.
 class RadiantSurface extends StatefulWidget {
-  const RadiantSurface({super.key, required this.child, this.kind = RadiantSurfaceKind.frame, this.radius = 22});
+  const RadiantSurface({
+    super.key,
+    required this.child,
+    this.kind = RadiantSurfaceKind.frame,
+    this.radius = 22,
+    this.background,
+    this.accent,
+    this.surfaceOpacity = 1,
+    this.useLauncherCorners = true,
+  });
   final Widget child;
   final RadiantSurfaceKind kind;
   final double radius;
+  final Color? background;
+  final Color? accent;
+  final double surfaceOpacity;
+  final bool useLauncherCorners;
 
   @override
   State<RadiantSurface> createState() => _RadiantSurfaceState();
@@ -152,9 +165,15 @@ class _RadiantSurfaceState extends State<RadiantSurface> {
   Widget build(BuildContext context) {
     final Animation<double> clock =
         context.dependOnInheritedWidgetOfExactType<_RadiantClock>()?.clock ?? const AlwaysStoppedAnimation<double>(0);
-    final CornerShapeBorder outline = LauncherCorners.shape(
-      LauncherCorners.radius(BorderRadius.circular(widget.radius), Directionality.of(context)),
-    );
+    final CornerShapeBorder outline = widget.useLauncherCorners
+        ? LauncherCorners.shape(
+            LauncherCorners.radius(BorderRadius.circular(widget.radius), Directionality.of(context)),
+          )
+        : CornerShapeBorder.css(
+            borderRadius: BorderRadius.circular(widget.radius),
+            cornerShapes: const <CornerShape>[CornerShape.round],
+            curveSegments: 16,
+          );
     final double inset = widget.kind == RadiantSurfaceKind.frame ? 12 : 1.5;
     final Widget content = Padding(
       padding: widget.kind == RadiantSurfaceKind.frame ? const EdgeInsets.all(14) : EdgeInsets.zero,
@@ -168,8 +187,9 @@ class _RadiantSurfaceState extends State<RadiantSurface> {
           clock: clock,
           kind: widget.kind,
           outline: outline,
-          background: RadiantTokens.background,
-          accent: RadiantTokens.accent,
+          background: widget.background ?? RadiantTokens.background,
+          accent: widget.accent ?? RadiantTokens.accent,
+          surfaceOpacity: widget.surfaceOpacity,
           highContrast: MediaQuery.highContrastOf(context),
         ),
         // Clip content to the same inset outline as the shader, while leaving
@@ -204,6 +224,7 @@ class _RadiantPainter extends CustomPainter {
       required this.outline,
       required this.background,
       required this.accent,
+      required this.surfaceOpacity,
       required this.highContrast})
       : super(repaint: clock);
   final ui.FragmentShader? shader;
@@ -212,12 +233,18 @@ class _RadiantPainter extends CustomPainter {
   final CornerShapeBorder outline;
   final Color background;
   final Color accent;
+  final double surfaceOpacity;
   final bool highContrast;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
     final Rect bounds = Offset.zero & size;
+    final double paintOpacity = surfaceOpacity.clamp(0.0, 1.0).toDouble();
+    final bool applyOpacity = kind != RadiantSurfaceKind.symbols && paintOpacity < 1;
+    if (applyOpacity) {
+      canvas.saveLayer(bounds, Paint()..color = Colors.white.withValues(alpha: paintOpacity));
+    }
     final ui.FragmentShader? effect = shader;
     if (effect == null || highContrast) {
       if (kind == RadiantSurfaceKind.symbols) {
@@ -244,6 +271,7 @@ class _RadiantPainter extends CustomPainter {
             ..color = accent
             ..style = PaintingStyle.stroke
             ..strokeWidth = highContrast ? 2 : 1);
+      if (applyOpacity) canvas.restore();
       return;
     }
     effect
@@ -263,6 +291,7 @@ class _RadiantPainter extends CustomPainter {
     // squircle=2. Keep this after the RGB uniforms (float slot 11).
     effect.setFloat(11, outline.topLeft.value);
     canvas.drawRect(bounds, Paint()..shader = effect);
+    if (applyOpacity) canvas.restore();
   }
 
   @override
@@ -273,5 +302,6 @@ class _RadiantPainter extends CustomPainter {
       outline != oldDelegate.outline ||
       background != oldDelegate.background ||
       accent != oldDelegate.accent ||
+      surfaceOpacity != oldDelegate.surfaceOpacity ||
       highContrast != oldDelegate.highContrast;
 }

@@ -101,6 +101,11 @@ class LiquidMetalSurface extends StatefulWidget {
     this.raised = true,
     this.overlay = false,
     this.optical = false,
+    this.background,
+    this.foreground,
+    this.accent,
+    this.surfaceOpacity = 1,
+    this.useLauncherCorners = true,
   });
   final Widget child;
   final bool selected;
@@ -108,6 +113,11 @@ class LiquidMetalSurface extends StatefulWidget {
   final bool raised;
   final bool overlay;
   final bool optical;
+  final Color? background;
+  final Color? foreground;
+  final Color? accent;
+  final double surfaceOpacity;
+  final bool useLauncherCorners;
 
   @override
   State<LiquidMetalSurface> createState() => _LiquidMetalSurfaceState();
@@ -172,21 +182,22 @@ class _LiquidMetalSurfaceState extends State<LiquidMetalSurface> {
       optical: widget.optical,
       radius: widget.radius,
       isDark: isDark,
-      background: widget.optical ? OpticalGlassTokens.background : LiquidMetalTokens.background,
-      foreground: widget.optical ? OpticalGlassTokens.foreground : LiquidMetalTokens.foreground,
-      accent: widget.optical ? OpticalGlassTokens.accent : LiquidMetalTokens.accent,
+      background: widget.background ?? (widget.optical ? OpticalGlassTokens.background : LiquidMetalTokens.background),
+      foreground: widget.foreground ?? (widget.optical ? OpticalGlassTokens.foreground : LiquidMetalTokens.foreground),
+      accent: widget.accent ?? (widget.optical ? OpticalGlassTokens.accent : LiquidMetalTokens.accent),
+      surfaceOpacity: widget.surfaceOpacity,
+    );
+    final Widget paintedSurface = CustomPaint(
+      painter: widget.overlay ? null : painter,
+      foregroundPainter: widget.overlay ? painter : null,
+      child: RepaintBoundary(child: widget.child),
     );
     return MouseRegion(
       onHover: reduceMotion ? null : (PointerEvent event) => _pointer.value = event.localPosition,
       onExit: (PointerEvent event) => _pointer.value = null,
-      child: LauncherClip(
-        borderRadius: BorderRadius.circular(widget.radius),
-        child: CustomPaint(
-          painter: widget.overlay ? null : painter,
-          foregroundPainter: widget.overlay ? painter : null,
-          child: RepaintBoundary(child: widget.child),
-        ),
-      ),
+      child: widget.useLauncherCorners
+          ? LauncherClip(borderRadius: BorderRadius.circular(widget.radius), child: paintedSurface)
+          : ClipRRect(borderRadius: BorderRadius.circular(widget.radius), child: paintedSurface),
     );
   }
 }
@@ -205,6 +216,7 @@ class _LiquidMetalPainter extends CustomPainter {
     required this.background,
     required this.foreground,
     required this.accent,
+    required this.surfaceOpacity,
   }) : super(repaint: Listenable.merge(<Listenable>[clock, pointer]));
 
   final ui.FragmentShader? shader;
@@ -219,14 +231,20 @@ class _LiquidMetalPainter extends CustomPainter {
   final Color background;
   final Color foreground;
   final Color accent;
+  final double surfaceOpacity;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
     final Rect rect = Offset.zero & size;
     final ui.FragmentShader? effect = shader;
+    if (effect == null && mode == 2) return;
+    final double paintOpacity = surfaceOpacity.clamp(0.0, 1.0).toDouble();
+    final bool applyOpacity = paintOpacity < 1;
+    if (applyOpacity) {
+      canvas.saveLayer(rect, Paint()..color = Colors.white.withValues(alpha: paintOpacity));
+    }
     if (effect == null) {
-      if (mode == 2) return;
       canvas.drawRect(
           rect,
           Paint()
@@ -245,6 +263,7 @@ class _LiquidMetalPainter extends CustomPainter {
                       Color.alphaBlend(foreground.withAlpha(48), background),
                     ],
             ).createShader(rect));
+      if (applyOpacity) canvas.restore();
       return;
     }
     final Offset cursor = reduceMotion ? size.center(Offset.zero) : pointer.value ?? size.center(Offset.zero);
@@ -265,6 +284,7 @@ class _LiquidMetalPainter extends CustomPainter {
         ..setFloat(slot++, color.b);
     }
     canvas.drawRect(rect, Paint()..shader = effect);
+    if (applyOpacity) canvas.restore();
   }
 
   @override
@@ -278,7 +298,8 @@ class _LiquidMetalPainter extends CustomPainter {
       isDark != oldDelegate.isDark ||
       background != oldDelegate.background ||
       foreground != oldDelegate.foreground ||
-      accent != oldDelegate.accent;
+      accent != oldDelegate.accent ||
+      surfaceOpacity != oldDelegate.surfaceOpacity;
 }
 
 /// A quiet frosted surface for repeated result rows.
@@ -338,12 +359,22 @@ class OpticalGlassSurface extends StatelessWidget {
       this.selected = false,
       this.radius = 14,
       this.raised = true,
-      this.overlay = false});
+      this.overlay = false,
+      this.background,
+      this.foreground,
+      this.accent,
+      this.surfaceOpacity = 1,
+      this.useLauncherCorners = true});
   final Widget child;
   final bool selected;
   final double radius;
   final bool raised;
   final bool overlay;
+  final Color? background;
+  final Color? foreground;
+  final Color? accent;
+  final double surfaceOpacity;
+  final bool useLauncherCorners;
 
   @override
   Widget build(BuildContext context) => LiquidMetalSurface(
@@ -353,6 +384,11 @@ class OpticalGlassSurface extends StatelessWidget {
         radius: radius,
         raised: raised,
         overlay: overlay,
+        background: background,
+        foreground: foreground,
+        accent: accent,
+        surfaceOpacity: surfaceOpacity,
+        useLauncherCorners: useLauncherCorners,
         child: child,
       );
 }

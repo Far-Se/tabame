@@ -10,10 +10,25 @@ enum UkiyoeMaterial { paper, landscape, selection }
 /// A still print: no tickers or content capture. Text remains ordinary Flutter
 /// text, and shared launcher clipping handles round, squircle and bevel alike.
 class UkiyoeSurface extends StatefulWidget {
-  const UkiyoeSurface({super.key, required this.child, this.material = UkiyoeMaterial.paper, this.radius = 6});
+  const UkiyoeSurface({
+    super.key,
+    required this.child,
+    this.material = UkiyoeMaterial.paper,
+    this.radius = 6,
+    this.background,
+    this.ink,
+    this.vermilion,
+    this.surfaceOpacity = 1,
+    this.useLauncherCorners = true,
+  });
   final Widget child;
   final UkiyoeMaterial material;
   final double radius;
+  final Color? background;
+  final Color? ink;
+  final Color? vermilion;
+  final double surfaceOpacity;
+  final bool useLauncherCorners;
 
   @override
   State<UkiyoeSurface> createState() => _UkiyoeSurfaceState();
@@ -47,22 +62,25 @@ class _UkiyoeSurfaceState extends State<UkiyoeSurface> {
   }
 
   @override
-  Widget build(BuildContext context) => RepaintBoundary(
-        child: LauncherClip(
-          borderRadius: BorderRadius.circular(widget.radius),
-          child: CustomPaint(
-            painter: _UkiyoePainter(
-              shader: _shader,
-              material: widget.material,
-              paper: UkiyoeTokens.background,
-              ink: UkiyoeTokens.accent,
-              vermilion: UkiyoeTokens.vermilion,
-              highContrast: MediaQuery.highContrastOf(context),
-            ),
-            child: RepaintBoundary(child: widget.child),
-          ),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final Widget surface = CustomPaint(
+      painter: _UkiyoePainter(
+        shader: _shader,
+        material: widget.material,
+        paper: widget.background ?? UkiyoeTokens.background,
+        ink: widget.ink ?? UkiyoeTokens.accent,
+        vermilion: widget.vermilion ?? UkiyoeTokens.vermilion,
+        opacity: widget.surfaceOpacity,
+        highContrast: MediaQuery.highContrastOf(context),
+      ),
+      child: RepaintBoundary(child: widget.child),
+    );
+    return RepaintBoundary(
+      child: widget.useLauncherCorners
+          ? LauncherClip(borderRadius: BorderRadius.circular(widget.radius), child: surface)
+          : ClipRRect(borderRadius: BorderRadius.circular(widget.radius), child: surface),
+    );
+  }
 }
 
 class _UkiyoePainter extends CustomPainter {
@@ -72,18 +90,25 @@ class _UkiyoePainter extends CustomPainter {
       required this.paper,
       required this.ink,
       required this.vermilion,
+      required this.opacity,
       required this.highContrast});
   final ui.FragmentShader? shader;
   final UkiyoeMaterial material;
   final Color paper;
   final Color ink;
   final Color vermilion;
+  final double opacity;
   final bool highContrast;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
     final Rect bounds = Offset.zero & size;
+    final double paintOpacity = opacity.clamp(0.0, 1.0).toDouble();
+    final bool applyOpacity = paintOpacity < 1;
+    if (applyOpacity) {
+      canvas.saveLayer(bounds, Paint()..color = Colors.white.withValues(alpha: paintOpacity));
+    }
     final ui.FragmentShader? effect = shader;
     if (effect == null || highContrast) {
       canvas.drawRect(
@@ -92,6 +117,7 @@ class _UkiyoePainter extends CustomPainter {
             ..color =
                 material == UkiyoeMaterial.selection ? Color.alphaBlend(ink.withValues(alpha: 0.18), paper) : paper);
       if (material == UkiyoeMaterial.landscape) _fallbackLandscape(canvas, size);
+      if (applyOpacity) canvas.restore();
       return;
     }
     effect
@@ -106,6 +132,7 @@ class _UkiyoePainter extends CustomPainter {
         ..setFloat(slot++, color.b);
     }
     canvas.drawRect(bounds, Paint()..shader = effect);
+    if (applyOpacity) canvas.restore();
   }
 
   void _fallbackLandscape(Canvas canvas, Size size) {
@@ -136,5 +163,6 @@ class _UkiyoePainter extends CustomPainter {
       paper != oldDelegate.paper ||
       ink != oldDelegate.ink ||
       vermilion != oldDelegate.vermilion ||
+      opacity != oldDelegate.opacity ||
       highContrast != oldDelegate.highContrast;
 }

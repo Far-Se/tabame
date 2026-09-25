@@ -20,6 +20,7 @@ import 'design_console.dart';
 import 'design_fluent.dart';
 import 'design_foundry.dart';
 import 'design_gazette.dart';
+import 'design_launcher_ports.dart';
 // import 'design_impact.dart';
 import 'design_interface.dart';
 import 'design_ledger.dart';
@@ -150,6 +151,17 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.commandDeck => MainMenuCommandDeckWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.switchboard => MainMenuSwitchboardWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.orbit => MainMenuOrbitWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.ivoryGrove ||
+      QuickMenuDesigns.ukiyoe ||
+      QuickMenuDesigns.radiant ||
+      QuickMenuDesigns.nouveau ||
+      QuickMenuDesigns.satin ||
+      QuickMenuDesigns.liquidMetal ||
+      QuickMenuDesigns.opticalGlass =>
+        MainMenuLauncherPortWidget(
+          key: ValueKey<int>(_refreshCounter),
+          design: QuickMenuDesigns.values[user.quickMenuDesign],
+        ),
     };
   }
 }
