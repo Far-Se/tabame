@@ -1382,6 +1382,27 @@
         "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/yt-dlp/main.py",
         "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/yt-dlp/README.md"
       }
+    },
+    {
+      "id": "home_assistant",
+      "name": "Home Assistant",
+      "category": "Utilities",
+      "keyword": "home",
+      "description": "Search and control Home Assistant entities from the Tabame launcher",
+      "icon": "home",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/home_assistant",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/home_assistant/plugin.json",
+        "entity_actions.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/home_assistant/entity_actions.js",
+        "entity_model.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/home_assistant/entity_model.js",
+        "entity_search.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/home_assistant/entity_search.js",
+        "home_assistant_client.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/home_assistant/home_assistant_client.js",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/home_assistant/main.js",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/home_assistant/README.md"
+      }
     }
   ]
 }

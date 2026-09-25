@@ -1,0 +1,12 @@
+{
+  "id": "home_assistant",
+  "name": "Home Assistant",
+  "category": "Utilities",
+  "keyword": "home",
+  "description": "Search and control Home Assistant entities from the Tabame launcher",
+  "icon": "home",
+  "runtime": "node",
+  "version": "1.0.0",
+  "entry": "main.js",
+  "enabled": true
+}

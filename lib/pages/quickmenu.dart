@@ -539,6 +539,13 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
     }
   }
 
+  @override
+  void onWindowMaximize() {
+    if (Globals.quickMenuPage == QuickMenuPage.launcher || Globals.quickMenuPage == QuickMenuPage.quickMenu) {
+      windowManager.restore();
+    }
+  }
+
   void _onWindowResize() {
     isresizing = true;
   }
