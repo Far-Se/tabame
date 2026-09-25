@@ -45,6 +45,7 @@ import 'design_vector.dart';
 import 'design_winamp.dart';
 import 'design_windows_98.dart';
 import 'design_windows_xp.dart';
+import 'quickmenu_corners.dart';
 
 class LoadQuickMenuDesign extends StatefulWidget {
   const LoadQuickMenuDesign({super.key});
@@ -112,7 +113,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
 
   @override
   Widget build(BuildContext context) {
-    return switch (QuickMenuDesigns.values[user.quickMenuDesign]) {
+    final Widget design = switch (QuickMenuDesigns.values[user.quickMenuDesign]) {
       QuickMenuDesigns.crt || QuickMenuDesigns.retro || QuickMenuDesigns.superMario => MainMenuArcadeWidget(
           key: ValueKey<String>('${user.quickMenuDesign}:$_refreshCounter'),
           design: QuickMenuDesigns.values[user.quickMenuDesign]),
@@ -163,5 +164,6 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
           design: QuickMenuDesigns.values[user.quickMenuDesign],
         ),
     };
+    return QuickMenuCornerClip(child: design);
   }
 }
