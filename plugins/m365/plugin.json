@@ -1,0 +1,11 @@
+{
+  "id": "m365",
+  "name": "Microsoft 365 Agenda",
+  "keyword": "m365",
+  "category": "Productivity",
+  "description": "Upcoming Outlook events, mailbox search, and one-key meeting joins",
+  "icon": "calendar",
+  "runtime": "node",
+  "version": "1.0.0",
+  "entry": "main.js"
+}

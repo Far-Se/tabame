@@ -434,6 +434,23 @@
       }
     },
     {
+      "id": "m365",
+      "name": "Microsoft 365 Agenda",
+      "category": "Productivity",
+      "keyword": "m365",
+      "description": "Upcoming Outlook events, mailbox search, and one-key meeting joins",
+      "icon": "calendar",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/m365",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/m365/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/m365/main.js",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/m365/README.md"
+      }
+    },
+    {
       "id": "google_drive",
       "name": "Google Drive",
       "category": "Productivity",
