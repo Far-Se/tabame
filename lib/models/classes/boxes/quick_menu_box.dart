@@ -211,7 +211,7 @@ class QuickMenuFunctions {
         visible = false;
       }
     } else {
-      Globals.quickMenuPage = QuickMenuPage.quickMenu;
+      Globals.quickMenuPage = QuickMenuPage.empty;
       await WindowManager.instance.setSize(Size(Boxes.quickMenuWidth, Globals.quickMenuSize.height));
       if (kDebugMode && !Globals.debugHotkeys) return;
       Win32.setPosition(const Offset(-99999, -99999));

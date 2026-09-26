@@ -156,20 +156,19 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
 
   @override
   Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) => _onQuickMenuToggled(visible, type);
-  bool tryToPop = false;
   @override
-  Future<void> onQuickMenuMaybePop() async {
-    tryToPop = false;
-    await _dismissQuickMenuPopup();
+  Future<void> onQuickMenuMaybePop() {
+    _dismissQuickMenuPopup();
+    return Future<void>.value();
   }
 
-  Future<void> _dismissQuickMenuPopup() async {
+  void _dismissQuickMenuPopup() {
     if (!mounted) return;
     final NavigatorState navigator = Navigator.of(context);
-    if (!navigator.canPop()) return;
-    // maybePop rechecks the current route after asynchronous pop callbacks and
-    // refuses to pop the root route. A popup can disappear during that wait.
-    await navigator.maybePop();
+    // QuickMenu pages are rebuilt within the root route; popup sheets and
+    // dialogs are routes above it. Stop at the root so QuickMenu itself stays
+    // mounted while any open popup routes are removed.
+    navigator.popUntil((Route<dynamic> route) => route.isFirst); // this crash issue, might.
   }
 
   @override
@@ -384,7 +383,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       case PlatformQuickSnapEventType.open:
         if (!user.quickSnapOverlay) return;
         if (Boxes.quickGrids.isEmpty && !user.quickSnapGrid) return;
-        await _dismissQuickMenuPopup();
+        _dismissQuickMenuPopup();
         if (!mounted) return;
         final PlatformMonitor? monitor = await MonitorService.instance.cursorMonitor();
         if (monitor == null) return;
@@ -410,21 +409,19 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
     user.launcherSearchText = "";
     Globals.clearQuickMenuSearchInput();
     unixVisible = DateTime.now().millisecondsSinceEpoch;
-    Globals.quickMenuPage = type;
+    Globals.quickMenuPage = visible ? type : QuickMenuPage.empty;
     QuickMenuFunctions.resetKeyboardSelection();
 
     if (visible) {
       // ShowWindow(Win32.hWnd, SW_SHOW);
       // PaintingBinding.instance.imageCache.clear();
 
-      // Both a page switch and the popup settings can request dismissal.
-      // Decide once: two pops after one canPop check can remove QuickMenu's
-      // root route, disposing this state and its global hotkey subscription.
+      // Page switches dismiss popups in _onQuickMenuSwitchedPage. This handles
+      // the separate focus-loss setting.
       final bool popupExpired = DateTime.now().difference(lastTimeShown).inSeconds > 30;
-      final bool dismissPopup = tryToPop ||
-          (user.hideTabameOnUnfocus && !user.keepPopupOpenOnDemand && (!user.keepPopupsOpen || popupExpired));
-      tryToPop = false;
-      if (dismissPopup) await _dismissQuickMenuPopup();
+      final bool dismissPopup =
+          user.hideTabameOnUnfocus && !user.keepPopupOpenOnDemand && (!user.keepPopupsOpen || popupExpired);
+      if (dismissPopup) _dismissQuickMenuPopup();
       if (!mounted) return;
       if (Globals.quickMenuPage == QuickMenuPage.launcher) {
         user.launcherSearchText = "";
@@ -474,7 +471,8 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
   }
 
   Future<void> _onQuickMenuSwitchedPage(QuickMenuPage newType, QuickMenuPage oldType, bool visible) async {
-    tryToPop = true;
+    _dismissQuickMenuPopup();
+    if (!mounted) return;
     Win32.setWindowInvisible(true);
     if (oldType == QuickMenuPage.quickClick) {
       WinUtils.makeWindowClickThrough(false);
@@ -733,6 +731,8 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
   }
 
   Widget _mainWidget(BuildContext context) {
+    if (Globals.quickMenuPage == QuickMenuPage.empty) return Container();
+
     switch (Globals.quickMenuPage) {
       case QuickMenuPage.quickMenu:
       case QuickMenuPage.launcher:

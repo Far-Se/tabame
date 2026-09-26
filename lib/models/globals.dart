@@ -41,6 +41,7 @@ enum QuickMenuPage {
   colorPicker,
   emojiPicker,
   quickClick,
+  empty,
 }
 
 class Globals {
