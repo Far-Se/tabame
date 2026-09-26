@@ -180,6 +180,8 @@ class QuickMenuModalFrame extends StatelessWidget {
         width: width,
         margin: EdgeInsets.zero,
         constraints: constraints,
+        opaqueBackground: Design.glassEnabled,
+        registerGlassRegion: false,
         child: popupChild,
       );
     }
@@ -1185,6 +1187,7 @@ class QuickMenuModalFrame extends StatelessWidget {
         child: Stack(
           fit: StackFit.passthrough,
           children: <Widget>[
+            if (Design.glassEnabled) Positioned.fill(child: ColoredBox(color: bg.withValues(alpha: 1.0))),
             for (final Widget underlay in spec.underlays) _mountModalLayer(underlay),
             popupChild,
             for (final Widget overlay in spec.overlays) _mountModalLayer(overlay),

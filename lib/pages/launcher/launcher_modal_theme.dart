@@ -192,6 +192,8 @@ class LauncherModalFrame extends StatelessWidget {
     required this.width,
     this.maxHeight = double.infinity,
     this.constraints,
+    this.opaqueBackground = false,
+    this.registerGlassRegion = true,
     this.margin = const EdgeInsets.symmetric(
       horizontal: 24,
       vertical: 48,
@@ -206,6 +208,10 @@ class LauncherModalFrame extends StatelessWidget {
   /// Overrides the [maxHeight]-derived constraints when provided (used by the
   /// QuickMenu popup frame, which also carries a minHeight).
   final BoxConstraints? constraints;
+  final bool opaqueBackground;
+
+  /// Whether this modal's bounds participate in the native glass region.
+  final bool registerGlassRegion;
 
   final EdgeInsetsGeometry margin;
   final Widget child;
@@ -289,6 +295,7 @@ class LauncherModalFrame extends StatelessWidget {
         surface: tokens.surface,
         accent: accent,
       ),
+      glass: registerGlassRegion,
       child: core,
     );
   }
@@ -297,6 +304,7 @@ class LauncherModalFrame extends StatelessWidget {
     return Stack(
       fit: StackFit.passthrough,
       children: <Widget>[
+        if (opaqueBackground) Positioned.fill(child: ColoredBox(color: tokens.surface.withValues(alpha: 1.0))),
         ..._buildBackgroundFlourishes(),
         _buildContent(context),
         ..._buildForegroundFlourishes(),

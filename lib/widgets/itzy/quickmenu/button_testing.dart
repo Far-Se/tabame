@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sqlite3/sqlite3.dart';
+import '../../../models/classes/boxes.dart';
 import '../../../platform/windows/tabamewin32_api.dart';
 
 // import '../../../models/win32/win32.dart';
@@ -32,6 +33,10 @@ class _TestingButtonState extends State<TestingButton> {
       message: "Testing",
       icon: xIcon != null ? Image.memory(xIcon!) : const Icon(Icons.science),
       onTap: () async {
+        user.lastChangelog = "v1.9";
+
+        QuickMenuFunctions.refreshQuickMenu();
+        return;
         if (kReleaseMode || true) {
           showQuickMenuModal(
             context: context,

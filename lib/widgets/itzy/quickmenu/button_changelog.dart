@@ -1,56 +1,42 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../../../models/classes/boxes.dart';
-import '../../../models/globals.dart';
-import '../../../models/settings.dart';
-import '../../../models/win32/win32.dart';
-import '../../../models/win32/win_utils.dart';
-import '../../../pages/quickmenu.dart';
-import '../../widgets/quick_actions_item.dart';
+import '../../interface/changelog.dart';
+import '../../widgets/modal_button.dart';
+import '../../widgets/panel_header.dart';
 
-class CheckChangelogButton extends StatefulWidget {
+class CheckChangelogButton extends StatelessWidget {
   const CheckChangelogButton({super.key});
-  @override
-  CheckChangelogButtonState createState() => CheckChangelogButtonState();
-}
-
-class CheckChangelogButtonState extends State<CheckChangelogButton> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
-    return QuickActionItem(
-      message: "See what's new!",
+    return ModalButton(
+      actionName: "See what's new!",
       icon: const Icon(Icons.newspaper),
-      hoverColor: Design.accentHue(58, saturation: 0.92),
+      child: () => const ChangelogPanel(),
       onTap: () {
-        if (kReleaseMode) {
-          QuickMenuFunctions.hideQuickMenu();
-          int hWnd = Win32.findWindow("Tabame - Interface");
-          if (hWnd == 0) {
-            WinUtils.startTabame(closeCurrent: false, arguments: "-interface -changelog");
-          } else {
-            Win32.activateWindow(hWnd);
-            return;
-          }
-          return;
-        }
-        final QuickMenuState? x = context.findAncestorStateOfType<QuickMenuState>();
-        Globals.changingPages = true;
-        x?.setState(() {});
-        Globals.mainPageViewController.jumpToPage(Pages.interface.index);
-        Globals.changingPages = true;
-        return;
+        // QuickMenuFunctions.refreshQuickMenu();
       },
+    );
+  }
+}
+
+class ChangelogPanel extends StatelessWidget {
+  const ChangelogPanel({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        const PanelHeader(title: 'Changelog', icon: Icons.newspaper),
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: const <Widget>[Changelog(showTitle: false)],
+          ),
+        ),
+      ],
     );
   }
 }

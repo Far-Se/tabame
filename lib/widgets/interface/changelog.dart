@@ -5,8 +5,17 @@ import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
 import '../../models/settings.dart';
 
+class _ChangelogRelease {
+  const _ChangelogRelease({this.date, required this.content});
+
+  final String? date;
+  final String content;
+}
+
 class Changelog extends StatefulWidget {
-  const Changelog({super.key});
+  const Changelog({super.key, this.showTitle = true});
+
+  final bool showTitle;
 
   @override
   State<Changelog> createState() => _ChangelogState();
@@ -24,13 +33,16 @@ class _ChangelogState extends State<Changelog> {
     if (user.lastChangelog != Globals.version) {
       user.lastChangelog = Globals.version;
       Boxes.updateSettings("lastChangelog", user.lastChangelog);
+      if (Globals.quickMenuPage == QuickMenuPage.quickMenu) {
+        QuickMenuFunctions.refreshQuickMenu();
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    Map<String, String> changelog = <String, String>{
-      '2.0': """
+    const Map<String, _ChangelogRelease> changelog = <String, _ChangelogRelease>{
+      '2.0': _ChangelogRelease(date: '29 Sept 2026', content: """
 ## UI
 Refactor the whole UI, added more QuickMenu Designs.
 ## Launcher
@@ -44,8 +56,8 @@ New Settings panel. Re-aranged and modernized all pages.
 ## Other features
 QuickClick, Fancyshot capture/record, Screen Tools, and all the other features.
 
-""",
-      '1.3': """
+"""),
+      '1.3': _ChangelogRelease(date: '9 Nov 2022', content: """
 ## Reminders change
  - Persistent Reminders: You will see a warning sign on QuickMenu when a persistent reminder triggers, its good for meds reminder.
  - Periodic Reminders: It will trigger each  X days. For example if you set each other 5 days since Monday, it will trigger on Saturday (+5 days) Thursday (+5 days) Tuesday, etc.
@@ -62,8 +74,8 @@ Now you can edit Hosts file directly in Wizardly, you neeed to run Tabame with A
 
 ### Other:
 Now timers save after restart
-""",
-      '1.2': """
+"""),
+      '1.2': _ChangelogRelease(date: '25 Oct 2022', content: """
 ## **Added Fancyshot**
 With Fancyshot you can make screenshots that are social media friendly. You can set custom background, round corners and padding, a company logo or a watermark and blur regions.
 You can create Profiles so you only need to set it once.
@@ -86,8 +98,8 @@ You can set a specific size to a window. Create a list of sizes from Settings ->
 Added Persistent Reminders, good for pill reminders
 
 
-""",
-      '1.1': '''
+"""),
+      '1.1': _ChangelogRelease(date: '29 Aug 2022', content: '''
 ## **Added Views**
 With Views you can place and resize a window on the screen based on a grid. It is like PowerToys FancyZone, but you can control everything with your mouse.
 
@@ -111,10 +123,10 @@ Now you can set default Volume for apps, for example if you open a game, and usu
 ### Fixes:
 - Fixed Wizardly ContextMenu. For some people it crashed because the Registry Path was missing.
 
-''',
-      '1.0': '''
+'''),
+      '1.0': _ChangelogRelease(date: '15 Aug 2022', content: '''
 ### Public release with all main features implemented.
-''',
+'''),
     };
     return Padding(
       padding: const EdgeInsets.all(10.0),
@@ -122,9 +134,11 @@ Now you can set default Volume for apps, for example if you open a game, and usu
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text("Changelog", style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 15),
-          ...changelog.entries.map((MapEntry<String, String> entry) {
+          if (widget.showTitle) ...<Widget>[
+            Text("Changelog", style: Theme.of(context).textTheme.headlineMedium),
+            const SizedBox(height: 15),
+          ],
+          ...changelog.entries.map((MapEntry<String, _ChangelogRelease> entry) {
             return Container(
               margin: const EdgeInsets.only(bottom: 24),
               padding: const EdgeInsets.all(16),
@@ -154,6 +168,15 @@ Now you can set default Volume for apps, for example if you open a game, and usu
                               ),
                         ),
                       ),
+                      if (entry.value.date != null) ...<Widget>[
+                        const SizedBox(width: 8),
+                        Text(
+                          entry.value.date!,
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                              ),
+                        ),
+                      ],
                       const SizedBox(width: 12),
                       Expanded(
                         child: Container(
@@ -166,7 +189,7 @@ Now you can set default Volume for apps, for example if you open a game, and usu
                   const SizedBox(height: 12),
                   MarkdownBody(
                     shrinkWrap: true,
-                    data: entry.value,
+                    data: entry.value.content,
                     styleSheet: MarkdownStyleSheet(
                       h2: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,

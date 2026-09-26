@@ -34,7 +34,7 @@ Unknown files from older installations remain untouched.
 
 ## Publishing weekly releases
 
-1. Increment `version` in `pubspec.yaml`, for example from `2.0.0` to `2.0.1`.
+1. Increment `version` in `pubspec.yaml`, for example from `2.0.0` to `2.12.0`.
 2. Publish an official release with the exactly matching tag, such as `v2.0.1`.
    Both Windows workflows reject mismatched tags. Do not reuse a stable version.
 3. Let the existing workflow publish `tabame-v2.0.1-windows.zip` and its
@@ -57,15 +57,15 @@ publication remains a maintainer action; this change does not schedule releases.
 State is isolated by installation path under
 `%LOCALAPPDATA%\Tabame\updates\<installation-id>`:
 
-| File | Purpose |
-| --- | --- |
-| `schedule.json` | Persistent network throttle |
-| `package.part`, `package.zip` | Partial and verified payload |
-| `pending.json` | Versioned handoff descriptor (`schema: 1`) |
-| `update.lock` | Cross-process download/replacement exclusion |
-| `journal.json`, `backup` | File inventory and originals for rollback |
-| `installed-files.json` | Last successfully managed application files |
-| `result.json`, `update.log` | Installation outcome and helper diagnostics |
+| File                          | Purpose                                      |
+| ----------------------------- | -------------------------------------------- |
+| `schedule.json`               | Persistent network throttle                  |
+| `package.part`, `package.zip` | Partial and verified payload                 |
+| `pending.json`                | Versioned handoff descriptor (`schema: 1`)   |
+| `update.lock`                 | Cross-process download/replacement exclusion |
+| `journal.json`, `backup`      | File inventory and originals for rollback    |
+| `installed-files.json`        | Last successfully managed application files  |
+| `result.json`, `update.log`   | Installation outcome and helper diagnostics  |
 
 Download errors go to the normal `errors.log`. All executable replacements
 happen in the bundled Windows PowerShell helper, copied outside the managed payload
