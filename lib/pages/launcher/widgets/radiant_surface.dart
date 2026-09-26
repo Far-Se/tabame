@@ -121,6 +121,8 @@ class RadiantSurface extends StatefulWidget {
     this.accent,
     this.surfaceOpacity = 1,
     this.useLauncherCorners = true,
+    this.frameInset = 12,
+    this.framePadding = 14,
   });
   final Widget child;
   final RadiantSurfaceKind kind;
@@ -129,6 +131,8 @@ class RadiantSurface extends StatefulWidget {
   final Color? accent;
   final double surfaceOpacity;
   final bool useLauncherCorners;
+  final double frameInset;
+  final double framePadding;
 
   @override
   State<RadiantSurface> createState() => _RadiantSurfaceState();
@@ -174,9 +178,9 @@ class _RadiantSurfaceState extends State<RadiantSurface> {
             cornerShapes: const <CornerShape>[CornerShape.round],
             curveSegments: 16,
           );
-    final double inset = widget.kind == RadiantSurfaceKind.frame ? 12 : 1.5;
+    final double inset = widget.kind == RadiantSurfaceKind.frame ? widget.frameInset : 1.5;
     final Widget content = Padding(
-      padding: widget.kind == RadiantSurfaceKind.frame ? const EdgeInsets.all(14) : EdgeInsets.zero,
+      padding: widget.kind == RadiantSurfaceKind.frame ? EdgeInsets.all(widget.framePadding) : EdgeInsets.zero,
       child: RepaintBoundary(child: widget.child),
     );
     return RepaintBoundary(
@@ -187,6 +191,7 @@ class _RadiantSurfaceState extends State<RadiantSurface> {
           clock: clock,
           kind: widget.kind,
           outline: outline,
+          inset: inset,
           background: widget.background ?? RadiantTokens.background,
           accent: widget.accent ?? RadiantTokens.accent,
           surfaceOpacity: widget.surfaceOpacity,
@@ -222,6 +227,7 @@ class _RadiantPainter extends CustomPainter {
       required this.clock,
       required this.kind,
       required this.outline,
+      required this.inset,
       required this.background,
       required this.accent,
       required this.surfaceOpacity,
@@ -231,6 +237,7 @@ class _RadiantPainter extends CustomPainter {
   final Animation<double> clock;
   final RadiantSurfaceKind kind;
   final CornerShapeBorder outline;
+  final double inset;
   final Color background;
   final Color accent;
   final double surfaceOpacity;
@@ -258,7 +265,7 @@ class _RadiantPainter extends CustomPainter {
         wordmark.dispose();
         return;
       }
-      final Path shape = outline.getOuterPath(bounds.deflate(kind == RadiantSurfaceKind.frame ? 12 : 1.5));
+      final Path shape = outline.getOuterPath(bounds.deflate(inset));
       canvas.drawPath(
           shape,
           Paint()
@@ -290,6 +297,7 @@ class _RadiantPainter extends CustomPainter {
     // CSS superellipse K shared by LauncherCorners: bevel=0, round=1,
     // squircle=2. Keep this after the RGB uniforms (float slot 11).
     effect.setFloat(11, outline.topLeft.value);
+    effect.setFloat(12, inset);
     canvas.drawRect(bounds, Paint()..shader = effect);
     if (applyOpacity) canvas.restore();
   }
@@ -300,6 +308,7 @@ class _RadiantPainter extends CustomPainter {
       clock != oldDelegate.clock ||
       kind != oldDelegate.kind ||
       outline != oldDelegate.outline ||
+      inset != oldDelegate.inset ||
       background != oldDelegate.background ||
       accent != oldDelegate.accent ||
       surfaceOpacity != oldDelegate.surfaceOpacity ||

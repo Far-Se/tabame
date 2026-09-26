@@ -217,7 +217,7 @@ class MainMenuLauncherPortWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: Design.glassEnabled ? Colors.transparent : background,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: accent.withValues(alpha: isDark ? 0.42 : 0.28)),
+        // border: Border.all(color: accent.withValues(alpha: isDark ? 0.42 : 0.28)),
       ),
       child: RadiantMotion(
         child: RadiantSurface(
@@ -227,6 +227,8 @@ class MainMenuLauncherPortWidget extends StatelessWidget {
           accent: accent,
           surfaceOpacity: Design.glassOpacity,
           useLauncherCorners: false,
+          frameInset: 3,
+          framePadding: 3,
           child: menu,
         ),
       ),

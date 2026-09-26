@@ -2,7 +2,7 @@
 #include <flutter/runtime_effect.glsl>
 
 // Float slots: size 0..1, phase 2, radius 3, mode 4, background 5..7,
-// accent 8..10, CSS corner K 11. No texture capture: text stays on Flutter's
+// accent 8..10, CSS corner K 11, frame inset 12. No texture capture: text stays on Flutter's
 // normal render path. K matches LauncherCorners / CornerShapeBorder.
 uniform vec2 uSize;
 uniform float uPhase;
@@ -11,6 +11,7 @@ uniform float uMode;
 uniform vec3 uBackground;
 uniform vec3 uAccent;
 uniform float uCorner;
+uniform float uInset;
 out vec4 fragColor;
 
 float launcherBox(vec2 p, vec2 halfSize, float radius) {
@@ -94,7 +95,7 @@ void main() {
   }
 
   bool selection = uMode > 0.5;
-  float inset = selection ? 1.5 : 12.0;
+  float inset = selection ? 1.5 : uInset;
   vec2 halfSize = max(uSize * 0.5 - inset, vec2(1.0));
   float radius = clamp(uRadius, 0.0, min(halfSize.x, halfSize.y));
   vec2 p = pixel - uSize * 0.5;

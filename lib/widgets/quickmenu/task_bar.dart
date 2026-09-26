@@ -119,7 +119,9 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
       NativeHooks.addListener(this);
       _scrollController.addListener(_updateBottomFade);
       _fetchWindows();
-      // _startTimer();
+      // The empty QuickMenu page disposes this widget. Its replacement can
+      // mount after the show notification, so start focus polling here too.
+      _startTimer();
     }
   }
 
@@ -159,14 +161,14 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   void _startTimer() {
     _mainTimer?.cancel();
     _mainTimer = Timer.periodic(kTimerInterval, (Timer timer) {
-      if (_keepFetching && !_fetching) {
+      if (_keepFetching) {
         if (GetForegroundWindow() != Win32.hWnd && user.hideTabameOnUnfocus && !QuickMenuFunctions.keepOpen) {
           if (DateTime.now().millisecondsSinceEpoch - QuickMenuFunctions.shownTime > 400) {
             _keepFetching = false;
             QuickMenuFunctions.hideQuickMenu();
           }
         }
-        _fetchWindows();
+        if (!_fetching) _fetchWindows();
       }
     });
     _hideTimer?.cancel();
@@ -234,8 +236,10 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
     if (visible) {
       _keepFetching = true;
       await _fetchWindows();
+      // Hiding can dispose this taskbar while the fetch is still pending.
+      if (!mounted || !_keepFetching) return;
       _startTimer();
-      if (_scrollController.offset > 1) {
+      if (_scrollController.hasClients && _scrollController.offset > 1) {
         _scrollController.animateTo(0, duration: const Duration(milliseconds: 100), curve: Curves.easeIn); // <- this
       }
     } else {

@@ -105,6 +105,8 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
   late final HotkeyCoordinator hotkeyCoordinator;
   final Trktivity trk = Trktivity.instance;
 
+  static const Duration _hiddenContentRetention = Duration(minutes: 5);
+  Timer? _hiddenContentClearTimer;
   Timer? _quickMenuFocusRetryTimer;
   PlatformQuickSnapOverlayState? _quickSnapOverlayState;
 
@@ -291,6 +293,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
 
   void _dispose() {
     trk.stopTimer();
+    _hiddenContentClearTimer?.cancel();
     _clickThroughTimer?.cancel();
     _clearRam?.cancel();
     PaintingBinding.instance.imageCache.clear();
@@ -409,7 +412,20 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
     user.launcherSearchText = "";
     Globals.clearQuickMenuSearchInput();
     unixVisible = DateTime.now().millisecondsSinceEpoch;
-    Globals.quickMenuPage = visible ? type : QuickMenuPage.empty;
+    _hiddenContentClearTimer?.cancel();
+    _hiddenContentClearTimer = null;
+    if (visible) {
+      Globals.quickMenuPage = type;
+    } else if (user.keepPopupsOpen && mounted && Navigator.of(context).canPop()) {
+      // Only retain the widget tree when an open sheet or dialog needs its state.
+      _hiddenContentClearTimer = Timer(_hiddenContentRetention, () {
+        _hiddenContentClearTimer = null;
+        if (!mounted || QuickMenuFunctions.isQuickMenuVisible) return;
+        setState(() => Globals.quickMenuPage = QuickMenuPage.empty);
+      });
+    } else {
+      Globals.quickMenuPage = QuickMenuPage.empty;
+    }
     QuickMenuFunctions.resetKeyboardSelection();
 
     if (visible) {
@@ -418,7 +434,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
 
       // Page switches dismiss popups in _onQuickMenuSwitchedPage. This handles
       // the separate focus-loss setting.
-      final bool popupExpired = DateTime.now().difference(lastTimeShown).inSeconds > 30;
+      final bool popupExpired = DateTime.now().difference(lastTimeShown) >= _hiddenContentRetention;
       final bool dismissPopup =
           user.hideTabameOnUnfocus && !user.keepPopupOpenOnDemand && (!user.keepPopupsOpen || popupExpired);
       if (dismissPopup) _dismissQuickMenuPopup();
@@ -621,7 +637,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
         Globals.quickMenuPage == QuickMenuPage.quickMenu &&
         !QuickMenuFunctions.keepOpen) {
       // Added Date to block quick flash.
-      if (DateTime.now().difference(DateTime(QuickMenuFunctions.shownTime)).inMilliseconds > 300) {
+      if (DateTime.now().millisecondsSinceEpoch - QuickMenuFunctions.shownTime > 300) {
         QuickMenuFunctions.hideQuickMenu();
         Future<void>.delayed(const Duration(milliseconds: 100), () => QuickMenuFunctions.hideQuickMenu());
       }

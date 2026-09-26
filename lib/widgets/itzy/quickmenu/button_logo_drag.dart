@@ -78,9 +78,9 @@ class LogoDragButtonState extends State<LogoDragButton> {
       return Container(
         width: 15,
         height: 15,
-        decoration: BoxDecoration(
-          border: Border.all(color: Theme.of(context).dividerColor),
-        ),
+        // decoration: BoxDecoration(
+        //   border: Border.all(color: Theme.of(context).dividerColor),
+        // ),
       );
     }
 
