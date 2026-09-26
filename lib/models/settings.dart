@@ -131,6 +131,8 @@ class M {
 }
 
 class Settings {
+  static const String customLogoNone = '__no_logo__';
+
   List<String> args = <String>[];
   TPage page = TPage.quickmenu;
   // int quickRunState = 0;

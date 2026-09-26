@@ -51,11 +51,7 @@ class LogoDragButtonState extends State<LogoDragButton> {
                       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0).copyWith(right: 2, top: 1),
                       child: Align(
                         alignment: Alignment.centerLeft,
-                        child: user.customLogo.isEmpty
-                            ? Image.asset(user.logo, width: 15)
-                            : user.customLogo.replaceAll('\\', '/').startsWith('resources/logos/')
-                                ? Image.asset(user.customLogo.replaceAll('\\', '/'), width: 15)
-                                : Image.file(File(user.customLogo), width: 15),
+                        child: _buildLogo(),
                       ),
                     ),
                     if (!user.hideTabameOnUnfocus)
@@ -75,6 +71,25 @@ class LogoDragButtonState extends State<LogoDragButton> {
         );
       },
     );
+  }
+
+  Widget _buildLogo() {
+    if (user.customLogo == Settings.customLogoNone) {
+      return Container(
+        width: 15,
+        height: 15,
+        decoration: BoxDecoration(
+          border: Border.all(color: Theme.of(context).dividerColor),
+        ),
+      );
+    }
+
+    if (user.customLogo.isEmpty) return Image.asset(user.logo, width: 15);
+
+    final String normalizedPath = user.customLogo.replaceAll('\\', '/');
+    return normalizedPath.startsWith('resources/logos/')
+        ? Image.asset(normalizedPath, width: 15)
+        : Image.file(File(user.customLogo), width: 15);
   }
 }
 

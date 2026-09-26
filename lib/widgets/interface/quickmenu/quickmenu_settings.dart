@@ -178,7 +178,7 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
             mainAxisSpacing: 8,
             childAspectRatio: 1.15,
           ),
-          itemCount: _logoLibrary.length + 2,
+          itemCount: _logoLibrary.length + 3,
           itemBuilder: (BuildContext context, int index) {
             if (index == 0) {
               return _buildLogoTile(
@@ -193,7 +193,9 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
             }
 
             if (index == 1) {
-              final bool hasCustomFile = user.customLogo.isNotEmpty && !_isLogoLibraryAsset(user.customLogo);
+              final bool hasCustomFile = user.customLogo.isNotEmpty &&
+                  user.customLogo != Settings.customLogoNone &&
+                  !_isLogoLibraryAsset(user.customLogo);
 
               return _buildLogoTile(
                 title: "Pick your own Logo",
@@ -205,9 +207,24 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
               );
             }
 
-            final String asset = _logoLibrary[index - 2];
+            if (index == 2) {
+              return _buildLogoTile(
+                title: "No Logo",
+                isSelected: user.customLogo == Settings.customLogoNone,
+                preview: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                  ),
+                ),
+                onTap: () => _selectLogo(Settings.customLogoNone),
+              );
+            }
+
+            final String asset = _logoLibrary[index - 3];
             return _buildLogoTile(
-              title: "Logo ${index - 2}",
+              title: "Logo ${index - 3}",
               isSelected: user.customLogo == asset,
               preview: Image.asset(asset, fit: BoxFit.contain),
               onTap: () => _selectLogo(asset),
