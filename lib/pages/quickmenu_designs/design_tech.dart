@@ -12,7 +12,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Tech" QuickMenu design — a Modern Smart Glass / Aerospace HUD aesthetic.
+/// "Tech" QuickMenu design – a Modern Smart Glass / Aerospace HUD aesthetic.
 ///
 /// The menu discards retro terminal tropes in favor of a sleek, modern dashboard.
 /// It uses frosted glass panels, soft glowing accent lines, highly rounded

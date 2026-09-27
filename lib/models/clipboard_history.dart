@@ -227,7 +227,7 @@ class ClipboardHistoryStore {
   static Future<void>? _migrationFuture;
 
   /// In-memory ring of content hashes of the newest entries.
-  /// Used only for duplicate detection — never exposed to the UI.
+  /// Used only for duplicate detection – never exposed to the UI.
   static final List<String> _recentCache = <String>[];
   static bool _recentCacheLoaded = false;
   // A missing setting is treated as paused. First-run initialization also

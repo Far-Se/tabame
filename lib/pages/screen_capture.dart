@@ -36,7 +36,7 @@ import 'photo_editor.dart';
 import 'screen_draw.dart' show AnnotationController, AnnotationOverlay, DrawTool;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Isolate helpers — must be top-level so compute() can send them
+// Isolate helpers – must be top-level so compute() can send them
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Plain data descriptor for one monitor's contribution to a cropped capture.
@@ -432,7 +432,7 @@ class ScreenCapture {
     GetDIBits(memDc, bmp, 0, h, bgra.cast(), bmi, DIB_RGB_COLORS);
 
     final Uint8List rgba = Uint8List(w * h * 4);
-    // Zero-copy view into native memory — no extra allocation needed.
+    // Zero-copy view into native memory – no extra allocation needed.
     final Uint8List src = bgra.asTypedList(w * h * 4);
     for (int i = 0; i < src.length; i += 4) {
       rgba[i] = src[i + 2];
@@ -647,7 +647,7 @@ class ScreenCapture {
     GetDIBits(cursorDc, dibBmp, 0, cyCursor, dibBitsRaw.cast(), bmi2, DIB_RGB_COLORS);
     calloc.free(bmi2);
 
-    // Zero-copy view — read pixels directly from native memory before freeing.
+    // Zero-copy view – read pixels directly from native memory before freeing.
     final Uint8List cursorBgra = dibBitsRaw.asTypedList(totalBytes);
 
     // 7. Alpha-blend the cursor onto a copy of the snapshot RGBA buffer.
@@ -693,7 +693,7 @@ class ScreenCapture {
     DeleteObject(dibBmp);
     DeleteDC(cursorDc);
     ReleaseDC(NULL, screenDc);
-    calloc.free(dibBitsRaw); // free after loop — view is no longer used
+    calloc.free(dibBitsRaw); // free after loop – view is no longer used
 
     return result;
   }
@@ -1151,7 +1151,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
     _updateCurrentMonitorRect();
   }
 
-  /// Called when the parent rebuilds ScreenCaptureView with new props —
+  /// Called when the parent rebuilds ScreenCaptureView with new props –
   /// specifically when preloadedSnapshots arrives after _captureInitialSnapshots()
   /// completes in the embedded-launch path.
   @override
@@ -1234,7 +1234,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
         _annotateMode = false;
         _annot?.drawingModeActive = false;
       } else {
-        // manageWindow:false — skip the Win32 click-through/synthetic-click side
+        // manageWindow:false – skip the Win32 click-through/synthetic-click side
         // effects that only make sense for the standalone screen-draw window.
         final AnnotationController ctrl = _annot ??= (AnnotationController()..manageWindow = false);
         ctrl.drawingModeActive = true;
@@ -1886,7 +1886,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                           });
                           final Rect localRect = Rect.fromPoints(s, e);
                           if (localRect.width < 6 || localRect.height < 6) {
-                            // Treat as a click — use the window that was highlighted
+                            // Treat as a click – use the window that was highlighted
                             // at pointer-down time (snapshotted into _clickedWindowRect).
                             final Rect? winRect = _clickedWindowRect;
                             _clickedWindowRect = null;
@@ -2051,7 +2051,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
                 ),
               ),
 
-            // Countdown overlay — shown when _captureDelaySeconds > 0 and ticking.
+            // Countdown overlay – shown when _captureDelaySeconds > 0 and ticking.
             if (_countdownValue != null)
               Positioned(
                 left: _currentMonitorRect.left,
@@ -2271,7 +2271,7 @@ class _ScreenCaptureViewState extends State<ScreenCaptureView> {
 
     switch (choice.mode ?? CaptureActionMode.ask) {
       case CaptureActionMode.ask:
-        // Keep the frozen background alive — _resetLiveSnapshot() is called
+        // Keep the frozen background alive – _resetLiveSnapshot() is called
         // from the modal's onClose so the overlay stays until modal closes.
         _showCaptureModal(
           pngBytes,
@@ -3073,7 +3073,7 @@ class _CapturePainter extends CustomPainter {
 // Crosshair cursor widget
 // ─────────────────────────────────────────────────────────────────────────────
 
-// EnumWindows callback — file-level buffer (FFI callbacks must be top-level).
+// EnumWindows callback – file-level buffer (FFI callbacks must be top-level).
 final List<int> _ewBuffer = <int>[];
 int _ewProc(int hWnd, int lParam) {
   _ewBuffer.add(hWnd);
@@ -3113,10 +3113,10 @@ class _CrosshairCursorState extends State<_CrosshairCursor> {
   List<_WindowEntry> _windows = <_WindowEntry>[];
   Timer? _refreshTimer;
 
-  /// Our own overlay HWND — excluded from the list.
+  /// Our own overlay HWND – excluded from the list.
   final int _ownHwnd = Win32Window.getHwnd();
 
-  /// Desktop HWND — excluded.
+  /// Desktop HWND – excluded.
   final int _desktopHwnd = GetDesktopWindow();
 
   /// Read the current cursor position from Win32 and convert it to
@@ -3443,7 +3443,7 @@ class _CrosshairPainter extends CustomPainter {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Post-capture modal — animated wrapper
+// Post-capture modal – animated wrapper
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Wraps [_CaptureModal] with a smooth fade + slide-up entrance animation so

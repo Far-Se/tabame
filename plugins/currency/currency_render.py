@@ -28,7 +28,7 @@ def font(weight, size):
             _FONT_CACHE[key] = ImageFont.truetype(path, size * SCALE)
         except OSError:
             # No fonts/ folder shipped with this plugin (copy it over from
-            # the stock plugin for a nicer look) — fall back gracefully.
+            # the stock plugin for a nicer look) – fall back gracefully.
             try:
                 _FONT_CACHE[key] = ImageFont.load_default(size=size * SCALE)
             except TypeError:
@@ -40,7 +40,7 @@ def S(v):
     return v * SCALE
 
 
-# ---- palette (dark, trading-terminal feel — same as stock_render.py) ------
+# ---- palette (dark, trading-terminal feel – same as stock_render.py) ------
 BG_TOP = (20, 24, 34)
 BG_BOTTOM = (11, 13, 19)
 CARD_BG = (30, 35, 47, 235)
@@ -139,7 +139,7 @@ def render_chart(data, out_path):
     FW, FH = (
         960,
         520,
-    )  # final (post-downscale) size — no volume strip, so shorter than stock's
+    )  # final (post-downscale) size – no volume strip, so shorter than stock's
     W, H = S(FW), S(FH)
     canvas = _vertical_gradient((W, H), BG_TOP, BG_BOTTOM).convert("RGBA")
     draw = ImageDraw.Draw(canvas)
@@ -332,7 +332,7 @@ def render_chart(data, out_path):
         draw.text((cx - lw / 2, label_y), label, font=f_stat_label, fill=TEXT_MUTED)
         vw = _text_w(draw, value, f_stat_value)
         vx = cx - vw / 2
-        # last column's value can be wide ("1 EUR = 1.081234 USD") — keep it on-card
+        # last column's value can be wide ("1 EUR = 1.081234 USD") – keep it on-card
         vx = max(min(vx, W - pad - vw - S(8)), pad + S(8))
         draw.text((vx, value_y), value, font=f_stat_value, fill=TEXT_WHITE)
         if i > 0:

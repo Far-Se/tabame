@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-IP & Domain Lookup — Tabame launcher plugin.
+IP & Domain Lookup – Tabame launcher plugin.
 
 Type an IP address -> geolocation / ISP / ASN.
 Type a domain       -> DNS resolution + WHOIS (registrar, dates, name servers).
@@ -405,7 +405,7 @@ def handle_action(item_id, action):
                 "view": "detail",
                 "inputMode": "submit",
                 "canGoBack": True,
-                "detail": {"markdown": f"# Raw WHOIS — `{text}`\n\n```\n{raw.strip()}\n```"},
+                "detail": {"markdown": f"# Raw WHOIS – `{text}`\n\n```\n{raw.strip()}\n```"},
             })
         return
 

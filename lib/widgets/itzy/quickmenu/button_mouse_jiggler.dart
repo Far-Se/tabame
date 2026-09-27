@@ -9,7 +9,7 @@ import '../../../models/globals.dart';
 import '../../widgets/quick_actions_item.dart';
 
 /// Owns the jiggle [Timer] at top level so it keeps running while the QuickMenu
-/// is hidden-but-mounted (see the QuickMenu RAM strategy — the tree stays alive
+/// is hidden-but-mounted (see the QuickMenu RAM strategy – the tree stays alive
 /// on hide, and widget state would otherwise be the wrong place to hold it).
 class MouseJigglerController {
   MouseJigglerController._();

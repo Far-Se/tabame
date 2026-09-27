@@ -216,7 +216,7 @@ function fmtRatingValue(r) {
     return Number(r.value).toFixed(1);
   if (r.score != null) return String(r.score);
   if (r.value != null) return String(r.value);
-  return "—";
+  return "–";
 }
 
 // ── media normalization ──────────────────────────────────────────────────────
@@ -428,7 +428,7 @@ function listItem(l) {
     preview: {
       markdown: `## ${l.name}\n\n${l.description || "*No description*"}`,
       metadata: [
-        { label: "Owner", text: l.user_name || "—" },
+        { label: "Owner", text: l.user_name || "–" },
         { label: "Items", text: String(l.items) },
         { label: "Likes", text: String(l.likes || 0), icon: "heart" },
         { label: "Type", text: l.dynamic ? "Dynamic" : "Static" },
@@ -466,7 +466,7 @@ function upNextItem(u) {
       { id: "copy_title", title: "Copy Title", icon: "copy" },
     ],
     preview: {
-      markdown: `## ${show.title || "Untitled"}${show.year ? ` (${show.year})` : ""}\n\n**Next up:** ${sub.join(" · ") || "—"}`,
+      markdown: `## ${show.title || "Untitled"}${show.year ? ` (${show.year})` : ""}\n\n**Next up:** ${sub.join(" · ") || "–"}`,
       metadata: [
         prog.total_episode_count
           ? {
@@ -614,7 +614,7 @@ function buildCommands() {
       id: "upnext",
       section: "You",
       title: "Up Next",
-      subtitle: "In-progress shows — next episode to watch",
+      subtitle: "In-progress shows – next episode to watch",
       icon: "calendar",
     },
     {
@@ -920,7 +920,7 @@ function renderSetup(rev, error) {
           placeholder: "Paste your key…",
           required: true,
           description:
-            "Free — grab one from mdblist.com/preferences (Ctrl+K below opens the page).",
+            "Free – grab one from mdblist.com/preferences (Ctrl+K below opens the page).",
           error: error || undefined,
         },
       ],
@@ -1158,6 +1158,6 @@ async function handleLine(line) {
     case "back":
       await popScreen();
       break;
-    // 'select' / 'tab' unused — previews are provided per item.
+    // 'select' / 'tab' unused – previews are provided per item.
   }
 }

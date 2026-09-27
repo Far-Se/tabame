@@ -11,7 +11,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Fluent" QuickMenu design — Windows 11 flyout styling.
+/// "Fluent" QuickMenu design – Windows 11 flyout styling.
 ///
 /// Mimics the taskbar flyouts (quick settings / notification center): a mica
 /// sheet with a faint accent tint, hairline surface strokes, the window
@@ -41,7 +41,7 @@ class _FluentTokens {
       tint: tint,
       accent: accent,
       text: text,
-      // WinUI "surface stroke" — the 1px outline around the whole flyout.
+      // WinUI "surface stroke" – the 1px outline around the whole flyout.
       stroke: isDark ? Colors.white.withValues(alpha: 0.09) : Colors.black.withValues(alpha: 0.11),
       divider: text.withValues(alpha: 0.08),
       // "Layer on mica" card the switcher sits on.
@@ -181,7 +181,7 @@ class MainMenuFluentWidget extends StatelessWidget {
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                     if (user.libreStats) const LibreStats(withTopDivider: false),
 
-                    // Footer strip — tonally separated like the quick-settings
+                    // Footer strip – tonally separated like the quick-settings
                     // battery/settings row.
                     DecoratedBox(
                       decoration: BoxDecoration(

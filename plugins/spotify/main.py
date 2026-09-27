@@ -457,7 +457,7 @@ def track_item(track, idx=0, context_uri=None):
     return {
         "id": item_id,
         "title": track.get("name", "Unknown"),
-        "subtitle": f"{artists} — {album}" if album else artists,
+        "subtitle": f"{artists} – {album}" if album else artists,
         "icon": icon,
         "accessories": [{"text": fmt_duration(track.get("duration_ms", 0))}],
         "actions": actions,
@@ -768,7 +768,7 @@ def render_now_playing(rev):
     pct = int((progress_ms / duration_ms) * 20) if duration_ms else 0
     bar = "\u2588" * pct + "\u2591" * (20 - pct)
     md = (
-        f"# {item.get('name', '—')}\n\n**{artists}**\n{album}\n\n"
+        f"# {item.get('name', '–')}\n\n**{artists}**\n{album}\n\n"
         f"`{bar}` {fmt_duration(progress_ms)} / {fmt_duration(duration_ms)}\n\n"
         f"Device: {device.get('name', 'Unknown')} · Shuffle: {'On' if shuffle else 'Off'} · "
         f"Repeat: {repeat.capitalize()}"
@@ -816,7 +816,7 @@ def render_devices(rev):
             return
     items = [device_item(d, i) for i, d in enumerate(state["devices_cache"])]
     send({"type": "render", "rev": rev, "view": "list", "canGoBack": True,
-          "placeholder": "Devices", "emptyText": "No devices found — open Spotify somewhere first.",
+          "placeholder": "Devices", "emptyText": "No devices found – open Spotify somewhere first.",
           "items": items})
 
 

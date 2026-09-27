@@ -2,7 +2,7 @@
 // QuickMenuDesigns.console
 //
 // A "Command Prompt" / TUI-flavored design:
-//  - flat, opaque panel (no glass/blur — real terminals aren't translucent)
+//  - flat, opaque panel (no glass/blur – real terminals aren't translucent)
 //  - sharp corners (borderRadius: 0)
 //  - Consolas everywhere, classic cmd.exe palette (black bg / gray text /
 //    bright green accent), with a light "light-terminal" variant too
@@ -12,7 +12,7 @@
 // Drop this alongside design_serene.dart / design_stable.dart etc. Wire the
 // `console` value into the `QuickMenuDesigns` enum, add the QMDesignThemeSet
 // entry to the theme table, and add the `_FrameSpec` case to the modal/popup
-// frame switch — all three snippets are below.
+// frame switch – all three snippets are below.
 // ============================================================================
 
 import 'dart:async';
@@ -31,7 +31,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 
 // ----------------------------------------------------------------------------
-// 1. THEME COLORS — add this entry to the QMDesignThemeSet table, next to
+// 1. THEME COLORS – add this entry to the QMDesignThemeSet table, next to
 //    the QuickMenuDesigns.vector entry shown in the prompt.
 // ----------------------------------------------------------------------------
 //
@@ -40,7 +40,7 @@ import '../../widgets/quickmenu/top_bar.dart';
 //       background: const Color(0xffF3F3F3),   // Win terminal "Campbell Light" paper
 //       textColor: const Color(0xff0C0C0C),    // near-black console text
 //       accentColor: const Color(0xff0037DA),  // classic cmd.exe blue
-//       gradientAlpha: 0,                      // flat — no glow/gradient
+//       gradientAlpha: 0,                      // flat – no glow/gradient
 //       uiFontFamily: 'Consolas',
 //       uiFontWeight: 400,
 //       entryFontFamily: 'Consolas',
@@ -63,14 +63,14 @@ import '../../widgets/quickmenu/top_bar.dart';
 //   ),
 
 // ----------------------------------------------------------------------------
-// 2. POPUP / MODAL FRAME SPEC — add this case next to the
+// 2. POPUP / MODAL FRAME SPEC – add this case next to the
 //    QuickMenuDesigns.vector => _FrameSpec(...) case.
 // ----------------------------------------------------------------------------
 //
 //   QuickMenuDesigns.console2 => _FrameSpec(
 //     decoration: BoxDecoration(
 //       borderRadius: radius, // Design.borderRadius is 0 for this theme anyway
-//       color: bg.withValues(alpha: 1.0), // opaque — terminal windows don't glass
+//       color: bg.withValues(alpha: 1.0), // opaque – terminal windows don't glass
 //       border: Border.all(
 //         color: accent.withValues(alpha: isDark ? 0.55 : 0.45),
 //         width: 1,
@@ -99,7 +99,7 @@ class MainMenuConsole2Widget extends StatelessWidget {
     final Color surface = theme.colorScheme.surface;
     final bool isDark = theme.brightness == Brightness.dark;
 
-    // Terminal windows are opaque — no translucency curve needed, but we
+    // Terminal windows are opaque – no translucency curve needed, but we
     // keep the shape so a user-adjusted opacity setting still applies.
     final double baseAlpha = user.activeBackdropPath.isNotEmpty ? 0.94 : 1.0;
     final Color panelBase = Design.glassColor(surface.withValues(alpha: baseAlpha));
@@ -119,7 +119,7 @@ class MainMenuConsole2Widget extends StatelessWidget {
           borderRadius: BorderRadius.circular(radius),
           child: Stack(
             children: <Widget>[
-              // Flat opaque terminal-window background — no blur.
+              // Flat opaque terminal-window background – no blur.
               Positioned.fill(
                 child: RepaintBoundary(
                   child: Container(
@@ -185,7 +185,7 @@ class MainMenuConsole2Widget extends StatelessWidget {
 }
 
 /// "C:\QuickMenu>" title strip with a blinking block cursor, in place of a
-/// generic top bar decoration — this is what sells the CMD look at a glance.
+/// generic top bar decoration – this is what sells the CMD look at a glance.
 // ignore: unused_element
 class _ConsoleTitleStrip extends StatelessWidget {
   final Color accent;
@@ -233,7 +233,7 @@ class _AsciiDivider extends StatelessWidget {
   }
 }
 
-/// A blinking block cursor ("█") — used inline in the title strip and can
+/// A blinking block cursor ("█") – used inline in the title strip and can
 /// also be dropped in as a standalone overlay widget for popups.
 class ConsoleCursorBlink extends StatefulWidget {
   final bool inline;
@@ -279,7 +279,7 @@ class _ConsoleCursorBlinkState extends State<ConsoleCursorBlink> {
 // 4. CUSTOM PAINTERS
 // ----------------------------------------------------------------------------
 
-/// Faint horizontal scanlines for a CRT-terminal feel. Cheap to paint —
+/// Faint horizontal scanlines for a CRT-terminal feel. Cheap to paint –
 /// draws every 3rd pixel row as a hairline.
 class ConsoleScanPainter extends CustomPainter {
   final Color color;
@@ -300,7 +300,7 @@ class ConsoleScanPainter extends CustomPainter {
   bool shouldRepaint(covariant ConsoleScanPainter oldDelegate) => oldDelegate.color != color;
 }
 
-/// Box-drawing corner frame (┌ ┐ └ ┘), TUI-style — painted as two short
+/// Box-drawing corner frame (┌ ┐ └ ┘), TUI-style – painted as two short
 /// perpendicular strokes per corner rather than glyphs, so it scales cleanly
 /// with the panel instead of relying on font metrics.
 class ConsoleFramePainter extends CustomPainter {

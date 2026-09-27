@@ -8,6 +8,30 @@ import '../../models/settings.dart';
 part 'launcher_design_config.dart';
 part 'launcher_palette.dart';
 
+/// Clear lenses, cool frost, and restrained system typography.
+abstract final class LiquidGlassTokens {
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: 0.72), background);
+  static Color get border => foreground.withValues(alpha: isDark ? 0.18 : 0.12);
+  static Color get edge => Colors.white.withValues(alpha: isDark ? 0.32 : 0.88);
+  static Color get selection => Color.alphaBlend(accent.withValues(alpha: isDark ? 0.17 : 0.10), background);
+
+  static TextStyle font(
+          {double size = 14, Color? color, FontWeight weight = FontWeight.w400, double spacing = -0.15}) =>
+      launcherTextStyle(TextStyle(
+        fontFamily: 'Segoe UI',
+        fontFamilyFallback: const <String>['SF Pro Text', 'Helvetica Neue', 'sans-serif'],
+        fontSize: size,
+        color: color ?? foreground,
+        fontWeight: weight,
+        letterSpacing: spacing,
+        height: 1.3,
+      ));
+}
+
 /// Warm ivory, pressed foliage, and muted gold, derived from the live palette.
 abstract final class IvoryGroveTokens {
   static Color get background => user.launcherThemeColors.background;
@@ -344,13 +368,13 @@ abstract final class TerminalTokens {
 /// Shared visual tokens for the Terminal2 (TUI) launcher design.
 ///
 /// The Terminal design overrides the active theme with a forced console palette
-/// so it always reads as a command prompt — regardless of the user's chosen
+/// so it always reads as a command prompt – regardless of the user's chosen
 /// launcher colors. Two curated palettes adapt to the active brightness: a
 /// near-black screen with light phosphor text in dark mode, and a soft "paper
 /// console" with dark ink in light mode. The accent stays user-driven (prompt,
 /// cursor, selection).
 abstract final class Terminal2Tokens {
-  // Dark — near-black screen (Windows Terminal default).
+  // Dark – near-black screen (Windows Terminal default).
   static const Color _bgDark = Color(0xFF10130F);
   static const Color _chromeDark = Color(0xFF171B15);
   static const Color _raisedDark = Color(0xFF20261D);
@@ -358,7 +382,7 @@ abstract final class Terminal2Tokens {
   static const Color _dimDark = Color(0xFF89917D);
   static const Color _amberDark = Color(0xFFE8B86A);
 
-  // Light — "paper console": off-white screen, dark ink.
+  // Light – "paper console": off-white screen, dark ink.
   static const Color _bgLight = Color(0xFFF2F1E8);
   static const Color _chromeLight = Color(0xFFE7E6D9);
   static const Color _raisedLight = Color(0xFFDCDDCF);
@@ -420,18 +444,18 @@ abstract final class Terminal2Tokens {
 /// Shared visual tokens for the Zen (nature) launcher design.
 ///
 /// Like [TerminalTokens] this forces its own palette so the launcher always
-/// reads as a calm, low-cortisol surface — soft sage and moss, warm paper light
-/// or a moonlit-forest dark — regardless of the user's chosen colors. Two
+/// reads as a calm, low-cortisol surface – soft sage and moss, warm paper light
+/// or a moonlit-forest dark – regardless of the user's chosen colors. Two
 /// curated palettes adapt to the active brightness.
 abstract final class ZenTokens {
-  // Light — "dawn garden".
+  // Light – "dawn garden".
   static const Color _bgLight = Color(0xFFEEF1E6);
   static const Color _bgLightTop = Color(0xFFF5F3EA);
   static const Color _fgLight = Color(0xFF3C463B);
   static const Color _dimLight = Color(0xFF818A78);
   static const Color _accentLight = Color(0xFF7B9A6B);
 
-  // Dark — "moonlit forest".
+  // Dark – "moonlit forest".
   static const Color _bgDark = Color(0xFF171C18);
   static const Color _bgDarkTop = Color(0xFF1E251F);
   static const Color _fgDark = Color(0xFFD7DFCF);
@@ -463,7 +487,7 @@ abstract final class ZenTokens {
 
 /// Typography for the Glass (iOS Liquid Glass) launcher design.
 ///
-/// Unlike [TerminalTokens]/[ZenTokens], Glass does not force a palette — its
+/// Unlike [TerminalTokens]/[ZenTokens], Glass does not force a palette – its
 /// translucent surfaces pick up the active theme's colors so it works in both
 /// light and dark. It only forces Inter, the closest free stand-in for the
 /// San Francisco system font, to nail the iOS feel.
@@ -488,18 +512,18 @@ abstract final class GlassTokens {
 /// Shared visual tokens for the Blueprint (drafting sheet) launcher design.
 ///
 /// Like [TerminalTokens]/[ZenTokens] this forces its own palette so the
-/// launcher always reads as an engineering drawing — a cyanotype blueprint
+/// launcher always reads as an engineering drawing – a cyanotype blueprint
 /// (deep prussian-blue sheet, pale ink) in dark mode, and white drafting paper
-/// with navy ink in light mode. Every line on the sheet — grid, borders,
-/// dimension lines, balloons — is drawn in "ink" (the forced accent).
+/// with navy ink in light mode. Every line on the sheet – grid, borders,
+/// dimension lines, balloons – is drawn in "ink" (the forced accent).
 abstract final class BlueprintTokens {
-  // Dark — cyanotype: deep prussian-blue sheet, pale ink.
+  // Dark – cyanotype: deep prussian-blue sheet, pale ink.
   static const Color _bgDark = Color(0xFF0C2841);
   static const Color _fgDark = Color(0xFFD9EAF8);
   static const Color _dimDark = Color(0xFF7E9FBD);
   static const Color _accentDark = Color(0xFF7FB8E6);
 
-  // Light — drafting paper: cool white sheet, navy ink.
+  // Light – drafting paper: cool white sheet, navy ink.
   static const Color _bgLight = Color(0xFFD9D8FF);
   static const Color _fgLight = Color(0xFF1F4467);
   static const Color _dimLight = Color(0xFF6F8CA6);
@@ -514,10 +538,10 @@ abstract final class BlueprintTokens {
   /// Dimmed ink (labels, subtitles, minor grid).
   static Color dim(bool isDark) => isDark ? _dimDark : _dimLight;
 
-  /// Bright drafting ink — the forced accent (selection, dimension lines).
+  /// Bright drafting ink – the forced accent (selection, dimension lines).
   static Color accent(bool isDark) => isDark ? _accentDark : _accentLight;
 
-  /// Squared technical lettering — the drafting-stencil voice of the sheet.
+  /// Squared technical lettering – the drafting-stencil voice of the sheet.
   static TextStyle tech({
     double? fontSize,
     FontWeight? fontWeight,
@@ -538,18 +562,18 @@ abstract final class BlueprintTokens {
 /// Shared visual tokens for the Transit (metro map) launcher design.
 ///
 /// Like [TerminalTokens] this forces its own palette so the launcher always
-/// reads as wayfinding signage — a night-service dark board or a clean white
+/// reads as wayfinding signage – a night-service dark board or a clean white
 /// station sign in light mode. The user accent stays in charge as "your line
 /// color": the route line, roundels, bands and zone markers are all drawn in
 /// it, so every accent choice becomes a different metro line.
 abstract final class TransitTokens {
-  // Dark — night network board.
+  // Dark – night network board.
   static const Color _bgDark = Color(0xFF15181D);
   static const Color _chromeDark = Color(0xFF1C2026);
   static const Color _fgDark = Color(0xFFE9EDF2);
   static const Color _dimDark = Color(0xFF8C96A3);
 
-  // Light — enamel station sign.
+  // Light – enamel station sign.
   static const Color _bgLight = Color(0xFFF7F7F4);
   static const Color _chromeLight = Color(0xFFECECE7);
   static const Color _fgLight = Color(0xFF17191C);
@@ -567,7 +591,7 @@ abstract final class TransitTokens {
   /// Dimmed lettering (connections, captions).
   static Color dim(bool isDark) => isDark ? _dimDark : _dimLight;
 
-  /// Signage lettering — Overpass, digitised from US highway-sign alphabets.
+  /// Signage lettering – Overpass, digitised from US highway-sign alphabets.
   static TextStyle sign({
     double? fontSize,
     FontWeight? fontWeight,
@@ -587,20 +611,20 @@ abstract final class TransitTokens {
 
 /// Shared visual tokens for the Fluent (Windows 11) launcher design.
 ///
-/// Like [TerminalTokens] this forces its own palette — the Windows 11 "Mica"
+/// Like [TerminalTokens] this forces its own palette – the Windows 11 "Mica"
 /// neutrals: the smoky #202020 sheet in dark mode, the frosted #F3F3F3 one in
 /// light. The user accent stays in charge (selection pill, focus underline),
 /// exactly like the system accent color in Windows. Typography is Segoe UI
-/// Variable with a plain Segoe UI fallback — the native voice of the OS, no
+/// Variable with a plain Segoe UI fallback – the native voice of the OS, no
 /// bundled font needed.
 abstract final class FluentTokens {
-  // Dark — mica dark.
+  // Dark – mica dark.
   static const Color _bgDark = Color(0xFF202020);
   static const Color _chromeDark = Color(0xFF1B1B1B);
   static const Color _fgDark = Color(0xFFFFFFFF);
   static const Color _dimDark = Color(0xFF9D9D9D);
 
-  // Light — mica light.
+  // Light – mica light.
   static const Color _bgLight = Color(0xFFF3F3F3);
   static const Color _chromeLight = Color(0xFFEBEBEB);
   static const Color _fgLight = Color(0xFF1B1B1B);
@@ -855,18 +879,18 @@ abstract final class ManifestoTokens {
 /// Shared visual tokens for the Orbit (spacecraft guidance HUD) launcher design.
 ///
 /// Like [TerminalTokens] this forces its own palette so the launcher always
-/// reads as a guidance computer — a deep-space scope in dark mode, a daylight
+/// reads as a guidance computer – a deep-space scope in dark mode, a daylight
 /// instrument panel in light mode. The user accent stays in charge as the
 /// "lock" color: reticle brackets, the radar sweep, track markers and telemetry
 /// readouts are all drawn in it.
 abstract final class OrbitTokens {
-  // Dark — deep-space scope.
+  // Dark – deep-space scope.
   static const Color _bgDark = Color(0xFF04090E);
   static const Color _chromeDark = Color(0xFF0A121A);
   static const Color _fgDark = Color(0xFFD9E8E4);
   static const Color _dimDark = Color(0xFF64787F);
 
-  // Light — daylight instrument panel.
+  // Light – daylight instrument panel.
   static const Color _bgLight = Color(0xFFEEF3EF);
   static const Color _chromeLight = Color(0xFFE0E9E3);
   static const Color _fgLight = Color(0xFF1C2A28);
@@ -884,7 +908,7 @@ abstract final class OrbitTokens {
   /// Dimmed foreground (captions, minor ticks).
   static Color dim(bool isDark) => isDark ? _dimDark : _dimLight;
 
-  /// Display voice — Space Grotesk, the geometric-technical face of flight
+  /// Display voice – Space Grotesk, the geometric-technical face of flight
   /// instrumentation labels.
   static TextStyle disp({
     double? fontSize,
@@ -902,7 +926,7 @@ abstract final class OrbitTokens {
     ));
   }
 
-  /// Telemetry voice — IBM Plex Mono for readouts, micro labels and kbd hints.
+  /// Telemetry voice – IBM Plex Mono for readouts, micro labels and kbd hints.
   static TextStyle tele({
     double? fontSize,
     FontWeight? fontWeight,
@@ -1094,7 +1118,7 @@ class LauncherThemeData {
   bool get isToon => design == LauncherDesign.toon;
   bool get isQuickMenuInspired => config.isQuickMenuInspired;
 
-  /// Leading glyph in the search bar — a chevron prompt for the Command/Terminal
+  /// Leading glyph in the search bar – a chevron prompt for the Command/Terminal
   /// consoles, a leaf for Zen, a drafting compass for Blueprint, a radar scope
   /// for Orbit, a magnifier otherwise.
   IconData get searchIcon => config.searchIcon;

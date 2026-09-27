@@ -212,7 +212,7 @@ enum RecordingTargetMode {
 
 /// Which capture backend to use.
 enum VideoSource {
-  /// Built-in Windows.Graphics.Capture (WGC) — default.
+  /// Built-in Windows.Graphics.Capture (WGC) – default.
   wgc,
 
   /// Launch a user-supplied ffmpeg command for recording.
@@ -995,7 +995,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
         if (title.isNotEmpty && !title.contains('"')) {
           windowTitle = title;
         } else {
-          // Title unavailable — fall back to the window's current rect.
+          // Title unavailable – fall back to the window's current rect.
           final ({int x, int y, int w, int h})? rect = _windowPhysicalRect(config.hWnd!);
           if (rect != null) {
             x = rect.x;
@@ -1086,7 +1086,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
         if (_audioMode == ScreenRecordingAudioMode.mic || _audioMode == ScreenRecordingAudioMode.systemAndMic) {
           micDevice = _pickMicDevice(devices, _selectedMicName(), exclude: systemDevice);
         }
-        _ffmpegLog('dshow audio resolved — mic: ${micDevice ?? "(none)"}  system: ${systemDevice ?? "(none)"}');
+        _ffmpegLog('dshow audio resolved – mic: ${micDevice ?? "(none)"}  system: ${systemDevice ?? "(none)"}');
       }
 
       // Build the command.
@@ -1124,7 +1124,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
       _ffmpegLog('Executable: ${parts.first}');
       _ffmpegLog('Args: ${parts.skip(1).toList()}');
 
-      // Do NOT use runInShell — it wraps in cmd.exe which eats stdin.
+      // Do NOT use runInShell – it wraps in cmd.exe which eats stdin.
       _ffmpegProcess = await Process.start(
         parts.first,
         parts.skip(1).toList(),
@@ -1189,7 +1189,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
 
     if (proc != null) {
       try {
-        // Send 'q\n' to ffmpeg stdin — graceful quit that finalises the MP4.
+        // Send 'q\n' to ffmpeg stdin – graceful quit that finalises the MP4.
         _ffmpegLog('Writing q to stdin...');
         proc.stdin.write('q\n');
         await proc.stdin.flush();
@@ -1197,14 +1197,14 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
         final int exitCode = await proc.exitCode.timeout(
           const Duration(seconds: 10),
           onTimeout: () {
-            _ffmpegLog('Timeout — killing process.');
+            _ffmpegLog('Timeout – killing process.');
             proc.kill();
             return -1;
           },
         );
         _ffmpegLog('Process exited with code $exitCode after stop.');
       } catch (e) {
-        _ffmpegLog('Exception during stop: $e — killing.');
+        _ffmpegLog('Exception during stop: $e – killing.');
         proc.kill();
       }
     } else {
@@ -1287,7 +1287,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
 
   Future<void> _stopRecording() async {
     // Stop can be triggered from the HUD button, the global hotkey, and the
-    // auto-stop timer — guard against overlapping invocations.
+    // auto-stop timer – guard against overlapping invocations.
     if (_stoppingRecording) return;
     _stoppingRecording = true;
     try {
@@ -1380,7 +1380,7 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
     _monitorTimer = null;
 
     // The modal's controls mutate state directly, so snapshot everything it can
-    // touch and restore on Cancel/dismiss — only Save keeps the changes.
+    // touch and restore on Cancel/dismiss – only Save keeps the changes.
     final RecordingTargetMode prevTargetMode = _targetMode;
     final RecordingAfterAction prevAfterAction = _afterAction;
     final ScreenRecordingAudioMode prevAudioMode = _audioMode;
@@ -1660,9 +1660,9 @@ class _ScreenRecordingViewState extends State<ScreenRecordingView> {
                                 sublabel: 'Video bitrate',
                                 value: _videoBitrateMbps,
                                 options: const <({int value, String label, String? sublabel})>[
-                                  (value: 6, label: 'Standard', sublabel: '6 Mbps — smaller file'),
-                                  (value: 12, label: 'High', sublabel: '12 Mbps — balanced'),
-                                  (value: 20, label: 'Ultra', sublabel: '20 Mbps — best quality'),
+                                  (value: 6, label: 'Standard', sublabel: '6 Mbps – smaller file'),
+                                  (value: 12, label: 'High', sublabel: '12 Mbps – balanced'),
+                                  (value: 20, label: 'Ultra', sublabel: '20 Mbps – best quality'),
                                 ],
                                 onChanged: (int v) => _videoBitrateMbps = v,
                               ),
@@ -2497,7 +2497,7 @@ class _RecordingHud extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              // Recording dot — red while capturing, amber while paused.
+              // Recording dot – red while capturing, amber while paused.
               Container(
                 width: 7,
                 height: 7,
@@ -2552,7 +2552,7 @@ class _RecordingHud extends StatelessWidget {
                 onTap: onStop,
               ),
               const SizedBox(width: 6),
-              // Pause / Resume button (WGC backend only) — sits between Stop and Cancel
+              // Pause / Resume button (WGC backend only) – sits between Stop and Cancel
               if (canPause) ...<Widget>[
                 _HudButton(
                   label: paused ? 'Resume' : 'Pause',

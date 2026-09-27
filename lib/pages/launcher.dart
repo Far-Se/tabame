@@ -661,7 +661,7 @@ class LauncherState extends State<Launcher>
     if (!QuickMenuFunctions.isQuickMenuVisible) return false;
     if (Globals.quickMenuPage != QuickMenuPage.launcher) return false;
     if (Navigator.of(context).canPop()) return false;
-    // A plugin form owns focus while it is shown — the search field must not
+    // A plugin form owns focus while it is shown – the search field must not
     // steal keystrokes back from its inputs.
     if (_pluginOwnsFormFocus) return false;
     // Plugin text surfaces (detail, chat, or the split preview pane) are
@@ -701,7 +701,7 @@ class LauncherState extends State<Launcher>
   String _keyboardNavigationQuery = '';
 
   /// The query text that produced the currently displayed [_results].
-  /// Selection is only carried over between result sets of the same query —
+  /// Selection is only carried over between result sets of the same query –
   /// results for a different query always start at the first row.
   String? _resultsQuery;
 
@@ -812,7 +812,7 @@ class LauncherState extends State<Launcher>
     final bool hasInput = _controller.text.trim().isNotEmpty;
     final LauncherThemeData launcherTheme = LauncherThemeData(design: _design);
 
-    // Build the shared inner content once — no per-design duplication.
+    // Build the shared inner content once – no per-design duplication.
     final Widget searchContent = _design.buildSearchBar(
       dragHandle: MouseRegion(
         cursor: user.useCustomCursor ? Globals.customCursor ?? SystemMouseCursors.move : SystemMouseCursors.basic,
@@ -861,6 +861,7 @@ class LauncherState extends State<Launcher>
               (isTerminal2 ? 'type a command or search the system...' : 'Search applications, files, bookmarks...'),
           hintStyle: TextStyle(
             color: switch (_design) {
+              LauncherDesign.liquidGlass => LiquidGlassTokens.dim,
               LauncherDesign.ukiyoe => UkiyoeTokens.dim,
               LauncherDesign.radiant => RadiantTokens.dim,
               LauncherDesign.nouveau => NouveauTokens.dim,

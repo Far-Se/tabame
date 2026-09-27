@@ -84,7 +84,7 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
 
     // Folder browsing is supported in desktop, files-only and mixed modes (see
     // isFileBrowsingMode in _runSearch). Only drop the browsing stack when the
-    // query switches to a mode that can't browse — otherwise drilling into a
+    // query switches to a mode that can't browse – otherwise drilling into a
     // folder from file/mixed search would clear the stack before the contents
     // could be listed.
     final bool isFileBrowsingMode = searchMode == LauncherSearchMode.desktopOnly ||
@@ -476,7 +476,7 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
       results.add(const LauncherSearchResultItem.info(LauncherInfoResult(
         id: 'bookmark-add-hint',
         title: 'Type what to save',
-        subtitle: "b add https://example.com  —  then pick a category",
+        subtitle: "b add https://example.com  –  then pick a category",
         icon: Icons.add_link_rounded,
       )));
     } else {
@@ -555,7 +555,7 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
     }
 
     // Re-read the persisted groups so we serialize the whole, current list back
-    // (the settings file is a single whole-file store — see boxes_base).
+    // (the settings file is a single whole-file store – see boxes_base).
     final List<BookmarkGroup> groups = Boxes().bookmarks;
     final int index = groups.indexWhere((BookmarkGroup g) => g.title == categoryTitle);
     if (index == -1) {
@@ -839,7 +839,7 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
         LauncherSearchResultItem.quickAction(_buildFunctionAction(
           id: 'spotify:launch',
           title: 'Open Spotify',
-          subtitle: "Spotify isn't running — launch it",
+          subtitle: "Spotify isn't running – launch it",
           icon: Icons.launch_rounded,
           searchTerms: <String>['spotify', 'open', 'launch'],
           onExecute: () {
@@ -866,7 +866,7 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
         LauncherSearchResultItem.quickAction(_buildFunctionAction(
           id: 'spotify:${action.id}',
           title: action.label,
-          subtitle: '${session.title} — ${session.artist}',
+          subtitle: '${session.title} – ${session.artist}',
           icon: action.icon,
           searchTerms: <String>[action.label, ...action.aliases],
           onExecute: () => _executeSpotifyCommand(session, action.command),
@@ -1572,7 +1572,7 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
     final RegExpMatch? fromOnly = RegExp(r'^(.+?)\s+from\s+(.+)$', caseSensitive: false).firstMatch(raw);
 
     if (explicit != null) {
-      // "<text> from <X> to <Y>" — explicit source and single target.
+      // "<text> from <X> to <Y>" – explicit source and single target.
       final String? parsedFrom = GoogleTranslator.getIsoCode(explicit.group(2)!.trim());
       final String? parsedTo = GoogleTranslator.getIsoCode(explicit.group(3)!.trim());
       if (parsedFrom != null && parsedTo != null) {
@@ -1583,7 +1583,7 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
         text = _stripQuotes(raw);
       }
     } else if (fromOnly != null) {
-      // "<text> from <X>" — explicit source, translate to every saved target.
+      // "<text> from <X>" – explicit source, translate to every saved target.
       final String? parsedFrom = GoogleTranslator.getIsoCode(fromOnly.group(2)!.trim());
       if (parsedFrom != null) {
         text = _stripQuotes(fromOnly.group(1)!.trim());
@@ -1895,7 +1895,7 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
     // refreshes of the *same* query (phase-2 merges, catalog-sync re-runs,
     // window refresh, pruning). When the displayed results belong to a
     // different query, the carried-over id would re-select a stale item at a
-    // random position — force a reset then. Keyed on the query text (not the
+    // random position – force a reset then. Keyed on the query text (not the
     // search generation) because same-text re-runs bump the generation.
     final bool keepSelection =
         _resultsQuery == _controller.text && (!resetSelection || _hasKeyboardNavigatedCurrentQuery);
@@ -1956,7 +1956,7 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
   }
 
   /// Checks file/folder results for existence after they are displayed.
-  /// Runs fully async without blocking — stale entries are removed from both
+  /// Runs fully async without blocking – stale entries are removed from both
   /// the DB and the visible results list.
   Future<void> _pruneStaleFileResults(List<LauncherSearchResultItem> snapshot) async {
     // Collect only items that represent real filesystem paths.

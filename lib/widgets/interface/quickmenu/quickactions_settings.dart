@@ -302,7 +302,7 @@ class QMTopbarState extends State<QMTopbar> {
                       ],
                     ),
                   ),
-                  // Search field — explicitly attached to the right of the Disabled header
+                  // Search field – explicitly attached to the right of the Disabled header
                   if (!isActive) ...<Widget>[
                     const SizedBox(width: 16),
                     SizedBox(

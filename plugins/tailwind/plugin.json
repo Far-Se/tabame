@@ -6,5 +6,5 @@
   "version": "1.0.0",
   "entry": "main.js",
   "icon": "palette",
-  "description": "Search & inspect Tailwind CSS utilities — see the generated CSS, copy the class, and jump to the docs."
+  "description": "Search & inspect Tailwind CSS utilities – see the generated CSS, copy the class, and jump to the docs."
 }

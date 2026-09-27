@@ -24,7 +24,7 @@ class AuthenticatorStorageInfo {
 
 class AuthenticatorManager {
   /// Legacy constant key. Files used to be AES-CBC sealed with
-  /// `sha256(password)`, and the "no password" choice used this constant — which
+  /// `sha256(password)`, and the "no password" choice used this constant – which
   /// meant the file was effectively unprotected. It is kept only so existing
   /// files can be read and migrated onto the device key (DPAPI).
   static const String _legacyDefaultPassword = 'encrypted';

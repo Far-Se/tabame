@@ -16,7 +16,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Terminal" QuickMenu design — a real terminal emulator session.
+/// "Terminal" QuickMenu design – a real terminal emulator session.
 ///
 /// The menu renders as a focused terminal window: a title bar with traffic
 /// lights and a `user@tabame: ~` title, a flat console body where every
@@ -68,7 +68,7 @@ class MainMenuTerminalWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(radius),
           child: Stack(
             children: <Widget>[
-              // Console surface — flat, semi-transparent when a backdrop is active.
+              // Console surface – flat, semi-transparent when a backdrop is active.
               Positioned.fill(
                 child: RepaintBoundary(
                   child: ShaderMask(
@@ -131,7 +131,7 @@ class MainMenuTerminalWidget extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Title bar — traffic lights + session title
+// Title bar – traffic lights + session title
 // ---------------------------------------------------------------------------
 
 class _TermTitleBar extends StatelessWidget {
@@ -234,7 +234,7 @@ TextStyle _promptStyle(Color color, {FontWeight weight = FontWeight.w500}) {
 //   }
 // }
 
-/// A command on its own line — the section's "output" follows below it.
+/// A command on its own line – the section's "output" follows below it.
 // class _PromptLine extends StatelessWidget {
 //   const _PromptLine({required this.command, this.flags});
 
@@ -312,7 +312,7 @@ class _IdlePromptState extends State<_IdlePrompt> with QuickMenuTriggers {
 
   @override
   Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
-    // The QuickMenu stays mounted while hidden — stop ticking off-screen.
+    // The QuickMenu stays mounted while hidden – stop ticking off-screen.
     if (visible) {
       _start();
     } else {

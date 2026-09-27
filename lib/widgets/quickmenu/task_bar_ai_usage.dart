@@ -252,7 +252,7 @@ class _TaskBarAiUsageCarouselState extends State<TaskBarAiUsageCarousel> {
     );
   }
 
-  String _percent(double? value) => value == null ? '—' : '${value.clamp(0, 100).round()}%';
+  String _percent(double? value) => value == null ? '–' : '${value.clamp(0, 100).round()}%';
 
   Widget _usageLine(String label, double? remaining, DateTime? reset, String? fallback) {
     final String text = '$label: ${_percent(remaining)} Left ${_reset(reset, fallback)}';

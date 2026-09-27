@@ -63,7 +63,7 @@ Color? parsePluginColor(Object? value) {
 }
 
 /// Formats a [Color] as the `#RRGGBB` string plugins receive in the `init`
-/// theme handshake (alpha is dropped — theme colors are opaque).
+/// theme handshake (alpha is dropped – theme colors are opaque).
 String pluginColorToHex(Color color) {
   final int argb = color.toARGB32();
   return '#${(argb & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
@@ -186,7 +186,7 @@ class PluginAccessory {
 
   final String text;
 
-  /// Optional tint (`#RRGGBB`) — status badges, tag colors. Falls back to the
+  /// Optional tint (`#RRGGBB`) – status badges, tag colors. Falls back to the
   /// theme accent when absent.
   final Color? color;
 
@@ -233,7 +233,7 @@ class PluginReplyPreview {
 }
 
 /// One row of the structured key-value pane shown next to (or instead of)
-/// preview/detail markdown — status, assignee, dates, links.
+/// preview/detail markdown – status, assignee, dates, links.
 class PluginMetadataEntry {
   const PluginMetadataEntry({
     required this.label,
@@ -1522,7 +1522,7 @@ class PluginCommand {
   /// Payload for `copy` / `paste` / `toast` / `notify` / `setquery`.
   final String? text;
 
-  /// Target for `open` — a URL or a file/folder path.
+  /// Target for `open` – a URL or a file/folder path.
   final String? url;
 
   /// The full decoded command message, for commands with richer payloads
@@ -1688,11 +1688,11 @@ class PluginRenderFrame {
   /// applied when the frame's item set actually changed).
   final String? selectId;
 
-  /// List/grid: the plugin has more items — scrolling near the end sends a
+  /// List/grid: the plugin has more items – scrolling near the end sends a
   /// `{"type":"loadMore"}` event; the plugin answers with a longer list.
   final bool hasMore;
 
-  /// `inputMode: "submit"` — keystrokes are not streamed to the plugin; Enter
+  /// `inputMode: "submit"` – keystrokes are not streamed to the plugin; Enter
   /// sends one `{"type":"submitQuery"}` with the full text (chat-style input).
   final bool submitInput;
 
@@ -1702,7 +1702,7 @@ class PluginRenderFrame {
   final String? typing;
 
   /// `detail.append`: a chunk to add to the *previous* frame's detail markdown
-  /// instead of replacing the document — streaming LLM output. The host merges
+  /// instead of replacing the document – streaming LLM output. The host merges
   /// this before the frame reaches the view.
   final String? detailAppend;
 

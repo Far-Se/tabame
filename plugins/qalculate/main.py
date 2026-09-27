@@ -156,7 +156,7 @@ HINT_LIMIT = 5
 
 
 def trailing_token(text):
-    """The identifier the user is still in the middle of typing, if any —
+    """The identifier the user is still in the middle of typing, if any –
     e.g. '5 + sq' -> 'sq', 'sqrt(4)' -> '' (word is already closed off)."""
     m = TOKEN_RE.search(text)
     return m.group(1) if m else ""
@@ -359,7 +359,7 @@ def render_result(rev, expr, calc, hints):
             "type": "render", "rev": rev, "view": "list",
             "placeholder": "Type an expression…",
             "items": [{
-                "id": "aborted", "title": "Took too long — aborted",
+                "id": "aborted", "title": "Took too long – aborted",
                 "subtitle": expr, "icon": "clock",
             }] + hints,
         })

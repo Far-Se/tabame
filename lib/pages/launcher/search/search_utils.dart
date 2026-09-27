@@ -197,7 +197,7 @@ List<PlatformWindow> findWindowMatches(String query, {bool includeAllOnEmpty = f
     return windows;
   }
 
-  // Normalise here so callers don't have to — guards against any call site
+  // Normalise here so callers don't have to – guards against any call site
   // that passes a mixed-case query and would otherwise get zero matches.
   final String lowerQuery = query.toLowerCase();
 

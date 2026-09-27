@@ -1,4 +1,4 @@
-"""API Client — a Postman-lite Tabame launcher plugin.
+"""API Client – a Postman-lite Tabame launcher plugin.
 
 Pages:
   api:home                    dashboard   latency chart, recent history, saved collections
@@ -189,7 +189,7 @@ def response_outcome(result):
 
 def human_size(n):
     if n is None:
-        return "—"
+        return "–"
     if n < 1024:
         return f"{n} B"
     if n < 1024 * 1024:
@@ -1193,7 +1193,7 @@ def run_batch(nodes, title="Batch Run"):
         flush()
     STATE["history"] = STATE["history"][:60]
     save_state()
-    lines.append({"level": "info", "text": f"Done — {ok_count}/{len(nodes)} succeeded"})
+    lines.append({"level": "info", "text": f"Done – {ok_count}/{len(nodes)} succeeded"})
     flush()
 
 
@@ -1509,7 +1509,7 @@ def render_home(rev, filter_text=None):
         panels.append(
             {
                 "id": "latency",
-                "title": "Latency — Last 10 Completed Requests",
+                "title": "Latency – Last 10 Completed Requests",
                 "view": "chart",
                 "height": 185,
                 "chart": {

@@ -118,7 +118,7 @@ class SecretCrypto {
   static bool isSecretServiceProtectedField(String stored) => stored.startsWith(secretServiceFieldPrefix);
 
   // ---------------------------------------------------------------------------
-  // Legacy read path — old format was unsalted sha256(password) + AES-CBC.
+  // Legacy read path – old format was unsalted sha256(password) + AES-CBC.
   // Kept only so existing vault/authenticator files remain readable and can be
   // migrated forward on the next save.
   // ---------------------------------------------------------------------------

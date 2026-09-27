@@ -109,7 +109,7 @@ class NotionSearchCache {
   static const String apiKeyKey = "notionApiKey";
 
   /// Single flat map of every page/database ever seen, keyed by Notion page id.
-  /// This is what gets persisted to disk — one deduplicated catalogue of all items.
+  /// This is what gets persisted to disk – one deduplicated catalogue of all items.
   static final Map<String, NotionResult> allItems = <String, NotionResult>{};
 
   /// Browse cache is still keyed by parent-page id so the browse tree works.
@@ -198,7 +198,7 @@ class NotionSearchCache {
   }
 
   // ---------------------------------------------------------------------------
-  // Search — returns fresh API results and merges them into allItems.
+  // Search – returns fresh API results and merges them into allItems.
   // ---------------------------------------------------------------------------
 
   static Future<List<NotionResult>> search(String query) async {
@@ -246,7 +246,7 @@ class NotionSearchCache {
 
     final List<NotionResult> results = freshMap.values.toList();
 
-    // Merge into the global catalogue — never remove items, only add/update.
+    // Merge into the global catalogue – never remove items, only add/update.
     if (results.isNotEmpty) {
       allItems.addAll(freshMap);
       await save();

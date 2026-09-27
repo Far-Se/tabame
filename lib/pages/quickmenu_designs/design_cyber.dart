@@ -12,7 +12,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Anime" QuickMenu design — a Cyberpunk/Mecha anime HUD aesthetic.
+/// "Anime" QuickMenu design – a Cyberpunk/Mecha anime HUD aesthetic.
 ///
 /// The menu renders as a high-tech tactical overlay: sharp asymmetrical
 /// clipped corners, glowing neon borders, and digital grid underlays.

@@ -299,7 +299,7 @@ float getVolume(EDataFlow deviceType = eRender)
     return 0.0;
 }
 
-// registerNotificationCallback was removed — it registered a null callback
+// registerNotificationCallback was removed – it registered a null callback
 // and returned 0.0 for a bool. Notification callbacks should be implemented
 // properly if needed in the future.
 

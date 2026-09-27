@@ -88,7 +88,7 @@ class Window {
 
     // ApplicationFrameHost-hosted apps resolve to the inner exe, which frequently
     // lives in a sub-folder of the package while AppxManifest.xml sits at the
-    // package root — walk up from the exe folder until we find the manifest.
+    // package root – walk up from the exe folder until we find the manifest.
     final String manifestDir = _findManifestDir(appxLocation);
     if (manifestDir.isEmpty) return;
 

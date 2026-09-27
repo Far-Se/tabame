@@ -24,7 +24,7 @@ const String _kWatchFolders = 'imgconv.watchFolders';
 const String _kProfiles = 'imgconv.profiles';
 
 // ─────────────────────────────────────────────
-//  Encode helpers — ffmpeg CLI
+//  Encode helpers – ffmpeg CLI
 //
 //  ffmpeg is invoked via Process.run (direct) with a PowerShell fallback.
 //  Source bytes are written to a temp file; ffmpeg writes to a second temp
@@ -330,7 +330,7 @@ class ImageConverterButton extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-//  Top-level panel — main page
+//  Top-level panel – main page
 // ─────────────────────────────────────────────
 
 enum _Page { main, settings }
@@ -478,7 +478,7 @@ class _ImageConverterPanelState extends State<ImageConverterPanel> {
         PlatformClipboardContent(imageBytes: await tmpBmp.readAsBytes()),
       );
     } catch (_) {
-      // Silently ignore — could add a snackbar here if desired
+      // Silently ignore – could add a snackbar here if desired
     } finally {
       tmp?.delete(recursive: true).catchError((_) => Directory(''));
     }
@@ -747,7 +747,7 @@ class _ConverterPage extends StatefulWidget {
   final List<File> files;
   final Uint8List? clipboardBytes;
 
-  /// Temp file on disk containing the clipboard image — used by ffmpeg.
+  /// Temp file on disk containing the clipboard image – used by ffmpeg.
   final File? clipboardTempFile;
 
   @override
@@ -806,7 +806,7 @@ class _ConverterPageState extends State<_ConverterPage> {
       _resizeMode = p.resizeMode;
       _resizePercent = p.resizePercent;
       _resizeWidth = p.resizeWidth ?? 1920;
-      // "Same folder as original" is invalid for clipboard sources — fall back
+      // "Same folder as original" is invalid for clipboard sources – fall back
       // to clipboard output mode in that case.
       final bool isClipboardSource = widget.clipboardBytes != null;
       _outputMode = (isClipboardSource && p.outputMode == OutputMode.sameFolder) ? OutputMode.clipboard : p.outputMode;
@@ -928,7 +928,7 @@ class _ConverterPageState extends State<_ConverterPage> {
           srcExt: _ext(f.path).isEmpty ? '.png' : _ext(f.path),
         ));
       } catch (_) {
-        // Skip unreadable files — will be reported as errors below
+        // Skip unreadable files – will be reported as errors below
       }
     }
 
@@ -940,7 +940,7 @@ class _ConverterPageState extends State<_ConverterPage> {
       _convertTotal = sources.length;
     });
 
-    // Nothing to convert — surface a clear message instead of crashing.
+    // Nothing to convert – surface a clear message instead of crashing.
     if (sources.isEmpty) {
       setState(() {
         _converting = false;
@@ -983,7 +983,7 @@ class _ConverterPageState extends State<_ConverterPage> {
 
         if (_outputMode == OutputMode.clipboard) {
           // The Windows clipboard adapter requires raw BMP/DIB bytes (CF_DIB).
-          // Formats like WebP or PNG cannot be pasted directly — we
+          // Formats like WebP or PNG cannot be pasted directly – we
           // re-encode the output to BMP via a second ffmpeg pass, then copy.
           Directory? tmpOut;
           try {
@@ -1204,7 +1204,7 @@ class _ConverterPageState extends State<_ConverterPage> {
                     const SizedBox(height: 10),
                     _IntField(
                       controller: _widthCtrl,
-                      label: 'Target Width (px)  —  height scales automatically',
+                      label: 'Target Width (px)  –  height scales automatically',
                       accent: accent,
                       onSurface: onSurface,
                       onChanged: (int v) => setState(() => _resizeWidth = v.clamp(1, 99999)),
@@ -1219,7 +1219,7 @@ class _ConverterPageState extends State<_ConverterPage> {
                   Column(
                     children: OutputMode.values
                         // "Same folder as original" is meaningless for a clipboard
-                        // source — hide it so the user can't select a broken option.
+                        // source – hide it so the user can't select a broken option.
                         .where((OutputMode m) => !(widget.clipboardBytes != null && m == OutputMode.sameFolder))
                         .map((OutputMode m) {
                       return _OutputModeRow(
@@ -2054,7 +2054,7 @@ class _FileRowState extends State<_FileRow> {
                       child: Stack(
                         alignment: Alignment.centerRight,
                         children: <Widget>[
-                          // File size — fades out on hover
+                          // File size – fades out on hover
                           AnimatedOpacity(
                             duration: const Duration(milliseconds: 130),
                             opacity: _hovered ? 0.0 : 1.0,
@@ -2069,7 +2069,7 @@ class _FileRowState extends State<_FileRow> {
                             ),
                           ),
 
-                          // Action buttons — fade in on hover
+                          // Action buttons – fade in on hover
                           AnimatedOpacity(
                             duration: const Duration(milliseconds: 130),
                             opacity: _hovered ? 1.0 : 0.0,
@@ -2233,7 +2233,7 @@ class _FolderRowState extends State<_FolderRow> {
                 ),
               ),
               const SizedBox(width: 4),
-              // Delete button — shown on hover
+              // Delete button – shown on hover
               AnimatedOpacity(
                 duration: const Duration(milliseconds: 130),
                 opacity: _hovered ? 1.0 : 0.0,

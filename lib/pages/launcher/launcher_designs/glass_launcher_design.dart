@@ -127,7 +127,7 @@ class GlassLauncherFrame extends StatelessWidget {
                   ),
                 ),
               ),
-              // Specular sheen — the glass shine from the top-left.
+              // Specular sheen – the glass shine from the top-left.
               Positioned.fill(
                 child: IgnorePointer(
                   child: DecoratedBox(

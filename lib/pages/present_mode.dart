@@ -21,11 +21,11 @@ import '../models/win32/mixed.dart';
 /// A single always-on-top, click-through overlay that follows the cursor's
 /// monitor and offers three teaching/screencast tools, switched via global
 /// hotkeys (the window is click-through + no-activate, so it never steals input
-/// from the app being demoed — controls therefore go through [NativeHooks]):
+/// from the app being demoed – controls therefore go through [NativeHooks]):
 ///
-///  * Spotlight  — dim everything except a soft circle around the cursor.
-///  * Magnifier  — a live magnified lens under the cursor (samples a WGC frame).
-///  * Ruler      — a crosshair + pixel readout; drop an anchor to measure.
+///  * Spotlight  – dim everything except a soft circle around the cursor.
+///  * Magnifier  – a live magnified lens under the cursor (samples a WGC frame).
+///  * Ruler      – a crosshair + pixel readout; drop an anchor to measure.
 ///
 /// Reuses the monitor-capture + click-through scaffolding proven in
 /// `spotlight.dart`.

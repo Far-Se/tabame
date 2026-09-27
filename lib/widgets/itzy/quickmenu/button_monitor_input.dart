@@ -7,7 +7,7 @@ import '../../widgets/panel_header.dart';
 import '../../widgets/windows_scroll.dart';
 
 /// Software KVM: switches a monitor's active input source over DDC/CI
-/// (VESA MCCS VCP code 0x60) — the same command a hardware KVM sends.
+/// (VESA MCCS VCP code 0x60) – the same command a hardware KVM sends.
 class MonitorInputButton extends StatelessWidget {
   const MonitorInputButton({super.key});
 
@@ -63,7 +63,7 @@ class _MonitorInputPanelState extends State<MonitorInputPanel> {
   String? _errorMessage;
   List<MonitorInputDisplay> _displays = <MonitorInputDisplay>[];
 
-  // displayId currently being switched, and the target code — drives the
+  // displayId currently being switched, and the target code – drives the
   // per-chip progress indicator.
   String? _switchingId;
   int? _switchingCode;
@@ -162,7 +162,7 @@ class _MonitorInputPanelState extends State<MonitorInputPanel> {
             const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))),
             const SizedBox(height: 12),
             Text(
-              "Probing DDC/CI — can take a few seconds",
+              "Probing DDC/CI – can take a few seconds",
               style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(120)),
             ),
           ],
@@ -241,7 +241,7 @@ class _MonitorInputPanelState extends State<MonitorInputPanel> {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              "Switching moves the monitor to another device — switch back from that device or the monitor's own menu.",
+              "Switching moves the monitor to another device – switch back from that device or the monitor's own menu.",
               style: TextStyle(fontSize: Design.baseFontSize - 0.5, color: Design.text.withAlpha(110)),
             ),
           ),

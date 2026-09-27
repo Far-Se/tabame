@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Spell Check & Dictionary — Tabame launcher plugin.
+Spell Check & Dictionary – Tabame launcher plugin.
 
 Type `sp <word or sentence>` to get spelling suggestions. Misspelled words
 get ranked corrections; a personal "custom dictionary" lets you teach it
@@ -98,7 +98,7 @@ def preserve_case(original, replacement):
 
 
 def should_skip(word):
-    # Skip acronyms, numbers, and single letters — too noisy to flag.
+    # Skip acronyms, numbers, and single letters – too noisy to flag.
     if len(word) <= 1:
         return True
     if any(ch.isdigit() for ch in word):
@@ -204,7 +204,7 @@ def format_definition_markdown(display_word, data):
     for entry in data:
         for meaning in entry.get("meanings", []):
             pos = meaning.get("partOfSpeech", "")
-            lines.append(f"### {pos}" if pos else "### —")
+            lines.append(f"### {pos}" if pos else "### –")
             for i, d in enumerate(meaning.get("definitions", [])[:3], start=1):
                 lines.append(f"{i}. {d.get('definition', '')}")
                 example = d.get("example")
@@ -308,7 +308,7 @@ def render_check(rev, text):
                 return
             subtitle = "Press Enter to look it up"
             if len(remainder.split()) > 1:
-                subtitle += " — only the first word is looked up"
+                subtitle += " – only the first word is looked up"
             send(
                 {
                     "type": "render",
@@ -364,7 +364,7 @@ def render_check(rev, text):
                     "items": [
                         {
                             "id": f"ok:{only.lower()}",
-                            "title": f"**{only}** — spelled correctly",
+                            "title": f"**{only}** – spelled correctly",
                             "subtitle": "Press Enter to look up its definition",
                             "icon": "check",
                             "accessories": [{"text": "correct", "color": "#16A34A"}],
@@ -397,7 +397,7 @@ def render_check(rev, text):
             items.append(
                 {
                     "id": f"w:{lower}",
-                    "title": f"**{original}** — no suggestions found",
+                    "title": f"**{original}** – no suggestions found",
                     "subtitle": "Not in the dictionary, and no close match either",
                     "icon": "help",
                     "accessories": [{"text": "unknown", "color": "#9CA3AF"}],
@@ -679,7 +679,7 @@ def main():
                 render_check(rev, text)
             elif state["screen"] == "dict":
                 render_dict(rev, text)
-            # dict_add: query events are ignored — form owns input
+            # dict_add: query events are ignored – form owns input
 
         elif t == "action":
             item_id = msg.get("id", "")

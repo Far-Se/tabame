@@ -1380,7 +1380,7 @@ private:
       }
       // Normally wait until every source has a full chunk, but if one device
       // stops delivering (unplugged, driver stall) don't let it silence the
-      // whole track: after 500 ms, write anyway — starved sources contribute
+      // whole track: after 500 ms, write anyway – starved sources contribute
       // silence for the frames they're missing.
       const bool stalledFlush =
           anyReady && std::chrono::steady_clock::now() - lastWrite >
@@ -1474,7 +1474,7 @@ private:
             nextFrameDeadlineUs = elapsedUs + frameIntervalUs;
           }
         }
-        // else: frame arrived too early — drop it (skips frame, no slow-mo)
+        // else: frame arrived too early – drop it (skips frame, no slow-mo)
       } catch (...) {
         ++droppedFrames_;
       }
@@ -1843,7 +1843,7 @@ static bool ConcatScreenRecordings(const std::vector<std::wstring> &inputs,
     reader->SetStreamSelection(kVideoStream, TRUE);
 
     // Leaving the reader on its native (compressed) types means ReadSample
-    // returns H.264/AAC samples verbatim — no decoder is inserted.
+    // returns H.264/AAC samples verbatim – no decoder is inserted.
     winrt::com_ptr<IMFMediaType> nativeVideoType;
     if (FAILED(reader->GetNativeMediaType(kVideoStream, 0,
                                           nativeVideoType.put()))) {

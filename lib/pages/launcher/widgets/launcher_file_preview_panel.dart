@@ -308,8 +308,7 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
                   future: _previewData,
                   builder: (BuildContext context, AsyncSnapshot<_LauncherFilePreviewData> snapshot) {
                     if (!snapshot.hasData)
-                      return Center(
-                          child: CircularProgressIndicator(strokeWidth: 1.5, color: PhosphorTokens.accent));
+                      return Center(child: CircularProgressIndicator(strokeWidth: 1.5, color: PhosphorTokens.accent));
                     final _LauncherFilePreviewData data = snapshot.data!;
                     return LayoutBuilder(
                         builder: (BuildContext context, BoxConstraints constraints) => Column(children: <Widget>[
@@ -1014,7 +1013,7 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
   }
 
   String _formatBytes(int? bytes) {
-    if (bytes == null || widget.entity is Directory) return '—';
+    if (bytes == null || widget.entity is Directory) return '–';
     if (bytes < 1024) return '$bytes B';
     const List<String> units = <String>['KB', 'MB', 'GB', 'TB'];
     double value = bytes / 1024;
@@ -1027,7 +1026,7 @@ class _LauncherFilePreviewPanelState extends State<_LauncherFilePreviewPanel> {
   }
 
   String _formatDate(DateTime? value) {
-    if (value == null) return '—';
+    if (value == null) return '–';
     final DateTime local = value.toLocal();
     String two(int number) => number.toString().padLeft(2, '0');
     return '${local.year}-${two(local.month)}-${two(local.day)} ${two(local.hour)}:${two(local.minute)}';

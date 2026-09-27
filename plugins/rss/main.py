@@ -739,7 +739,7 @@ def format_age(value) -> str:
 def format_timestamp(value) -> str:
     parsed = parse_datetime(value)
     if parsed is None:
-        return "—"
+        return "–"
     local = parsed.astimezone()
     return local.strftime("%Y-%m-%d %H:%M")
 

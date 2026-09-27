@@ -1,4 +1,4 @@
-# Audio Tag Transformer — Tabame plugin
+# Audio Tag Transformer – Tabame plugin
 
 Keyword: `atag`
 
@@ -66,9 +66,9 @@ Patterns may be plain Python-compatible regexes or JavaScript-style notation:
 The supported flags are `i` (case-insensitive), `m` (multiline), and `s`
 (dot matches newlines). Rules run in order and support:
 
-- **Extract** — find the first match and return only the expanded replacement.
-- **Replace first** — replace the first match in the complete source string.
-- **Replace all** — replace every match in the complete source string.
+- **Extract** – find the first match and return only the expanded replacement.
+- **Replace first** – replace the first match in the complete source string.
+- **Replace all** – replace every match in the complete source string.
 
 Replacement expressions use familiar syntax: `$0` is the complete match,
 `$1`–`$99` are numbered capture groups, `$<name>` is a named capture group,

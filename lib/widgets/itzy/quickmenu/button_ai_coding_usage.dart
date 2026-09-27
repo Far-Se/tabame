@@ -233,7 +233,7 @@ class _UsageDetails extends StatelessWidget {
   }
 }
 
-String _percent(double? value) => value == null ? '—' : '${value.clamp(0, 100).round()}%';
+String _percent(double? value) => value == null ? '–' : '${value.clamp(0, 100).round()}%';
 
 String _timeAgo(DateTime date) {
   final Duration elapsed = DateTime.now().difference(date);

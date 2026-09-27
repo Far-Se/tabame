@@ -5,6 +5,6 @@
   "version": "1.0.0",
   "entry": "main.py",
   "icon": "music",
-  "description": "Search Spotify and control playback — tracks, artists, albums, playlists, queue, devices, history.",
+  "description": "Search Spotify and control playback – tracks, artists, albums, playlists, queue, devices, history.",
   "pip": ["requests"]
 }

@@ -3,7 +3,7 @@ name: tbm-browser-connector-extension
 description: Author, extend, or debug the Tabame Connector browser extension: a Manifest V3 Chromium extension that pairs with Tabame, maintains an authenticated loopback WebSocket, exposes the fixed browser-bridge method allowlist, executes trusted plugin-supplied JavaScript in HTTP(S) tabs, and pushes debounced tab-change events. Use for connector transport, pairing UI, tab operations, MV3 reconnection, userScripts execution, security, or Chromium/Firefox packaging. Do not use this skill to design a normal QuickLaunch plugin UI.
 ---
 
-# Tabame Connector Browser Extension — Authoring Skill
+# Tabame Connector Browser Extension – Authoring Skill
 
 > Treat the protocol sections in this document as authoritative. Do not invent
 > message types, methods, event names, protocol versions, ports, paths, worlds,

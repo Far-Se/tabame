@@ -169,7 +169,7 @@ class Win32Helper {
       File(AppPaths.cachePath('grid.json', forWrite: true))
           .writeAsStringSync(const JsonEncoder.withIndent('  ').convert(payload));
     } catch (_) {
-      // Non-fatal — just skip the file write.
+      // Non-fatal – just skip the file write.
     }
   }
 

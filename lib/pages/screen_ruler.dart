@@ -14,7 +14,7 @@ import '../logic/app_startup.dart';
 import '../models/screen_utils.dart';
 
 // ---------------------------------------------------------------------------
-// Screen Ruler — PowerToys-style pixel measure overlay with a loupe.
+// Screen Ruler – PowerToys-style pixel measure overlay with a loupe.
 //
 // Spawned as its own process via `tabame.exe -screenRuler` (same pattern as
 // -screenDraw / -colorPicker). Takes one frozen snapshot of the virtual

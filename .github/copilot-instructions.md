@@ -5,7 +5,7 @@ Power users and developers on Windows looking for a fast, distraction-free, and 
 
 ### Brand Personality
 **Minimal · Technical · Design-rich**
-Tabame should feel like a high-performance instrument—precise and dense, but aesthetically elevated through thoughtful details.
+Tabame should feel like a high-performance instrument–precise and dense, but aesthetically elevated through thoughtful details.
 
 ### Aesthetic Direction
 A blend of functional utility (inspired by PowerToys) and refined interaction design (inspired by Raycast). It is a "Modern Quick Menu" that balances dense information architecture with a state-of-the-art visual finish.

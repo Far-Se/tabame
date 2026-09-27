@@ -149,7 +149,7 @@ class WindowWatcher {
   static Future<bool> handleIcons() async {
     // Keep the cache scoped to currently-open windows only. Prune every cycle
     // (not just when the counts differ) so a window closing while another opens
-    // — which leaves the counts equal — can't leave stale icon bytes behind.
+    // – which leaves the counts equal – can't leave stale icon bytes behind.
     icons.removeWhere((int key, ExtractedIcon value) => !list.any((Window w) => w.hWnd == key));
     iconsHandles.removeWhere((int key, int value) => !list.any((Window w) => w.hWnd == key));
 
@@ -161,7 +161,7 @@ class WindowWatcher {
           icons[win.hWnd] = File(win.appxIcon).readAsBytesSync();
         } else {
           // Manifest logo couldn't be resolved (common for ApplicationFrameHost-
-          // hosted apps) — fall back to the window's own HICON, the same icon
+          // hosted apps) – fall back to the window's own HICON, the same icon
           // Windows shows in the title bar and the real taskbar, instead of the
           // blank placeholder. Left uncached on failure so a later cycle retries.
           final ExtractedIcon winIcon = WinUtils.windowIcon(win.hWnd);

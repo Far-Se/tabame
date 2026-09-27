@@ -22,7 +22,7 @@
 // Chromium based browsers (Chrome, Edge, Brave, Opera, ...) expose their tab
 // strip through UIA as a `Tab` control whose children are `TabItem` controls,
 // each named with the page title. The tab strip is part of the browser chrome,
-// so it is exposed even when full document accessibility is disabled — which
+// so it is exposed even when full document accessibility is disabled – which
 // keeps this enumeration cheap (we never walk the page content tree).
 // ---------------------------------------------------------------------------
 
@@ -255,7 +255,7 @@ std::vector<BrowserTab> EnumerateBrowserTabs() {
           SysFreeString(name);
         item->Release();
         // The trailing "+" / new-tab affordance can surface as a nameless
-        // TabItem — skip empties, but keep the real array index `i` so that
+        // TabItem – skip empties, but keep the real array index `i` so that
         // activation re-selects the correct element.
         if (!title.empty())
           tabs.push_back({bw.browser,

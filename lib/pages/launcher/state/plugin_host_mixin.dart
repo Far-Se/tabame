@@ -114,7 +114,7 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
       // `inputMode: "submit"`: keystrokes stay local; the query only reaches
       // the plugin when the user presses Enter (see _submitPluginItem).
     } else {
-      // Debounce keystrokes before hitting the plugin process — plugins that
+      // Debounce keystrokes before hitting the plugin process – plugins that
       // call a rate-limited external API on every query can get blocked if we
       // forward every keystroke immediately.
       _pluginQueryDebounce = Timer(const Duration(milliseconds: 300), () {
@@ -165,7 +165,7 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
     final bool wasForm = previous?.view == PluginViewType.form ||
         (previous?.view == PluginViewType.dashboard &&
             previous!.dashboardPanels.any((PluginDashboardPanel panel) => panel.frame.view == PluginViewType.form));
-    // Streaming `detail.append` frames carry only the new chunk — resolve them
+    // Streaming `detail.append` frames carry only the new chunk – resolve them
     // against the markdown currently on screen before rendering.
     if (frame.detailAppend != null) {
       frame = frame.resolveAppend(previous?.view == PluginViewType.detail ? previous?.detailMarkdown : null);
@@ -228,7 +228,7 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
       }
     });
     // An Enter press was deferred until this query's frame arrived. Fire the
-    // first result now — ignoring transient loading frames the plugin emits
+    // first result now – ignoring transient loading frames the plugin emits
     // before its real results, and never auto-submitting a form.
     if (_pluginSubmitPending && !frame.loading && frame.view != PluginViewType.form) {
       _pluginSubmitPending = false;
@@ -257,7 +257,7 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
     return true;
   }
 
-  /// Whether two plugin item lists carry the same ids in the same order — the
+  /// Whether two plugin item lists carry the same ids in the same order – the
   /// signal for "same list, just re-rendered" versus "a new list to show".
   bool _sameItemIds(List<PluginItem> a, List<PluginItem> b) {
     if (a.length != b.length) return false;
@@ -615,7 +615,7 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
   }
 
   /// Puts [text] on the clipboard, hides the launcher (which re-activates the
-  /// previously focused window), then sends Ctrl+V — the emoji picker's flow.
+  /// previously focused window), then sends Ctrl+V – the emoji picker's flow.
   Future<void> _pastePluginText(String text) async {
     if (text.isEmpty) return;
     // `paste` is also a launcher-closing command. Use the same lifecycle path
@@ -801,7 +801,7 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
   /// Fires the default action for the selected plugin item (Enter / tap).
   void _submitPluginItem() {
     final PluginManifest? plugin = _activePlugin;
-    // `inputMode: "submit"` — Enter delivers the query text (chat-style) when
+    // `inputMode: "submit"` – Enter delivers the query text (chat-style) when
     // it changed since the last submit; unchanged text falls through to the
     // selected item's default action so arrows+Enter still work.
     if (_pluginFrame?.submitInput == true && plugin != null) {
@@ -1013,7 +1013,7 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
   KeyEventResult _handlePluginKey(KeyEvent event) {
     final PluginRenderFrame? frame = _pluginFrame;
     if (frame == null) {
-      // Process launched but no frame yet — still swallow Escape so it exits.
+      // Process launched but no frame yet – still swallow Escape so it exits.
       if (event.logicalKey == LogicalKeyboardKey.escape && event is KeyDownEvent) {
         _exitPlugin();
         return KeyEventResult.handled;
@@ -1072,7 +1072,7 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
     }
 
     // Detail (markdown document) view: arrows and page keys scroll the
-    // document. Home/End are left alone — they move the caret in the search
+    // document. Home/End are left alone – they move the caret in the search
     // field.
     if (frame.view == PluginViewType.detail || frame.view == PluginViewType.chat) {
       return _scrollPluginDetail(event.logicalKey, isRepeat: event is KeyRepeatEvent);

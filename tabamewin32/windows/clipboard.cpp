@@ -95,7 +95,7 @@ bool CopyImageToClipboard(const wchar_t *filename)
                                                      DIB_RGB_COLORS);
                 ReleaseDC(HWND_DESKTOP, hdc);
                 SetClipboardData(CF_BITMAP, hbitmap_ddb);
-                // Note: do NOT DeleteObject(hbitmap_ddb) — clipboard owns it now
+                // Note: do NOT DeleteObject(hbitmap_ddb) – clipboard owns it now
                 success = true;
             }
             CloseClipboard();

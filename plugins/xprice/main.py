@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-xPrice Lookup — a Tabame launcher plugin.
+xPrice Lookup – a Tabame launcher plugin.
 
 Usage: type `xprice <product url>` in the launcher.
 
 Flow:
   1. Open xprice.ro in a temporary, inactive browser tab (via Tabame's
-     app-owned browserBridge — this plugin never opens its own WebSocket).
+     app-owned browserBridge – this plugin never opens its own WebSocket).
   2. Paste the pasted URL into `input[name="product_link"]` and submit
      the form.
   3. Wait for the redirect to the product's price-history page.
@@ -48,7 +48,7 @@ URL_RE = re.compile(r"https?://\S+")
 
 # ---------------------------------------------------------------------------
 # Site-specific browser scripts. Data flows in through the bridge's `input`
-# and back out through the script's `return` value — nothing is inferred
+# and back out through the script's `return` value – nothing is inferred
 # from selectors that weren't confirmed to exist on the target pages.
 # ---------------------------------------------------------------------------
 
@@ -176,7 +176,7 @@ def extract_url(text):
 class BrowserBridge:
     """Thin adapter for Tabame's app-owned browser bridge.
 
-    The plugin never opens its own WebSocket — it asks Tabame to forward an
+    The plugin never opens its own WebSocket – it asks Tabame to forward an
     allowlisted browser request via `browserBridge` commands, and correlates
     the asynchronous reply (which arrives on stdin) by requestId.
     """

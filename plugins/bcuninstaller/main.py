@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-BC Uninstaller — Tabame launcher plugin.
+BC Uninstaller – Tabame launcher plugin.
 
 Ported from the "List Applications" BCUninstaller extension for Raycast.
 Exports the installed-application list from BC Uninstaller's BCU-console.exe,
@@ -860,7 +860,7 @@ def begin_uninstall():
 
     missing = [item for item in queued_items if item["id"] not in live_ids]
     if missing:
-        send({"type": "command", "command": "toast", "text": "Queue is stale — refresh and try again", "style": "error"})
+        send({"type": "command", "command": "toast", "text": "Queue is stale – refresh and try again", "style": "error"})
         return
 
     send(
@@ -883,7 +883,7 @@ def _uninstall_worker(bcu_path, queued_items, auto_remove_junk):
             {
                 "type": "command",
                 "command": "toast",
-                "text": f"Batch uninstall complete — quiet: {summary['quiet_count']}, non-quiet: {summary['non_quiet_count']}",
+                "text": f"Batch uninstall complete – quiet: {summary['quiet_count']}, non-quiet: {summary['non_quiet_count']}",
                 "style": "success",
             }
         )

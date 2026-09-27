@@ -1,4 +1,4 @@
-# GitHub — Tabame launcher plugin
+# GitHub – Tabame launcher plugin
 
 Search and manage GitHub without leaving the launcher: pull requests, issues,
 repositories, branches, Actions workflow runs, notifications, discussions,
@@ -14,7 +14,7 @@ Type **`gh`** in the launcher to open the command list.
    - **Fine-grained tokens** work too, with equivalent repository/account
      permissions (Contents, Issues, Pull requests, Actions, Notifications,
      Projects read).
-2. Type `gh` in the launcher — the first run shows a token form. Paste the
+2. Type `gh` in the launcher – the first run shows a token form. Paste the
    token and press Enter. It is validated against the API and stored in
    `config.json` next to `main.js`.
 
@@ -23,28 +23,28 @@ there, or set the `GITHUB_TOKEN` / `GH_TOKEN` environment variable.
 
 ## Commands
 
-| Command | What it does |
-|---|---|
-| My Pull Requests | PRs you created, were asked to review, or that mention you (sectioned) |
-| Search Pull Requests | Global PR search — supports GitHub qualifiers (`repo:`, `org:`, `label:`…) |
-| Create Pull Request | Pick a repo → form with head/base branch dropdowns, draft checkbox |
-| My Issues | Issues assigned to you, created by you, or mentioning you |
-| Search Issues | Global issue search |
-| Create Issue | Pick a repo → form with title, body, labels, assign-to-me |
-| My Latest Repositories | Your repos (incl. orgs & private) by latest push |
-| My Starred Repositories | Repos you starred |
-| Search Repositories | Filter your public & private repos by name |
-| Create Branch | Pick a repo → name + source-branch form |
-| Download Repository | Pick a repo → download the ZIP, browse folders, download a single directory or file (with progress) |
-| Download One Folder | Paste a GitHub `/tree/<ref>/<folder>` link, choose a destination, and sparse-clone only that folder |
-| Workflow Runs | Pick a repo → inspect, re-run, re-run failed jobs, or cancel Actions runs |
-| Notifications | Your inbox — open, mark one/all as read |
-| Unread Notifications | Only the unread ones; a live unread badge also shows on the root list |
-| Search Discussions / My Discussions | GraphQL-backed discussion search |
-| My Projects | Your Projects (v2) — needs `read:project` on classic tokens |
-| My GitHub Stats | Followers, stars received, PRs/issues/commits + a contribution sparkline |
+| Command                             | What it does                                                                                        |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------- |
+| My Pull Requests                    | PRs you created, were asked to review, or that mention you (sectioned)                              |
+| Search Pull Requests                | Global PR search – supports GitHub qualifiers (`repo:`, `org:`, `label:`…)                          |
+| Create Pull Request                 | Pick a repo → form with head/base branch dropdowns, draft checkbox                                  |
+| My Issues                           | Issues assigned to you, created by you, or mentioning you                                           |
+| Search Issues                       | Global issue search                                                                                 |
+| Create Issue                        | Pick a repo → form with title, body, labels, assign-to-me                                           |
+| My Latest Repositories              | Your repos (incl. orgs & private) by latest push                                                    |
+| My Starred Repositories             | Repos you starred                                                                                   |
+| Search Repositories                 | Filter your public & private repos by name                                                          |
+| Create Branch                       | Pick a repo → name + source-branch form                                                             |
+| Download Repository                 | Pick a repo → download the ZIP, browse folders, download a single directory or file (with progress) |
+| Download One Folder                 | Paste a GitHub `/tree/<ref>/<folder>` link, choose a destination, and sparse-clone only that folder |
+| Workflow Runs                       | Pick a repo → inspect, re-run, re-run failed jobs, or cancel Actions runs                           |
+| Notifications                       | Your inbox – open, mark one/all as read                                                             |
+| Unread Notifications                | Only the unread ones; a live unread badge also shows on the root list                               |
+| Search Discussions / My Discussions | GraphQL-backed discussion search                                                                    |
+| My Projects                         | Your Projects (v2) – needs `read:project` on classic tokens                                         |
+| My GitHub Stats                     | Followers, stars received, PRs/issues/commits + a contribution sparkline                            |
 
-Raycast's macOS *menu bar* commands are adapted to the launcher: the unread
+Raycast's macOS _menu bar_ commands are adapted to the launcher: the unread
 notification count appears as a badge on the root command list, and profile
 stats live in **My GitHub Stats**.
 

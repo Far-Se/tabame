@@ -5,6 +5,6 @@
   "version": "1.0.0",
   "entry": "main.py",
   "icon": "mail",
-  "description": "Read and send email over IMAP/POP3 + SMTP — Gmail, Yahoo, or any custom server.",
+  "description": "Read and send email over IMAP/POP3 + SMTP – Gmail, Yahoo, or any custom server.",
   "dev": false
 }

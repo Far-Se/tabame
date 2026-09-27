@@ -63,7 +63,7 @@ Type `sp` to open the plugin.
 ## Notes
 
 - Playback control requires an active Spotify device (phone, desktop app, or
-  web player) — Spotify's API can't start playback on a device that isn't
+  web player) – Spotify's API can't start playback on a device that isn't
   already open somewhere.
 - Set `"dev": true` in `plugin.json` while developing for hot reload + a
   debug console.

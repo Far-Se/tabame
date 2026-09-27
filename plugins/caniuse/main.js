@@ -8,7 +8,7 @@
  * feature database and see, per browser, whether the feature is supported.
  *
  * Runtime: Node 18+ (global fetch) or Bun. Set "runtime": "bun" in plugin.json
- * to use Bun instead — main.js is plain JS and needs no dependencies.
+ * to use Bun instead – main.js is plain JS and needs no dependencies.
  *
  * Data: the full caniuse dataset (fulldata-json/data-2.0.json) is fetched once
  * from a CDN and cached to `caniuse-cache.json` next to this file, refreshed
@@ -120,7 +120,7 @@ function ensureDataset() {
     try {
       _dataset = await fetchDataset();
     } catch (err) {
-      // Network failed — fall back to any cached copy, even an expired one.
+      // Network failed – fall back to any cached copy, even an expired one.
       const stale = readCache(true);
       if (stale) {
         _dataset = stale;
@@ -270,7 +270,7 @@ function statusLabel(status) {
     other: 'Non-W3C',
     unoff: 'Unofficial / Note',
   };
-  return map[status] || status || '—';
+  return map[status] || status || '–';
 }
 
 function stripHtml(s) {
@@ -311,9 +311,9 @@ const HELP_MARKDOWN = [
   '',
   'Type a web-platform feature after the keyword to check browser support:',
   '',
-  '- `ciu grid` — CSS Grid Layout',
-  '- `ciu :has` — the `:has()` selector',
-  '- `ciu webp` — the WebP image format',
+  '- `ciu grid` – CSS Grid Layout',
+  '- `ciu :has` – the `:has()` selector',
+  '- `ciu webp` – the WebP image format',
   '- `ciu container queries`',
   '- `ciu dialog`',
   '',
@@ -335,7 +335,7 @@ async function renderQuery(rev, text) {
   } catch (err) {
     detailFrame(
       rev,
-      `# Can I Use — data unavailable\n\nCould not download the caniuse dataset.\n\n\`\`\`\n${err.message}\n\`\`\`\n\nCheck your internet connection and try again.`,
+      `# Can I Use – data unavailable\n\nCould not download the caniuse dataset.\n\n\`\`\`\n${err.message}\n\`\`\`\n\nCheck your internet connection and try again.`,
     );
     return;
   }
@@ -394,6 +394,6 @@ async function handleLine(line) {
     case 'action':
       handleAction(msg.id, msg.action || 'default');
       break;
-    // 'select' needs no work — previews are provided per item.
+    // 'select' needs no work – previews are provided per item.
   }
 }

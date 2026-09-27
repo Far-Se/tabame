@@ -20,18 +20,18 @@ time it runs.
 
 ## Usage
 
-- `shows` — lists your tracked shows. Type to filter locally.
-- **Ctrl+K → "Add show from TMDB"** (or **Ctrl+N**) — search TMDB by name and
+- `shows` – lists your tracked shows. Type to filter locally.
+- **Ctrl+K → "Add show from TMDB"** (or **Ctrl+N**) – search TMDB by name and
   add a show. Adding fetches the show's *current* season (the one that's
   airing, or the most recently aired one if the show is between seasons or
   ended).
-- **Enter** on a tracked show — opens a season view:
-  - **📊 Season overview** row (selected by default) — the preview pane shows
+- **Enter** on a tracked show – opens a season view:
+  - **📊 Season overview** row (selected by default) – the preview pane shows
     season start/end dates, next air date, status, and a sparkline of episode
     ratings for the season.
   - Each episode below shows its air date, whether it's aired or upcoming,
     and its rating; select one to see its overview in the preview pane.
-- **Ctrl+K** on a show or in the season view — Refresh from TMDB, Remove
+- **Ctrl+K** on a show or in the season view – Refresh from TMDB, Remove
   show, or Open on TMDB.
 
 ## Notes

@@ -15,7 +15,7 @@ import 'plugin_registry.dart';
 /// A plugin installs either from a [files] map (`relative path → download URL`,
 /// perfect for plugins hosted as plain files in a git repo) or from a [zip]
 /// archive URL. The gallery index itself lives in the Tabame repo
-/// (`resources/plugins.json` on master) — same hosting pattern as sponsor.json.
+/// (`resources/plugins.json` on master) – same hosting pattern as sponsor.json.
 class PluginGalleryEntry {
   const PluginGalleryEntry({
     required this.id,
@@ -248,7 +248,7 @@ abstract final class PluginGallery {
     final http.Response response = await http.get(Uri.parse(entry.zip)).timeout(const Duration(seconds: 60));
     if (response.statusCode != 200) return 'Download failed: HTTP ${response.statusCode}';
 
-    // Stage in the system temp dir — never inside the plugins folder, where the
+    // Stage in the system temp dir – never inside the plugins folder, where the
     // registry could scan a half-extracted archive.
     final Directory tempDirectory = Directory(AppPaths.temporaryDirectory);
     if (!tempDirectory.existsSync()) tempDirectory.createSync(recursive: true);

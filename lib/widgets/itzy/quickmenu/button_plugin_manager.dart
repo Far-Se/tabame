@@ -33,7 +33,7 @@ class PluginManagerButton extends StatelessWidget {
   }
 }
 
-/// Where users submit their own plugins for review — opens the pre-filled
+/// Where users submit their own plugins for review – opens the pre-filled
 /// "Plugin submission" GitHub issue template. Curated submissions land in
 /// `resources/plugins.json` and show up in everyone's gallery.
 const String _submitPluginUrl = 'https://github.com/Far-Se/tabame/issues/new?template=plugin_submission.md';
@@ -228,7 +228,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
       if (!mounted) return;
       setState(() {
         _galleryLoading = false;
-        _galleryError = 'Could not load the gallery — check your connection.';
+        _galleryError = 'Could not load the gallery – check your connection.';
       });
     }
   }
@@ -244,7 +244,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
     setState(() {
       _installingId = null;
       _installStatus = error == null
-          ? 'Installed "${entry.name}" — type "${PluginRegistry.launchKeywordFor(entry.keyword)}" in the launcher'
+          ? 'Installed "${entry.name}" – type "${PluginRegistry.launchKeywordFor(entry.keyword)}" in the launcher'
           : 'Install failed: $error';
     });
   }
@@ -1170,7 +1170,7 @@ Build a plugin with your favorite AI coding assistant:
     );
   }
 
-  /// Invitation to contribute a plugin — links to the GitHub submission
+  /// Invitation to contribute a plugin – links to the GitHub submission
   /// template. Submissions are reviewed manually and added to the gallery.
   Widget _buildSubmitStrip() {
     return InkWell(
@@ -1201,7 +1201,7 @@ Build a plugin with your favorite AI coding assistant:
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    "Share it via GitHub — reviewed plugins are added to this gallery.",
+                    "Share it via GitHub – reviewed plugins are added to this gallery.",
                     style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(120)),
                   ),
                 ],
@@ -1904,7 +1904,7 @@ class _GalleryCard extends StatelessWidget {
     }
     if (installedManifest != null) {
       return Tooltip(
-        message: 'Installed — tap to reinstall/update',
+        message: 'Installed – tap to reinstall/update',
         waitDuration: const Duration(milliseconds: 400),
         child: InkWell(
           onTap: entry.installable ? onInstall : null,

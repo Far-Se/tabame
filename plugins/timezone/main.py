@@ -341,7 +341,7 @@ def resolve_token(token, on_date):
         if zone is not None:
             return zone, key, None
         raise ValueError(
-            f"Couldn't load IANA zone `{token}` — install the `tzdata` package "
+            f"Couldn't load IANA zone `{token}` – install the `tzdata` package "
             "or use a region from the bundled catalog."
         )
     return None
@@ -440,11 +440,11 @@ def parse_query(query):
 
 USAGE_MD = (
     "### Usage\n\n"
-    "- `3 PM` — your local time across world zones\n"
-    "- `11:30 PM PT` — Pacific → local\n"
-    "- `9 AM ET to CET` — zone → zone\n"
+    "- `3 PM` – your local time across world zones\n"
+    "- `11:30 PM PT` – Pacific → local\n"
+    "- `9 AM ET to CET` – zone → zone\n"
     "- `now in Tokyo`, `noon UTC`, `PT`\n"
-    "- `Los Angeles` or `Kathmandu` — current local time in that zone\n\n"
+    "- `Los Angeles` or `Kathmandu` – current local time in that zone\n\n"
     "Zones: `PT` `MT` `CT` `ET` `UTC` `UK` `CET` `EET` `IST` `JST` `AEST`…\n"
     "The bundled catalog also accepts Windows region names, city names, and IANA IDs\n"
     "such as `Cairo`, `Kathmandu`, `America/Sao_Paulo`, or `Pacific/Fiji`."
@@ -481,10 +481,10 @@ def make_item(idx, label, target_tz, base, src_line, has_seconds):
     if day_shift:
         accessories.append({"text": f"{day_shift:+d} day"})
 
-    copy_str = f"{time_str} {tz_abbr(dt)} — {dt.strftime('%a, %b %d')}"
+    copy_str = f"{time_str} {tz_abbr(dt)} – {dt.strftime('%a, %b %d')}"
     shift_note = f"  *({day_shift:+d} day)*" if day_shift else ""
     preview = (
-        f"## {label} — {tz_abbr(dt)}\n\n"
+        f"## {label} – {tz_abbr(dt)}\n\n"
         f"# {time_str}\n\n"
         f"{dt.strftime('%A, %B %d')}{shift_note}\n\n"
         f"`{fmt_offset(dt)}`\n\n"

@@ -13,7 +13,7 @@
  * Setup is handled by an in-app form. Register a free API app at
  * https://trakt.tv/oauth/applications with redirect URI
  * `urn:ietf:wg:oauth:2.0:oob`, then paste its Client ID + Secret into Tabame.
- * `tmdbApiKey` is optional (free TMDB v3 key) — with it, browse/search show
+ * `tmdbApiKey` is optional (free TMDB v3 key) – with it, browse/search show
  * poster thumbnails; without it they fall back to icons.
  */
 
@@ -207,7 +207,7 @@ async function ensureToken() {
       saveTokens(await res.json());
     } else {
       clearTokens();
-      throw new HttpError(401, "Trakt session expired — please log in again");
+      throw new HttpError(401, "Trakt session expired – please log in again");
     }
   }
 }
@@ -657,7 +657,7 @@ function renderRoot(rev, text) {
   render(rev, "list", {
     items,
     emptyText: "No matching commands",
-    placeholder: "Trakt — search or pick a command…",
+    placeholder: "Trakt – search or pick a command…",
   });
 }
 
@@ -697,7 +697,7 @@ async function renderBrowse(rev, text, fetcher, opts) {
     return;
   }
   frame.ctx.loading = false;
-  // Render against the latest query — the awaited fetch may be stale by `rev`.
+  // Render against the latest query – the awaited fetch may be stale by `rev`.
   if (top() === frame)
     renderMediaFrame(
       state.lastRev,
@@ -869,7 +869,7 @@ async function pollLogin() {
     login.error = `HTTP ${res.status}`;
     renderLogin(0);
   } catch (err) {
-    scheduleLoginPoll(); // transient network error — keep polling
+    scheduleLoginPoll(); // transient network error – keep polling
   }
 }
 
@@ -880,7 +880,7 @@ function renderLogin(rev) {
 
   let statusLine = "Waiting for you to authorize…";
   if (login.status === "expired")
-    statusLine = "Code expired — press Enter on “Restart” to try again.";
+    statusLine = "Code expired – press Enter on “Restart” to try again.";
   else if (login.status === "denied") statusLine = "Authorization was denied.";
   else if (login.status === "error") statusLine = `Error: ${login.error}`;
 
@@ -902,7 +902,7 @@ function renderLogin(rev) {
           "",
           `1. Open **[${login.url}](${login.url})**`,
           `2. Enter the code:  **\`${login.userCode}\`**`,
-          "3. Approve the app — this screen updates automatically.",
+          "3. Approve the app – this screen updates automatically.",
         ].join("\n"),
       },
     });
@@ -943,7 +943,7 @@ async function renderAccount(rev) {
         "You are logged in.",
       ].join("\n"),
       metadata: [
-        { label: "Username", text: u.username || "—", icon: "person" },
+        { label: "Username", text: u.username || "–", icon: "person" },
         { label: "VIP", text: u.vip ? "Yes" : "No" },
         { label: "Private", text: u.private ? "Yes" : "No" },
         { separator: true },
@@ -970,7 +970,7 @@ function renderSetup(rev, note = "") {
       },
     ],
     form: {
-      title: note ? `Trakt setup — ${note}` : "Connect Trakt",
+      title: note ? `Trakt setup – ${note}` : "Connect Trakt",
       buttons: [
         { id: "save", label: "Save & Log in" },
         { id: "copy_url", label: "Copy URL" },
@@ -1268,7 +1268,7 @@ async function handleLine(line) {
     case "back":
       await popScreen();
       break;
-    // 'select' needs no work — previews are provided per item.
+    // 'select' needs no work – previews are provided per item.
     // 'tab' / 'submit' unused by this plugin.
   }
 }

@@ -172,7 +172,7 @@ class _PluginViewState extends State<PluginView> {
   int _dashboardActiveIndex = -1;
 
   // When the selection moves because the pointer hovered a new row, we must NOT
-  // scroll it into view — recentering the list under the cursor makes it hover
+  // scroll it into view – recentering the list under the cursor makes it hover
   // yet another row, producing runaway auto-scroll. Only keyboard-driven
   // selection changes scroll; hovering leaves the scroll offset alone so the
   // user can scroll manually.
@@ -310,7 +310,7 @@ class _PluginViewState extends State<PluginView> {
 
   /// Streaming `detail.append`: when the document grew and the user was
   /// already reading its end, keep the view pinned to the bottom so new chunks
-  /// stay visible (scrolling up detaches — no forced follow).
+  /// stay visible (scrolling up detaches – no forced follow).
   void _followStreamingDetail(PluginView oldWidget) {
     if (widget.frame.view != PluginViewType.detail) return;
     final String previous = oldWidget.frame.detailMarkdown ?? '';
@@ -354,8 +354,8 @@ class _PluginViewState extends State<PluginView> {
     final bool frameChanged = !identical(oldWidget.frame, widget.frame);
     if (!enteredChat && !frameChanged) return;
     // Network images can grow the chat after its first layout. Pin a few times
-    // while entering an empty chat so its actual last message—not the initial
-    // pre-image layout—ends up on screen.
+    // while entering an empty chat so its actual last message–not the initial
+    // pre-image layout–ends up on screen.
     final bool openingConversation = enteredChat || oldWidget.frame.items.isEmpty;
     final bool wasAtBottom = openingConversation || (!_chatAwayFromBottom && _chatIsAtBottom(_scrollController));
     void pinToEnd() {
@@ -1261,7 +1261,7 @@ class _PluginViewState extends State<PluginView> {
 
   Widget _buildGrid(PluginRenderFrame frame, {ScrollController? controller}) {
     // Partition the items into runs sharing a `section`, each run its own grid
-    // under a header (sections are ignored inside a run — keep them adjacent,
+    // under a header (sections are ignored inside a run – keep them adjacent,
     // like the list view).
     final List<(String?, int, int)> runs = <(String?, int, int)>[]; // (section, start, end-exclusive)
     for (int i = 0; i < frame.items.length; i++) {
@@ -2166,12 +2166,12 @@ class _PluginViewState extends State<PluginView> {
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
         child: !hasMarkdown && metadata.isEmpty
             ? Text('No content', style: TextStyle(fontSize: Design.baseFontSize + 3, color: Design.text.withAlpha(120)))
-            // Cap the measure in the widened window — full-width prose lines
+            // Cap the measure in the widened window – full-width prose lines
             // are unreadable at 1080px.
             : Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 820),
-                  // Selectable: detail documents are the "answer" surface —
+                  // Selectable: detail documents are the "answer" surface –
                   // users copy from them constantly.
                   child: _selectableContent(
                     Column(
@@ -2277,7 +2277,7 @@ class _PluginViewState extends State<PluginView> {
   }
 
   /// Markdown styling tied to the active theme. Every block type is retinted
-  /// with [Design] colors — the package defaults render headings, list bullets,
+  /// with [Design] colors – the package defaults render headings, list bullets,
   /// checkboxes, rules and syntax tokens with hardcoded light-mode grays/blacks
   /// (e.g. a 32px black `# H1` under a `#d7dde3` underline) that are unreadable
   /// and visually foreign against the launcher's themed backdrop.
@@ -2391,7 +2391,7 @@ class _PluginViewState extends State<PluginView> {
           padding: const EdgeInsets.fromLTRB(12, 2, 0, 2),
         ),
         // Tables: the package default draws full-opacity text-colored grid
-        // lines — soften to the launcher's hairline style with a tinted header.
+        // lines – soften to the launcher's hairline style with a tinted header.
         TableConfig(
           border: TableBorder.all(color: text.withAlpha(40)),
           headerRowDecoration: BoxDecoration(color: accent.withAlpha(18)),
@@ -2443,7 +2443,7 @@ class _PluginViewState extends State<PluginView> {
       }
       if (image == null) return broken;
       // Rasters scale down to fit the pane but never upscale past their
-      // intrinsic size — a 96px avatar must not stretch across the detail pane.
+      // intrinsic size – a 96px avatar must not stretch across the detail pane.
       // SVGs keep filling [width]: plugin-generated vector charts rely on it.
       if (!isSvg && width != null) {
         image = ConstrainedBox(constraints: BoxConstraints(maxWidth: width), child: image);
@@ -2703,7 +2703,7 @@ class _EmptyActionButton extends StatelessWidget {
   }
 }
 
-/// A [HeadingConfig] with a caller-supplied tag, style, divider and padding —
+/// A [HeadingConfig] with a caller-supplied tag, style, divider and padding –
 /// the package's built-in `H1Config`…`H6Config` bake in article-sized styles
 /// and a fixed light-gray underline, none of which suit the launcher.
 class _MdHeadingConfig extends HeadingConfig {

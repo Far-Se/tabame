@@ -1105,7 +1105,7 @@ class Boxes {
   static bool _reloading = false;
 
   /// Live-reloads all settings from disk into memory and re-applies them to the
-  /// running QuickMenu — settings scalars, themes, native hotkeys, and the UI —
+  /// running QuickMenu – settings scalars, themes, native hotkeys, and the UI –
   /// without restarting the process. Triggered by the Interface via the reload
   /// marker file (see [SavedStore] signaling + the QuickMenu's file watcher).
   static Future<void> reloadSettings() async {
@@ -1126,7 +1126,7 @@ class Boxes {
         SaveSettings.suppressWrites = false;
       }
 
-      // Re-register native hotkeys only when they actually changed — avoids tearing down and
+      // Re-register native hotkeys only when they actually changed – avoids tearing down and
       // reinstalling the global keyboard hook on every unrelated settings edit.
       if ((pref.getString("remap") ?? "") != previousRemapJson) {
         await WinHotkeys.update();
@@ -1167,7 +1167,7 @@ class Boxes {
     _taskbarBadges = <String, List<String>>{};
     _quickMenuWidth = null;
     _launcherSizeWidth = null;
-    // `mediaControls` is re-read by registerBoxes (line ~269) — no reset needed.
+    // `mediaControls` is re-read by registerBoxes (line ~269) – no reset needed.
   }
   // --------------------------------------------------------------------------
   // Group: Quick timer runtime management
@@ -1192,7 +1192,7 @@ class Boxes {
   }
 
   /// Like [addQuickTimer] but fires at an absolute [endTime] rather than a
-  /// whole-minute offset — used for alarms that must hit an exact moment.
+  /// whole-minute offset – used for alarms that must hit an exact moment.
   void addQuickTimerAt(String name, DateTime endTime, int type) {
     if (!endTime.isAfter(DateTime.now())) return;
     final QuickTimer quickTimer = QuickTimer()

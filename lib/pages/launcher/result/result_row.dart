@@ -13,6 +13,7 @@ import '../widgets/thermal_surface.dart';
 import '../widgets/radiant_surface.dart';
 import '../widgets/ukiyoe_surface.dart';
 import '../widgets/liquid_metal_surface.dart';
+import '../widgets/liquid_glass_surface.dart';
 import 'inline_markup.dart';
 
 part 'designs/aurora_result_row.dart';
@@ -26,6 +27,7 @@ part 'designs/crt_result_row.dart';
 part 'designs/fluent_result_row.dart';
 part 'designs/glass_result_row.dart';
 part 'designs/liquid_metal_result_row.dart';
+part 'designs/liquid_glass_result_row.dart';
 part 'designs/manifesto_result_row.dart';
 part 'designs/notion_result_row.dart';
 part 'designs/nouveau_result_row.dart';
@@ -113,6 +115,7 @@ class LauncherResultRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final LauncherDesign design = LauncherTheme.maybeOf(context)?.design ?? user.launcherDesign;
     return switch (design) {
+      LauncherDesign.liquidGlass => _buildLiquidGlass(context),
       LauncherDesign.ivoryGrove => _buildIvoryGrove(context),
       LauncherDesign.ukiyoe => _buildUkiyoe(context),
       LauncherDesign.radiant => _buildRadiant(context),

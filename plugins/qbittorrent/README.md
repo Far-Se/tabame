@@ -1,4 +1,4 @@
-# qBittorrent — Tabame launcher plugin
+# qBittorrent – Tabame launcher plugin
 
 Type **`qbit`** in the launcher to browse qBittorrent torrents, inspect their
 stats, pause or resume transfers, open download folders, and optionally open
@@ -39,16 +39,16 @@ the setup form; keep that file private.
 
 ## Controls
 
-- **All / Active / Downloading / Seeding / Completed** — browse and search
+- **All / Active / Downloading / Seeding / Completed** – browse and search
   torrents by name, category, or hash.
-- **Enter** on a torrent — show detailed stats and the file list.
-- **Preview → Save path → Open folder** or **Ctrl+K → Open download folder** —
+- **Enter** on a torrent – show detailed stats and the file list.
+- **Preview → Save path → Open folder** or **Ctrl+K → Open download folder** –
   asks Windows to open qBittorrent's reported `save_path`.
-- **Ctrl+K → Open WebUI** — optionally opens the configured WebUI in the default
+- **Ctrl+K → Open WebUI** – optionally opens the configured WebUI in the default
   browser. The launcher does not open a tab just to read torrent data.
-- **Ctrl+K → Pause/Resume**, **Recheck**, and **Copy hash** — available on each
+- **Ctrl+K → Pause/Resume**, **Recheck**, and **Copy hash** – available on each
   torrent where qBittorrent supports the operation.
-- **Ctrl+R** — refresh the current torrent list or test the API connection on
+- **Ctrl+R** – refresh the current torrent list or test the API connection on
   the root screen.
 
 Opening a folder uses the path reported by qBittorrent on the local machine.

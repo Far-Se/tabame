@@ -111,7 +111,7 @@ static DWORD doubleAltActiveVk = 0;
 // Hook handles for this subsystem
 HHOOK g_KeyboardHook = nullptr;
 HHOOK g_MouseHook = nullptr;
-// Win event hooks — one entry per registered event range (see InstallEventHooks).
+// Win event hooks – one entry per registered event range (see InstallEventHooks).
 std::vector<HWINEVENTHOOK> g_EventHooks;
 
 void SetKeyboardBlockerEnabled(bool enabled) {
@@ -1351,8 +1351,8 @@ VOID CALLBACK EventHook(HWINEVENTHOOK /*hWinEventHook*/, DWORD dwEvent,
 // ---------------------------------------------------------------------------
 // Register only the specific events EventHook() actually consumes. Registering
 // the full EVENT_MIN..EVENT_MAX range would invoke the callback for every
-// accessibility event system-wide — most notably EVENT_OBJECT_LOCATIONCHANGE,
-// which fires on every mouse move/caret blink — adding needless overhead to the
+// accessibility event system-wide – most notably EVENT_OBJECT_LOCATIONCHANGE,
+// which fires on every mouse move/caret blink – adding needless overhead to the
 // whole OS input pipeline. MOVESIZESTART/MOVESIZEEND are contiguous so they
 // share one range; NAMECHANGE uses a single-event range to exclude the adjacent
 // (and very noisy) LOCATIONCHANGE.

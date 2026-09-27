@@ -358,7 +358,7 @@ def build_story_markdown(it):
     if text:
         lines.append("\n" + html_to_md(text))
     if not url and not text:
-        lines.append("\n_No link or text — see the discussion for context._")
+        lines.append("\n_No link or text – see the discussion for context._")
     return "\n".join(lines)
 
 
@@ -501,7 +501,7 @@ def do_search(rev, query, history="replace", more=False):
     elif more:
         state["search_page"] += 1
     else:
-        # same query, no pagination requested — nothing new to fetch
+        # same query, no pagination requested – nothing new to fetch
         pass
 
     if not state["search_hits"] or more or state["search_query"] != state.get("_last_fetched_query"):

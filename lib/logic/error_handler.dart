@@ -15,7 +15,7 @@ class ErrorLogger {
     StackTrace? stack,
   ) async {
     try {
-      // Demangle the stack trace — critical for release mode
+      // Demangle the stack trace – critical for release mode
       final String chain = stack != null ? Chain.forTrace(stack).terse.toString() : 'no stack trace';
 
       final String entry = '''

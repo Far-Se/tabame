@@ -1,4 +1,4 @@
-# BC Uninstaller — Tabame plugin
+# BC Uninstaller – Tabame plugin
 
 Ported from the "List Applications" BCUninstaller extension for Raycast.
 Search installed software, queue several apps, and batch-uninstall them
@@ -11,7 +11,7 @@ Search installed software, queue several apps, and batch-uninstall them
 2. Open the Tabame launcher and type `uninstall`.
 3. First run: pick **Settings** (`Ctrl+S`) and set the path to
    `BCU-console.exe`, `BCUninstaller.exe`, or the BC Uninstaller install
-   folder — Tabame resolves any of the three the same way the original
+   folder – Tabame resolves any of the three the same way the original
    Raycast extension did.
 
 BC Uninstaller always launches elevated (`Start-Process -Verb RunAs`), so
@@ -29,7 +29,7 @@ expect a UAC prompt on the first export of a session and on every uninstall.
   enabled).
 - **Ctrl+Shift+Delete**: clear the queue.
 - **Ctrl+F**: change visibility (default / include updates / include system
-  / include protected / show all) — mirrors the Raycast dropdown.
+  / include protected / show all) – mirrors the Raycast dropdown.
 - **Ctrl+D**: toggle the split preview pane (publisher, version, install
   location, rating/registry identifiers, etc.).
 - **Ctrl+R**: force a refresh (re-runs the elevated export).
@@ -39,7 +39,7 @@ expect a UAC prompt on the first export of a session and on every uninstall.
 - The XML export/uninstall-list handling, stable app IDs, and match-target
   fallback logic (`RatingId` → `RegistryKeyName` → display name/publisher/
   version) are ported line-for-line from the original TypeScript.
-- No third-party packages are needed — XML parsing uses Python's stdlib
+- No third-party packages are needed – XML parsing uses Python's stdlib
   `xml.etree.ElementTree`, so there's nothing for Tabame to `pip install`.
 - Settings (`bcu_path`, auto-cleanup flag, visibility, preview-pane state)
   and the last exported app list are persisted via Tabame's `storage`

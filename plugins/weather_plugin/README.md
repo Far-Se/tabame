@@ -1,4 +1,4 @@
-# Weather — Tabame plugin
+# Weather – Tabame plugin
 
 Generates a nice weather image (today's forecast, or a 7-day strip) and shows
 it right in the launcher.
@@ -28,7 +28,7 @@ the same city without retyping.
 2. Open the Tabame launcher (it rescans plugins on open).
 3. Type `weather <your city>` and press Enter.
 
-The first launch installs Pillow into the plugin's own `.pluginlibs` folder —
+The first launch installs Pillow into the plugin's own `.pluginlibs` folder –
 you'll see a short "Installing dependencies…" step once.
 
 ## Optional config
@@ -49,7 +49,7 @@ query temporarily switches that result to Fahrenheit.
 ## How it works
 
 - Geocoding + forecast data come from the free [Open-Meteo](https://open-meteo.com)
-  API — no API key needed.
+  API – no API key needed.
 - The weather card is drawn with Pillow (vector-style icons, gradient
   background, a bundled Lato font) and saved as a PNG next to the plugin.
 - A tiny local HTTP server (bound to `127.0.0.1` only, random port, one per

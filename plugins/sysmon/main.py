@@ -115,7 +115,7 @@ def build_frame():
         "rev": 0,
         "view": "detail",
         "detail": {
-            "markdown": "# System Monitor\n\nLive usage — updates every " f"{REFRESH_SECONDS:g}s.",
+            "markdown": "# System Monitor\n\nLive usage – updates every " f"{REFRESH_SECONDS:g}s.",
             "metadata": metadata,
         },
         "actions": [
@@ -125,7 +125,7 @@ def build_frame():
 
 
 def monitor_loop():
-    # First cpu_percent() call has no baseline yet — prime it, then loop.
+    # First cpu_percent() call has no baseline yet – prime it, then loop.
     psutil.cpu_percent(interval=None)
     psutil.cpu_percent(interval=None, percpu=True)
     time.sleep(0.2)

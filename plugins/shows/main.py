@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-TV Shows Tracker — a Tabame launcher plugin.
+TV Shows Tracker – a Tabame launcher plugin.
 
 Keyword: shows
 
@@ -10,7 +10,7 @@ Keyword: shows
   Ctrl+K / Ctrl+N     -> "Add show from TMDB" -> search -> preview -> add
   Enter on a show     -> season overview + episode calendar + ratings sparkline
 
-No config file needed up front — if no TMDB API key is set yet, the plugin
+No config file needed up front – if no TMDB API key is set yet, the plugin
 shows a form to paste one in and saves it to config.json for you.
 """
 

@@ -54,7 +54,7 @@ extension _FluentResultRow on LauncherResultRow {
                   ],
                 ),
               ),
-              // Accent selection pill — the WinUI list indicator.
+              // Accent selection pill – the WinUI list indicator.
               AnimatedContainer(
                 duration: Duration(milliseconds: animMs),
                 curve: curve,

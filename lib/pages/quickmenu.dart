@@ -678,7 +678,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
     }
 
     // A modal (a pushed route) draws a full-window barrier on top of the base
-    // content, so the whole window must stay interactive — otherwise clicks on
+    // content, so the whole window must stay interactive – otherwise clicks on
     // the barrier outside the underlying content rect would pass through.
     if (Navigator.maybeOf(context)?.canPop() ?? false) {
       _setClickThrough(false);

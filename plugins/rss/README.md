@@ -6,23 +6,23 @@ search command.
 
 ## What it includes
 
-- **New Articles** — unread stories from every enabled feed, with source, age,
+- **New Articles** – unread stories from every enabled feed, with source, age,
   category, tags, and a split preview pane.
-- **Read Later** — save stories, add private notes, edit tags/categories, and
+- **Read Later** – save stories, add private notes, edit tags/categories, and
   keep saved articles safe from cache pruning.
-- **Nested categories** — create categories and subcategories such as
+- **Nested categories** – create categories and subcategories such as
   `Technology / Frontend / CSS`; feeds and articles can be assigned at any
   level.
-- **Feed management** — add, edit, enable/disable, refresh, copy, and remove
+- **Feed management** – add, edit, enable/disable, refresh, copy, and remove
   RSS/Atom subscriptions.
-- **Manual articles** — add a URL from a newsletter, chat, or another source
+- **Manual articles** – add a URL from a newsletter, chat, or another source
   even when it does not have an RSS feed.
-- **OPML import/export** — import subscriptions from another reader; OPML
+- **OPML import/export** – import subscriptions from another reader; OPML
   folders become categories. Export both subscriptions and a JSON backup of
   the library.
-- **Background refresh** — refresh one feed or all feeds without blocking the
+- **Background refresh** – refresh one feed or all feeds without blocking the
   launcher. Failed feeds stay visible with their last error.
-- **Article detail view** — read the feed-provided summary/content in Tabame or
+- **Article detail view** – read the feed-provided summary/content in Tabame or
   open the original article in the browser.
 
 ## Usage
@@ -33,11 +33,11 @@ across article titles, summaries, notes, tags, feed names, and categories.
 
 On an article:
 
-- **Enter** — open the original article; optionally mark it read.
-- **Ctrl+K → Read summary here** — open a full-width detail view.
-- **Ctrl+K → Mark as read/unread** — change its unread state.
-- **Ctrl+K → Save for Read Later** — preserve it in the reading queue.
-- **Ctrl+K → Edit article** — change category, tags, notes, and saved state.
+- **Enter** – open the original article; optionally mark it read.
+- **Ctrl+K → Read summary here** – open a full-width detail view.
+- **Ctrl+K → Mark as read/unread** – change its unread state.
+- **Ctrl+K → Save for Read Later** – preserve it in the reading queue.
+- **Ctrl+K → Edit article** – change category, tags, notes, and saved state.
 
 On a feed or category, **Enter** opens its article list. Ctrl+K provides
 refresh, edit, copy, and delete actions where appropriate. Destructive feed,

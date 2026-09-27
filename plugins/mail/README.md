@@ -1,8 +1,8 @@
-# Mail — Tabame plugin
+# Mail – Tabame plugin
 
 Read and send email from the Tabame launcher over IMAP or POP3 (receiving)
 and SMTP (sending). Works with Gmail, Yahoo, and any other mail server that
-speaks these standard protocols. No extra packages required — it's built
+speaks these standard protocols. No extra packages required – it's built
 entirely on the Python standard library.
 
 ## Install
@@ -11,24 +11,24 @@ entirely on the Python standard library.
    ```
    %localappdata%\Tabame\plugins\mail\
    ```
-2. Open the Tabame launcher (it rescans plugins on open — no restart needed).
+2. Open the Tabame launcher (it rescans plugins on open – no restart needed).
 3. Type `mail`.
 
 ## Adding an account
 
 Type `mail`, then press **Ctrl+K** (or use the empty-state button) and choose
-**Add account**. Pick a provider from the dropdown — choosing **Gmail** or
+**Add account**. Pick a provider from the dropdown – choosing **Gmail** or
 **Yahoo** auto-fills the correct server, port, and encryption settings for
 you. Choosing **Custom / other server** clears those fields so you can type
 your own.
 
 Whichever provider you pick, you still need to supply:
 
-- **Account name** — any label you want, just for your own reference
+- **Account name** – any label you want, just for your own reference
 - **Email address**
-- **Password / app password** — see below, this is _not_ always your normal
+- **Password / app password** – see below, this is _not_ always your normal
   login password
-- **Login username** — leave blank to default to your email address; only
+- **Login username** – leave blank to default to your email address; only
   needed if your server uses a separate username
 
 After saving, the plugin runs a quick connection test in the background and
@@ -42,7 +42,7 @@ Google blocks plain-password IMAP/SMTP login. You must use an **app
 password** instead of your real Google password.
 
 1. Turn on **2-Step Verification** on your Google account, if it isn't
-   already (required — app passwords aren't available without it):
+   already (required – app passwords aren't available without it):
    `https://myaccount.google.com/security`
 2. Go to `https://myaccount.google.com/apppasswords`
 3. Create a new app password (name it anything, e.g. "Tabame Mail")
@@ -74,7 +74,7 @@ Yahoo also blocks plain-password access. You need a Yahoo **app password**.
 1. Sign in to Yahoo Mail → profile icon → **Manage your account**
 2. Go to **Security** → **External Connections** (also called "Other ways
    to sign in" on some accounts)
-3. Turn on **Two-Step Verification** if it isn't already on — Yahoo requires
+3. Turn on **Two-Step Verification** if it isn't already on – Yahoo requires
    this before it will let you generate an app password
 4. Click **Generate app password** / **Create app password**, name it, and
    copy the code
@@ -102,25 +102,25 @@ of 587/STARTTLS.)
 Choose **Custom / other server** as the provider. You'll need these details
 from your email provider or IT department:
 
-- **Receive via** — IMAP (recommended: syncs read/unread state, folders,
+- **Receive via** – IMAP (recommended: syncs read/unread state, folders,
   supports delete) or POP3 (simpler, but the plugin can only list/read/
-  delete — POP3 has no concept of "read" status)
+  delete – POP3 has no concept of "read" status)
 - **Incoming server host** and **port**
-- **Incoming encryption** — SSL/TLS (usually port 993 for IMAP / 995 for
+- **Incoming encryption** – SSL/TLS (usually port 993 for IMAP / 995 for
   POP3), STARTTLS (usually port 143 / 110), or None
 - **Outgoing (SMTP) host** and **port** (commonly 465 for SSL/TLS, or 587
   for STARTTLS)
-- **Outgoing encryption** — same three options as above
-- **Login username** — often your full email address, but some servers use
+- **Outgoing encryption** – same three options as above
+- **Login username** – often your full email address, but some servers use
   a separate username (e.g. just `jdoe` instead of `jdoe@company.com`)
-- **Password** — whatever your server expects. If it's protected by 2FA,
+- **Password** – whatever your server expects. If it's protected by 2FA,
   you'll likely need an app-specific password the same way Gmail/Yahoo
-  require one — check with your provider.
+  require one – check with your provider.
 
 A couple of things worth knowing for self-hosted or internal servers:
 
 - TLS certificates are verified normally. A self-signed certificate that
-  isn't trusted by your system will fail to connect — install it into your
+  isn't trusted by your system will fail to connect – install it into your
   system's trust store first, or use a certificate from a real CA
   (Let's Encrypt, etc.).
 - If your server is only reachable on a private network or VPN, make sure
@@ -154,7 +154,7 @@ login password (see the Gmail/Yahoo sections above), or the username is
 wrong (try your full email address if a short username doesn't work).
 
 **Connects but shows no messages / wrong folder**
-The plugin always reads the `INBOX` folder specifically — mail filed into
+The plugin always reads the `INBOX` folder specifically – mail filed into
 other folders/labels won't show up.
 
 **Times out / can't connect at all**

@@ -104,7 +104,7 @@ function loadingFrame(rev, text) {
 function renderError(rev, err) {
   const msg = err && err.message ? err.message : String(err);
   if (err && err.status === 401)
-    return renderSetup(rev, "token rejected — paste a new one");
+    return renderSetup(rev, "token rejected – paste a new one");
   let hint = "";
   if (/scope|permission|forbidden|resource not accessible/i.test(msg)) {
     hint =
@@ -194,7 +194,7 @@ async function rest(method, apiPath, body) {
           .join("; ");
     }
     if (res.status === 403 && /rate limit/i.test(msg)) {
-      msg = "GitHub API rate limit hit — try again in a minute.";
+      msg = "GitHub API rate limit hit – try again in a minute.";
     }
     throw new HttpError(res.status, msg);
   }
@@ -218,7 +218,7 @@ async function gql(query, variables) {
 
 // ── small utils ──────────────────────────────────────────────────────────────
 function ago(iso) {
-  if (!iso) return "—";
+  if (!iso) return "–";
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
   if (s < 60) return "just now";
   const m = s / 60;
@@ -233,7 +233,7 @@ function ago(iso) {
 }
 
 function human(bytes) {
-  if (bytes == null) return "—";
+  if (bytes == null) return "–";
   if (bytes < 1024) return `${bytes} B`;
   const kb = bytes / 1024;
   if (kb < 1024) return `${kb.toFixed(0)} KB`;
@@ -389,7 +389,7 @@ function resetToRoot() {
 }
 
 // Debounce for screens that hit the search API on every keystroke. The host
-// already drops stale frames by rev; this avoids hammering the API — and the
+// already drops stale frames by rev; this avoids hammering the API – and the
 // screen check stops a pending search from painting over another screen the
 // user has already navigated to (its rev would still count as fresh).
 let searchTimer = null;
@@ -594,7 +594,7 @@ function renderRoot(rev, text) {
   setItems(items);
   render(rev, "list", {
     items,
-    placeholder: "GitHub — pick a command…",
+    placeholder: "GitHub – pick a command…",
     empty: {
       icon: "search",
       title: "No matching command",
@@ -808,7 +808,7 @@ function renderGlobalSearch(rev, text, qualifier, noun, icon) {
 }
 
 // ── repositories ─────────────────────────────────────────────────────────────
-// Only what later screens/actions need — full API repo objects are ~6 KB each
+// Only what later screens/actions need – full API repo objects are ~6 KB each
 // and would bloat every render frame via `_data`.
 function slimRepo(r) {
   return {
@@ -856,7 +856,7 @@ function repoItem(r, pick) {
     preview: {
       markdown: `## ${r.full_name}\n\n${r.description || "_No description._"}`,
       metadata: [
-        { label: "Owner", text: r.owner ? r.owner.login : "—", icon: "person" },
+        { label: "Owner", text: r.owner ? r.owner.login : "–", icon: "person" },
         {
           label: "Visibility",
           text: r.private ? "private" : "public",
@@ -880,7 +880,7 @@ function repoItem(r, pick) {
         },
         {
           label: "Default branch",
-          text: r.default_branch || "—",
+          text: r.default_branch || "–",
           icon: "flag",
         },
         { label: "Pushed", text: ago(r.pushed_at), icon: "clock" },
@@ -1028,7 +1028,7 @@ function runItem(r) {
   return {
     id: `wfrun:${r.id}`,
     title: r.display_title || r.name || `Run #${r.run_number}`,
-    subtitle: `${r.name || "workflow"} · ${r.head_branch || "—"} · ${r.event}`,
+    subtitle: `${r.name || "workflow"} · ${r.head_branch || "–"} · ${r.event}`,
     icon: st.icon,
     accessories: [
       { text: st.text, color: st.color },
@@ -1048,13 +1048,13 @@ function runItem(r) {
     preview: {
       markdown: `## ${r.display_title || r.name}`,
       metadata: [
-        { label: "Workflow", text: r.name || "—", icon: "run" },
+        { label: "Workflow", text: r.name || "–", icon: "run" },
         { label: "Status", text: st.text, color: st.color },
-        { label: "Branch", text: r.head_branch || "—", icon: "flag" },
+        { label: "Branch", text: r.head_branch || "–", icon: "flag" },
         { label: "Event", text: r.event, icon: "bolt" },
         {
           label: "Actor",
-          text: r.actor ? `@${r.actor.login}` : "—",
+          text: r.actor ? `@${r.actor.login}` : "–",
           icon: "person",
         },
         { label: "Attempt", text: String(r.run_attempt || 1), icon: "refresh" },
@@ -1207,7 +1207,7 @@ async function renderNotifications(rev, text) {
     empty: {
       icon: "bell",
       title: all ? "No notifications" : "Inbox zero",
-      hint: all ? "" : "Nothing unread — nice.",
+      hint: all ? "" : "Nothing unread – nice.",
     },
   });
 }
@@ -1283,7 +1283,7 @@ function discussionItem(d) {
           : []),
         {
           label: "Author",
-          text: d.author ? `@${d.author.login}` : "—",
+          text: d.author ? `@${d.author.login}` : "–",
           icon: "person",
         },
         {
@@ -1689,7 +1689,11 @@ function runGit(args, cwd, detail, progressRange) {
     });
     child.on("close", (code) => {
       if (code === 0) return finish(null, stdout);
-      const message = stderr.trim().split(/[\r\n]+/).slice(-4).join("\n");
+      const message = stderr
+        .trim()
+        .split(/[\r\n]+/)
+        .slice(-4)
+        .join("\n");
       finish(new Error(message || `Git exited with code ${code}.`));
     });
   });
@@ -1987,7 +1991,7 @@ async function jobDir(repo, branch, dirPath) {
     throttledProgress(done / blobs.length, `${done} / ${blobs.length} files`);
   });
   if (tree.truncated)
-    cmdToast("Note: the repo tree was truncated — some files may be missing.");
+    cmdToast("Note: the repo tree was truncated – some files may be missing.");
   return root;
 }
 
@@ -2004,14 +2008,14 @@ async function jobFile(repo, branch, filePath) {
 function renderSetup(rev, note) {
   render(rev, "form", {
     form: {
-      title: note ? `GitHub — ${note}` : "GitHub — connect your account",
+      title: note ? `GitHub – ${note}` : "GitHub – connect your account",
       submitLabel: "Save & Sign in",
       fields: [
         {
           id: "token",
           type: "password",
           label:
-            "Personal Access Token — create one at github.com/settings/tokens",
+            "Personal Access Token – create one at github.com/settings/tokens",
           placeholder: "ghp_… or github_pat_…",
         },
         {
@@ -2039,8 +2043,7 @@ function renderDownloadFolderForm(rev) {
           id: "url",
           type: "text",
           label: "GitHub folder link",
-          placeholder:
-            "https://github.com/user/project/tree/main/assets/icons",
+          placeholder: "https://github.com/user/project/tree/main/assets/icons",
           description:
             "Paste a /tree/ link to a folder. Branches, tags, and commit SHAs are supported.",
           required: true,
@@ -2064,7 +2067,7 @@ function renderCreateIssueForm(rev) {
   const { repo } = top().ctx;
   render(rev, "form", {
     form: {
-      title: `New issue — ${repo.full_name}`,
+      title: `New issue – ${repo.full_name}`,
       submitLabel: "Create Issue",
       fields: [
         {
@@ -2083,7 +2086,7 @@ function renderCreateIssueForm(rev) {
           id: "labels",
           type: "text",
           label: "Labels",
-          placeholder: "bug, help wanted — comma separated (optional)",
+          placeholder: "bug, help wanted – comma separated (optional)",
         },
         {
           id: "assign_me",
@@ -2102,7 +2105,7 @@ function renderCreatePRForm(rev) {
   const firstHead = branches.find((b) => b !== def) || def;
   render(rev, "form", {
     form: {
-      title: `New pull request — ${repo.full_name}`,
+      title: `New pull request – ${repo.full_name}`,
       submitLabel: "Create Pull Request",
       fields: [
         {
@@ -2147,7 +2150,7 @@ function renderCreateBranchForm(rev) {
   const def = repo.default_branch || branches[0];
   render(rev, "form", {
     form: {
-      title: `New branch — ${repo.full_name}`,
+      title: `New branch – ${repo.full_name}`,
       submitLabel: "Create Branch",
       fields: [
         {
@@ -2641,6 +2644,6 @@ async function handleLine(line) {
     case "tab":
       handleTab(msg.id || "");
       break;
-    // 'select' needs no work — previews are provided per item.
+    // 'select' needs no work – previews are provided per item.
   }
 }

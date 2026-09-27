@@ -39,7 +39,7 @@ static HICON GetShellItemIconFromPidl(PIDLIST_ABSOLUTE pidl) {
   }
   return nullptr;
 }
-// Replace this helper — no longer needed for menu icons:
+// Replace this helper – no longer needed for menu icons:
 // static HICON GetShellItemIconFromPidl(...) { ... }
 
 // New helper: convert HBITMAP from menu item to HICON
@@ -70,7 +70,7 @@ static HICON HBitmapToHIcon(HBITMAP hBitmap) {
   std::vector<DWORD> pixels(w * h);
   HDC hdcTmp = CreateCompatibleDC(hdcScreen);
   HBITMAP hOldTmp = (HBITMAP)SelectObject(hdcTmp, hBitmap);
-  // GetDIBits directly from the source — preserves the alpha byte
+  // GetDIBits directly from the source – preserves the alpha byte
   if (!GetDIBits(hdcTmp, hBitmap, 0, h, pixels.data(), &bmi, DIB_RGB_COLORS)) {
     SelectObject(hdcTmp, hOldTmp);
     DeleteDC(hdcTmp);
@@ -343,7 +343,7 @@ bool ShellContextMenu::Invoke(const std::wstring &path,
       goto Cleanup;
   }
 
-  // Must call QueryContextMenu first — initializes the handler internally
+  // Must call QueryContextMenu first – initializes the handler internally
   hMenu = CreatePopupMenu();
   if (!hMenu)
     goto Cleanup;
@@ -356,7 +356,7 @@ bool ShellContextMenu::Invoke(const std::wstring &path,
   {
     CMINVOKECOMMANDINFOEX ci = {};
     ci.cbSize = sizeof(ci);
-    ci.hwnd = hwnd; // valid HWND — many verbs need this
+    ci.hwnd = hwnd; // valid HWND – many verbs need this
     ci.nShow = SW_SHOWNORMAL;
     ci.fMask = CMIC_MASK_UNICODE;
 

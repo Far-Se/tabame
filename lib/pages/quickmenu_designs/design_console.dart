@@ -16,7 +16,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Console" QuickMenu design — a physical hardware mixing-desk faceplate.
+/// "Console" QuickMenu design – a physical hardware mixing-desk faceplate.
 ///
 /// The menu reads as a piece of brushed-aluminum gear rather than software:
 /// a beveled two-tone bezel, four Phillips-head rivets pinning the corners,
@@ -24,7 +24,7 @@ import 'design_backdrop_stable.dart';
 /// (light-over-dark) groove dividers instead of flat `Divider`s between
 /// sections, and a bottom "signal strip" of channel LEDs that light up
 /// according to which optional sections (task-manager stats / libre stats)
-/// are actually active — so the strip reflects real state, not decoration
+/// are actually active – so the strip reflects real state, not decoration
 /// for its own sake.
 ///
 /// Colors still derive from the user's theme (`Design.background` /
@@ -95,7 +95,7 @@ class _MainMenuConsoleWidgetState extends State<MainMenuConsoleWidget>
       ),
       child: RepaintBoundary(
         child: Container(
-          // Outer bezel edge — dark, like a routed metal lip.
+          // Outer bezel edge – dark, like a routed metal lip.
           padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
@@ -105,7 +105,7 @@ class _MainMenuConsoleWidgetState extends State<MainMenuConsoleWidget>
             ],
           ),
           child: Container(
-            // Inner bezel edge — light, catching the "overhead" light.
+            // Inner bezel edge – light, catching the "overhead" light.
             padding: const EdgeInsets.all(1),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(radius - 1),
@@ -188,7 +188,7 @@ class _MainMenuConsoleWidgetState extends State<MainMenuConsoleWidget>
 }
 
 // ---------------------------------------------------------------------------
-// Header — power LED + unit label, standing in for the old TopBar slot.
+// Header – power LED + unit label, standing in for the old TopBar slot.
 // ---------------------------------------------------------------------------
 
 class _ConsoleHeader extends StatelessWidget {
@@ -240,7 +240,7 @@ class _ConsoleHeader extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Rivet — small Phillips-head screw sitting in each corner of the bezel.
+// Rivet – small Phillips-head screw sitting in each corner of the bezel.
 // ---------------------------------------------------------------------------
 
 class _Rivet extends StatelessWidget {
@@ -284,7 +284,7 @@ class _ScrewSlotPainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------------------------
-// Groove divider — an engraved line (dark hairline + light hairline) instead
+// Groove divider – an engraved line (dark hairline + light hairline) instead
 // of a flat single-tone Divider, so sections read as milled into the metal.
 // ---------------------------------------------------------------------------
 
@@ -308,7 +308,7 @@ class _GrooveDivider extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Signal strip — a row of channel LEDs along the bottom, lit according to
+// Signal strip – a row of channel LEDs along the bottom, lit according to
 // which optional sections are actually enabled. Real state, not decoration.
 // ---------------------------------------------------------------------------
 
@@ -346,7 +346,7 @@ class _SignalStrip extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Brushed metal texture — a handful of faint, slightly-jittered diagonal
+// Brushed metal texture – a handful of faint, slightly-jittered diagonal
 // strokes. Cheap to paint, cheap to re-theme, no image asset required.
 // ---------------------------------------------------------------------------
 

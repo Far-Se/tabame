@@ -1,7 +1,7 @@
 part of '../launcher_design_builder.dart';
 
 BoxDecoration _fluentOuterDecoration(Color surface) {
-  // Mica window — [surface] is the forced Win11 neutral. The 8px corner,
+  // Mica window – [surface] is the forced Win11 neutral. The 8px corner,
   // a hairline stroke, and the broad soft shadow Windows 11 puts under
   // every flyout.
   final bool fluentDark = ThemeData.estimateBrightnessForColor(surface) == Brightness.dark;
@@ -29,8 +29,8 @@ class _FluentSearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color accent = LauncherTheme.accentOf(context);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    // A WinUI AutoSuggestBox: faint layer fill, hairline stroke, and — since
-    // the launcher input is always focused — the 2px accent bottom underline.
+    // A WinUI AutoSuggestBox: faint layer fill, hairline stroke, and – since
+    // the launcher input is always focused – the 2px accent bottom underline.
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
       child: Container(
@@ -65,7 +65,7 @@ class _FluentSearchBar extends StatelessWidget {
                   ],
                 ),
               ),
-              // Focus underline — the accent bottom stroke of a focused text box.
+              // Focus underline – the accent bottom stroke of a focused text box.
               Container(height: 2, color: accent),
             ],
           ),
@@ -75,7 +75,7 @@ class _FluentSearchBar extends StatelessWidget {
   }
 }
 
-/// The mica window — forced Win11 neutrals, 8px corners, and a footer strip in
+/// The mica window – forced Win11 neutrals, 8px corners, and a footer strip in
 /// the shifted chrome shade, like the Start menu's bottom bar.
 class FluentLauncherFrame extends StatelessWidget {
   const FluentLauncherFrame({super.key, required this.child, this.resultCount = 0});

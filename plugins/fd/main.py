@@ -2178,7 +2178,7 @@ def check_fd_again() -> None:
         command("toast", text="fd is ready", style="success")
         start_search(0, STATE["current_query"])
     else:
-        command("toast", text="fd is ready — choose your search locations", style="success")
+        command("toast", text="fd is ready – choose your search locations", style="success")
         render_settings(0, history="replace", first_run=True)
 
 

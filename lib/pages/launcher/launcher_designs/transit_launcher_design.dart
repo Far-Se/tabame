@@ -1,7 +1,7 @@
 part of '../launcher_design_builder.dart';
 
 BoxDecoration _transitOuterDecoration(Color surface, Color accent) {
-  // Station sign — [surface] is the forced signage palette. Soft signage
+  // Station sign – [surface] is the forced signage palette. Soft signage
   // rounding, an enamel-plate edge, and a flat drop shadow.
   return BoxDecoration(
     borderRadius: BorderRadius.circular(Design.borderRadius),
@@ -33,7 +33,7 @@ class _TransitSearchBar extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 11, 14, 9),
           child: Row(
             children: <Widget>[
-              // Line roundel — the metro-line bullet (also the drag handle).
+              // Line roundel – the metro-line bullet (also the drag handle).
               Container(
                 width: 30,
                 height: 30,
@@ -60,7 +60,7 @@ class _TransitSearchBar extends StatelessWidget {
             ],
           ),
         ),
-        // The line-color band — the identity stripe of a station sign.
+        // The line-color band – the identity stripe of a station sign.
         Container(height: 5, color: accent),
       ],
     );
@@ -90,7 +90,7 @@ class _TransitZonePainter extends CustomPainter {
   bool shouldRepaint(covariant _TransitZonePainter oldDelegate) => oldDelegate.color != color;
 }
 
-/// The station sign — forced signage palette, a flat enamel plate with the
+/// The station sign – forced signage palette, a flat enamel plate with the
 /// accent as the metro-line color, and a platform strip along the bottom.
 class TransitLauncherFrame extends StatelessWidget {
   const TransitLauncherFrame({super.key, required this.child, this.resultCount = 0});
@@ -123,7 +123,7 @@ class TransitLauncherFrame extends StatelessWidget {
 }
 
 /// The platform strip: boarding hints on the left, the stop count on the
-/// right — all in signage lettering.
+/// right – all in signage lettering.
 class _TransitFooter extends StatelessWidget {
   const _TransitFooter({required this.resultCount, required this.isDark});
 

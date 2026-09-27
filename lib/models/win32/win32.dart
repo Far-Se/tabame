@@ -715,7 +715,7 @@ class Win32 {
   }
 
   static ({int x, int y, int width, int height}) setDPIAware(int hWnd, int x, int y, int width, int height) {
-    // Get target monitor — use position if provided, else current window position.
+    // Get target monitor – use position if provided, else current window position.
     final int targetMonitor;
     if (x == -1 || y == -1) {
       final Pointer<RECT> rectPtr = calloc<RECT>();
@@ -760,7 +760,7 @@ class Win32 {
   }
 
   static void changePosition(int hWnd, int x, int y, int width, int height) {
-    // Get target monitor — use position if provided, else current window position.
+    // Get target monitor – use position if provided, else current window position.
     final int targetMonitor;
     if (x == -1 || y == -1) {
       final Pointer<RECT> rectPtr = calloc<RECT>();
@@ -805,7 +805,7 @@ class Win32 {
   /// Positions [hwnd] using raw physical/virtual-screen pixel coordinates.
   ///
   /// Unlike [setPosDPI], this does no logical→physical conversion and no
-  /// monitor guessing — the caller supplies absolute physical coordinates.
+  /// monitor guessing – the caller supplies absolute physical coordinates.
   /// Use it when the exact target monitor's physical bounds are already known
   /// (e.g. workspace restore) so a window can never be mapped onto the wrong
   /// monitor by the [setPosDPI] two-pass estimate.

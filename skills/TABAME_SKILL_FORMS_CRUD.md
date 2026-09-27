@@ -3,7 +3,7 @@ name: tbm-plugin-forms-crud
 description: Author a Tabame QuickLaunch plugin for creating, editing, organizing, and acting on records using list/table/kanban/calendar views, full forms, Ctrl+K, floating actions, confirmations, bulk selection, page history, and persistent storage. Use for task managers, issue trackers, settings, CRUD tools, planners, and record-management plugins.
 ---
 
-# Tabame QuickLaunch Plugin — Forms & Record Management Skill
+# Tabame QuickLaunch Plugin – Forms & Record Management Skill
 
 > Treat this document as authoritative for record-management plugins. Do not
 > invent fields, commands, or events. This skill focuses on list/form workflows,
@@ -273,7 +273,7 @@ Relevant commands:
 | `copyFile` | `path`/`file` or `paths`                     | Copy local file/folder references to clipboard. |
 | `paste`    | `text`                                      | Paste into the previous app and hide launcher. |
 | `open`     | `url` or `path`                             | Open linked resource.                          |
-| `hide`     | —                                           | Dismiss launcher.                              |
+| `hide`     | –                                           | Dismiss launcher.                              |
 | `toast`    | `text`, optional `style`, `progress`        | Feedback after create/update/delete.           |
 | `setQuery` | `text`                                      | Reset/rewrite post-keyword query.              |
 | `storage`  | `op`, `key`, `value`, `secret`, `requestId` | Persistent plugin state and secrets.           |

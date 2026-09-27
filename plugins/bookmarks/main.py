@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tabame 'Bookmarks' plugin — links, files, and parameterized commands under categories."""
+"""Tabame 'Bookmarks' plugin – links, files, and parameterized commands under categories."""
 import sys, json, os, re, uuid, threading, subprocess, hashlib
 from datetime import datetime
 from urllib.parse import urlparse
@@ -377,7 +377,7 @@ def _unescape_quoted(s):
     return s.replace('\\"', '"').replace("\\\\", "\\")
 
 def parse_quick_tokens(s):
-    # Supports: add "name" "value" / add "value" — and, for values that
+    # Supports: add "name" "value" / add "value" – and, for values that
     # themselves contain double quotes (e.g. a command with "${var}"
     # segments), escape them as \" so the outer quoting stays unambiguous.
     s = s.strip()
@@ -651,7 +651,7 @@ def render_add_preview(rev, arg_text):
             "placeholder": 'add "name" "url, path, or command"',
             "items": [{
                 "id": "hint", "title": "Type a URL, file path, or command to add",
-                "subtitle": 'e.g. add "GitHub" "https://github.com" — for commands with quotes, escape them as \\" or use the Add form',
+                "subtitle": 'e.g. add "GitHub" "https://github.com" – for commands with quotes, escape them as \\" or use the Add form',
                 "icon": "bookmark",
             }],
         })
@@ -1023,7 +1023,7 @@ def run_job_thread(job, command_str, workdir):
 
     job["finished"] = True
     level = "success" if job.get("exit_code") == 0 else "error"
-    job["lines"].append({"id": str(len(job["lines"])), "level": level, "text": f"— exited with code {job.get('exit_code')} —"})
+    job["lines"].append({"id": str(len(job["lines"])), "level": level, "text": f"– exited with code {job.get('exit_code')} –"})
     push_running_update(job, final=True)
     if not (STATE.get("job") and STATE["job"]["id"] == job["id"] and STATE.get("page_id") == "bookmarks:running"):
         send({"type": "command", "command": "notify", "title": job["name"], "text": f"Finished (exit {job.get('exit_code')})."})

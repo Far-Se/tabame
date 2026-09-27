@@ -131,7 +131,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
                                   ),
                                   const SizedBox(height: 15),
 
-                                  // Song title + artist + album — centered
+                                  // Song title + artist + album – centered
                                   AnimatedSwitcher(
                                     duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 220),
                                     switchInCurve: Curves.easeOutCubic,
@@ -1765,7 +1765,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
             icon: Icons.info_outline_rounded,
             title: "Jellyfin / Navidrome compatibility",
             subtitle: "Tabame connects over the Subsonic API. For Navidrome or Subsonic, keep Subsonic mode. "
-                "For Jellyfin, install its \"Subsonic API\" plugin and pick Jellyfin mode — Tabame auto-probes the "
+                "For Jellyfin, install its \"Subsonic API\" plugin and pick Jellyfin mode – Tabame auto-probes the "
                 "/sb path and uses plaintext auth, since Jellyfin can't verify Subsonic token logins.",
           ),
           const SizedBox(height: 8),
@@ -1994,7 +1994,7 @@ extension _MusicServerPanelStateViews on _MusicServerPanelState {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  "Jellyfin mode sends your password hex-encoded — effectively cleartext. Prefer an https:// server URL.",
+                  "Jellyfin mode sends your password hex-encoded – effectively cleartext. Prefer an https:// server URL.",
                   style: TextStyle(
                       fontSize: Design.baseFontSize, height: 1.25, color: Colors.orangeAccent.withAlpha(220)),
                 ),

@@ -3,7 +3,7 @@ name: tbm-plugin-live-connected
 description: Author an advanced Tabame QuickLaunch plugin for live data, dashboards, charts, timelines, logs, long-running operations, streaming chat/detail output, OAuth, browser automation, background completion, notifications, and secure storage. Use for service monitors, deployment tools, AI assistants, sync/upload tools, browser-integrated plugins, and external API clients.
 ---
 
-# Tabame QuickLaunch Plugin — Live, Async & Connected Skill
+# Tabame QuickLaunch Plugin – Live, Async & Connected Skill
 
 > Treat this document as authoritative for live and connected plugins. Do not
 > invent fields, events, browser methods, or commands. This skill focuses on
@@ -40,18 +40,18 @@ Result actions    Ctrl+K       copy/open/save
 
 Choose views by task, not by novelty:
 
-| Need | View |
-| --- | --- |
-| Overview of several related surfaces | `dashboard` |
-| Metric trend or outlier | `chart` |
-| Ordered event history | `timeline` |
-| Live diagnostic output | `log` |
-| One prominent running job | `operation` |
-| Conversation feed | `chat` |
-| Long streamed document/answer | `detail` + `detail.append` |
-| Before/after result | `diff` |
-| Exact record comparison | `table` |
-| Input before an operation | `form` |
+| Need                                 | View                       |
+| ------------------------------------ | -------------------------- |
+| Overview of several related surfaces | `dashboard`                |
+| Metric trend or outlier              | `chart`                    |
+| Ordered event history                | `timeline`                 |
+| Live diagnostic output               | `log`                      |
+| One prominent running job            | `operation`                |
+| Conversation feed                    | `chat`                     |
+| Long streamed document/answer        | `detail` + `detail.append` |
+| Before/after result                  | `diff`                     |
+| Exact record comparison              | `table`                    |
+| Input before an operation            | `form`                     |
 
 ---
 
@@ -97,7 +97,7 @@ Example:
   "icon": "server",
   "args": [],
   "pip": ["requests"],
-  "env": {"API_BASE":"https://api.example.com"},
+  "env": { "API_BASE": "https://api.example.com" },
   "dev": true
 }
 ```
@@ -138,7 +138,7 @@ When the frame uses `inputMode: "submit"`, keystrokes are not streamed. Enter
 sends the complete input:
 
 ```json
-{"type":"submitQuery","text":"Explain this incident","rev":9}
+{ "type": "submitQuery", "text": "Explain this incident", "rev": 9 }
 ```
 
 Use for chat and LLM-style input.
@@ -156,7 +156,7 @@ also contain `pageId`, `panelId`, and `elementId`; dispatch using this scope.
 ### `chartSelect`
 
 ```json
-{"type":"chartSelect","seriesId":"p95","index":4,"value":83,"rev":9}
+{ "type": "chartSelect", "seriesId": "p95", "index": 4, "value": 83, "rev": 9 }
 ```
 
 Use to drill into a filtered table, timeline, or detail page.
@@ -164,7 +164,7 @@ Use to drill into a filtered table, timeline, or detail page.
 ### `cancel`
 
 ```json
-{"type":"cancel","id":"deploy-42","rev":9}
+{ "type": "cancel", "id": "deploy-42", "rev": 9 }
 ```
 
 Stop/cancel the declared operation and render a durable cancelled/result state.
@@ -174,7 +174,7 @@ Stop/cancel the declared operation and render a durable cancelled/result state.
 Reply to an OAuth command:
 
 ```json
-{"type":"oauth","requestId":"login-1","code":"...","state":"..."}
+{ "type": "oauth", "requestId": "login-1", "code": "...", "state": "..." }
 ```
 
 The reply may instead contain `error` or other provider callback fields. Verify
@@ -194,7 +194,7 @@ Match replies by `requestId`. Handle connection/tab-change events when useful.
 ### `storage`
 
 ```json
-{"type":"storage","requestId":"token-1","key":"token","value":"..."}
+{ "type": "storage", "requestId": "token-1", "key": "token", "value": "..." }
 ```
 
 Response to `storage get/keys`.
@@ -233,7 +233,7 @@ The host prevents stale UI, but the plugin must still protect its own state:
 - ignore callbacks for replaced operations;
 - use locks when multiple threads mutate state;
 - cancel requests when supported;
-- never write partial/interleaved JSON from multiple workers—serialize writes
+- never write partial/interleaved JSON from multiple workers–serialize writes
   through one `send()` lock.
 
 Python thread-safe sender:
@@ -255,17 +255,17 @@ def send(message):
 
 ### General UI commands
 
-| Command | Fields | Effect |
-| --- | --- | --- |
-| `copy` | `text` | Copy with toast. |
-| `copyImage` | `url` (HTTP(S)) or `path`/`file` | Copy image pixels to the image clipboard; Windows currently. |
-| `copyFile` | `path`/`file` or `paths` | Copy local files/folders as file-drop clipboard data; Windows currently. |
-| `paste` | `text` | Paste into previous window and hide. |
-| `open` | `url` or `path` | Open external resource. |
-| `hide` | — | Hide launcher. |
-| `toast` | `text`, optional `style`, `progress` | Transient or pinned progress feedback. |
-| `setQuery` | `text` | Rewrite post-keyword query. |
-| `notify` | optional `title`, `text` | Native Windows notification. |
+| Command     | Fields                               | Effect                                                                   |
+| ----------- | ------------------------------------ | ------------------------------------------------------------------------ |
+| `copy`      | `text`                               | Copy with toast.                                                         |
+| `copyImage` | `url` (HTTP(S)) or `path`/`file`     | Copy image pixels to the image clipboard; Windows currently.             |
+| `copyFile`  | `path`/`file` or `paths`             | Copy local files/folders as file-drop clipboard data; Windows currently. |
+| `paste`     | `text`                               | Paste into previous window and hide.                                     |
+| `open`      | `url` or `path`                      | Open external resource.                                                  |
+| `hide`      | –                                    | Hide launcher.                                                           |
+| `toast`     | `text`, optional `style`, `progress` | Transient or pinned progress feedback.                                   |
+| `setQuery`  | `text`                               | Rewrite post-keyword query.                                              |
+| `notify`    | optional `title`, `text`             | Native Windows notification.                                             |
 
 A `toast` with `style: "progress"` stays pinned until replaced. Add `progress`
 from 0–1 for a determinate ring.
@@ -274,12 +274,12 @@ from 0–1 for a determinate ring.
 
 ```jsonc
 {
-  "type":"command",
-  "command":"storage",
-  "op":"set",
-  "key":"token",
-  "value":"secret-token",
-  "secret":true
+  "type": "command",
+  "command": "storage",
+  "op": "set",
+  "key": "token",
+  "value": "secret-token",
+  "secret": true,
 }
 ```
 
@@ -290,7 +290,7 @@ values use Windows Credential Manager and are not listed by `keys`.
 ### Background completion
 
 ```json
-{"type":"command","command":"background","timeout":60}
+{ "type": "command", "command": "background", "timeout": 60 }
 ```
 
 Send `background` **before** `hide` when a job must continue after the launcher
@@ -301,11 +301,11 @@ ordinary UI commands are dropped, but `storage` and `notify` still work.
 
 ```jsonc
 {
-  "type":"command",
-  "command":"oauth",
-  "authorizationUrl":"https://provider.example/authorize?redirect_uri={redirectUri}&state=...",
-  "requestId":"login-1",
-  "timeout":120
+  "type": "command",
+  "command": "oauth",
+  "authorizationUrl": "https://provider.example/authorize?redirect_uri={redirectUri}&state=...",
+  "requestId": "login-1",
+  "timeout": 120,
 }
 ```
 
@@ -318,26 +318,26 @@ URL. Exchange the returned code yourself. Store access/refresh tokens with
 
 ```jsonc
 {
-  "type":"command",
-  "command":"browserBridge",
-  "op":"status",
-  "requestId":"bridge-status"
+  "type": "command",
+  "command": "browserBridge",
+  "op": "status",
+  "requestId": "bridge-status",
 }
 ```
 
 ```jsonc
 {
-  "type":"command",
-  "command":"browserBridge",
-  "op":"request",
-  "requestId":"page-title-1",
-  "method":"javascript.execute",
-  "params":{
-    "tabId":42,
-    "code":"return { title: document.title, url: location.href, selector: input.selector };",
-    "input":{"selector":"main"}
+  "type": "command",
+  "command": "browserBridge",
+  "op": "request",
+  "requestId": "page-title-1",
+  "method": "javascript.execute",
+  "params": {
+    "tabId": 42,
+    "code": "return { title: document.title, url: location.href, selector: input.selector };",
+    "input": { "selector": "main" },
   },
-  "timeoutMs":30000
+  "timeoutMs": 30000,
 }
 ```
 
@@ -369,28 +369,28 @@ Example service dashboard frame:
 
 ```jsonc
 {
-  "type":"render",
-  "rev":0,
-  "view":"dashboard",
-  "page":{
-    "id":"svc:service:api",
-    "title":"API Service",
-    "history":"push",
-    "preserveState":true,
-    "breadcrumbs":[{"id":"svc:home","label":"Services"}]
+  "type": "render",
+  "rev": 0,
+  "view": "dashboard",
+  "page": {
+    "id": "svc:service:api",
+    "title": "API Service",
+    "history": "push",
+    "preserveState": true,
+    "breadcrumbs": [{ "id": "svc:home", "label": "Services" }],
   },
-  "elementId":"service-dashboard",
-  "placeholder":"Search service data…",
-  "actions":[
-    {"id":"refresh","title":"Refresh","icon":"refresh"},
-    {"id":"sign-out","title":"Sign out","icon":"lock"}
+  "elementId": "service-dashboard",
+  "placeholder": "Search service data…",
+  "actions": [
+    { "id": "refresh", "title": "Refresh", "icon": "refresh" },
+    { "id": "sign-out", "title": "Sign out", "icon": "lock" },
   ],
-  "floatingAction":{"id":"deploy","title":"Deploy","icon":"run"},
-  "dashboard":{
-    "layout":"stack",
-    "panels":[]
+  "floatingAction": { "id": "deploy", "title": "Deploy", "icon": "run" },
+  "dashboard": {
+    "layout": "stack",
+    "panels": [],
   },
-  "items":[]
+  "items": [],
 }
 ```
 
@@ -424,43 +424,53 @@ A dashboard composes normal view payloads:
 
 ```jsonc
 {
-  "view":"dashboard",
-  "dashboard":{
-    "layout":"stack",
-    "panels":[
+  "view": "dashboard",
+  "dashboard": {
+    "layout": "stack",
+    "panels": [
       {
-        "id":"status",
-        "title":"Status",
-        "height":160,
-        "view":"detail",
-        "elementId":"status-detail",
-        "detail":{"markdown":"## Healthy\n\nAll checks passed."}
+        "id": "status",
+        "title": "Status",
+        "height": 160,
+        "view": "detail",
+        "elementId": "status-detail",
+        "detail": { "markdown": "## Healthy\n\nAll checks passed." },
       },
       {
-        "id":"latency",
-        "title":"Latency",
-        "height":240,
-        "view":"chart",
-        "elementId":"latency-chart",
-        "chart":{
-          "title":"p95 latency",
-          "series":[
-            {"id":"p95","label":"p95","values":[24,31,27,45],"color":"#63A0EA"}
-          ]
-        }
+        "id": "latency",
+        "title": "Latency",
+        "height": 240,
+        "view": "chart",
+        "elementId": "latency-chart",
+        "chart": {
+          "title": "p95 latency",
+          "series": [
+            {
+              "id": "p95",
+              "label": "p95",
+              "values": [24, 31, 27, 45],
+              "color": "#63A0EA",
+            },
+          ],
+        },
       },
       {
-        "id":"events",
-        "title":"Recent events",
-        "height":260,
-        "view":"timeline",
-        "elementId":"event-timeline",
-        "items":[
-          {"id":"event:1","timestamp":"10:42","title":"Deploy completed","icon":"check"}
-        ]
-      }
-    ]
-  }
+        "id": "events",
+        "title": "Recent events",
+        "height": 260,
+        "view": "timeline",
+        "elementId": "event-timeline",
+        "items": [
+          {
+            "id": "event:1",
+            "timestamp": "10:42",
+            "title": "Deploy completed",
+            "icon": "check",
+          },
+        ],
+      },
+    ],
+  },
 }
 ```
 
@@ -472,14 +482,19 @@ a full page.
 
 ```jsonc
 {
-  "view":"chart",
-  "chart":{
-    "title":"Latency",
-    "series":[
-      {"id":"p50","label":"p50","values":[12,15,14]},
-      {"id":"p95","label":"p95","values":[24,31,29],"color":"#63A0EA"}
-    ]
-  }
+  "view": "chart",
+  "chart": {
+    "title": "Latency",
+    "series": [
+      { "id": "p50", "label": "p50", "values": [12, 15, 14] },
+      {
+        "id": "p95",
+        "label": "p95",
+        "values": [24, 31, 29],
+        "color": "#63A0EA",
+      },
+    ],
+  },
 }
 ```
 
@@ -489,16 +504,26 @@ Series IDs are stable; values are index-aligned numbers. A click sends
 ### `timeline`
 
 Each item uses `timestamp`, icon, title, subtitle, and accessories. Sort
-intentionally and consistently—newest-first for activity feeds, oldest-first for
+intentionally and consistently–newest-first for activity feeds, oldest-first for
 process narratives.
 
 ```jsonc
 {
-  "view":"timeline",
-  "items":[
-    {"id":"e1","timestamp":"10:42","title":"Build started","icon":"run"},
-    {"id":"e2","timestamp":"10:45","title":"Build passed","icon":"check"}
-  ]
+  "view": "timeline",
+  "items": [
+    {
+      "id": "e1",
+      "timestamp": "10:42",
+      "title": "Build started",
+      "icon": "run",
+    },
+    {
+      "id": "e2",
+      "timestamp": "10:45",
+      "title": "Build passed",
+      "icon": "check",
+    },
+  ],
 }
 ```
 
@@ -506,15 +531,27 @@ process narratives.
 
 ```jsonc
 {
-  "view":"log",
-  "log":{
-    "follow":true,
-    "wrap":false,
-    "lines":[
-      {"id":"1","timestamp":"10:42:01","level":"info","source":"build","text":"Starting"},
-      {"id":"2","timestamp":"10:42:04","level":"success","source":"build","text":"Done"}
-    ]
-  }
+  "view": "log",
+  "log": {
+    "follow": true,
+    "wrap": false,
+    "lines": [
+      {
+        "id": "1",
+        "timestamp": "10:42:01",
+        "level": "info",
+        "source": "build",
+        "text": "Starting",
+      },
+      {
+        "id": "2",
+        "timestamp": "10:42:04",
+        "level": "success",
+        "source": "build",
+        "text": "Done",
+      },
+    ],
+  },
 }
 ```
 
@@ -526,14 +563,14 @@ detaches.
 
 ```jsonc
 {
-  "view":"operation",
-  "operation":{
-    "id":"deploy-42",
-    "title":"Deploying API",
-    "detail":"Uploading release artifacts",
-    "progress":0.4,
-    "cancellable":true
-  }
+  "view": "operation",
+  "operation": {
+    "id": "deploy-42",
+    "title": "Deploying API",
+    "detail": "Uploading release artifacts",
+    "progress": 0.4,
+    "cancellable": true,
+  },
 }
 ```
 
@@ -545,13 +582,13 @@ may also accompany another view as a progress strip.
 
 ```jsonc
 {
-  "view":"diff",
-  "diff":{
-    "mode":"unified",
-    "oldLabel":"Before",
-    "newLabel":"After",
-    "text":"-TIMEOUT=20\n+TIMEOUT=30"
-  }
+  "view": "diff",
+  "diff": {
+    "mode": "unified",
+    "oldLabel": "Before",
+    "newLabel": "After",
+    "text": "-TIMEOUT=20\n+TIMEOUT=30",
+  },
 }
 ```
 
@@ -566,12 +603,16 @@ HTTP(S) attachments. Pair with `inputMode: "submit"`.
 
 ```jsonc
 {
-  "view":"chat",
-  "inputMode":"submit",
-  "items":[
-    {"id":"m1","title":"You","subtitle":"Show recent failures"},
-    {"id":"m2","title":"Assistant","subtitle":"Three builds failed today."}
-  ]
+  "view": "chat",
+  "inputMode": "submit",
+  "items": [
+    { "id": "m1", "title": "You", "subtitle": "Show recent failures" },
+    {
+      "id": "m2",
+      "title": "Assistant",
+      "subtitle": "Three builds failed today.",
+    },
+  ],
 }
 ```
 
@@ -581,12 +622,12 @@ Initial frame:
 
 ```jsonc
 {
-  "view":"detail",
-  "inputMode":"submit",
-  "detail":{
-    "wide":true,
-    "markdown":"# Assistant\n\nAsk a question."
-  }
+  "view": "detail",
+  "inputMode": "submit",
+  "detail": {
+    "wide": true,
+    "markdown": "# Assistant\n\nAsk a question.",
+  },
 }
 ```
 
@@ -594,11 +635,11 @@ Streaming chunk:
 
 ```jsonc
 {
-  "type":"render",
-  "rev":0,
-  "view":"detail",
-  "inputMode":"submit",
-  "detail":{"append":"next text chunk"}
+  "type": "render",
+  "rev": 0,
+  "view": "detail",
+  "inputMode": "submit",
+  "detail": { "append": "next text chunk" },
 }
 ```
 
@@ -614,32 +655,32 @@ dependencies, or editing:
 
 ```jsonc
 {
-  "view":"form",
-  "form":{
-    "title":"Deploy Service",
-    "submitLabel":"Deploy",
-    "fields":[
+  "view": "form",
+  "form": {
+    "title": "Deploy Service",
+    "submitLabel": "Deploy",
+    "fields": [
       {
-        "id":"environment",
-        "type":"dropdown",
-        "label":"Environment",
-        "required":true,
-        "options":["staging","production"]
+        "id": "environment",
+        "type": "dropdown",
+        "label": "Environment",
+        "required": true,
+        "options": ["staging", "production"],
       },
       {
-        "id":"version",
-        "type":"text",
-        "label":"Version",
-        "required":true
+        "id": "version",
+        "type": "text",
+        "label": "Version",
+        "required": true,
       },
       {
-        "id":"approved",
-        "type":"checkbox",
-        "label":"I approve this deployment",
-        "value":false
-      }
-    ]
-  }
+        "id": "approved",
+        "type": "checkbox",
+        "label": "I approve this deployment",
+        "value": false,
+      },
+    ],
+  },
 }
 ```
 
@@ -647,13 +688,18 @@ Use action `parameters` only for one compact choice:
 
 ```jsonc
 {
-  "id":"restart",
-  "title":"Restart service",
-  "icon":"refresh",
-  "confirm":true,
-  "parameters":[
-    {"id":"mode","type":"dropdown","label":"Mode","options":["graceful","immediate"]}
-  ]
+  "id": "restart",
+  "title": "Restart service",
+  "icon": "refresh",
+  "confirm": true,
+  "parameters": [
+    {
+      "id": "mode",
+      "type": "dropdown",
+      "label": "Mode",
+      "options": ["graceful", "immediate"],
+    },
+  ],
 }
 ```
 
@@ -668,7 +714,7 @@ Form field types and validation follow the normal Tabame form contract:
 
 ### Stream an LLM/detail answer without blocking stdin
 
-```python
+````python
 import threading
 
 
@@ -694,7 +740,7 @@ def on_submit_query(prompt):
             })
 
     threading.Thread(target=run, daemon=True).start()
-```
+````
 
 ### Operation lifecycle
 
@@ -791,7 +837,7 @@ architecture for a real API client:
 
 `main.py`:
 
-```python
+````python
 #!/usr/bin/env python3
 import json
 import sys
@@ -1181,7 +1227,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
+````
 
 In a real plugin, replace simulated sleeps/data with HTTP requests. Use request
 timeouts, verify response shapes, and avoid holding `state_lock` while doing
@@ -1297,7 +1343,7 @@ note run open
 
 > Build a Tabame QuickLaunch **live/connected plugin** in
 > `<Python|Node|Bun>`. Keyword: `<keyword>`. It connects to `<API/browser/local
-> process/LLM>` and must support `<dashboard/monitor/deploy/chat/sync/etc.>`.
+process/LLM>` and must support `<dashboard/monitor/deploy/chat/sync/etc.>`.
 > Design a page map with native views for overview, input, progress, logs, and
 > durable results. Use correct async workers, `rev`, operation cancellation,
 > streaming, storage/OAuth/browser bridge/background commands only where needed.

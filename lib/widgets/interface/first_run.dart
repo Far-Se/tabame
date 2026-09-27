@@ -43,7 +43,7 @@ class FirstRunState extends State<FirstRun> {
 
   /// Canonical, persisted list of hotkeys. Every feature row below points at
   /// one entry in here, and edits go through [HotKeySettings] which writes back
-  /// to it directly — so nothing depends on a final "save" step anymore.
+  /// to it directly – so nothing depends on a final "save" step anymore.
   final List<Hotkeys> remap = Boxes.remap;
 
   /// Resolved index of each feature inside [remap]. Recomputed whenever the
@@ -166,7 +166,7 @@ class FirstRunState extends State<FirstRun> {
         boundToRegion: false,
         region: Region(),
         triggerType: TriggerType.movement,
-        // [directionIndex, distMin, distMax] — Left=0, Right=1, Up=2, Down=3.
+        // [directionIndex, distMin, distMax] – Left=0, Right=1, Up=2, Down=3.
         triggerInfo: <int>[direction, 100, 9999],
         actions: <KeyAction>[KeyAction(type: ActionType.tabameFunction, value: function)],
         variableCheck: <String>["", ""],
@@ -435,11 +435,11 @@ class FirstRunState extends State<FirstRun> {
       case 0:
         return "Make sure Tabame is running from a permanent folder on your computer.";
       case 1:
-        return "Set up your hotkeys — tap any item to configure its shortcut.";
+        return "Set up your hotkeys – tap any item to configure its shortcut.";
       case 2:
         return "These settings cover startup behavior, admin access, updates, privacy-sensitive tracking, and extra tools.";
       case 3:
-        return "Settings is where the real power lives — every feature has its own dedicated page.";
+        return "Settings is where the real power lives – every feature has its own dedicated page.";
       default:
         return "";
     }
@@ -605,11 +605,11 @@ class FirstRunState extends State<FirstRun> {
             title: "QuickMenu setup tips",
             introduction: "QuickMenu works best with mouse interaction. Try one of these shortcuts:",
             tips: const <String>[
-              "A side mouse button — most mice have one, and it is the quickest way to summon the menu.",
-              "Any extra mouse button — in your mouse software, bind it to a combination such as "
+              "A side mouse button – most mice have one, and it is the quickest way to summon the menu.",
+              "Any extra mouse button – in your mouse software, bind it to a combination such as "
                   "Ctrl+Alt+Shift+F9, then assign the same combination in Tabame.",
               "No spare mouse button? Choose an easy keyboard shortcut, such as Win+Shift+Z or Win+Shift+A.",
-              "As a last resort, open QuickMenu separately through the Mouse Control QuickAction — for example, "
+              "As a last resort, open QuickMenu separately through the Mouse Control QuickAction – for example, "
                   "press the middle mouse button and move right. A dedicated QuickMenu hotkey is better because "
                   "one hotkey can expose several functions through movement and hold triggers.",
             ],
@@ -903,7 +903,7 @@ class FirstRunState extends State<FirstRun> {
           children: <Widget>[
             Expanded(
               child: Text(
-                "Drag a window's title bar, then right-click — QuickSnap intercepts the right-click and shows snapping zones. "
+                "Drag a window's title bar, then right-click – QuickSnap intercepts the right-click and shows snapping zones. "
                 "Toggle off if you prefer default Windows snapping behavior. More settings and Zones Creator in QuickSnap Settings",
                 style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4),
               ),
@@ -1054,7 +1054,7 @@ class FirstRunState extends State<FirstRun> {
                 Text("Almost there!", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 Text(
-                  "One last page to go — it covers Settings, where you can fully customize every feature.",
+                  "One last page to go – it covers Settings, where you can fully customize every feature.",
                   style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4),
                 ),
               ],
@@ -1103,7 +1103,7 @@ class FirstRunState extends State<FirstRun> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  "Settings is divided into sections — here's what you'll find inside:",
+                  "Settings is divided into sections – here's what you'll find inside:",
                   style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
                 ),
                 const SizedBox(height: 12),
@@ -1143,7 +1143,7 @@ class FirstRunState extends State<FirstRun> {
                 Text("You're all set!", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 Text(
-                  "Press Save and launch — your hotkeys will be active immediately.",
+                  "Press Save and launch – your hotkeys will be active immediately.",
                   style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4),
                 ),
               ],
@@ -1156,14 +1156,14 @@ class FirstRunState extends State<FirstRun> {
 
   Widget _settingsSectionPlaceholder(ThemeData theme, Color accent) {
     const List<String> sections = <String>[
-      "Hotkeys — Remap every action, add new ones, and fine-tune gesture behavior.",
-      "QuickMenu — Choose which items appear and reorder them.",
-      "Launcher — Add watched folders, change appearance, and set search preferences.",
-      "Plugins — Browse and install Plugins, or you can create your own. Unlimited Posibilities.",
-      "Fancyshot — Set default capture mode, output folder, and image format.",
-      "QuickSnap — Define snap zones and grid layout.",
-      "Appearance — Switch themes, accent colors, and font size.",
-      "Privacy & Data — Manage Trktivity logs and reset all stored data.",
+      "Hotkeys – Remap every action, add new ones, and fine-tune gesture behavior.",
+      "QuickMenu – Choose which items appear and reorder them.",
+      "Launcher – Add watched folders, change appearance, and set search preferences.",
+      "Plugins – Browse and install Plugins, or you can create your own. Unlimited Posibilities.",
+      "Fancyshot – Set default capture mode, output folder, and image format.",
+      "QuickSnap – Define snap zones and grid layout.",
+      "Appearance – Switch themes, accent colors, and font size.",
+      "Privacy & Data – Manage Trktivity logs and reset all stored data.",
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

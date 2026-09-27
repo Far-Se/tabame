@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Clipboard History — Tabame's saved-history browser (keyword: cb)."""
+"""Clipboard History – Tabame's saved-history browser (keyword: cb)."""
 
 import json
 import sys

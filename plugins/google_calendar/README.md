@@ -25,14 +25,14 @@ Credential Manager. It is not written to the plugin folder.
 
 ## Everyday use
 
-- `cal` — month view for the current date.
+- `cal` – month view for the current date.
 - Use the header arrows, **Today**, **Month**, and **Agenda** controls to browse.
 - Type after `cal` to filter events in the visible date range.
-- `cal agenda` — open the 30-day agenda directly.
-- Ctrl+K → **New event** — create a detailed event with guests and notes.
-- Ctrl+K → **Quick add** — use Google's natural-language event parser.
-- Enter on an event — inspect its details without leaving the launcher.
-- Ctrl+K on an event — view details, join its meeting, edit, copy, or delete it.
+- `cal agenda` – open the 30-day agenda directly.
+- Ctrl+K → **New event** – create a detailed event with guests and notes.
+- Ctrl+K → **Quick add** – use Google's natural-language event parser.
+- Enter on an event – inspect its details without leaving the launcher.
+- Ctrl+K on an event – view details, join its meeting, edit, copy, or delete it.
 
 The plugin shows the primary calendar plus every calendar marked as selected in
 Google Calendar. Event and calendar writes use the full Calendar scope; deleting

@@ -579,7 +579,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
   }
 
   // Phase 2 – full grid drawn inside the selected zone quadrant.
-  // ALL rows and cols are shown — the zone only narrows the screen area,
+  // ALL rows and cols are shown – the zone only narrows the screen area,
   // giving the user finer precision within that quadrant.
   Widget _buildZonedGrid() {
     final Rect zone = _zoneRect;
@@ -705,7 +705,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
           ),
         ),
 
-        // Coordinate chip — same _currentCoordinate() used everywhere.
+        // Coordinate chip – same _currentCoordinate() used everywhere.
         Positioned(
           top: 12,
           right: 12,
@@ -772,7 +772,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
   // ── coordinate label ────────────────────────────────────────────────────────
 
   String _currentCoordinate() {
-    if (selectedRow == null && selectedCol == null) return '—';
+    if (selectedRow == null && selectedCol == null) return '–';
     final String r = selectedRow != null ? rows[selectedRow!] : '_';
     final String c = selectedCol != null ? cols[selectedCol!] : '_';
     return '$r$c';
@@ -941,7 +941,7 @@ class _QuickClickOverlayState extends State<QuickClickOverlay> with TabameListen
 
   // ── cursor indicator: tiny dot at the cursor's bottom-right ───────────────────
   //
-  // Rendered only while the overlay is hidden — a low-key reminder that
+  // Rendered only while the overlay is hidden – a low-key reminder that
   // QuickClick is still capturing keys.
 
   Widget _buildCursorIndicator() {

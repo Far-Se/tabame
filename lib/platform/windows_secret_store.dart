@@ -20,7 +20,7 @@ class WindowsSecretStore implements SecretStore {
 
   static final WindowsSecretStore instance = WindowsSecretStore._();
 
-  // CRYPTPROTECT_UI_FORBIDDEN — the win32 package does not export the constant.
+  // CRYPTPROTECT_UI_FORBIDDEN – the win32 package does not export the constant.
   static const int _cryptProtectUiForbidden = 0x1;
 
   @override

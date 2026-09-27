@@ -7,6 +7,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/globals.dart';
 import '../../../models/settings.dart';
 import '../../../models/theme.dart';
+import '../../widgets/custom_tooltip.dart';
 
 class LogoDragButton extends StatefulWidget {
   const LogoDragButton({super.key});
@@ -32,38 +33,44 @@ class LogoDragButtonState extends State<LogoDragButton> {
             await Future<void>.delayed(const Duration(milliseconds: 100));
             await windowManager.setSize(Size(value.width, value.height));
             QuickMenuFunctions.refreshQuickMenu();
+            Boxes.pref.setBool("LogoInfo", true);
           },
           child: RepaintBoundary(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              focusColor: Colors.transparent,
-              hoverColor: Colors.transparent,
-              splashColor: Colors.transparent,
-              onTap: () {
-                user.hideTabameOnUnfocus = !user.hideTabameOnUnfocus;
-              },
-              child: MouseRegion(
-                cursor:
-                    user.useCustomCursor ? Globals.customCursor ?? SystemMouseCursors.move : SystemMouseCursors.basic,
-                child: Stack(
-                  children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0).copyWith(right: 2, top: 1),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: _buildLogo(),
-                      ),
-                    ),
-                    if (!user.hideTabameOnUnfocus)
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: CustomPaint(
-                          size: const Size(6, 6),
-                          painter: TrianglePainter(Design.accent.withValues(alpha: 0.5)),
+            child: CustomTooltip(
+              message: Boxes.pref.getBool("LogoInfo") == null
+                  ? "Left Click Toggle Always On\nRight Click Full Refresh\nDrag to move"
+                  : "",
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                focusColor: Colors.transparent,
+                hoverColor: Colors.transparent,
+                splashColor: Colors.transparent,
+                onTap: () {
+                  user.hideTabameOnUnfocus = !user.hideTabameOnUnfocus;
+                },
+                child: MouseRegion(
+                  cursor:
+                      user.useCustomCursor ? Globals.customCursor ?? SystemMouseCursors.move : SystemMouseCursors.basic,
+                  child: Stack(
+                    children: <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0).copyWith(right: 2, top: 1),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: _buildLogo(),
                         ),
                       ),
-                  ],
+                      if (!user.hideTabameOnUnfocus)
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: CustomPaint(
+                            size: const Size(6, 6),
+                            painter: TrianglePainter(Design.accent.withValues(alpha: 0.5)),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),

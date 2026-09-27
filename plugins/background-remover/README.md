@@ -1,4 +1,4 @@
-# Background Remover — Tabame plugin
+# Background Remover – Tabame plugin
 
 Keyword: `bgremove`
 

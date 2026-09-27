@@ -91,7 +91,7 @@ class LauncherPluginHost {
 
   /// Extra shutdown grace requested via the `background` command: instead of
   /// being killed ~2s after `close`, the process gets this long to finish its
-  /// work (uploads, syncs) — still able to write storage and fire native
+  /// work (uploads, syncs) – still able to write storage and fire native
   /// notifications, but detached from the UI.
   Duration? _backgroundGrace;
 
@@ -114,7 +114,7 @@ class LauncherPluginHost {
   /// plugin is already live.
   Future<void> activate(PluginManifest manifest, {required String initialQuery}) async {
     if (_active?.id == manifest.id && _process != null) {
-      // Already live (e.g. re-entering after a dev reload raced an exit) —
+      // Already live (e.g. re-entering after a dev reload raced an exit) –
       // just bring the plugin up to date with the current query.
       sendQuery(initialQuery);
       return;
@@ -409,7 +409,7 @@ class LauncherPluginHost {
   /// Installs a Python plugin's declared dependencies (`"pip"` array and/or a
   /// sibling `requirements.txt`) into `.pluginlibs`, but only when the declared
   /// set has changed since the last install. Returns false only when an install
-  /// was attempted and failed (an error frame is shown); true otherwise —
+  /// was attempted and failed (an error frame is shown); true otherwise –
   /// including the common "nothing to install" and "non-Python runtime" cases.
   Future<bool> _ensurePythonDeps(PluginManifest manifest) async {
     if (!manifest.runtime.toLowerCase().contains('py')) return true;
@@ -481,7 +481,7 @@ class LauncherPluginHost {
           return;
         }
         if (path.endsWith('.log') || path.endsWith('.tmp')) return;
-        // Storage writes come from the plugin itself — never a reason to restart.
+        // Storage writes come from the plugin itself – never a reason to restart.
         if (path.endsWith('/${PluginStorage.storeFileName}')) return;
         _devReloadDebounce?.cancel();
         // Editors fire several events per save (write + metadata); coalesce
@@ -489,7 +489,7 @@ class LauncherPluginHost {
         _devReloadDebounce = Timer(const Duration(milliseconds: 300), () {
           _devReloadDebounce = null;
           final String name = path.split('/').last;
-          debugLog.add(PluginDebugKind.info, 'Change in $name — restarting');
+          debugLog.add(PluginDebugKind.info, 'Change in $name – restarting');
           unawaited(_devReload());
         });
       });
@@ -501,7 +501,7 @@ class LauncherPluginHost {
 
   /// Stops and relaunches the active plugin, replaying the last query. If the
   /// user exits the plugin during the (up to ~2s) shutdown await, the restarted
-  /// process is merely a warm idle child — it receives no further events and is
+  /// process is merely a warm idle child – it receives no further events and is
   /// reused on re-entry or killed with the host.
   Future<void> _devReload() async {
     final PluginManifest? manifest = _active;
@@ -524,7 +524,7 @@ class LauncherPluginHost {
     _send(<String, Object?>{'type': 'select', 'id': id, 'rev': _rev, ...scope.fields});
   }
 
-  /// Triggers an action for an item — `default` on Enter, or a Ctrl+K action id.
+  /// Triggers an action for an item – `default` on Enter, or a Ctrl+K action id.
   void sendAction(
     String id,
     String action, {
@@ -630,7 +630,7 @@ class LauncherPluginHost {
     });
   }
 
-  /// A watched form field changed — lets plugins re-render dependent fields.
+  /// A watched form field changed – lets plugins re-render dependent fields.
   void sendFormChange(String fieldId, Map<String, Object?> values,
       {PluginEventScope scope = const PluginEventScope()}) {
     _send(<String, Object?>{'type': 'change', 'id': fieldId, 'values': values, ...scope.fields});
@@ -641,14 +641,14 @@ class LauncherPluginHost {
     _send(<String, Object?>{'type': 'validate', 'id': fieldId, 'values': values, 'rev': _rev, ...scope.fields});
   }
 
-  /// The user scrolled near the end of a `hasMore` list — the plugin should
+  /// The user scrolled near the end of a `hasMore` list – the plugin should
   /// answer with a longer item list (same rev semantics as a query response).
   void sendLoadMore({PluginEventScope scope = const PluginEventScope()}) {
     debugLog.add(PluginDebugKind.info, 'loadMore');
     _send(<String, Object?>{'type': 'loadMore', 'rev': _rev, ...scope.fields});
   }
 
-  /// `inputMode: "submit"` — Enter submits the whole query text at once
+  /// `inputMode: "submit"` – Enter submits the whole query text at once
   /// instead of streaming keystrokes.
   /// The launcher window became active again. Plugins can use this lifecycle
   /// signal to acknowledge background read state without creating a native
@@ -665,7 +665,7 @@ class LauncherPluginHost {
     _send(<String, Object?>{'type': 'submitQuery', 'text': text, 'rev': _rev, ...scope.fields});
   }
 
-  /// Escape on a frame that declared `canGoBack` — the plugin should render
+  /// Escape on a frame that declared `canGoBack` – the plugin should render
   /// its previous screen.
   void sendBack({String? fromPageId, String? toPageId, PluginEventScope scope = const PluginEventScope()}) {
     debugLog.add(PluginDebugKind.info, 'back');
@@ -706,7 +706,7 @@ class LauncherPluginHost {
     });
   }
 
-  /// Tab pressed — [id] is the highlighted item (empty when there is none).
+  /// Tab pressed – [id] is the highlighted item (empty when there is none).
   /// Plugins typically respond with a `setQuery` command to autocomplete.
   void sendTab(String id, {PluginEventScope scope = const PluginEventScope()}) {
     _send(<String, Object?>{'type': 'tab', 'id': id, 'rev': _rev, ...scope.fields});
@@ -731,7 +731,7 @@ class LauncherPluginHost {
       }
     }
     if (message == null) {
-      // Not a protocol message — treat as diagnostic output from the plugin.
+      // Not a protocol message – treat as diagnostic output from the plugin.
       debugLog.add(PluginDebugKind.stdout, trimmed);
       unawaited(ErrorLogger.log('Plugin:${manifest.id}', '[stdout] $line', null));
       return;
@@ -806,7 +806,7 @@ class LauncherPluginHost {
         _handleClipboardHistoryCommand(command);
         return true;
       case 'notify':
-        // Works even from a background-finishing process — that's its point.
+        // Works even from a background-finishing process – that's its point.
         final Object? title = command.data['title'];
         unawaited(NotificationCoordinator.instance.show(
           title: title is String && title.trim().isNotEmpty ? title : manifest.name,
@@ -1212,13 +1212,13 @@ class LauncherPluginHost {
       process.stdin.writeln(jsonEncode(<String, Object?>{'type': 'close'}));
       await process.stdin.flush();
     } catch (_) {
-      // Ignore — the pipe may already be gone.
+      // Ignore – the pipe may already be gone.
     }
 
     if (backgroundGrace != null) {
       // Detached finish: keep the stdout listener alive (storage writes and
       // notify commands still work; frames and UI commands are dropped by the
-      // process identity guard) and only kill once the grace runs out. Don't await —
+      // process identity guard) and only kill once the grace runs out. Don't await –
       // a switch to another plugin must not block on this.
       debugLog.add(PluginDebugKind.info, 'Finishing in background (up to ${backgroundGrace.inSeconds}s)');
       unawaited(_finishDetachedProcess(

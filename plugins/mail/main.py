@@ -539,12 +539,12 @@ def render_email(rev):
     if truncated:
         md += "\n\n*(message truncated)*"
     metadata = [
-        {"label": "From", "text": e["from"] or "—"},
-        {"label": "To", "text": e["to"] or "—"},
+        {"label": "From", "text": e["from"] or "–"},
+        {"label": "To", "text": e["to"] or "–"},
     ]
     if e.get("cc"):
         metadata.append({"label": "Cc", "text": e["cc"]})
-    metadata.append({"label": "Date", "text": e["date"] or "—"})
+    metadata.append({"label": "Date", "text": e["date"] or "–"})
 
     acc = get_account(STATE["account_id"])
     actions = [
@@ -813,7 +813,7 @@ def do_test_connection(acc, pwd):
         toast(f"{acc['name']}: connected successfully")
     except Exception as e:
         log("test connection error:", e)
-        toast(f"{acc['name']}: connection failed — {e}", "error")
+        toast(f"{acc['name']}: connection failed – {e}", "error")
 
 
 def remove_account(acc):

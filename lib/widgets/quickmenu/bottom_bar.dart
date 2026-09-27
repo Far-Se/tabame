@@ -25,7 +25,7 @@ class _MergedPinnedTray extends StatelessWidget {
     // RepaintBoundary: this bar is right-aligned, so its content sits at a
     // fractional x offset. Without isolation, every unrelated repaint in the
     // QuickMenu (hover highlights, focus churn) re-samples the ShaderMask
-    // saveLayer over that fractional offset, which wobbles ~1px — the "jitter".
+    // saveLayer over that fractional offset, which wobbles ~1px – the "jitter".
     return RepaintBoundary(
       child: ShaderMask(
         shaderCallback: (Rect rect) {

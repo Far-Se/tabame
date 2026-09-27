@@ -254,7 +254,7 @@ class _ObsidianWidgetState extends State<ObsidianWidget> {
     return ObsidianVaultService.filter(notes.toList(), _currentQuery);
   }
 
-  /// Vault name targeted by the New/Daily note actions — the selected vault if
+  /// Vault name targeted by the New/Daily note actions – the selected vault if
   /// one is active, otherwise the first configured vault.
   String get _targetVaultName => _selectedVaultPath != null
       ? ObsidianVaultService.vaultNameOf(_selectedVaultPath!)

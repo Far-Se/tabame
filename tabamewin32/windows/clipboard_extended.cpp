@@ -361,7 +361,7 @@ static bool WriteRichTextToClipboard(const std::string& text,
 
 // RAII initializer for an OLE/COM apartment on the calling thread. Browser
 // clipboard data (Chrome, Edge, …) is delivered through the OLE clipboard, and
-// GDI+ image codecs use COM internally — both require COM to be initialized on
+// GDI+ image codecs use COM internally – both require COM to be initialized on
 // whatever thread touches them. The platform thread already has this; a worker
 // thread does not, so clipboard image capture/encoding silently fails there
 // unless we initialize COM ourselves.
@@ -563,7 +563,7 @@ class ClipboardPluginImpl {
       auto image_it = formats->find(EncodableValue("image/png"));
       if (image_it != formats->end()) {
         std::vector<uint8_t> bytes;
-        // Fast path: typed data (Uint8List) — a single byte buffer, no unboxing.
+        // Fast path: typed data (Uint8List) – a single byte buffer, no unboxing.
         if (const auto* byte_vec = std::get_if<std::vector<uint8_t>>(&image_it->second)) {
           bytes = *byte_vec;
         } else if (const auto* image_bytes = std::get_if<EncodableList>(&image_it->second)) {
@@ -645,7 +645,7 @@ class ClipboardPluginImpl {
     }
 
     std::vector<uint8_t> bytes;
-    // Fast path: typed data (Uint8List) — a single byte buffer, no unboxing.
+    // Fast path: typed data (Uint8List) – a single byte buffer, no unboxing.
     if (const auto* byte_vec = std::get_if<std::vector<uint8_t>>(&image_bytes_it->second)) {
       bytes = *byte_vec;
     } else if (const auto* image_bytes = std::get_if<EncodableList>(&image_bytes_it->second)) {
@@ -735,7 +735,7 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
   }
   BYTE* pSource = (BYTE*)bitmapData.Scan0;
 
-  // ── CF_DIBV5 — full ARGB transparency, understood by most modern apps ──
+  // ── CF_DIBV5 – full ARGB transparency, understood by most modern apps ──
   size_t v5Size = sizeof(BITMAPV5HEADER) + rowSize * height;
   HGLOBAL hDibV5 = GlobalAlloc(GMEM_MOVEABLE, v5Size);
   bool dibV5Success = false;
@@ -779,7 +779,7 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
     }
   }
 
-  // ── CF_DIB fallback — no alpha, composite transparent pixels onto white ──
+  // ── CF_DIB fallback – no alpha, composite transparent pixels onto white ──
   // so apps that only read CF_DIB don't see black where transparency was.
   HGLOBAL hDib = GlobalAlloc(GMEM_MOVEABLE, sizeof(BITMAPINFOHEADER) + rowSize * height);
   bool dibSuccess = false;
@@ -900,7 +900,7 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
   // Captures the current clipboard image and encodes it to PNG bytes into [out].
   // Returns an empty string on success; otherwise a short error code (currently
   // always "PASTE_IMAGE_ERROR") when no image could be produced. Shared by the
-  // synchronous paste path and the background-thread save path — it touches no
+  // synchronous paste path and the background-thread save path – it touches no
   // instance state, so it is safe to call from a worker thread.
   std::string CaptureClipboardPng(std::vector<uint8_t>& out) {
     out.clear();
@@ -1122,8 +1122,8 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
           if (SUCCEEDED(hr) && bytesRead > 0) {
             // Return the PNG as typed data (-> Dart Uint8List). Previously every
             // byte was boxed into its own EncodableValue(int32); for a large
-            // image that blocked the platform thread — and therefore the
-            // low-level mouse hook that lives on it — long enough to freeze
+            // image that blocked the platform thread – and therefore the
+            // low-level mouse hook that lives on it – long enough to freeze
             // system input. A byte vector serializes as a single buffer.
             if (bytesRead < pngBytes.size()) pngBytes.resize(bytesRead);
             out = std::move(pngBytes);
@@ -1153,8 +1153,8 @@ bool SetClipboardImage(const std::vector<uint8_t>& png_bytes) {
 
   // Capture + encode + write the current clipboard image to disk, then return
   // only lightweight metadata (path, byte length, MD5 hash) to Dart. All heavy
-  // work runs on a detached background thread, so the platform thread — which
-  // owns the global WH_MOUSE_LL mouse hook — is never blocked; that is what
+  // work runs on a detached background thread, so the platform thread – which
+  // owns the global WH_MOUSE_LL mouse hook – is never blocked; that is what
   // keeps copying an image from freezing system input. The reply is delivered
   // from the worker thread through a shared MethodResult, the same pattern the
   // media-session handler in tabamewin32_plugin.cpp uses.

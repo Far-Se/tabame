@@ -10,7 +10,7 @@ class SaveSettings {
   static const String _prefix = 'flutter.';
 
   /// When true, setters update the in-memory cache but skip the disk write.
-  /// Set around [Boxes.reloadSettings] so a live reload never writes settings.json —
+  /// Set around [Boxes.reloadSettings] so a live reload never writes settings.json –
   /// two processes rewriting the whole file at once can clobber each other's data.
   static bool suppressWrites = false;
 

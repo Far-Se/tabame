@@ -87,7 +87,7 @@ class _RewindlyPanelState extends State<RewindlyPanel> {
       _exporting = false;
       _statusIsError = files.isEmpty;
       _statusMessage = files.isEmpty
-          ? "Nothing to export yet — let it record for a bit."
+          ? "Nothing to export yet – let it record for a bit."
           : "Saved ${files.length} clip${files.length == 1 ? '' : 's'} to FancyShot.";
     });
   }
@@ -230,7 +230,7 @@ class _RewindlyPanelState extends State<RewindlyPanel> {
           child: _buildMetric(
             icon: Icons.desktop_windows_rounded,
             label: "MONITORS",
-            value: running ? "${_service.monitorCount}" : "—",
+            value: running ? "${_service.monitorCount}" : "–",
           ),
         ),
         const SizedBox(width: 8),
@@ -238,7 +238,7 @@ class _RewindlyPanelState extends State<RewindlyPanel> {
           child: _buildMetric(
             icon: Icons.sd_storage_rounded,
             label: "BUFFER",
-            value: running ? sizeLabel : "—",
+            value: running ? sizeLabel : "–",
           ),
         ),
       ],

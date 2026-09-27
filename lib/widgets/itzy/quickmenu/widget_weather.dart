@@ -95,7 +95,7 @@ class WeatherWidget extends StatefulWidget {
 class _WeatherWidgetState extends State<WeatherWidget> {
   late Timer _refreshTimer;
 
-  /// The cached future — only replaced when the 30-minute timer fires.
+  /// The cached future – only replaced when the 30-minute timer fires.
   late Future<String> _weatherFuture;
 
   /// Last known display text, used while a new fetch is in-flight or on error.
@@ -138,7 +138,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       height: 30,
       child: FutureBuilder<String>(
         // Re-using the same future instance means no extra network calls on
-        // parent setState — Flutter just delivers the already-resolved value.
+        // parent setState – Flutter just delivers the already-resolved value.
         future: _weatherFuture,
         initialData: _cachedWeather,
         builder: (BuildContext context, AsyncSnapshot<Object?> snapshot) {
@@ -158,7 +158,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
             final String result = snapshot.data as String? ?? "";
             display = result.isNotEmpty ? result : (_cachedWeather.isNotEmpty ? _cachedWeather : "No Data");
           } else {
-            // Still loading — show the last known value (or nothing while
+            // Still loading – show the last known value (or nothing while
             // the very first fetch is in-flight).
             display = _cachedWeather.isNotEmpty ? _cachedWeather : "";
           }

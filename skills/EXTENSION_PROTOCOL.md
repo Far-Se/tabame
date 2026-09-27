@@ -73,9 +73,9 @@ Failed response:
 
 | Method | Parameters | Result |
 |---|---|---|
-| `bridge.ping` | — | Connector and browser version |
-| `tabs.list` | — | All tabs, including optional group metadata |
-| `tabs.audible` | — | Audible tabs, group metadata, and current candidate |
+| `bridge.ping` | – | Connector and browser version |
+| `tabs.list` | – | All tabs, including optional group metadata |
+| `tabs.audible` | – | Audible tabs, group metadata, and current candidate |
 | `tabs.activate` | `tabId` | Updated tab |
 | `tabs.close` | `tabId` | Completion |
 | `tabs.mute` | `tabId`, optional `muted` | Updated tab |

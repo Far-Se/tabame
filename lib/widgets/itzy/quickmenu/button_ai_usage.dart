@@ -458,7 +458,7 @@ class _ResetAlarmButton extends StatelessWidget {
               const SizedBox(width: 7),
               Expanded(
                 child: Text(
-                  armed ? 'Reset alert armed — tap to cancel' : 'Alert when 5h usage resets',
+                  armed ? 'Reset alert armed – tap to cancel' : 'Alert when 5h usage resets',
                   style: TextStyle(
                     fontSize: Design.baseFontSize + 0.5,
                     fontWeight: FontWeight.w600,

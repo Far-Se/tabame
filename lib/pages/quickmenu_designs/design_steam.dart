@@ -12,7 +12,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Steam" QuickMenu design — the Steam client look.
+/// "Steam" QuickMenu design – the Steam client look.
 ///
 /// Deep navy body with the library's ambient blue glow bleeding in from the
 /// top, a darker nav header (the STORE / LIBRARY / COMMUNITY strip) holding

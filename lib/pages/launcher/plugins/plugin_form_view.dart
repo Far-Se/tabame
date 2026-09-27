@@ -59,7 +59,7 @@ class PluginFormView extends StatefulWidget {
   /// A field with `validate:true` settled after its debounce window.
   final void Function(String fieldId, Map<String, Object?> values)? onValidate;
 
-  /// Ctrl+K — the launcher opens the frame-level actions palette.
+  /// Ctrl+K – the launcher opens the frame-level actions palette.
   final VoidCallback? onOpenActions;
 
   /// Page-state restoration values supplied by [PluginView]. Plugin-declared
@@ -126,7 +126,7 @@ class _PluginFormViewState extends State<PluginFormView> {
     super.dispose();
   }
 
-  /// Identity of the form's field set — id+type pairs. When it changes the
+  /// Identity of the form's field set – id+type pairs. When it changes the
   /// plugin is showing a different form, so typed state is discarded.
   String _signature(PluginForm form) => form.fields.map((PluginFormField f) => '${f.id}:${f.type}').join('|');
 
@@ -1397,7 +1397,7 @@ class _TagChip extends StatelessWidget {
   }
 }
 
-/// The form's primary CTA — the one place a subtle accent gradient is allowed
+/// The form's primary CTA – the one place a subtle accent gradient is allowed
 /// per the design language. Destructive buttons trade the accent for danger.
 class _SubmitButton extends StatelessWidget {
   const _SubmitButton({required this.label, required this.destructive, required this.onTap});

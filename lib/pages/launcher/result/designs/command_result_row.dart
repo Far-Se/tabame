@@ -73,7 +73,7 @@ extension _CommandResultRow on LauncherResultRow {
                     padding: const EdgeInsets.only(left: 6),
                     child: badge,
                   ),
-                // Trailing enter key — only on the active row.
+                // Trailing enter key – only on the active row.
                 AnimatedSize(
                   duration: Duration(milliseconds: animMs),
                   curve: curve,

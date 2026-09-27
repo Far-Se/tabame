@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Echo Demo — a reference Tabame launcher plugin.
+"""Echo Demo – a reference Tabame launcher plugin.
 
 Protocol (newline-delimited JSON on stdin/stdout):
 
@@ -14,7 +14,7 @@ Protocol (newline-delimited JSON on stdin/stdout):
   should change. Always echo back the latest `rev` so stale frames are
   dropped. See render() below for the full frame shape. You can also
   print {"type": "command", "command": ...} lines to have Tabame copy or
-  paste text, open a URL, hide the launcher, or show a toast — see
+  paste text, open a URL, hide the launcher, or show a toast – see
   handle_action() below.
 
 Try these queries after typing the `echo ` keyword in the launcher:
@@ -237,7 +237,7 @@ def render_list(text, rev, with_preview):
     items = []
     for i, word in enumerate(words):
         preview = {
-            "markdown": f"## {word}\n\n> Live preview for `{word}` — [docs](https://example.com).",
+            "markdown": f"## {word}\n\n> Live preview for `{word}` – [docs](https://example.com).",
             "metadata": [
                 {"label": "Length", "text": str(len(word)), "color": "#0EA5E9"},
                 {"label": "Upper", "text": word.upper(), "icon": "tag"},
@@ -630,7 +630,7 @@ def render_detail(text, rev):
     wide = body.startswith("wide")
     filler = (
         "\n\n".join(
-            f"## Section {n}\n\nParagraph {n} — hold ↓ or press PageDown to scroll."
+            f"## Section {n}\n\nParagraph {n} – hold ↓ or press PageDown to scroll."
             for n in range(1, 9)
         )
         if wide
@@ -779,7 +779,7 @@ def render_legacy_form(rev, message_error=None):
                         "label": "Message",
                         "placeholder": "What should I echo?",
                         "required": True,
-                        "description": "Required — validated by the host before submit.",
+                        "description": "Required – validated by the host before submit.",
                         # Plugin-side validation: re-render the same form with an error.
                         **({"error": message_error} if message_error else {}),
                     },
@@ -1178,7 +1178,7 @@ def render_empty(rev):
             "empty": {
                 "icon": "cloud",
                 "title": "Nothing here",
-                "hint": "This is a custom empty state — try 'echo hello' instead",
+                "hint": "This is a custom empty state – try 'echo hello' instead",
                 # v3: a call-to-action; clicking sends an action with an empty id.
                 "action": {
                     "id": "empty:form",
@@ -1197,12 +1197,12 @@ def render_chat_home(rev):
             "rev": rev,
             "view": "detail",
             "canGoBack": True,
-            # v3: submit-mode input — keystrokes stay local, Enter delivers the
+            # v3: submit-mode input – keystrokes stay local, Enter delivers the
             # whole line as {"type":"submitQuery"}.
             "inputMode": "submit",
             "placeholder": "Type a question and press Enter…",
             "detail": {
-                "markdown": "# Chat demo\n\nType something and press **Enter** — "
+                "markdown": "# Chat demo\n\nType something and press **Enter** – "
                 "the answer streams in via `detail.append`.\n\nEscape goes back."
             },
         }
@@ -1273,7 +1273,7 @@ def render_more(rev):
             "canGoBack": True,
             # v3: scrolling near the end sends {"type":"loadMore"}.
             "hasMore": STATE["pages"] < MAX_PAGES,
-            "placeholder": f"Paginated list — {STATE['pages']}/{MAX_PAGES} pages loaded",
+            "placeholder": f"Paginated list – {STATE['pages']}/{MAX_PAGES} pages loaded",
             "items": items,
         }
     )
@@ -1296,7 +1296,7 @@ def render_storage(rev, select_id=None):
                 {
                     "id": "inc",
                     "title": f"Counter: **{counter if counter is not None else '…'}**",
-                    "subtitle": "Enter increments — persisted via the `storage` command",
+                    "subtitle": "Enter increments – persisted via the `storage` command",
                     "icon": "add",
                 },
                 {
@@ -1365,7 +1365,7 @@ def handle_submit(values, button, msg=None):
     STATE["form_values"] = values
     if "bad" in message.strip().lower():
         # Plugin-side validation demo: reject and show an inline field error.
-        render_rich_form(0, message_error='"bad" is not echo-worthy — try anything else')
+        render_rich_form(0, message_error='"bad" is not echo-worthy – try anything else')
         return
     voice = values.get("voice", "plain")
     if voice == "loud":
@@ -1398,17 +1398,17 @@ def handle_submit(values, button, msg=None):
                     {"label": "Voice", "text": str(voice), "icon": "chat"},
                     {
                         "label": "When",
-                        "text": str(values.get("when") or "—"),
+                        "text": str(values.get("when") or "–"),
                         "icon": "calendar",
                     },
                     {
                         "label": "Flavors",
-                        "text": ", ".join(values.get("flavors") or []) or "—",
+                        "text": ", ".join(values.get("flavors") or []) or "–",
                         "icon": "tag",
                     },
                     {
                         "label": "File",
-                        "text": str(values.get("attachment") or "—"),
+                        "text": str(values.get("attachment") or "–"),
                         "icon": "file",
                     },
                     {
@@ -2906,7 +2906,7 @@ def main():
             if STATE["screen"] == "form" and msg.get("id") == "recipient":
                 refresh_recipient_options(msg.get("values", {}))
                 continue
-            # A watched form field changed — a real plugin would re-render
+            # A watched form field changed – a real plugin would re-render
             # dependent fields; the demo just surfaces it.
             send(
                 {
@@ -2956,7 +2956,7 @@ def main():
                         "text": title.strip("*`"),
                     }
                 )
-        # "select" needs no work here — previews are supplied per-item.
+        # "select" needs no work here – previews are supplied per-item.
 
 
 if __name__ == "__main__":

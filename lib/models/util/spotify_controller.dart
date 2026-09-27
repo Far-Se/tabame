@@ -10,7 +10,7 @@ import '../../platform/audio_system_service.dart';
 /// OAuth, no developer app, works offline, and reuses the plugin that already
 /// powers the media-control button. The tradeoff is that only what Spotify
 /// publishes to SMTC is available (now-playing metadata, artwork, and
-/// play/pause/next/previous) — no library search, playlists, or device volume.
+/// play/pause/next/previous) – no library search, playlists, or device volume.
 class SpotifyController {
   const SpotifyController._();
 

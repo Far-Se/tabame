@@ -94,7 +94,7 @@ class _PluginDebugConsoleState extends State<PluginDebugConsole> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: last == null
-                            ? Text('${widget.pluginId} — waiting for output',
+                            ? Text('${widget.pluginId} – waiting for output',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(

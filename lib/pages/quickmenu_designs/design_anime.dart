@@ -17,7 +17,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Anime" QuickMenu design — a kawaii character-card / visual-novel panel.
+/// "Anime" QuickMenu design – a kawaii character-card / visual-novel panel.
 ///
 /// The menu renders as a soft sticker-card: a scalloped ribbon banner across
 /// the top (with a little sparkle-star cluster tucked in the corner), a
@@ -180,7 +180,7 @@ class MainMenuAnimeWidget extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Header — scalloped ribbon banner
+// Header – scalloped ribbon banner
 // ---------------------------------------------------------------------------
 
 class _RibbonHeader extends StatelessWidget {
@@ -278,7 +278,7 @@ class _ScallopPainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------------------------
-// Washi-taped card — wraps the window switcher
+// Washi-taped card – wraps the window switcher
 // ---------------------------------------------------------------------------
 
 class _WashiCard extends StatelessWidget {
@@ -332,7 +332,7 @@ class _WashiCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Footer — rounded ribbon pill holding the info bar
+// Footer – rounded ribbon pill holding the info bar
 // ---------------------------------------------------------------------------
 
 class _RibbonFooter extends StatelessWidget {
@@ -362,7 +362,7 @@ class _RibbonFooter extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Sparkle field — a slow, self-pausing twinkle overlay
+// Sparkle field – a slow, self-pausing twinkle overlay
 // ---------------------------------------------------------------------------
 
 class _SparkleField extends StatefulWidget {
@@ -405,7 +405,7 @@ class _SparkleFieldState extends State<_SparkleField> with QuickMenuTriggers {
 
   @override
   Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
-    // The QuickMenu stays mounted while hidden — stop ticking off-screen.
+    // The QuickMenu stays mounted while hidden – stop ticking off-screen.
     if (visible) {
       _start();
     } else {

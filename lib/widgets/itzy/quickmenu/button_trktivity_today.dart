@@ -299,7 +299,7 @@ class _TrktivityTodayPanelState extends State<_TrktivityTodayPanel> {
     );
   }
 
-  /// Active-vs-idle focus ratio — always meaningful regardless of app rules.
+  /// Active-vs-idle focus ratio – always meaningful regardless of app rules.
   Widget _focusBar(int active, ColorScheme scheme) {
     final int idle = _summary.idleSeconds;
     final int total = active + idle;

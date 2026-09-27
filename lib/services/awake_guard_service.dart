@@ -18,7 +18,7 @@ import '../models/win32/win_utils.dart';
 ///  - fire an action (notify / sleep / hibernate / shutdown / lock) when a
 ///    watched process exits or when network transfer goes idle.
 ///
-/// Rules are session-scoped by design ("while this render/download runs") —
+/// Rules are session-scoped by design ("while this render/download runs") –
 /// they are not persisted across app restarts. The manual Always Awake toggle
 /// keeps its existing [WinUtils.alwaysAwakeRun] path; this service only adds
 /// its own execution-state assertions on top and never clears the manual one.
@@ -152,10 +152,10 @@ class AwakeGuard {
       _forcing = true;
       // Re-assert every tick; the flag combination matches WinUtils.alwaysAwakeRun.
       SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
-      statusLine = "Keeping awake — $forceReason";
+      statusLine = "Keeping awake – $forceReason";
     } else {
       _stopForcing();
-      statusLine = hasWork ? "Watching — conditions not met" : "Idle";
+      statusLine = hasWork ? "Watching – conditions not met" : "Idle";
     }
 
     // --- automations -------------------------------------------------------------
@@ -193,7 +193,7 @@ class AwakeGuard {
   static void _stopForcing() {
     if (!_forcing) return;
     _forcing = false;
-    // Don't clear the manual Always Awake assertion — its own 45s timer in
+    // Don't clear the manual Always Awake assertion – its own 45s timer in
     // WinUtils.alwaysAwakeRun owns that state.
     if (!Globals.alwaysAwake) SetThreadExecutionState(ES_CONTINUOUS);
   }
@@ -216,7 +216,7 @@ class AwakeGuard {
   }
 
   // ---------------------------------------------------------------------------
-  // Process enumeration (Toolhelp32 snapshot — one cheap kernel call, no
+  // Process enumeration (Toolhelp32 snapshot – one cheap kernel call, no
   // per-process OpenProcess like EnumProcesses-based paths need)
   // ---------------------------------------------------------------------------
 
@@ -289,7 +289,7 @@ class AwakeGuard {
       if (result != NO_ERROR) return null;
 
       final int numEntries = buffer.cast<Uint32>().value;
-      // MIB_IFTABLE: DWORD dwNumEntries; MIB_IFROW table[] — rows start at
+      // MIB_IFTABLE: DWORD dwNumEntries; MIB_IFROW table[] – rows start at
       // offset 4 (MIB_IFROW is 4-byte aligned).
       final Pointer<_MibIfRow> rows = Pointer<_MibIfRow>.fromAddress(buffer.address + 4);
       int total = 0;

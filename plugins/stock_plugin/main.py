@@ -303,12 +303,12 @@ def instructions_frame(rev):
         "",
         "Type a ticker and press **Enter**:",
         "",
-        "- `stock AAPL` — default period (" + DEFAULT_PERIOD.upper() + ")",
-        "- `stock AAPL 1d` — 1 day",
-        "- `stock AAPL 2m` — 2 months",
-        "- `stock AAPL 1y` — 1 year",
+        "- `stock AAPL` – default period (" + DEFAULT_PERIOD.upper() + ")",
+        "- `stock AAPL 1d` – 1 day",
+        "- `stock AAPL 2m` – 2 months",
+        "- `stock AAPL 1y` – 1 year",
         "- `stock AAPL ytd` / `stock AAPL max`",
-        "- `stock watch 1m` — render your watchlist",
+        "- `stock watch 1m` – render your watchlist",
     ]
     if DEFAULT_TICKER:
         lines.append("")

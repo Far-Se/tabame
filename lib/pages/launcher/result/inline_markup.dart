@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 /// `**bold**` and `` `code` `` spans. Everything else is literal text.
 final RegExp _inlineMarkupPattern = RegExp(r'\*\*(.+?)\*\*|`(.+?)`');
 
-/// True when [text] contains any markup worth parsing — lets callers skip the
+/// True when [text] contains any markup worth parsing – lets callers skip the
 /// rich-text path entirely for plain strings.
 bool hasInlineMarkup(String text) => _inlineMarkupPattern.hasMatch(text);
 

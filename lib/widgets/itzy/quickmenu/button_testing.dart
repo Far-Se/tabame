@@ -50,7 +50,7 @@ class _TestingButtonState extends State<TestingButton> {
 
         for (final MediaSession session in result.sessions) {
           print('${session.isCurrent ? "▶" : " "} [${session.id}] '
-              '${session.title} — ${session.artist} (${session.playbackStatus})');
+              '${session.title} – ${session.artist} (${session.playbackStatus})');
           print(session);
           if (session.thumbnailImage != null) {
             xIcon = session.thumbnail!;

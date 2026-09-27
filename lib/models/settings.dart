@@ -759,7 +759,7 @@ Future<void> registerAll() async {
   await AudioSystemService.instance.initialize();
   await MediaSessionService.instance.initialize();
 
-  // Rewindly background DVR — main/QuickMenu process only, never the Interface
+  // Rewindly background DVR – main/QuickMenu process only, never the Interface
   // settings window (which runs as a separate process).
   if (Globals.currentPage != Pages.interface) {
     RewindlyService.instance.init();

@@ -9,7 +9,7 @@
  * catalog and inspect the CSS each class generates, an example snippet, and a
  * link to the matching docs page.
  *
- * Runtime: Node 18+ or Bun. Plain JS, no dependencies, fully offline — the
+ * Runtime: Node 18+ or Bun. Plain JS, no dependencies, fully offline – the
  * catalog is generated in-process from Tailwind's default theme (v3.x).
  *
  *   Enter  → copy the class name
@@ -408,7 +408,7 @@ const SPECIAL_COLORS = {
 
 // ── catalog ───────────────────────────────────────────────────────────────────
 // Each entry: { cls, css, cat, doc, hex? }. Built once at startup; searched
-// linearly (a few thousand tiny objects — negligible).
+// linearly (a few thousand tiny objects – negligible).
 const CATALOG = [];
 const seen = new Set();
 function add(cls, css, cat, doc, extra) {
@@ -1904,7 +1904,7 @@ function handleLine(line) {
       case "action":
         handleAction(msg.id, msg.action || "default");
         break;
-      // 'select' needs no work — previews are provided per item.
+      // 'select' needs no work – previews are provided per item.
     }
   } catch (err) {
     detailFrame(

@@ -14,7 +14,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Cassette" QuickMenu design — cassette-futurism hardware.
+/// "Cassette" QuickMenu design – cassette-futurism hardware.
 ///
 /// Instead of a translucent digital panel, the menu renders as a physical
 /// piece of retro-future equipment: a molded device shell with corner screws,
@@ -22,7 +22,7 @@ import 'design_backdrop_stable.dart';
 /// holding the quick-action buttons; and the window switcher recessed behind
 /// a scanlined CRT glass window. Everything is derived from the user's theme
 /// colors (`Design.background` / `Design.text` / `Design.accent`), and
-/// `Design.gradientAlpha` acts as the "phosphor" knob — it scales scanline
+/// `Design.gradientAlpha` acts as the "phosphor" knob – it scales scanline
 /// strength, screen tint and LED glow.
 Color _lift(Color base, double amount) => Color.alphaBlend(Colors.white.withValues(alpha: amount), base);
 Color _sink(Color base, double amount) => Color.alphaBlend(Colors.black.withValues(alpha: amount), base);
@@ -176,7 +176,7 @@ class MainMenuCassetteWidget extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Fascia header — screws, engraved model label, grip ridges, LED cluster
+// Fascia header – screws, engraved model label, grip ridges, LED cluster
 // ---------------------------------------------------------------------------
 
 class _FasciaHeader extends StatelessWidget {
@@ -350,7 +350,7 @@ class _ButtonPlate extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// CRT window — the task switcher recessed behind scanlined glass
+// CRT window – the task switcher recessed behind scanlined glass
 // ---------------------------------------------------------------------------
 
 class _CrtScreen extends StatelessWidget {
@@ -368,7 +368,7 @@ class _CrtScreen extends StatelessWidget {
         color: p.screen.withValues(alpha: hasBackdrop ? 0.85 : 1.0),
         borderRadius: BorderRadius.circular(screenRadius),
         border: Border.all(color: Colors.black.withValues(alpha: p.isDark ? 0.55 : 0.25)),
-        // Bottom lip highlight — sells the "recessed into the shell" cut.
+        // Bottom lip highlight – sells the "recessed into the shell" cut.
         boxShadow: <BoxShadow>[
           BoxShadow(color: p.grooveLight, offset: const Offset(0, 1)),
         ],
@@ -447,7 +447,7 @@ class _ScreenFxPainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------------------------
-// Status plate — riveted base plate holding the info bar
+// Status plate – riveted base plate holding the info bar
 // ---------------------------------------------------------------------------
 
 class _StatusPlate extends StatelessWidget {

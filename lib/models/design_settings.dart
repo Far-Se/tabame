@@ -109,9 +109,11 @@ enum LauncherDesign {
   nouveau,
   radiant,
   ukiyoe,
-  ivoryGrove;
+  ivoryGrove,
+  liquidGlass;
 
   String get displayName => switch (this) {
+        LauncherDesign.liquidGlass => 'Liquid Glass',
         LauncherDesign.ivoryGrove => 'Ivory Grove',
         LauncherDesign.ukiyoe => 'Ukiyo-e',
         LauncherDesign.crt => 'CRT',
@@ -169,6 +171,28 @@ class DesignSettings {
     }
 
     return <String, LauncherDesignThemeSet>{
+      LauncherDesign.liquidGlass.displayName: LauncherDesignThemeSet(
+        lightTheme: defaultThemeColors(
+          background: const Color(0xFFF0F3F8),
+          textColor: const Color(0xFF1C2434),
+          accentColor: const Color(0xFF0066D6),
+          gradientAlpha: 0,
+          uiFontFamily: 'Segoe UI',
+          entryFontFamily: 'Segoe UI',
+          entryFontWeight: 500,
+          borderRadius: 24,
+        ),
+        darkTheme: defaultThemeColors(
+          background: const Color(0xFF17202D),
+          textColor: const Color(0xFFF3F6FB),
+          accentColor: const Color(0xFF8CC4FF),
+          gradientAlpha: 0,
+          uiFontFamily: 'Segoe UI',
+          entryFontFamily: 'Segoe UI',
+          entryFontWeight: 500,
+          borderRadius: 24,
+        ),
+      ),
       LauncherDesign.ivoryGrove.displayName: LauncherDesignThemeSet(
         lightTheme: defaultThemeColors(
           background: const Color(0xFFF0EADF),
@@ -1345,7 +1369,7 @@ class DesignSettings {
           background: const Color(0xffF3F3F3), // Win terminal "Campbell Light" paper
           textColor: const Color(0xff0C0C0C), // near-black console text
           accentColor: const Color(0xff0037DA), // classic cmd.exe blue
-          gradientAlpha: 0, // flat — no glow/gradient
+          gradientAlpha: 0, // flat – no glow/gradient
           uiFontFamily: 'Consolas',
           uiFontWeight: 400,
           entryFontFamily: 'Consolas',

@@ -1,4 +1,4 @@
-# Browser Scripts — AI-friendly Tabame plugin example
+# Browser Scripts – AI-friendly Tabame plugin example
 
 This folder is a small, runnable reference for an AI tool generating a
 browser-capable Tabame launcher plugin. It demonstrates the same Codex Usage
@@ -18,9 +18,9 @@ site-specific script together in one easy-to-copy plugin.
 
 The plugin includes two examples:
 
-- **Inspect active tab** — the smallest `javascript.execute` call, using the
+- **Inspect active tab** – the smallest `javascript.execute` call, using the
   current active tab and returning title, URL, selection, and a text sample.
-- **Codex usage** — opens ChatGPT analytics in an inactive temporary tab, waits
+- **Codex usage** – opens ChatGPT analytics in an inactive temporary tab, waits
   for the dynamic page, extracts the allowance with page JavaScript, validates
   the result, and closes the temporary tab.
 

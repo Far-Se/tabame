@@ -12,7 +12,7 @@ out/
 .cache/
 *.log
 
-# Secrets (use caution — see note below)
+# Secrets (use caution – see note below)
 .env
 *.key
 secrets/

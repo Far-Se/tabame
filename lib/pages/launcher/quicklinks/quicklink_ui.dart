@@ -107,6 +107,7 @@ class QuicklinkUi {
       if (template.arguments.any((QuicklinkArgument item) => item.error(values[item.key] ?? '') != null)) {
         final Map<String, String>? entered = await showDialog<Map<String, String>>(
           context: context,
+          barrierColor: Colors.transparent,
           builder: (_) => _QuicklinkArguments(link: link, template: template, initial: values, clipboard: clipboard),
         );
         if (entered == null || !context.mounted) return false;

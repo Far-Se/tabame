@@ -11,7 +11,7 @@ import '../../widgets/panel_header.dart';
 import '../../widgets/quick_actions_item.dart';
 
 /// Top-bar launcher for the Spotify controller. Keeps to the thin-button
-/// convention: label, icon, modal entry point only — all state lives in
+/// convention: label, icon, modal entry point only – all state lives in
 /// [SpotifyPanel].
 class SpotifyButton extends StatelessWidget {
   const SpotifyButton({super.key});

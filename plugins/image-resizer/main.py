@@ -244,7 +244,7 @@ def handle_submit(values):
         ]
         for src, out, err in results:
             if err:
-                lines.append(f"- ❌ `{os.path.basename(src)}` — {err}")
+                lines.append(f"- ❌ `{os.path.basename(src)}` – {err}")
             else:
                 lines.append(
                     f"- ✅ `{os.path.basename(src)}` → `{os.path.basename(out)}`"
@@ -254,7 +254,7 @@ def handle_submit(values):
             {
                 "type": "command",
                 "command": "toast",
-                "text": f"Done — {len(ok)} resized"
+                "text": f"Done – {len(ok)} resized"
                 + (f", {len(failed)} failed" if failed else ""),
                 "style": "success" if not failed else "error",
             }

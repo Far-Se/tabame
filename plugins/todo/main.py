@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-To-Do & Reminders — a Tabame launcher plugin.
+To-Do & Reminders – a Tabame launcher plugin.
 
 Quick-add syntax (typed after the `todo` keyword):
     todo Buy milk tomorrow 5pm !h #errands
@@ -21,7 +21,7 @@ Everything else in the query becomes the task title.
 
 Storage: a plain tasks.json file in the plugin folder (not the opaque
 .tabame-store.json), so a separate script can read/notify on due tasks
-even when the launcher isn't running — see reminder_watcher.py.
+even when the launcher isn't running – see reminder_watcher.py.
 """
 
 import datetime
@@ -343,7 +343,7 @@ def build_preview(t):
         },
         {
             "label": "Due",
-            "text": format_due(due_dt, t.get("has_time", False)) if due_dt else "—",
+            "text": format_due(due_dt, t.get("has_time", False)) if due_dt else "–",
             "icon": "calendar",
         },
         {
@@ -353,7 +353,7 @@ def build_preview(t):
         },
         {
             "label": "Tags",
-            "text": ", ".join(f"#{x}" for x in t.get("tags", [])) or "—",
+            "text": ", ".join(f"#{x}" for x in t.get("tags", [])) or "–",
             "icon": "tag",
         },
         {"separator": True},
@@ -431,10 +431,10 @@ Anything left over becomes the title."""
 
 def build_quickadd_preview(title, due_dt, has_time, priority, tags):
     parsed = [
-        {"label": "Title", "text": title or "—"},
+        {"label": "Title", "text": title or "–"},
         {
             "label": "Due",
-            "text": format_due(due_dt, has_time) if due_dt else "—",
+            "text": format_due(due_dt, has_time) if due_dt else "–",
             "icon": "calendar",
         },
         {
@@ -444,7 +444,7 @@ def build_quickadd_preview(title, due_dt, has_time, priority, tags):
         },
         {
             "label": "Tags",
-            "text": ", ".join(f"#{x}" for x in tags) or "—",
+            "text": ", ".join(f"#{x}" for x in tags) or "–",
             "icon": "tag",
         },
         {"separator": True},
@@ -510,9 +510,9 @@ def render_list(rev, query):
     items.extend(build_item(t) for t in visible)
 
     empty_text = (
-        "No tasks match — type to add one"
+        "No tasks match – type to add one"
         if q
-        else "No tasks yet — type something and press Enter to add"
+        else "No tasks yet – type something and press Enter to add"
     )
     send(
         {

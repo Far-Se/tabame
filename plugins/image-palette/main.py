@@ -140,7 +140,7 @@ def handle_query(text, rev):
 
 
 def handle_action(item_id, action):
-    # The root screen's only item IS "browse" — Enter on it sends action:"default"
+    # The root screen's only item IS "browse" – Enter on it sends action:"default"
     # (per spec, Enter always fires "default" regardless of the item's own actions),
     # so catch it by item id too, not just by the Ctrl+K action id.
     if action == "browse" or item_id == "browse":
@@ -216,7 +216,7 @@ def main():
         elif t == "back":
             send(root_frame(msg.get("rev", 0)))
 
-        # "select": not needed — grid tiles are already self-explanatory.
+        # "select": not needed – grid tiles are already self-explanatory.
 
 
 if __name__ == "__main__":

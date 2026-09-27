@@ -1,29 +1,29 @@
 #!/usr/bin/env python3
 """
-PC Specs — Tabame launcher plugin
+PC Specs – Tabame launcher plugin
 Live system-overview dashboard: CPU, GPU, RAM, storage, disk I/O, network,
 motherboard/BIOS, OS, battery, and top processes. Streams a rev:0 refresh
 every `REFRESH_SECONDS` while the plugin owns the query.
 
-Real telemetry sources only — every field is best-effort and comes back
+Real telemetry sources only – every field is best-effort and comes back
 as "N/A" (or the panel is simply omitted) when it can't be determined:
   - psutil: CPU load/freq, RAM/swap, disks, disk I/O, network counters,
     boot time, battery, per-process stats
   - WMI (Win32_*): CPU/board/BIOS names & dates, physical memory
     speed/type, disk model/media-type mapping, GPU name/VRAM fallback
-  - nvidia-smi: GPU name + total VRAM (specs only, queried once — no
+  - nvidia-smi: GPU name + total VRAM (specs only, queried once – no
     live load/clock/temp polling)
   - registry (DisplayVersion): Windows feature version (e.g. "23H2")
 
 No config file and no third-party hardware-monitoring backend (e.g.
-LibreHardwareMonitor) are required or used — anything that could only be
+LibreHardwareMonitor) are required or used – anything that could only be
 sourced from those (fan RPM, voltages, PSU wattage, per-component temps,
 chipset/case/peripheral labels) has been dropped rather than faked.
 
 WMI/hardware-identity facts (CPU name, motherboard, BIOS, memory
 type/speed, disk model/media map, GPU name/VRAM, OS identity) don't
 change while the plugin runs, so they're queried exactly ONCE at
-startup via gather_static() and cached in STATIC — never re-queried on
+startup via gather_static() and cached in STATIC – never re-queried on
 each refresh. This also sidesteps a real bug: WMI/COM connections are
 thread-affine, and this plugin has both a main thread and a background
 refresh thread; a WMI connection touched from a different thread than
@@ -36,7 +36,7 @@ are thread-safe.
 
 If GPU detection fails, the GRAPHICS CARD panel shows the actual
 nvidia-smi/WMI error text instead of a generic "not detected" message
-— see _detect_gpu().
+– see _detect_gpu().
 """
 
 import datetime
@@ -91,7 +91,7 @@ def send(frame):
 def get_wmi():
     """Connect to the standard Win32 WMI namespace. Only ever called
     from gather_static(), which runs once on the main thread before any
-    other thread starts — see the module docstring for why."""
+    other thread starts – see the module docstring for why."""
     try:
         import wmi
 
@@ -119,9 +119,9 @@ def _find_nvidia_smi():
 
 
 def _detect_gpu(w):
-    """One-shot GPU identity lookup — name + VRAM only, no live usage.
+    """One-shot GPU identity lookup – name + VRAM only, no live usage.
     Tries nvidia-smi first, then WMI Win32_VideoController. Returns
-    (name, vram_gb, errors) — errors is a list of the actual exception
+    (name, vram_gb, errors) – errors is a list of the actual exception
     strings so a failure can be shown in the panel instead of just
     disappearing silently."""
     errors = []
@@ -164,7 +164,7 @@ def _detect_gpu(w):
                 for x in ("basic render", "basic display", "remote display", "virtual")
             )
 
-        # Prefer a real adapter over a virtual/basic one if both are listed —
+        # Prefer a real adapter over a virtual/basic one if both are listed –
         # WMI enumeration order isn't guaranteed to put the dedicated GPU first.
         real = [g for g in gpus if is_real(g)]
         gpu = (real or gpus)[0]
@@ -318,7 +318,7 @@ def gather_static():
     system_drive = os.environ.get("SystemDrive", "C:")
     STATIC["system_drive_model"] = models.get(system_drive, system_drive)
 
-    # --- GPU identity/VRAM (queried once — specs only, no live usage) ---
+    # --- GPU identity/VRAM (queried once – specs only, no live usage) ---
     gpu_name, gpu_vram_gb, gpu_errors = _detect_gpu(w)
     STATIC["gpu_name"] = gpu_name
     STATIC["gpu_vram_gb"] = gpu_vram_gb
@@ -391,7 +391,7 @@ def cpu_data():
 
 def gpu_data():
     """GPU is specs-only (name + VRAM), gathered once in gather_static()
-    — no per-refresh polling. If detection failed, the actual error
+    – no per-refresh polling. If detection failed, the actual error
     strings are surfaced here so the panel can show *why* instead of
     just "not detected"."""
     if STATIC.get("gpu_name"):
@@ -547,7 +547,7 @@ def resolution():
 
 
 def motherboard_data():
-    """Board identity/BIOS facts only — no temps/voltages, since those
+    """Board identity/BIOS facts only – no temps/voltages, since those
     have no generic OS API and previously required LibreHardwareMonitor."""
     return {"bios_date": STATIC.get("bios_date"), "socket": STATIC.get("socket")}
 
@@ -621,7 +621,7 @@ def build_panels():
     panels.append(
         {
             "id": "overview",
-            "title": "PC SPECS — System Overview",
+            "title": "PC SPECS – System Overview",
             "height": 130,
             "view": "detail",
             "detail": {"markdown": "", "metadata": overview_meta},
@@ -667,7 +667,7 @@ def build_panels():
         }
     )
 
-    # --- graphics (specs only — name + VRAM, no live usage) ---
+    # --- graphics (specs only – name + VRAM, no live usage) ---
     if gpu.get("available"):
         gpu_meta = [
             meta_row("Model", gpu["name"], icon="grid", color="#22C55E"),
@@ -682,7 +682,7 @@ def build_panels():
     else:
         errs = gpu.get("errors") or []
         if errs:
-            gpu_meta = [meta_row("Status", "GPU not detected — " + " | ".join(errs))]
+            gpu_meta = [meta_row("Status", "GPU not detected – " + " | ".join(errs))]
         else:
             gpu_meta = [meta_row("Status", "No GPU detected.")]
         gpu_height = max(100, 60 + 20 * len(errs))
@@ -968,7 +968,7 @@ def refresh_loop():
 
 def main():
     # Gather everything static exactly once, synchronously, on the main
-    # thread — before the background refresh thread exists at all.
+    # thread – before the background refresh thread exists at all.
     gather_static()
 
     if psutil:

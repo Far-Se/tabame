@@ -14,7 +14,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Anime" QuickMenu design — a soft, dreamy pastel aesthetic inspired by
+/// "Anime" QuickMenu design – a soft, dreamy pastel aesthetic inspired by
 /// magical-girl HUDs and visual-novel interfaces. Rounded bubbly containers,
 /// floating sparkle motes, soft glow gradients, and star-shaped section
 /// markers give the menu a light, kawaii personality without sacrificing

@@ -1,11 +1,11 @@
 # Trakt plugin
 
 Search movies & shows on [Trakt.tv](https://trakt.tv), browse trending/popular,
-and — after a one-time login — manage your **watchlist**, **watched history**,
+and – after a one-time login – manage your **watchlist**, **watched history**,
 and see your upcoming **calendar**, all from the Tabame launcher.
 
 - **Keyword:** `trakt`
-- **Runtime:** Node 18+ (or Bun) — plain JS, no dependencies.
+- **Runtime:** Node 18+ (or Bun) – plain JS, no dependencies.
 
 ## Setup
 
@@ -24,9 +24,9 @@ and see your upcoming **calendar**, all from the Tabame launcher.
    Manager rather than a plaintext configuration file. The form includes
    **Copy URL** and **Copy URI** buttons for creating the Trakt application.
 
-   - **Client ID** — required for search & browsing.
-   - **Client Secret** — required for logging in (watchlist / history / calendar).
-   - **TMDB v3 API Key** — optional. A free [TMDB](https://www.themoviedb.org/settings/api)
+   - **Client ID** – required for search & browsing.
+   - **Client Secret** – required for logging in (watchlist / history / calendar).
+   - **TMDB v3 API Key** – optional. A free [TMDB](https://www.themoviedb.org/settings/api)
      key adds real poster thumbnails; without it, results use icons.
 
 3. **Install:** drop this folder into `%localappdata%\Tabame\plugins\trakt\`,
@@ -36,7 +36,7 @@ and see your upcoming **calendar**, all from the Tabame launcher.
 
 Run **Log in to Trakt** from the command list. The plugin uses Trakt's OAuth
 **device flow**: it shows a short code, opens `trakt.tv/activate` in your
-browser, you enter the code and approve — the plugin polls in the background and
+browser, you enter the code and approve – the plugin polls in the background and
 signs you in automatically. Your password is never seen by the plugin.
 
 Credentials entered in the form are stored by Tabame. Existing environment
@@ -46,7 +46,7 @@ migration path. Tokens are stored in `tokens.json` and refreshed automatically;
 
 ## Usage
 
-Type `trakt` for the command list, or `trakt <title>` — the top command is
+Type `trakt` for the command list, or `trakt <title>` – the top command is
 **Search Movies & Shows**, so typing a title searches right away.
 
 - **Enter** on a result opens it on Trakt.

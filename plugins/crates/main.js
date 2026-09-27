@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * Crates.io — a Tabame launcher plugin.
+ * Crates.io – a Tabame launcher plugin.
  *
  * Type `crate <query>` to search crates.io. Enter (or the "View details"
  * action) opens the full crate detail screen (license, downloads, links).
@@ -10,7 +10,7 @@
  * repository, copy a `cargo add` line, or copy the bare crate name.
  *
  * Requires Node 18+ (uses the global `fetch`/`AbortController`). No
- * dependencies, so no package.json / npm install step is needed — Tabame
+ * dependencies, so no package.json / npm install step is needed – Tabame
  * launches `node main.js` directly.
  *
  * Protocol: newline-delimited JSON on stdin/stdout. See
@@ -28,7 +28,7 @@ function send(frame) {
 }
 
 function log(...args) {
-  console.error(...args); // stderr only — stdout is protocol-only
+  console.error(...args); // stderr only – stdout is protocol-only
 }
 
 function formatNumber(n) {
@@ -41,7 +41,7 @@ function formatNumber(n) {
 }
 
 function formatDate(iso) {
-  if (!iso) return '—';
+  if (!iso) return '–';
   try {
     return new Date(iso).toISOString().slice(0, 10);
   } catch {
@@ -139,7 +139,7 @@ function itemActions() {
 
 function previewMetadata(c) {
   const rows = [
-    { label: 'Version', text: c.newest_version || c.max_version || '—', icon: 'tag' },
+    { label: 'Version', text: c.newest_version || c.max_version || '–', icon: 'tag' },
     { label: 'Downloads', text: formatNumber(c.downloads), icon: 'download' },
   ];
   if (c.recent_downloads) {
@@ -157,7 +157,7 @@ function renderRoot(rev) {
     type: 'render',
     rev,
     view: 'list',
-    placeholder: 'crate <name> — search crates.io',
+    placeholder: 'crate <name> – search crates.io',
     empty: {
       icon: 'search',
       title: 'Search crates.io',
@@ -175,7 +175,7 @@ function renderList(rev, { loading = false } = {}) {
     type: 'render',
     rev,
     view: 'list',
-    placeholder: 'crate <name> — search crates.io',
+    placeholder: 'crate <name> – search crates.io',
     loading,
     loadingText: 'Searching crates.io…',
     emptyText: `No crates found for "${STATE.query}"`,
@@ -212,7 +212,7 @@ function renderDetail(rev, id, detail, error) {
     (latest.yanked ? '\n\n> ⚠️ Latest version is **yanked**.' : '');
 
   const metadata = [
-    { label: 'Version', text: latest.num || c.max_version || '—', icon: 'tag' },
+    { label: 'Version', text: latest.num || c.max_version || '–', icon: 'tag' },
     { label: 'License', text: latest.license || 'unknown', icon: 'shield' },
     { label: 'Downloads', text: formatNumber(c.downloads), icon: 'download' },
     { label: 'Published', text: formatDate(latest.created_at || c.created_at), icon: 'calendar' },
@@ -292,7 +292,7 @@ function runSearch(text, rev, { append = false } = {}) {
       });
   };
 
-  // Pagination (`loadMore`) should feel instant — no debounce there.
+  // Pagination (`loadMore`) should feel instant – no debounce there.
   if (append) fire();
   else debounceTimer = setTimeout(fire, DEBOUNCE_MS);
 }
@@ -369,7 +369,7 @@ function handleAction(msg) {
       send({ type: 'command', command: 'copy', text: name });
       return;
     default:
-      // Unknown action — ignore rather than crash.
+      // Unknown action – ignore rather than crash.
       return;
   }
 }
@@ -391,7 +391,7 @@ process.stdin.on('data', (chunk) => {
     try {
       msg = JSON.parse(line);
     } catch {
-      continue; // malformed line — ignore
+      continue; // malformed line – ignore
     }
 
     switch (msg.type) {

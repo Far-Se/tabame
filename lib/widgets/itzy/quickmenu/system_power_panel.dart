@@ -120,7 +120,7 @@ class _PowerRow extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      armed ? "Confirm — this closes your session" : action.description,
+                      armed ? "Confirm – this closes your session" : action.description,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(

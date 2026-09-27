@@ -26,7 +26,7 @@
  *   - fetchUpNext()                     → GET /calendar/shows/{date}/{days}
  * If any of the three "You"/"Discover" screens error out, open
  * https://api.simkl.org/api-reference and fix the path in the fetcher
- * function of the same name — everything else (auth, search, watchlist,
+ * function of the same name – everything else (auth, search, watchlist,
  * mark-as-watched) should work as written.
  */
 
@@ -147,7 +147,7 @@ function ensureConfigLoaded() {
 
 // Simkl access tokens are long-lived (docs advertise ~5 years) and there is
 // no refresh token in the PIN flow, so unlike Trakt there's nothing to
-// refresh — they're valid until the user revokes the app on simkl.com.
+// refresh – they're valid until the user revokes the app on simkl.com.
 const TOKENS_FILE = path.join(process.cwd(), "tokens.json");
 function loadTokens() {
   try {
@@ -221,7 +221,7 @@ async function simkl(
   return data;
 }
 
-// ── Simkl posters (native — no third-party image API needed) ────────────────
+// ── Simkl posters (native – no third-party image API needed) ────────────────
 // Widths: _s 40, _cm 84, _c 170, _ca 190, _m 340 (height varies, never cropped
 // for _m). Simkl returns bare paths; wsrv.nl proxies/caches/converts them.
 function posterUrl(posterPath, size) {
@@ -238,7 +238,7 @@ function toMedia(mediaType, obj, extra) {
 }
 
 // Sync endpoints (/sync/*) key items as ids.simkl; catalog endpoints
-// (/search, /trending, /best, /calendar) key them as ids.simkl_id — same
+// (/search, /trending, /best, /calendar) key them as ids.simkl_id – same
 // integer, different field name depending on which family returned it.
 function simklId(obj) {
   const ids = (obj && obj.ids) || {};
@@ -623,7 +623,7 @@ function renderRoot(rev, text) {
   render(rev, "list", {
     items,
     emptyText: "No matching commands",
-    placeholder: "Simkl — search or pick a command…",
+    placeholder: "Simkl – search or pick a command…",
   });
 }
 
@@ -662,7 +662,7 @@ async function renderBrowse(rev, text, fetcher, opts) {
     return;
   }
   frame.ctx.loading = false;
-  // Render against the latest query — the awaited fetch may be stale by `rev`.
+  // Render against the latest query – the awaited fetch may be stale by `rev`.
   if (top() === frame)
     renderMediaFrame(
       state.lastRev,
@@ -703,7 +703,7 @@ async function searchMedia(type, term) {
   const mediaType = type === "tv" ? "show" : "movie";
   return (raw || []).map((o) => toMedia(mediaType, o));
 }
-// Best-guess path — see the accuracy note at the top of this file.
+// Best-guess path – see the accuracy note at the top of this file.
 async function fetchTrending(kind) {
   const type = kind === "shows" ? "tv" : "movies";
   const raw = await simkl(`/${type}/trending`);
@@ -712,7 +712,7 @@ async function fetchTrending(kind) {
     toMedia(mediaType, r, { watchers: r.watchers || r.watcher_count }),
   );
 }
-// Best-guess path — see the accuracy note at the top of this file.
+// Best-guess path – see the accuracy note at the top of this file.
 async function fetchPopular(kind) {
   const type = kind === "shows" ? "tv" : "movies";
   const raw = await simkl(`/${type}/best`);
@@ -749,7 +749,7 @@ async function fetchHistory() {
     ...fromList(shows, "show", "shows"),
   ];
 }
-// Best-guess path — see the accuracy note at the top of this file.
+// Best-guess path – see the accuracy note at the top of this file.
 async function fetchUpNext() {
   const today = new Date().toISOString().slice(0, 10);
   const raw = await simkl(`/calendar/shows/${today}/14?extended=full`, {
@@ -828,7 +828,7 @@ async function pollLogin() {
       login.interval += 1; // slow down
       return scheduleLoginPoll();
     }
-    // Transient network / server error — keep polling.
+    // Transient network / server error – keep polling.
     return scheduleLoginPoll();
   }
 }
@@ -836,7 +836,7 @@ async function pollLogin() {
 function renderLogin(rev) {
   let statusLine = "Waiting for you to authorize…";
   if (login.status === "expired")
-    statusLine = "Code expired — press Enter on “Restart” to try again.";
+    statusLine = "Code expired – press Enter on “Restart” to try again.";
   else if (login.status === "error") statusLine = `Error: ${login.error}`;
 
   const items = [];
@@ -857,7 +857,7 @@ function renderLogin(rev) {
           "",
           `1. Open **[${login.url}](${login.url})**`,
           `2. Enter the code:  **\`${login.userCode}\`**`,
-          "3. Approve the app — this screen updates automatically.",
+          "3. Approve the app – this screen updates automatically.",
         ].join("\n"),
       },
     });
@@ -899,7 +899,7 @@ async function renderAccount(rev) {
         "You are logged in.",
       ].join("\n"),
       metadata: [
-        { label: "Username", text: account.id || u.name || "—", icon: "person" },
+        { label: "Username", text: account.id || u.name || "–", icon: "person" },
         { label: "Premium", text: account.premium_dt ? "Yes" : "No" },
         { separator: true },
         { label: "Profile", text: "simkl.com", url: "https://simkl.com" },
@@ -919,7 +919,7 @@ function renderSetup(rev, note = "") {
       },
     ],
     form: {
-      title: note ? `Simkl setup — ${note}` : "Connect Simkl",
+      title: note ? `Simkl setup – ${note}` : "Connect Simkl",
       buttons: [
         { id: "save", label: "Save & Log in" },
         { id: "copy_url", label: "Copy URL" },
@@ -1190,7 +1190,7 @@ async function handleLine(line) {
     case "back":
       await popScreen();
       break;
-    // 'select' needs no work — previews are provided per item.
+    // 'select' needs no work – previews are provided per item.
     // 'tab' / 'submit' unused by this plugin.
   }
 }

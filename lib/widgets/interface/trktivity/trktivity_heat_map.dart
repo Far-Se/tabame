@@ -218,7 +218,7 @@ class TrktivityHeatMapState extends State<TrktivityHeatMap> {
 
   /// Builds the scrollable month label row, driven by the same [_scrollController].
   /// Uses a [ValueListenableBuilder] on the scroll offset so labels stay
-  /// visually "pinned" — the row scrolls with the grid but we clip it to the
+  /// visually "pinned" – the row scrolls with the grid but we clip it to the
   /// viewport and offset the inner content by the scroll amount, making labels
   /// appear sticky relative to the viewport.
   Widget _buildStickyMonthRow(double viewportWidth) {

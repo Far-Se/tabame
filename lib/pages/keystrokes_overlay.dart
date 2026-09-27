@@ -178,13 +178,13 @@ class _KeystrokesOverlayState extends State<KeystrokesOverlay> with TabameListen
       final bool stale = last == null || now.difference(last.lastAt).inMilliseconds > _groupGapMs;
 
       if (isHotkey) {
-        // Grow the current chord so it reads as one building combo — each new
+        // Grow the current chord so it reads as one building combo – each new
         // key extends the previous badge ("Ctrl" -> "Ctrl + Shift" ->
         // "Ctrl + Shift + F"). A different chord (or a pause) starts a new row.
         if (!stale && last.isHotkey) {
           final _KeyBadge tip = last.badges.last;
           if (label == tip.label) {
-            last.lastAt = now; // auto-repeat while holding — just keep it alive
+            last.lastAt = now; // auto-repeat while holding – just keep it alive
           } else if (label.startsWith(tip.label)) {
             last.badges.add(_KeyBadge(label, _nextId++));
             last.lastAt = now;

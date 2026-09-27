@@ -65,6 +65,7 @@ mixin _LauncherLayoutMixin on _LauncherStateMembersMixin {
     }
 
     return switch (_design) {
+      LauncherDesign.liquidGlass => LiquidGlassLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.ivoryGrove => IvoryGroveLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.anime => AnimeLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.aurora => AuroraLauncherFrame(child: buildBody(), resultCount: resultCount),

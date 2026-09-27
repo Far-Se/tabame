@@ -1,7 +1,7 @@
 part of '../launcher_design_builder.dart';
 
 BoxDecoration _blueprintOuterDecoration(Color surface, Color accent) {
-  // Drafting sheet — [surface] is the forced blueprint palette. Sharp
+  // Drafting sheet – [surface] is the forced blueprint palette. Sharp
   // corners, a crisp ink edge, and a flat paper shadow (no glow).
   return BoxDecoration(
     borderRadius: BorderRadius.circular(Design.borderRadius),
@@ -68,7 +68,7 @@ class _BlueprintSearchBar extends StatelessWidget {
             ],
           ),
         ),
-        // Drafting ruler — the measured underline of the input.
+        // Drafting ruler – the measured underline of the input.
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
           child: SizedBox(
@@ -82,8 +82,8 @@ class _BlueprintSearchBar extends StatelessWidget {
   }
 }
 
-/// A ruler edge: a baseline with graduation ticks — taller every 5th, tallest
-/// every 10th — like the scale printed along a drafting rule.
+/// A ruler edge: a baseline with graduation ticks – taller every 5th, tallest
+/// every 10th – like the scale printed along a drafting rule.
 class _BlueprintRulerPainter extends CustomPainter {
   const _BlueprintRulerPainter({required this.color});
 
@@ -111,7 +111,7 @@ class _BlueprintRulerPainter extends CustomPainter {
   bool shouldRepaint(covariant _BlueprintRulerPainter oldDelegate) => oldDelegate.color != color;
 }
 
-/// The drafting sheet — grid paper, an inner sheet border with corner
+/// The drafting sheet – grid paper, an inner sheet border with corner
 /// registration crosses, and an engineering title block along the bottom.
 class BlueprintLauncherFrame extends StatelessWidget {
   const BlueprintLauncherFrame({super.key, required this.child, this.resultCount = 0});
@@ -264,7 +264,7 @@ class _BlueprintTitleBlock extends StatelessWidget {
       child: IntrinsicHeight(
         child: Row(
           children: <Widget>[
-            buildCell('DRAWING', 'TABAME — QUICK LAUNCH', expand: true),
+            buildCell('DRAWING', 'TABAME – QUICK LAUNCH', expand: true),
             divider,
             buildCell('ENTER', 'OPEN'),
             divider,

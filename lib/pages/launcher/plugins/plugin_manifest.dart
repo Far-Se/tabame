@@ -3,7 +3,7 @@
 ///
 /// A plugin is an external script (Python / Node / Bun) that Tabame launches as
 /// a long-running child process when the user types the plugin's [keyword] in
-/// the launcher. The manifest only describes *how* to launch it — the live UI is
+/// the launcher. The manifest only describes *how* to launch it – the live UI is
 /// driven entirely by the JSON render frames the script streams back (see
 /// `plugin_protocol.dart`).
 class PluginManifest {
@@ -24,7 +24,7 @@ class PluginManifest {
     this.env = const <String, String>{},
   });
 
-  /// Stable identifier — defaults to the containing folder name.
+  /// Stable identifier – defaults to the containing folder name.
   final String id;
 
   /// Human-friendly title shown in discovery hints.
@@ -51,7 +51,7 @@ class PluginManifest {
   /// Extra argv inserted before [entry].
   final List<String> args;
 
-  /// Absolute path of the plugin's own folder — used as the process working
+  /// Absolute path of the plugin's own folder – used as the process working
   /// directory so relative paths inside the script resolve predictably.
   final String directory;
 
@@ -68,7 +68,7 @@ class PluginManifest {
   final bool dev;
 
   /// Python packages to install into the plugin's own `.pluginlibs` folder on
-  /// first run (and again whenever this list — or a sibling `requirements.txt` —
+  /// first run (and again whenever this list – or a sibling `requirements.txt` –
   /// changes). From the optional `"pip"` array in `plugin.json`. The host puts
   /// `.pluginlibs` on `PYTHONPATH` so `import` resolves them with no `sys.path`
   /// juggling in the script. Ignored for non-Python runtimes.
@@ -76,7 +76,7 @@ class PluginManifest {
 
   /// Extra environment variables handed to the plugin process, merged on top of
   /// Tabame's defaults (UTF-8 + the computed `PYTHONPATH`). From the optional
-  /// `"env"` object in `plugin.json` — useful for API base URLs or feature flags
+  /// `"env"` object in `plugin.json` – useful for API base URLs or feature flags
   /// the script reads from `os.environ` / `process.env`.
   final Map<String, String> env;
 

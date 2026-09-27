@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Notes — a Tabame launcher plugin.
+Notes – a Tabame launcher plugin.
 
 Keyword: note
 
@@ -197,7 +197,7 @@ def fmt_dt(iso):
         d = datetime.fromisoformat(iso)
         return d.strftime("%b %d, %Y %H:%M")
     except Exception:
-        return iso or "—"
+        return iso or "–"
 
 
 # --------------------------------------------------------------------------
@@ -285,7 +285,7 @@ def note_preview(n):
             "color": "#F5B400" if n["pinned"] else None,
         },
         {"label": "Category", "text": category_name_for(n), "icon": "folder"},
-        {"label": "Tags", "text": ", ".join(n["tags"]) if n["tags"] else "—"},
+        {"label": "Tags", "text": ", ".join(n["tags"]) if n["tags"] else "–"},
         {"separator": True},
         {"label": "Created", "text": fmt_dt(n["created"])},
         {"label": "Updated", "text": fmt_dt(n["updated"])},
@@ -484,7 +484,7 @@ def render_root(rev, query, select_id=None):
             "view": "list",
             "preview": {"enabled": True},
             "placeholder": "Search notes, or type to quick-add… (#tag, ! to pin)",
-            "emptyText": "No matches — press Enter to create",
+            "emptyText": "No matches – press Enter to create",
             "actions": ROOT_FRAME_ACTIONS,
             "floatingAction": ROOT_FRAME_ACTIONS[:2],
             "items": items,

@@ -61,7 +61,7 @@ class _SereneSearchBar extends StatelessWidget {
               ],
             ),
           ),
-          // Hairline separator — replaces the boxy card border
+          // Hairline separator – replaces the boxy card border
           Divider(
             height: 1,
             thickness: 1,

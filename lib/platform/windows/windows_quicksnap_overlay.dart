@@ -317,7 +317,7 @@ class ViewsScreenState extends State<ViewsScreen> with TabameListener {
   }
 
   void _handleMoveStart(int windowHwnd) {
-    // BUG FIX #5: was -9998 (four digits) — must be -99998 to fully offscreen.
+    // BUG FIX #5: was -9998 (four digits) – must be -99998 to fully offscreen.
     if (!fixedWindowsBug) WindowManager.instance.setPosition(const Offset(-99998, -99998));
     fixedWindowsBug = true;
     activeWindowHwnd = windowHwnd;
@@ -651,7 +651,7 @@ class _NotchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      // Flat top, rounded bottom — true notch shape.
+      // Flat top, rounded bottom – true notch shape.
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
       child: Container(
         decoration: BoxDecoration(

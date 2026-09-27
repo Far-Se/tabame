@@ -21,7 +21,7 @@ import '../models/win32/win_utils.dart';
 import '../widgets/interface/fancyshot.dart';
 
 // ---------------------------------------------------------------------------
-// Rect extension — shared by both files
+// Rect extension – shared by both files
 // ---------------------------------------------------------------------------
 
 extension RectNormExtension on Rect {

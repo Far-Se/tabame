@@ -13,6 +13,7 @@ import 'widgets/thermal_surface.dart';
 import 'widgets/satin_surface.dart';
 import 'widgets/ukiyoe_surface.dart';
 import 'widgets/liquid_metal_surface.dart';
+import 'widgets/liquid_glass_surface.dart';
 import 'widgets/crt_surface.dart';
 import 'widgets/ivory_grove_surface.dart';
 
@@ -49,7 +50,7 @@ class LauncherModalTokens {
         _ => onSurface,
       };
 
-  /// Corner radius of the modal card — same voice as the launcher frame.
+  /// Corner radius of the modal card – same voice as the launcher frame.
   double get frameRadius => LauncherThemeData(design: design).frameRadius;
 
   /// Radius for inner controls (search field, chips).
@@ -59,7 +60,7 @@ class LauncherModalTokens {
   /// looks); the soft designs use borderless fills instead.
   bool get outlinedControls => LauncherThemeData(design: design).config.outlinedControls;
 
-  /// The design voice — same font family the launcher rows use.
+  /// The design voice – same font family the launcher rows use.
   TextStyle text({
     double? fontSize,
     FontWeight? fontWeight,
@@ -68,6 +69,12 @@ class LauncherModalTokens {
     double? height,
   }) {
     return switch (design) {
+      LauncherDesign.liquidGlass => LiquidGlassTokens.font(
+          size: fontSize ?? 14,
+          color: color ?? onSurface,
+          weight: fontWeight ?? FontWeight.w400,
+          spacing: letterSpacing ?? -0.15,
+        ).copyWith(height: height),
       LauncherDesign.ivoryGrove => IvoryGroveTokens.font(
           size: fontSize ?? 14,
           color: color ?? onSurface,
@@ -181,7 +188,7 @@ class LauncherModalTokens {
 }
 
 // ---------------------------------------------------------------------------
-// Frame — the modal card, re-using each design's outer decoration plus its
+// Frame – the modal card, re-using each design's outer decoration plus its
 // signature inner layers (scanlines, grid paper, dawn glow, glass sheen…).
 // ---------------------------------------------------------------------------
 
@@ -224,6 +231,16 @@ class LauncherModalFrame extends StatelessWidget {
     Widget core = _buildCore(context);
 
     core = _applyBackdropEffect(core);
+
+    if (design == LauncherDesign.liquidGlass) {
+      core = LiquidGlassMotion(
+        child: LiquidGlassSurface(
+          radius: tokens.frameRadius,
+          opacity: opaqueBackground ? 1 : Design.glassOpacity,
+          child: core,
+        ),
+      );
+    }
 
     if (design == LauncherDesign.ivoryGrove) {
       core = IvoryGroveSurface(ink: tokens.onSurface, child: core);
@@ -304,7 +321,8 @@ class LauncherModalFrame extends StatelessWidget {
     return Stack(
       fit: StackFit.passthrough,
       children: <Widget>[
-        if (opaqueBackground) Positioned.fill(child: ColoredBox(color: tokens.surface.withValues(alpha: 1.0))),
+        if (opaqueBackground && design != LauncherDesign.liquidGlass)
+          Positioned.fill(child: ColoredBox(color: tokens.surface.withValues(alpha: 1.0))),
         ..._buildBackgroundFlourishes(),
         _buildContent(context),
         ..._buildForegroundFlourishes(),
@@ -323,6 +341,7 @@ class LauncherModalFrame extends StatelessWidget {
 
   Color _surfaceColor(BuildContext context) {
     return switch (design) {
+      LauncherDesign.liquidGlass => Colors.transparent,
       LauncherDesign.ivoryGrove => Colors.transparent,
       LauncherDesign.ukiyoe => Colors.transparent,
       LauncherDesign.radiant => tokens.surface,
@@ -558,7 +577,7 @@ class LauncherModalFrame extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Header — item identity row (icon chip + title/subtitle + mode badge).
+// Header – item identity row (icon chip + title/subtitle + mode badge).
 // ---------------------------------------------------------------------------
 
 class LauncherModalHeader extends StatelessWidget {
@@ -580,6 +599,15 @@ class LauncherModalHeader extends StatelessWidget {
   Decoration _chipDecoration() {
     final Color accent = tokens.accent;
     return switch (tokens.design) {
+      LauncherDesign.liquidGlass => BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: <Color>[LiquidGlassTokens.edge, accent.withValues(alpha: 0.12)],
+          ),
+          borderRadius: BorderRadius.circular(tokens.controlRadius),
+          border: Border.all(color: LiquidGlassTokens.border),
+        ).withLauncherCorners(),
       LauncherDesign.ivoryGrove => BoxDecoration(
           color: Color.alphaBlend(accent.withValues(alpha: 0.20), tokens.surface),
           borderRadius: BorderRadius.circular(tokens.controlRadius),
@@ -633,7 +661,7 @@ class LauncherModalHeader extends StatelessWidget {
           color: tokens.onSurface,
           border: Border.all(color: tokens.onSurface, width: 1.5),
         ),
-      // Instrument chip — square, thin phosphor outline.
+      // Instrument chip – square, thin phosphor outline.
       LauncherDesign.orbit => BoxDecoration(
           color: tokens.accent.withAlpha(16),
           borderRadius: BorderRadius.circular(4),
@@ -764,7 +792,7 @@ class LauncherModalHeader extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Footer — keyboard hints in the design's voice.
+// Footer – keyboard hints in the design's voice.
 // ---------------------------------------------------------------------------
 
 class LauncherModalFooter extends StatelessWidget {
@@ -783,6 +811,7 @@ class LauncherModalFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color lineColor = switch (tokens.design) {
+      LauncherDesign.liquidGlass => LiquidGlassTokens.border,
       LauncherDesign.ivoryGrove => IvoryGroveTokens.border,
       LauncherDesign.terminal => tokens.accent.withAlpha(40),
       LauncherDesign.terminal2 => tokens.dim.withAlpha(72),
@@ -909,7 +938,7 @@ class LauncherModalKbd extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Painters — private copies of the launcher frame's signature textures.
+// Painters – private copies of the launcher frame's signature textures.
 // ---------------------------------------------------------------------------
 
 /// Subtle CRT scanlines (Terminal design).
@@ -1007,7 +1036,7 @@ class _ModalManifestoPainter extends CustomPainter {
 }
 
 /// Faint range rings radiating from beyond the top-right corner, with bearing
-/// ticks down the left edge (Orbit design) — a private copy of the launcher
+/// ticks down the left edge (Orbit design) – a private copy of the launcher
 /// frame's scope texture.
 class _ModalOrbitPainter extends CustomPainter {
   const _ModalOrbitPainter({required this.ink, required this.isDark});

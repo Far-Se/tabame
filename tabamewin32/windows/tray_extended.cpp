@@ -25,7 +25,7 @@ struct ExtTrayIcon {
   HWND appHwnd = nullptr;
   UINT uID = 0;
   UINT uCallbackMsg = 0;
-  HICON hIcon = nullptr; // GDI handle — pass int to getIconPng() on Dart side
+  HICON hIcon = nullptr; // GDI handle – pass int to getIconPng() on Dart side
   bool isVisible = false;
   bool isOverflow = false;
 };
@@ -87,7 +87,7 @@ static void ReadTrayToolbar(HWND toolbarWnd, bool isOverflow,
     icon.isOverflow = isOverflow;
     icon.isVisible = !(tbb.fsState & TBSTATE_HIDDEN);
 
-    // Tooltip — read for ALL icons (visible and hidden)
+    // Tooltip – read for ALL icons (visible and hidden)
     {
       wchar_t tip[1024]{};
       wchar_t *pTip = reinterpret_cast<wchar_t *>(tbb.iString);
@@ -106,7 +106,7 @@ static void ReadTrayToolbar(HWND toolbarWnd, bool isOverflow,
     icon.uID = td.uID;
     icon.uCallbackMsg = td.uCallbackMessage;
     icon.hIcon =
-        td.hIcon; // GDI handles are kernel-global — valid cross-process
+        td.hIcon; // GDI handles are kernel-global – valid cross-process
 
     // Explorer keeps a stale toolbar button around (greyed, removed lazily on
     // hover) when an app exits/crashes without calling Shell_NotifyIcon
@@ -126,7 +126,7 @@ static void ReadTrayToolbar(HWND toolbarWnd, bool isOverflow,
   CloseHandle(hProc);
 }
 
-// ─── Public API — enumeration
+// ─── Public API – enumeration
 // ─────────────────────────────────────────────────
 
 std::vector<ExtTrayIcon> EnumAllTrayIcons() {
@@ -216,7 +216,7 @@ static IUIAutomationElement *FindTrayButtonByName(IUIAutomation *pAuto,
   return pBtn;
 }
 
-// ─── Public API — UIA click
+// ─── Public API – UIA click
 // ───────────────────────────────────────────────────
 
 bool ClickTrayIconUia(const std::wstring &tipName, bool preferOverflow,
@@ -252,7 +252,7 @@ bool ClickTrayIconUia(const std::wstring &tipName, bool preferOverflow,
 
   bool ok = false;
 
-  if (clickType == 0 || clickType == 3) // left / double — use InvokePattern
+  if (clickType == 0 || clickType == 3) // left / double – use InvokePattern
   {
     IUnknown *pRaw = nullptr;
     pBtn->GetCurrentPattern(UIA_InvokePatternId, &pRaw);
@@ -290,7 +290,7 @@ bool ClickTrayIconUia(const std::wstring &tipName, bool preferOverflow,
         pAcc->Release();
       }
     }
-  } else // right (1) or middle (2) — resolve screen rect and SendInput
+  } else // right (1) or middle (2) – resolve screen rect and SendInput
   {
     RECT rect{};
     pBtn->get_CurrentBoundingRectangle(&rect);

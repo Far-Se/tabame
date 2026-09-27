@@ -76,7 +76,7 @@ class Monitor {
 
     _monitors = newMonitors;
     monitorSizes = monitorsData;
-    // Clear stale cache — monitor handles can be reused by Windows
+    // Clear stale cache – monitor handles can be reused by Windows
     // after a display change, so old DPI values must not linger.
     dpi.clear();
     _monitorIds.clear();
@@ -135,7 +135,7 @@ class Monitor {
       fetchMonitors();
     }
     if (!dpi.containsKey(monitor)) {
-      // Truly unknown after refresh — return original point unchanged.
+      // Truly unknown after refresh – return original point unchanged.
       return point;
     }
     return PointXY(

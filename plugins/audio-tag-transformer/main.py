@@ -1460,9 +1460,9 @@ def file_item(record: FileRecord) -> Dict[str, Any]:
         "icon": "music" if record.extension == "mp3" else "file",
         "cells": {
             "format": record.extension.upper(),
-            "title": shorten(record.snapshot.get("Title", ""), 48) or "—",
-            "artist": shorten(record.snapshot.get("Artist", ""), 48) or "—",
-            "album": shorten(record.snapshot.get("Album", ""), 48) or "—",
+            "title": shorten(record.snapshot.get("Title", ""), 48) or "–",
+            "artist": shorten(record.snapshot.get("Artist", ""), 48) or "–",
+            "album": shorten(record.snapshot.get("Album", ""), 48) or "–",
             "status": status,
         },
         "actions": [
@@ -1531,7 +1531,7 @@ def render_files(rev: int = 0, history: str = "none", preserve: bool = True) -> 
 def source_metadata(snapshot: Dict[str, str]) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     for field_name in SOURCE_FIELDS:
-        rows.append({"label": field_name, "text": snapshot.get(field_name, "") or "—", "icon": "tag" if field_name in SOURCE_FIELDS[9:] else "file"})
+        rows.append({"label": field_name, "text": snapshot.get(field_name, "") or "–", "icon": "tag" if field_name in SOURCE_FIELDS[9:] else "file"})
     return rows
 
 
@@ -1701,7 +1701,7 @@ def rule_fields(draft: Dict[str, Any], errors: Optional[Dict[str, str]] = None) 
             "type": "text",
             "label": "Replacement expression",
             "value": draft.get("replacement", ""),
-            "placeholder": "$1 or $<artist> — $$ is a literal dollar",
+            "placeholder": "$1 or $<artist> – $$ is a literal dollar",
             "description": "$1 means a capture inside this rule. {1} means this rule's final output in the final template.",
             "watch": True,
             "validate": True,
@@ -1885,8 +1885,8 @@ def render_preview(rev: int = 0, history: str = "none", preserve: bool = True) -
                 "subtitle": shorten(message, 120) or shorten(plan.get("path", ""), 120),
                 "icon": "check" if status == "valid" else "warning" if status in {"error", "collision"} else "music",
                 "cells": {
-                    "current": shorten(plan.get("current_value", "") or "—", 100),
-                    "proposed": shorten(plan.get("proposed_value", "") or "—", 120),
+                    "current": shorten(plan.get("current_value", "") or "–", 100),
+                    "proposed": shorten(plan.get("proposed_value", "") or "–", 120),
                     "status": status_label,
                 },
                 "actions": [
@@ -1940,15 +1940,15 @@ def metadata_for_plan(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     snapshot = plan.get("snapshot", {})
     for field_name in SOURCE_FIELDS:
-        rows.append({"label": field_name, "text": snapshot.get(field_name, "") or "—", "icon": "tag" if field_name in SOURCE_FIELDS[9:] else "file"})
+        rows.append({"label": field_name, "text": snapshot.get(field_name, "") or "–", "icon": "tag" if field_name in SOURCE_FIELDS[9:] else "file"})
     rows.append({"separator": True})
     for number, value in sorted(((int(key), value) for key, value in plan.get("rule_outputs", {}).items()), key=lambda pair: pair[0]):
-        rows.append({"label": f"Rule {number} output", "text": value or "—", "icon": "check"})
+        rows.append({"label": f"Rule {number} output", "text": value or "–", "icon": "check"})
     rows.extend(
         [
-            {"label": "Expanded final template", "text": plan.get("expanded_template", "") or "—", "icon": "code"},
-            {"label": "Old target value", "text": plan.get("current_value", "") or "—", "icon": "file"},
-            {"label": "New target value", "text": plan.get("proposed_value", "") or "—", "icon": "check"},
+            {"label": "Expanded final template", "text": plan.get("expanded_template", "") or "–", "icon": "code"},
+            {"label": "Old target value", "text": plan.get("current_value", "") or "–", "icon": "file"},
+            {"label": "New target value", "text": plan.get("proposed_value", "") or "–", "icon": "check"},
         ]
     )
     return rows
@@ -1973,10 +1973,10 @@ def render_preview_detail(rev: int = 0, history: str = "none", preserve: bool = 
         f"Target: **{plan.get('target', '')}**\n\n"
         f"Status: **{status.title()}**\n\n"
         f"Source path: {md_code(plan.get('path', ''))}\n\n"
-        f"## Expanded result\n\n{md_code(plan.get('expanded_template', '') or '—')}\n\n"
+        f"## Expanded result\n\n{md_code(plan.get('expanded_template', '') or '–')}\n\n"
         f"## Exact target change\n\n"
-        f"Before: {md_code(plan.get('current_value', '') or '—')}\n\n"
-        f"After: {md_code(plan.get('proposed_value', '') or '—')}"
+        f"Before: {md_code(plan.get('current_value', '') or '–')}\n\n"
+        f"After: {md_code(plan.get('proposed_value', '') or '–')}"
     )
     if status_message:
         body += f"\n\n> {status_message}"

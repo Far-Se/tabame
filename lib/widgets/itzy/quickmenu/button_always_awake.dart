@@ -189,12 +189,12 @@ class _AwakeGuardPanelState extends State<AwakeGuardPanel> {
                 children: <Widget>[
                   Text(
                     "Always awake",
-                    style: TextStyle(
-                        fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w700, color: Design.text),
+                    style:
+                        TextStyle(fontSize: Design.baseFontSize + 1.5, fontWeight: FontWeight.w700, color: Design.text),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    "Manual override — ignores all conditions below",
+                    "Manual override – ignores all conditions below",
                     style: TextStyle(fontSize: Design.baseFontSize - 0.5, color: Design.text.withAlpha(120)),
                   ),
                 ],
@@ -290,8 +290,7 @@ class _AwakeGuardPanelState extends State<AwakeGuardPanel> {
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
-                  fontSize: Design.baseFontSize + 0.5, fontWeight: FontWeight.w600, color: Design.accent),
+              style: TextStyle(fontSize: Design.baseFontSize + 0.5, fontWeight: FontWeight.w600, color: Design.accent),
             ),
           ],
         ),
@@ -541,7 +540,7 @@ class _AwakeGuardPanelState extends State<AwakeGuardPanel> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Text(
-                "No running process matches — Enter adds it anyway (armed once it starts).",
+                "No running process matches – Enter adds it anyway (armed once it starts).",
                 style: TextStyle(fontSize: Design.baseFontSize - 0.5, color: Design.text.withAlpha(110)),
               ),
             ),
@@ -590,7 +589,7 @@ class _AwakeGuardPanelState extends State<AwakeGuardPanel> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              "${Globals.alwaysAwake ? "Keeping awake — manual override" : AwakeGuard.statusLine}$network",
+              "${Globals.alwaysAwake ? "Keeping awake – manual override" : AwakeGuard.statusLine}$network",
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

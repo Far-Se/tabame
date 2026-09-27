@@ -315,10 +315,10 @@ def instructions_frame(rev):
         "",
         "Type a ticker and press **Enter**:",
         "",
-        "- `crypto BTC` — default period (" + DEFAULT_PERIOD.upper() + ")",
-        "- `crypto ETH 1d` — 1 day",
-        "- `crypto SOL 2m` — 2 months",
-        "- `crypto DOGE 1y` — 1 year",
+        "- `crypto BTC` – default period (" + DEFAULT_PERIOD.upper() + ")",
+        "- `crypto ETH 1d` – 1 day",
+        "- `crypto SOL 2m` – 2 months",
+        "- `crypto DOGE 1y` – 1 year",
         "- `crypto BTC ytd` / `crypto BTC max`",
     ]
     if DEFAULT_TICKER:
@@ -419,7 +419,7 @@ def process(rev, text):
 
     except urllib.error.HTTPError as e:
         if e.code == 429:
-            error_frame(rev, "Rate limited by CoinGecko — try again in a moment.")
+            error_frame(rev, "Rate limited by CoinGecko – try again in a moment.")
         elif e.code == 404:
             error_frame(rev, f"No data found for **{ticker.upper()}**.")
         else:

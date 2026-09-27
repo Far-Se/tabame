@@ -1,9 +1,9 @@
 ---
 name: tbm-plugin-min
-description: Author a Tabame launcher plugin — an external Python/Node/Bun script that extends the app launcher, talking newline-delimited JSON over stdin/stdout. Use when the user wants to build, scaffold, debug, or install a Tabame launcher plugin, add a new launcher keyword backed by a script, or asks about the plugin render-frame protocol.
+description: Author a Tabame launcher plugin – an external Python/Node/Bun script that extends the app launcher, talking newline-delimited JSON over stdin/stdout. Use when the user wants to build, scaffold, debug, or install a Tabame launcher plugin, add a new launcher keyword backed by a script, or asks about the plugin render-frame protocol.
 ---
 
-# Tabame Launcher Plugin — Authoring Skill
+# Tabame Launcher Plugin – Authoring Skill
 
 > Authoritative. Don't invent fields/message types not documented here. Choose the view from the user's task and data shape. Do **not** default to list + preview because the smoke-test template uses it; a substantial plugin should be a small navigable application, not a command list with its product hidden in Ctrl+K.
 
@@ -12,7 +12,7 @@ description: Author a Tabame launcher plugin — an external Python/Node/Bun scr
 A plugin = folder with `plugin.json` + a script (Python/Node/Bun), launched as a long-running child process when the user types its `keyword` in the launcher. Protocol: **newline-delimited JSON, one object per line, both directions.**
 
 - stdin (Tabame→script): UI events (query text, selection, actions, shutdown).
-- stdout (script→Tabame): **render frames** — full description of what to show now. Re-print a frame whenever the UI should change. No SDK; just read/write lines. Process stays alive while the keyword owns the query; killed on exit (~2s grace).
+- stdout (script→Tabame): **render frames** – full description of what to show now. Re-print a frame whenever the UI should change. No SDK; just read/write lines. Process stays alive while the keyword owns the query; killed on exit (~2s grace).
 - Working dir = plugin folder (relative paths resolve there). No shell. Node/Bun get global `fetch`; Python any version 3. Windows sets `PYTHONIOENCODING=utf-8`/`PYTHONUTF8=1` for Python.
 
 ### 1.1 Design pages before handlers
@@ -35,7 +35,7 @@ For every page decide:
 - **Information shape:** scanning, comparison, hierarchy, chronology, trend, reading, editing, conversation, progress, media, or scheduling → choose the native view in §7.
 - **Query contract:** what typing filters/submits here; clear stale input with `setQuery` on navigation and set a page-specific `placeholder`.
 - **Primary interaction:** Enter = obvious item verb/drill-down. Put important page verbs (Create/Run/Deploy) in `floatingAction`; Ctrl+K is for contextual/secondary actions, not the only navigation.
-- **States:** use `loadingText`, rich `empty.action`, `detail` errors/results, `operation` progress, and intentional success destinations—not blank lists/toasts for everything.
+- **States:** use `loadingText`, rich `empty.action`, `detail` errors/results, `operation` progress, and intentional success destinations–not blank lists/toasts for everything.
 - **Routes:** define Enter, submit, cancel, back, breadcrumb, and action destinations. The plugin owns state and renders each destination.
 
 Page rules:
@@ -59,17 +59,17 @@ Page rules:
 
 | Field         | Req | Default       | Meaning                                                                                                                              |
 | ------------- | --- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `keyword`     | yes | —             | Trigger word user types. Short & unique.                                                                                             |
-| `runtime`     | yes | —             | `"python"` \| `"node"` \| `"bun"` (resolved on PATH).                                                                                |
-| `version`     | yes | —             | Current version, use "1.0.0" for start.                                                                                              |
-| `entry`       | yes | —             | Script path relative to folder.                                                                                                      |
+| `keyword`     | yes | –             | Trigger word user types. Short & unique.                                                                                             |
+| `runtime`     | yes | –             | `"python"` \| `"node"` \| `"bun"` (resolved on PATH).                                                                                |
+| `version`     | yes | –             | Current version, use "1.0.0" for start.                                                                                              |
+| `entry`       | yes | –             | Script path relative to folder.                                                                                                      |
 | `id`          | yes | folder name   | Stable identifier.                                                                                                                   |
 | `name`        | yes | folder name   | Shown in discovery hint.                                                                                                             |
-| `category`    | yes | —             | One exact canonical discovery category from `resources/plugins.json`.                                                                |
+| `category`    | yes | –             | One exact canonical discovery category from `resources/plugins.json`.                                                                |
 | `description` | yes | `""`          | One-liner.                                                                                                                           |
 | `icon`        | yes | `"extension"` | §7 icon name.                                                                                                                        |
 | `args`        | no  | `[]`          | CLI args inserted before `entry`.                                                                                                    |
-| `pip`         | no  | `[]`          | Python only — packages to auto-install (see §3).                                                                                     |
+| `pip`         | no  | `[]`          | Python only – packages to auto-install (see §3).                                                                                     |
 | `env`         | no  | `{}`          | Extra env vars, merged over Tabame defaults.                                                                                         |
 | `dev`         | no  | `false`       | Hot reload + on-screen debug console (stderr, malformed lines, dropped/accepted frames, commands, crashes). Turn off before sharing. |
 
@@ -86,22 +86,22 @@ Launch = `<runtime> <args...> <entry>`. **Install/reload**: drop folder in `plug
 
 ## 3. Dependencies
 
-**Python**: declare in `plugin.json`'s `"pip"` array and/or a `requirements.txt`. First run (and on change) Tabame runs `pip install --target .pluginlibs …`, shows a spinner, puts `.pluginlibs` on `PYTHONPATH` — import normally. Cached; ignored by dev-mode watcher. Requires `pip` for that runtime (`<runtime> -m pip`); failure shows the pip error instead of your UI. Can also vendor by hand (`pip install --target .pluginlibs <pkg>`).
+**Python**: declare in `plugin.json`'s `"pip"` array and/or a `requirements.txt`. First run (and on change) Tabame runs `pip install --target .pluginlibs …`, shows a spinner, puts `.pluginlibs` on `PYTHONPATH` – import normally. Cached; ignored by dev-mode watcher. Requires `pip` for that runtime (`<runtime> -m pip`); failure shows the pip error instead of your UI. Can also vendor by hand (`pip install --target .pluginlibs <pkg>`).
 
 **Node/Bun**: ship a `package.json`; if `node_modules` is missing/stale, Tabame runs `npm install` (or `bun install`) on first launch, cached on `package.json` hash. `npm`/`bun` must be on PATH. Guard/lazy-load heavy `require()`s so a missing package degrades gracefully. Alternative: bundle to a dependency-free file (`esbuild main.js --bundle --platform=node --format=cjs --outfile=main.bundle.js`, or `bun build ... --target=node`) and point `entry` at it.
 
 Custom env vars (any runtime): `"env"` object in `plugin.json` → `os.environ`/`process.env`.
 
-## 4. Protocol — stdin (Tabame → script)
+## 4. Protocol – stdin (Tabame → script)
 
 | Msg                | When                                                                                                                         | Fields                                                                                                                                                                                                                                                                          |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `init`             | once, at start                                                                                                               | `query` (initial text), `protocol` (int, currently 14), `theme` {accent,text,background,dark}, `locale` (e.g. `"en-US"`). Immediately followed by a `query` with same text — treat both alike (`text` falling back to `query`). Use `theme` for matching generated images/SVGs. |
+| `init`             | once, at start                                                                                                               | `query` (initial text), `protocol` (int, currently 14), `theme` {accent,text,background,dark}, `locale` (e.g. `"en-US"`). Immediately followed by a `query` with same text – treat both alike (`text` falling back to `query`). Use `theme` for matching generated images/SVGs. |
 | `query`            | every keystroke (not in `inputMode:"submit"`)                                                                                | `text`, `rev` (int, increases with typing)                                                                                                                                                                                                                                      |
 | `submitQuery`      | Enter, when frame set `inputMode:"submit"`                                                                                   | `text`, `rev`                                                                                                                                                                                                                                                                   |
 | `select`           | highlighted item changed                                                                                                     | `id`, `rev`                                                                                                                                                                                                                                                                     |
 | `action`           | Enter (`action:"default"`, always fires even if item lists no `"default"`), Ctrl+K pick, action shortcut, or empty-state CTA | `id` (`""` for frame-level/empty-state), `action`, optional `ids` (bulk selection), optional `parameters`. **No `rev`.**                                                                                                                                                        |
-| `toggle`           | tree disclosure clicked                                                                                                      | `id`, `expanded`, `rev` — render children yourself                                                                                                                                                                                                                              |
+| `toggle`           | tree disclosure clicked                                                                                                      | `id`, `expanded`, `rev` – render children yourself                                                                                                                                                                                                                              |
 | `chartSelect`      | chart point clicked                                                                                                          | `seriesId`, `index`, `value`, `rev`                                                                                                                                                                                                                                             |
 | `chartRangeSelect` | selectable chart range dragged                                                                                               | `startIndex`, `endIndex`, `rev`, plus scope                                                                                                                                                                                                                                     |
 | `toolbarChange`    | toolbar control changed                                                                                                      | `id`, optional `value`/`values`/`direction`, `rev`, plus scope                                                                                                                                                                                                                  |
@@ -113,15 +113,15 @@ Custom env vars (any runtime): `"env"` object in `plugin.json` → `os.environ`/
 | `submit`           | form submitted                                                                                                               | `values` {fieldId: value}, `button` (pressed `form.buttons` id, absent = default CTA)                                                                                                                                                                                           |
 | `change`           | a `"watch":true` field changed                                                                                               | `id`, `values` (all current)                                                                                                                                                                                                                                                    |
 | `validate`         | a `validate:true` field settled after debounce                                                                               | `id`, all current `values`, `rev`, plus scope                                                                                                                                                                                                                                   |
-| `loadMore`         | scrolled near end, `hasMore:true`                                                                                            | `rev` — answer with longer list                                                                                                                                                                                                                                                 |
+| `loadMore`         | scrolled near end, `hasMore:true`                                                                                            | `rev` – answer with longer list                                                                                                                                                                                                                                                 |
 | `storage`          | reply to `storage` get/keys                                                                                                  | `requestId` (echo), `key`+`value` or `keys`                                                                                                                                                                                                                                     |
 | `clipboard`        | reply to `clipboardRead`                                                                                                     | `requestId` (echo), `text`                                                                                                                                                                                                                                                      |
-| `back`             | Escape/back button when `canGoBack:true` or page history has a previous entry                                                | `rev`, optional `fromPageId`/`toPageId`, plus scope — render previous screen                                                                                                                                                                                                    |
+| `back`             | Escape/back button when `canGoBack:true` or page history has a previous entry                                                | `rev`, optional `fromPageId`/`toPageId`, plus scope – render previous screen                                                                                                                                                                                                    |
 | `navigate`         | page breadcrumb clicked                                                                                                      | `targetPageId`,`rev`, optional `pageId`,`panelId`,`elementId`                                                                                                                                                                                                                   |
 | `kanbanMove`       | kanban card dropped                                                                                                          | `id`,`columnId`,`index`,`rev`, optional scope fields                                                                                                                                                                                                                            |
 | `calendarNavigate` | calendar header navigation                                                                                                   | `date` (`yyyy-mm-dd`), `mode` (`month` or `agenda`), `rev`, optional scope fields                                                                                                                                                                                               |
-| `tab`              | Tab pressed                                                                                                                  | `id` (highlighted item, `""` if none), `rev` — typically answer with `setQuery`                                                                                                                                                                                                 |
-| `close`            | plugin shutting down                                                                                                         | —                                                                                                                                                                                                                                                                               |
+| `tab`              | Tab pressed                                                                                                                  | `id` (highlighted item, `""` if none), `rev` – typically answer with `setQuery`                                                                                                                                                                                                 |
+| `close`            | plugin shutting down                                                                                                         | –                                                                                                                                                                                                                                                                               |
 
 ```json
 {"type":"init","query":"rome","protocol":14,"theme":{"accent":"#63A0EA","text":"#E8E8E8","background":"#1B1D23","dark":true},"locale":"en-US"}
@@ -130,9 +130,9 @@ Custom env vars (any runtime): `"env"` object in `plugin.json` → `os.environ`/
 {"type":"close"}
 ```
 
-## 5. Protocol — stdout (script → Tabame)
+## 5. Protocol – stdout (script → Tabame)
 
-Only `{"type":"render",...}` and `{"type":"command","command":"...",...}` are meaningful. **Any other stdout line is treated as diagnostic log (written to errors.log, not shown) — put debug prints on stderr.**
+Only `{"type":"render",...}` and `{"type":"command","command":"...",...}` are meaningful. **Any other stdout line is treated as diagnostic log (written to errors.log, not shown) – put debug prints on stderr.**
 
 ### 5.1 Commands (fire-and-forget, no `rev`, no response unless noted)
 
@@ -143,7 +143,7 @@ Only `{"type":"render",...}` and `{"type":"command","command":"...",...}` are me
 | `copyFile`         | `path`/`file`, or `paths` (local file/folder paths)                              | Copies one or more local files/folders as a native file-drop payload; Windows currently.                                                                                                                                    |
 | `paste`            | `text`                                                                           | Clipboard, hides launcher, refocuses previous window, sends Ctrl+V (types text there).                                                                                                                                      |
 | `open`             | `url` or `path`                                                                  | Opens URL/file/folder with default handler.                                                                                                                                                                                 |
-| `hide`             | —                                                                                | Hides launcher and sends `close`; for long-running work, send `background` first so the process can finish and send `notify`.                                                                                               |
+| `hide`             | –                                                                                | Hides launcher and sends `close`; for long-running work, send `background` first so the process can finish and send `notify`.                                                                                               |
 | `toast`            | `text`,`style`?(`success`\|`error`\|`info`\|`progress`),`progress`?              | Transient chip. `progress` style stays pinned (spinner or determinate ring); re-send to update.                                                                                                                             |
 | `setQuery`         | `text`                                                                           | Rewrites post-keyword search text (keyword stays); triggers a normal `query` back to you.                                                                                                                                   |
 | `clipboardRead`    | `requestId`?                                                                     | Host replies `{"type":"clipboard","requestId","text"}`.                                                                                                                                                                     |
@@ -166,7 +166,7 @@ lifecycle. See `tabame-extension/PROTOCOL.md`.
 
 ### 5.2 `rev` staleness rule
 
-Echo the query's `rev` when responding to that query — Tabame **drops frames older than the latest query's rev** (prevents slow "rom" response overwriting fresh "rome" results). For unsolicited frames (action results, background refresh, async pushes) use **`rev: 0`** (always accepted).
+Echo the query's `rev` when responding to that query – Tabame **drops frames older than the latest query's rev** (prevents slow "rom" response overwriting fresh "rome" results). For unsolicited frames (action results, background refresh, async pushes) use **`rev: 0`** (always accepted).
 
 ### 5.3 Lifecycle
 
@@ -209,7 +209,7 @@ keyword typed → process starts → `init`/`query` → actions → leave/Esc/cl
 }
 ```
 
-`view="list"|"grid"|"detail"|"chat"|"form"` are the common ones — see §7 for behavior of each.
+`view="list"|"grid"|"detail"|"chat"|"form"` are the common ones – see §7 for behavior of each.
 
 ### 6.1 Metadata entries (`preview.metadata` / `detail.metadata`)
 
@@ -402,7 +402,7 @@ Item `actions[]` + frame-level `actions[]` both populate Ctrl+K (item's first, t
 
 ## 9. Selection, keyboard, lifecycle
 
-Launcher owns selection (react to `select` optionally, e.g. lazy preview — usually unneeded since preview travels with the item). Arrow keys don't reach you. Enter/Ctrl+K → `action`; Tab → `tab` (answer with `setQuery` to autocomplete). Escape → exits (`close`) unless manual `canGoBack` or page history enables back → you get `back` with page ids when available, then render the previous screen. Slow op: emit `loading:true` frame (echo rev) first, then result.
+Launcher owns selection (react to `select` optionally, e.g. lazy preview – usually unneeded since preview travels with the item). Arrow keys don't reach you. Enter/Ctrl+K → `action`; Tab → `tab` (answer with `setQuery` to autocomplete). Escape → exits (`close`) unless manual `canGoBack` or page history enables back → you get `back` with page ids when available, then render the previous screen. Slow op: emit `loading:true` frame (echo rev) first, then result.
 
 ## 10. Icons
 
@@ -430,7 +430,7 @@ import json, os
 cfg = json.load(open("config.json", encoding="utf-8")) if os.path.exists("config.json") else {}
 ```
 
-**Async loading** — echo rev, spinner, then result (same rev; stale results auto-dropped if user kept typing):
+**Async loading** – echo rev, spinner, then result (same rev; stale results auto-dropped if user kept typing):
 
 ```python
 send({"type":"render","rev":rev,"view":"list","loading":True,"items":[],"loadingText":"Searching…"})
@@ -471,7 +471,7 @@ send({"type":"command","command":"hide"})
 send({"type":"command","command":"notify","title":"Conversion","text":"Finished successfully."})
 ```
 
-**Error handling** — never crash; catch and render:
+**Error handling** – never crash; catch and render:
 
 ````python
 try:
@@ -491,9 +491,9 @@ except Exception as e:
 - Multi-workflow plugin: write a page map; choose views from actual task/data shape, not the smoke-test list+preview.
 - Stable page ids; handle `back.toPageId`/`navigate.targetPageId`; use history intentionally.
 - Primary navigation/verbs stay discoverable via Enter, page chrome, and `floatingAction`, not only Ctrl+K.
-- Use commands (§5.1) for clipboard/open/hide/toast — never shell out.
+- Use commands (§5.1) for clipboard/open/hide/toast – never shell out.
 - cwd = plugin folder (put `config.json` there).
-- Deps auto-install: Python `pip`/`requirements.txt`; Node/Bun `package.json` (§3) — lazy-load heavy ones.
+- Deps auto-install: Python `pip`/`requirements.txt`; Node/Bun `package.json` (§3) – lazy-load heavy ones.
 - Icons: §10 name, `#RRGGBB`, `data:image/...` URI (≤2 MB), or raster/SVG URL.
 - Prefer `metadata` rows (§6.1) over markdown tables.
 - Same-`section` items must stay adjacent.
@@ -561,8 +561,8 @@ if __name__ == "__main__":
 
 `plugin.json`: `{"name":"My Plugin","category":"Utilities","keyword":"mp","runtime":"python","version": "1.0.0","entry":"main.py","icon":"star"}`
 
-**Node/Bun**: same protocol/logic — `send()` = `process.stdout.write(JSON.stringify(frame)+"\n")`; buffer stdin chunks and split on `"\n"`; `msg.type==="close"` → `process.exit(0)`; also exit on stdin `"end"`. `runtime:"node"`, `entry:"main.js"` (or `"bun"`/`.ts`).
+**Node/Bun**: same protocol/logic – `send()` = `process.stdout.write(JSON.stringify(frame)+"\n")`; buffer stdin chunks and split on `"\n"`; `msg.type==="close"` → `process.exit(0)`; also exit on stdin `"end"`. `runtime:"node"`, `entry:"main.js"` (or `"bun"`/`.ts`).
 
 ## 14. Prompt template for generating a plugin
 
-> Using the Tabame Launcher Plugin spec above, write a **<Python|Node>** plugin. Choose one exact `category` from the registry vocabulary based on the plugin's primary purpose. Keyword: `<keyword>`. It should: `<users, data source, major tasks, desired workflows>`. Before coding, give a compact page map with each page's stable id, purpose, native view, query meaning, Enter/primary action, and destinations. Choose from **all** §7 views; do not default to list + preview or hide primary navigation in Ctrl+K. Use proper history/breadcrumbs, visible floating actions, forms, loading/empty/error states, and scoped dashboard panels where they improve the workflow—without irrelevant view variety. Store secrets with `storage secret:true`. Follow §12. Give `plugin.json`, complete script, install folder, and a short walkthrough of the finished pages.
+> Using the Tabame Launcher Plugin spec above, write a **<Python|Node>** plugin. Choose one exact `category` from the registry vocabulary based on the plugin's primary purpose. Keyword: `<keyword>`. It should: `<users, data source, major tasks, desired workflows>`. Before coding, give a compact page map with each page's stable id, purpose, native view, query meaning, Enter/primary action, and destinations. Choose from **all** §7 views; do not default to list + preview or hide primary navigation in Ctrl+K. Use proper history/breadcrumbs, visible floating actions, forms, loading/empty/error states, and scoped dashboard panels where they improve the workflow–without irrelevant view variety. Store secrets with `storage secret:true`. Follow §12. Give `plugin.json`, complete script, install folder, and a short walkthrough of the finished pages.

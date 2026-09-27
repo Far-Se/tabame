@@ -307,7 +307,7 @@ class _DevToolboxWidgetState extends State<DevToolboxWidget> {
           ),
           const SizedBox(height: 6),
           SelectableText(
-            hasError ? _error! : (_output.isEmpty ? "—" : _output),
+            hasError ? _error! : (_output.isEmpty ? "–" : _output),
             style: TextStyle(
               fontSize: 13,
               fontFamily: "monospace",

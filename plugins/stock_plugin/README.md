@@ -1,7 +1,7 @@
-# Stocks — Tabame plugin
+# Stocks – Tabame plugin
 
-Generates a dark, trading-app style price card — chart, volume, and a stats
-row — for any ticker, over whatever period you ask for.
+Generates a dark, trading-app style price card – chart, volume, and a stats
+row – for any ticker, over whatever period you ask for.
 
 ## Usage
 
@@ -41,7 +41,7 @@ If you don't type a ticker, it falls back to `defaultTicker` in
 2. Open the Tabame launcher (it rescans plugins on open).
 3. Type `stock aapl` and press Enter.
 
-The first launch installs Pillow into the plugin's own `.pluginlibs` folder —
+The first launch installs Pillow into the plugin's own `.pluginlibs` folder –
 you'll see a short "Installing dependencies…" step once.
 
 ## Optional config
@@ -58,7 +58,7 @@ default period:
 
 ## How it works
 
-- Price and volume data come from Yahoo Finance's public chart endpoint —
+- Price and volume data come from Yahoo Finance's public chart endpoint –
   no API key needed. Chart resolution adapts to the period (5-min bars for
   1 day, up to weekly bars for multi-year ranges).
 - The card is drawn with Pillow at 2x resolution then downscaled for clean
@@ -67,6 +67,6 @@ default period:
   and a stats row (day high/low, previous close, volume, 52-week range).
 - A tiny local HTTP server (bound to `127.0.0.1` only, random port, one per
   running plugin instance) serves the PNG so it can be embedded as a normal
-  image in the result markdown — the launcher's protocol only allows
+  image in the result markdown – the launcher's protocol only allows
   `http(s)`/`file://` images, and `file://` isn't documented for markdown
   images, only icons.

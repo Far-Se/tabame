@@ -29,7 +29,7 @@ function escapeMarkdown(value) {
   return String(value ?? "").replace(/([\\`*_{}[\]()#+\-.!|>])/g, "\\$1");
 }
 
-function text(value, fallback = "—") {
+function text(value, fallback = "–") {
   const result = String(value ?? "").trim();
   return result || fallback;
 }
@@ -201,7 +201,7 @@ function renderConfig(rev, values = null, error = "", errorField = "url") {
           type: "password",
           label: "Password (optional)",
           placeholder: savedPassword
-            ? "Saved — leave blank to keep it"
+            ? "Saved – leave blank to keep it"
             : "WebUI password",
           description:
             "Leave both credential fields blank when WebUI authentication is disabled.",
@@ -291,7 +291,7 @@ function rootItems() {
     {
       id: "webui:open",
       title: "Open qBittorrent WebUI",
-      subtitle: "Optional — open the full WebUI in your browser",
+      subtitle: "Optional – open the full WebUI in your browser",
       icon: "open",
       accessories: [status],
       actions: [{ id: "default", title: "Open WebUI", icon: "open" }],
@@ -378,7 +378,7 @@ function torrentIcon(torrent) {
 
 function formatBytes(value) {
   const amount = Number(value);
-  if (!Number.isFinite(amount) || amount < 0) return "—";
+  if (!Number.isFinite(amount) || amount < 0) return "–";
   if (amount < 1024) return `${Math.round(amount)} B`;
   const units = ["KiB", "MiB", "GiB", "TiB"];
   let scaled = amount;
@@ -400,7 +400,7 @@ function formatRate(value) {
 
 function formatNumber(value, digits = 2) {
   const amount = Number(value);
-  return Number.isFinite(amount) ? amount.toFixed(digits) : "—";
+  return Number.isFinite(amount) ? amount.toFixed(digits) : "–";
 }
 
 function formatEta(value) {
@@ -417,9 +417,9 @@ function formatEta(value) {
 
 function formatDate(value) {
   const numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric <= 0) return "—";
+  if (!Number.isFinite(numeric) || numeric <= 0) return "–";
   const date = new Date(numeric < 10_000_000_000 ? numeric * 1000 : numeric);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "–";
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
@@ -945,7 +945,7 @@ function filesMarkdown(files) {
   const visible = files.slice(0, 80);
   const lines = visible.map((file) => {
     const progress = Math.round((Number(file.progress) || 0) * 100);
-    return `- ${escapeMarkdown(file.name || "Unnamed file")} — ${formatBytes(file.size)} · ${progress}%`;
+    return `- ${escapeMarkdown(file.name || "Unnamed file")} – ${formatBytes(file.size)} · ${progress}%`;
   });
   if (files.length > visible.length)
     lines.push(`\n_Only the first ${visible.length} files are shown._`);

@@ -202,8 +202,8 @@ def instructions_frame(rev):
         "",
         "Type a city and press **Enter**:",
         "",
-        "- `weather Gorgonia` — today's weather",
-        "- `weather Gorgonia weekly` (or `w`) — 7-day forecast",
+        "- `weather Gorgonia` – today's weather",
+        "- `weather Gorgonia weekly` (or `w`) – 7-day forecast",
         "- Add `f` at the end for Fahrenheit, e.g. `weather Gorgonia f`",
     ]
     if DEFAULT_CITY:

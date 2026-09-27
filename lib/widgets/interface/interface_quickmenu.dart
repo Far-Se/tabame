@@ -41,7 +41,7 @@ class _SettingsPage {
 }
 
 // ---------------------------------------------------------------------------
-// Main widget — shows a link list, navigates to sub-pages
+// Main widget – shows a link list, navigates to sub-pages
 // ---------------------------------------------------------------------------
 class QMSettings extends StatefulWidget {
   const QMSettings({super.key});

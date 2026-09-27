@@ -1020,7 +1020,7 @@ class FancyshotState extends State<Fancyshot> {
   }
 }
 
-/// Compact tonal header action button — smaller than [FilledButton.tonalIcon]
+/// Compact tonal header action button – smaller than [FilledButton.tonalIcon]
 /// so the header's three actions fit comfortably.
 class _HeaderButton extends StatelessWidget {
   const _HeaderButton({
@@ -1208,7 +1208,7 @@ class _CompactTextField extends StatelessWidget {
   }
 }
 
-/// Create-profile tile — same row style as [_ProfileListTile], first in the list.
+/// Create-profile tile – same row style as [_ProfileListTile], first in the list.
 class _ProfileCreateTile extends StatelessWidget {
   const _ProfileCreateTile({
     required this.controller,
@@ -2697,8 +2697,8 @@ class _FancyShotFrameSurface extends StatelessWidget {
   final Uint8List? captureBytesForBackground;
   final double scale;
   // The main image always renders at its native source size (only the
-  // preview-fit `scale` applies). Decorations — padding, border, browser
-  // frame, background, and aspect ratio — wrap around it without resizing it.
+  // preview-fit `scale` applies). Decorations – padding, border, browser
+  // frame, background, and aspect ratio – wrap around it without resizing it.
   Size get _captureSize => Size(
         sourceWidth * scale,
         sourceHeight * scale,
@@ -2706,7 +2706,7 @@ class _FancyShotFrameSurface extends StatelessWidget {
 
   // The main layer's outer dimensions: capture + imagePadding on all sides +
   // optional browser bar height.
-  // NOTE: frameBorderWidth is an *inset* BoxDecoration border — it does NOT
+  // NOTE: frameBorderWidth is an *inset* BoxDecoration border – it does NOT
   // expand the container, so it must NOT be included in the size calculation.
   // When showBrowserFrame is true the top imagePadding is suppressed (the bar
   // itself acts as the top spacing) so only bottom imagePadding is counted.
@@ -2802,7 +2802,7 @@ class _FancyShotFrameSurface extends StatelessWidget {
         ..setEntry(3, 2, profile.skewPerspective)
         ..rotateX(0.1 * profile.skewY)
         ..rotateY(-0.1 * profile.skewX);
-      // removed: ..scale(0.1) — this was shrinking the widget to 10% size
+      // removed: ..scale(0.1) – this was shrinking the widget to 10% size
     }
     if (profile.rotation != 0) {
       matrix.rotateZ(profile.rotation * math.pi / 180);
@@ -2831,7 +2831,7 @@ class _FancyShotFrameSurface extends StatelessWidget {
     // Grows outward from capture via imagePadding + frameBorderWidth.
     // Carries shadow and border. Never resizes capturedImageLayer.
     final Widget mainImageLayer = Container(
-      // Remove width/height here — Column drives the size
+      // Remove width/height here – Column drives the size
       decoration: BoxDecoration(
         color: profile.showBrowserFrame ? const Color(0xFFEBEBEB) : surfaceColor,
         borderRadius: radius,
@@ -2974,7 +2974,7 @@ class _FancyShotFrameSurface extends StatelessWidget {
                 ),
               ),
 
-            // 4. mainImageLayer centered — backgroundPadding is the space
+            // 4. mainImageLayer centered – backgroundPadding is the space
             //    between canvas edge and mainLayer, enforced by Center +
             //    the canvas being exactly mainLayer + backgroundPadding*2.
             Center(

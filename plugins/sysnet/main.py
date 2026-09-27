@@ -87,7 +87,7 @@ def render_root(rev, query):
 
 def proc_name(pid):
     if not pid:
-        return "—"
+        return "–"
     try:
         return psutil.Process(pid).name()
     except Exception:
@@ -145,7 +145,7 @@ def to_port_item(r):
     return {
         "id": port_item_id(r),
         "title": f"{r['proto']} :{r['port']}",
-        "subtitle": f"{r['name']} · PID {r['pid'] or '—'}",
+        "subtitle": f"{r['name']} · PID {r['pid'] or '–'}",
         "icon": "server",
         "accessories": [{"text": r["proto"]}],
         "actions": actions,
@@ -317,13 +317,13 @@ def render_wifi(rev, query):
                 "section": "Current connection",
                 "preview": {
                     "metadata": [
-                        {"label": "State", "text": state or "—"},
-                        {"label": "Signal", "text": signal or "—"},
-                        {"label": "Radio type", "text": info.get("Radio type", "—")},
-                        {"label": "Channel", "text": info.get("Channel", "—")},
-                        {"label": "Authentication", "text": info.get("Authentication", "—")},
-                        {"label": "Receive rate", "text": info.get("Receive rate (Mbps)", "—")},
-                        {"label": "Transmit rate", "text": info.get("Transmit rate (Mbps)", "—")},
+                        {"label": "State", "text": state or "–"},
+                        {"label": "Signal", "text": signal or "–"},
+                        {"label": "Radio type", "text": info.get("Radio type", "–")},
+                        {"label": "Channel", "text": info.get("Channel", "–")},
+                        {"label": "Authentication", "text": info.get("Authentication", "–")},
+                        {"label": "Receive rate", "text": info.get("Receive rate (Mbps)", "–")},
+                        {"label": "Transmit rate", "text": info.get("Transmit rate (Mbps)", "–")},
                     ]
                 },
                 "actions": [{"id": "refresh", "title": "Refresh", "icon": "refresh"}],
@@ -417,12 +417,12 @@ def render_adapters(rev, query):
                 "accessories": [{"text": "up" if r["up"] else "down", "color": "#22C55E" if r["up"] else "#8A8A8A"}],
                 "preview": {
                     "metadata": [
-                        {"label": "IPv4", "text": r["ipv4"] or "—"},
-                        {"label": "Netmask", "text": r["netmask"] or "—"},
-                        {"label": "IPv6", "text": r["ipv6"] or "—"},
-                        {"label": "MAC", "text": r["mac"] or "—"},
-                        {"label": "Speed", "text": f"{r['speed']} Mbps" if r["speed"] else "—"},
-                        {"label": "MTU", "text": str(r["mtu"]) if r["mtu"] else "—"},
+                        {"label": "IPv4", "text": r["ipv4"] or "–"},
+                        {"label": "Netmask", "text": r["netmask"] or "–"},
+                        {"label": "IPv6", "text": r["ipv6"] or "–"},
+                        {"label": "MAC", "text": r["mac"] or "–"},
+                        {"label": "Speed", "text": f"{r['speed']} Mbps" if r["speed"] else "–"},
+                        {"label": "MTU", "text": str(r["mtu"]) if r["mtu"] else "–"},
                     ]
                 },
                 "actions": [{"id": "copy_ip", "title": "Copy IPv4", "icon": "copy"}] if r["ipv4"] else [],

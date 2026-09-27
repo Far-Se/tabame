@@ -1,4 +1,4 @@
-# Browser — Tabame launcher plugin
+# Browser – Tabame launcher plugin
 
 Control Chromium or Firefox through the companion **Tabame Connector** extension.
 
@@ -33,12 +33,12 @@ is paired once per Windows account/browser profile. Existing
 
 ## Commands
 
-- **Codex usage** — plugin-owned logic opens ChatGPT Codex analytics in an
+- **Codex usage** – plugin-owned logic opens ChatGPT Codex analytics in an
   inactive temporary tab, sends its extraction JavaScript through
   `javascript.execute`, and closes the tab.
-- **All browser tabs** — searchable list with favicons and tab state.
-- **Playing audio** — audible tabs with the best current candidate first.
-- **Connection & pairing** — live status, extension version, port, and token.
+- **All browser tabs** – searchable list with favicons and tab state.
+- **Playing audio** – audible tabs with the best current candidate first.
+- **Connection & pairing** – live status, extension version, port, and token.
 
 Tab actions are available through Enter and Ctrl+K: focus, close, mute/unmute,
 pin/unpin, reload, duplicate, and copy URL.

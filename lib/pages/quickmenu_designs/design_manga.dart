@@ -15,7 +15,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Manga" QuickMenu design — a black-and-white comic page.
+/// "Manga" QuickMenu design – a black-and-white comic page.
 ///
 /// The menu renders as a single inked panel: a bold double-ruled frame like
 /// a comic page border, a slanted "impact" masthead with a burst mark and
@@ -120,7 +120,7 @@ class MainMenuMangaWidget extends StatelessWidget {
                               ),
                             ),
                           ),
-                          // Second ruling just inside the frame — the double panel border.
+                          // Second ruling just inside the frame – the double panel border.
                           Positioned.fill(
                             child: IgnorePointer(
                               child: Container(
@@ -172,7 +172,7 @@ class MainMenuMangaWidget extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Impact header — slanted masthead, burst mark, speed lines
+// Impact header – slanted masthead, burst mark, speed lines
 // ---------------------------------------------------------------------------
 
 class _ImpactHeader extends StatelessWidget {
@@ -346,7 +346,7 @@ class _HalftonePainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------------------------
-// Panel label — skewed ink caption tab (used above the switcher / pinned strip)
+// Panel label – skewed ink caption tab (used above the switcher / pinned strip)
 // ---------------------------------------------------------------------------
 
 class _PanelLabel extends StatelessWidget {
@@ -388,7 +388,7 @@ class _PanelLabel extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Caption footer — hard-ruled box holding the info bar
+// Caption footer – hard-ruled box holding the info bar
 // ---------------------------------------------------------------------------
 
 class _CaptionFooter extends StatelessWidget {

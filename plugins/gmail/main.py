@@ -7,7 +7,7 @@ Setup (one-time, per user):
      create an OAuth Client ID of type "Desktop app".
   2. Download the client secret JSON and save it in this plugin's folder as
      "client_secret.json".
-  3. Type `mail` in the launcher and pick "Connect Gmail" — a browser window
+  3. Type `mail` in the launcher and pick "Connect Gmail" – a browser window
      opens for you to sign in. The token is stored securely via Tabame's
      storage command (Windows Credential Manager), not on disk.
 
@@ -242,7 +242,7 @@ def get_service():
 def run_oauth_flow():
     if not os.path.exists(CLIENT_SECRET_FILE):
         toast(
-            "Missing client_secret.json in the plugin folder — see setup instructions",
+            "Missing client_secret.json in the plugin folder – see setup instructions",
             "error",
         )
         render_messages(0, _state["text"])
@@ -425,7 +425,7 @@ def collect_images(service, message_id, payload):
     """Download embedded/attached images to a local cache folder.
     Returns (cid_map: {content-id -> file:// url}, image_list: [{filename,url}],
     other_attachment_names: [filename]). Only images physically embedded in the
-    message are ever fetched — remote http(s) images referenced in HTML are
+    message are ever fetched – remote http(s) images referenced in HTML are
     intentionally never auto-loaded, since doing so would leak a read receipt
     to the sender (the classic email tracking-pixel problem)."""
     cid_map, image_list, other_names = {}, [], []
@@ -1176,7 +1176,7 @@ def main():
                 _state["rev"] = rev
                 _state["text"] = text
             if t == "init":
-                # `init` never carries a `rev`, so it defaults to 0 — which
+                # `init` never carries a `rev`, so it defaults to 0 – which
                 # both Tabame and our own is_stale() always accept, no
                 # matter how long it takes to answer. `init` is always
                 # immediately followed by a `query` with the same text and

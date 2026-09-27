@@ -11,7 +11,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Player" QuickMenu design — an early-2000s skinned media player (BSPlayer /
+/// "Player" QuickMenu design – an early-2000s skinned media player (BSPlayer /
 /// Winamp era).
 ///
 /// The menu renders as a Y2K "blue steel" player skin: brushed-metal body with
@@ -231,7 +231,7 @@ class MainMenuPlayerWidget extends StatelessWidget {
                     else if (user.bottomBarOnTop)
                       const PinnedAndTrayList(),
 
-                    // Main LCD well — the window switcher behind glass.
+                    // Main LCD well – the window switcher behind glass.
                     _Bevel(
                       t: t,
                       inset: true,
@@ -286,7 +286,7 @@ class MainMenuPlayerWidget extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Brand strip — embossed label + speaker-grille vents
+// Brand strip – embossed label + speaker-grille vents
 // ---------------------------------------------------------------------------
 
 class _BrandStrip extends StatelessWidget {

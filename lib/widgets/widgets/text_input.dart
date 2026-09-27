@@ -242,7 +242,7 @@ class _DesktopTextScrollBehavior extends MaterialScrollBehavior {
 
   @override
   Set<PointerDeviceKind> get dragDevices => const <PointerDeviceKind>{
-        // Intentionally empty — disables drag-to-scroll entirely.
+        // Intentionally empty – disables drag-to-scroll entirely.
         // Mouse wheel still works via the 'scrollAnimator' path.
       };
 }

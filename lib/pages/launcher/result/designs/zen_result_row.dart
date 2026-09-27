@@ -2,7 +2,7 @@ part of '../result_row.dart';
 
 extension _ZenResultRow on LauncherResultRow {
   Widget _buildZen(BuildContext context) {
-    // Deliberately unhurried — calm motion, never snappy (even on key-repeat).
+    // Deliberately unhurried – calm motion, never snappy (even on key-repeat).
     final Duration dur = Duration(milliseconds: isRepeating ? 120 : 300);
     const Curve curve = Curves.easeInOutSine;
 

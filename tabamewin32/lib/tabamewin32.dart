@@ -526,29 +526,29 @@ class CaretLayerResult {
 /// "best" rect (the same value [getFocusedElementCaretRect] would return).
 ///
 /// Layers, in the priority order they're tried:
-/// 1. [win32Caret] — `GetGUIThreadInfo().rcCaret`. Works for classic Win32
+/// 1. [win32Caret] – `GetGUIThreadInfo().rcCaret`. Works for classic Win32
 ///    edit/richedit controls regardless of which process owns them.
-/// 2. [accessibleCaret] — legacy MSAA `IAccessible` `OBJID_CARET`. Covers
+/// 2. [accessibleCaret] – legacy MSAA `IAccessible` `OBJID_CARET`. Covers
 ///    older/non-UIA-aware controls.
-/// 3. [uiaCaretRange] — UI Automation `TextPattern2.GetCaretRange`. The
+/// 3. [uiaCaretRange] – UI Automation `TextPattern2.GetCaretRange`. The
 ///    "proper" modern API; works in UWP/WinUI/most Win32 apps that implement
 ///    UIA text patterns.
-/// 4. [uiaSelection] — UIA `TextPattern.GetSelection` bounding rect, used
+/// 4. [uiaSelection] – UIA `TextPattern.GetSelection` bounding rect, used
 ///    when there's no dedicated caret range but the (possibly empty)
 ///    selection range still marks the caret position.
-/// 5. [imeCandidate] — `ImmGetCandidateWindow` on the focused window. This is
+/// 5. [imeCandidate] – `ImmGetCandidateWindow` on the focused window. This is
 ///    the IMM32 channel apps set (via `ImmSetCandidateWindow`) specifically
-///    to anchor IME popup UI — candidate lists, and the system's own Win+.
-///    emoji panel — near the caret. Cross-platform toolkits (e.g. winit's
+///    to anchor IME popup UI – candidate lists, and the system's own Win+.
+///    emoji panel – near the caret. Cross-platform toolkits (e.g. winit's
 ///    `set_ime_cursor_area`, which GPUI-based editors like Zed are built on)
 ///    call exactly this, even for apps with no other accessibility support,
 ///    which is why the native emoji panel can land correctly in apps where
 ///    every other layer here reports "not found".
-/// 6. [imeComposition] — `ImmGetCompositionWindow` on the focused window.
+/// 6. [imeComposition] – `ImmGetCompositionWindow` on the focused window.
 ///    A different IMM32 channel: where actively-composed (not yet committed)
 ///    IME text is drawn. Useful when a field is mid IME-composition and the
 ///    other layers go stale.
-/// 7. [uiaBoundingRect] — UIA bounding rect of the whole focused element.
+/// 7. [uiaBoundingRect] – UIA bounding rect of the whole focused element.
 ///    Last-resort fallback: not a caret position, just "the control is
 ///    roughly here". If it ends up covering most of the focused window, the
 ///    native layer treats it as untrustworthy (see [found]/[chosenLayer]) -
@@ -585,7 +585,7 @@ class CaretDebugInfo {
   /// Human-readable `CurrentControlType` of the focused UIA element (e.g.
   /// "Edit", "Document", "Pane"). A bare "Pane"/"Window" with none of the
   /// `supports*` flags below set is the generic passthrough every HWND gets
-  /// for free — i.e. "this app implements no accessibility API".
+  /// for free – i.e. "this app implements no accessibility API".
   String elementControlType;
 
   /// Whether the focused element supports `TextPattern` (selection/caret via
@@ -601,7 +601,7 @@ class CaretDebugInfo {
   bool supportsValuePattern;
 
   /// Whether the focused element supports the UIA-to-MSAA bridge
-  /// (`LegacyIAccessiblePattern`) — a different path to old-style
+  /// (`LegacyIAccessiblePattern`) – a different path to old-style
   /// `IAccessible` data than calling `AccessibleObjectFromWindow` directly.
   bool supportsLegacyIAccessible;
 
@@ -653,7 +653,7 @@ class CaretDebugInfo {
     );
   }
 
-  /// All layers keyed by name, in priority order — handy for iterating/logging.
+  /// All layers keyed by name, in priority order – handy for iterating/logging.
   Map<String, CaretLayerResult> get layers => <String, CaretLayerResult>{
         'Win32Caret': win32Caret,
         'AccessibleCaret': accessibleCaret,
@@ -1911,7 +1911,7 @@ class ClipboardExtended {
     if (text != null) formats['text/plain'] = text;
     if (html != null) formats['text/html'] = html;
     if (pngBytes != null) {
-      formats['image/png'] = pngBytes; // typed data (Uint8List) — single buffer, not a boxed int list
+      formats['image/png'] = pngBytes; // typed data (Uint8List) – single buffer, not a boxed int list
     }
 
     final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
@@ -1924,7 +1924,7 @@ class ClipboardExtended {
   static Future<bool> copyImage(Uint8List imageBytes) async {
     final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(
       'clipboardExtendedCopyImage',
-      <String, dynamic>{'imageBytes': imageBytes}, // typed data (Uint8List) — single buffer, not a boxed int list
+      <String, dynamic>{'imageBytes': imageBytes}, // typed data (Uint8List) – single buffer, not a boxed int list
     );
     return result ?? false;
   }
@@ -1959,7 +1959,7 @@ class ClipboardExtended {
   }
 
   /// Captures the current clipboard image, encodes it to PNG, and writes it to
-  /// [path] — all on a native background thread. Only small metadata crosses the
+  /// [path] – all on a native background thread. Only small metadata crosses the
   /// method channel; the PNG bytes never enter the Dart isolate, so this does
   /// not block Flutter's platform thread (which owns the global mouse hook).
   /// Returns null when the clipboard holds no image, or throws a
@@ -2068,7 +2068,7 @@ class TaskbarButtonInfo {
     required this.uiaName,
   });
 
-  /// Convenience accessor — true when [helpText] is non-empty.
+  /// Convenience accessor – true when [helpText] is non-empty.
   bool get hasBadge => helpText.isNotEmpty;
 
   factory TaskbarButtonInfo._fromMap(Map<Object?, Object?> m) {
@@ -2096,7 +2096,7 @@ class TaskbarUia {
 }
 
 enum TrayClickType {
-  /// UIA InvokePattern::Invoke() — works for Win32, Qt, Electron, Appx/UWP
+  /// UIA InvokePattern::Invoke() – works for Win32, Qt, Electron, Appx/UWP
   left,
 
   /// Resolves screen coordinates via UIA then sends a real right-click via SendInput
@@ -2119,7 +2119,7 @@ class ExtendedTrayIcon {
   /// HWND of the owning application window.
   final int hWnd;
 
-  /// Icon identifier — wParam of the tray callback message.
+  /// Icon identifier – wParam of the tray callback message.
   final int uID;
 
   /// The private WM_* message registered by the app for tray notifications.
@@ -2490,7 +2490,7 @@ class BrowserTabs {
 
 /// A connected display along with its HDR (advanced color) capability/state.
 class HDRDisplay {
-  /// Low part of the adapter LUID — identifies the display together with
+  /// Low part of the adapter LUID – identifies the display together with
   /// [adapterIdHigh] and [id] across re-queries.
   final int adapterIdLow;
 
@@ -2662,7 +2662,7 @@ class MonitorInputDisplay {
 }
 
 /// Enumerate displays and switch their active input source via DDC-CI
-/// (VESA MCCS VCP code 0x60 — the same mechanism a hardware KVM uses).
+/// (VESA MCCS VCP code 0x60 – the same mechanism a hardware KVM uses).
 class WinMonitorInput {
   /// Returns every detected display with its current input and, when the
   /// monitor advertises one, the list of selectable input codes. Slow
@@ -2737,7 +2737,7 @@ class BluetoothDeviceInfo {
 
 /// Enumerate paired Bluetooth devices and connect/disconnect them by toggling
 /// their installed service enablement (the reliable Win32 path for audio
-/// devices — no WinRT dependency).
+/// devices – no WinRT dependency).
 class WinBluetooth {
   /// Returns every paired/remembered device with its connection state and
   /// battery level (when available). Runs on a native background thread.
@@ -2748,7 +2748,7 @@ class WinBluetooth {
   }
 
   /// Connects ([connect] = true) or disconnects the device. Blocks (on a
-  /// native background thread) while the radio negotiates — allow a few
+  /// native background thread) while the radio negotiates – allow a few
   /// seconds and re-enumerate afterwards to observe the settled state.
   static Future<bool> setConnection(BluetoothDeviceInfo device, bool connect) async {
     final bool? result = await tabameWin32MethodChannel.invokeMethod<bool>(

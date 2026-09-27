@@ -12,13 +12,13 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Gazette" QuickMenu design — a vintage newspaper front page.
+/// "Gazette" QuickMenu design – a vintage newspaper front page.
 ///
 /// The menu renders as a sheet of aged newsprint: a double-rule page frame,
 /// a serif masthead over an Oxford rule (thick line paired with a thin one),
 /// the quick actions as the section-links strip, the window switcher boxed as
 /// the day's dispatches column, pinned apps behind a dotted classifieds rule,
-/// and the info bar as the page footer. Everything is "ink" — flat hairlines,
+/// and the info bar as the page footer. Everything is "ink" – flat hairlines,
 /// no glows, no gradients on chrome. `Design.gradientAlpha` scales the aged-
 /// paper vignette that darkens the page edges.
 class _GazetteInk {
@@ -185,7 +185,7 @@ class MainMenuGazetteWidget extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Masthead — title flanked by rules, over the Oxford rule
+// Masthead – title flanked by rules, over the Oxford rule
 // ---------------------------------------------------------------------------
 
 class _Masthead extends StatelessWidget {
@@ -254,7 +254,7 @@ class _InkDiamond extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Dispatch column — the window switcher boxed as the lead article
+// Dispatch column – the window switcher boxed as the lead article
 // ---------------------------------------------------------------------------
 
 class _DispatchColumn extends StatelessWidget {

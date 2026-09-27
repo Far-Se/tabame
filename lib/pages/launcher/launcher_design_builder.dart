@@ -17,6 +17,7 @@ import 'launcher_design.dart';
 import 'widgets/capillary_surface.dart';
 import 'widgets/crt_surface.dart';
 import 'widgets/liquid_metal_surface.dart';
+import 'widgets/liquid_glass_surface.dart';
 import 'widgets/thermal_surface.dart';
 import 'widgets/satin_surface.dart';
 import 'widgets/radiant_surface.dart';
@@ -36,6 +37,7 @@ part 'launcher_designs/cyber_launcher_design.dart';
 part 'launcher_designs/fluent_launcher_design.dart';
 part 'launcher_designs/glass_launcher_design.dart';
 part 'launcher_designs/liquid_metal_launcher_design.dart';
+part 'launcher_designs/liquid_glass_launcher_design.dart';
 part 'launcher_designs/manga_launcher_design.dart';
 part 'launcher_designs/manifesto_launcher_design.dart';
 part 'launcher_designs/matrix_launcher_design.dart';
@@ -87,6 +89,7 @@ extension LauncherDesignBuilder on LauncherDesign {
         LauncherDesign.fluent => _fluentOuterDecoration(surface),
         LauncherDesign.glass => _glassOuterDecoration(accent),
         LauncherDesign.liquidMetal => _liquidMetalOuterDecoration(),
+        LauncherDesign.liquidGlass => _liquidGlassOuterDecoration(),
         LauncherDesign.manga => _mangaOuterDecoration(surface),
         LauncherDesign.manifesto => _manifestoOuterDecoration(surface),
         LauncherDesign.matrix => _matrixOuterDecoration(),
@@ -133,6 +136,7 @@ extension LauncherDesignBuilder on LauncherDesign {
       isSearching: isSearching,
     );
     return switch (this) {
+      LauncherDesign.liquidGlass => _LiquidGlassSearchBar(content),
       LauncherDesign.ivoryGrove => _IvoryGroveSearchBar(content),
       LauncherDesign.anime => _AnimeSearchBar(content),
       LauncherDesign.aurora => _AuroraSearchBar(content),

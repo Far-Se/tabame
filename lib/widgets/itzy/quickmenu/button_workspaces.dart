@@ -252,7 +252,7 @@ WorkspaceArea _convertAreaMode(WorkspaceArea area, {required bool usePixels}) {
 }
 
 // ===========================================================================
-// Editor — one screen for both "edit existing" and "create new".
+// Editor – one screen for both "edit existing" and "create new".
 // ===========================================================================
 
 class _WorkspaceEditor extends StatefulWidget {
@@ -888,7 +888,7 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
   late final TextEditingController _pathController;
   late final TextEditingController _paramsController;
   late final TextEditingController _hookToController;
-  // Geometry is stored as left/top/right/bottom — either monitor-relative
+  // Geometry is stored as left/top/right/bottom – either monitor-relative
   // fractions (percent mode) or absolute pixels (px mode), per area.usePixels.
   // Edited here as integer position (X/Y) and size (W/H) in the current unit.
   late final TextEditingController _xController;
@@ -921,7 +921,7 @@ class _WorkspaceAreaCardState extends State<_WorkspaceAreaCard> {
   void didUpdateWidget(covariant _WorkspaceAreaCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Compare against the controller's current text (not oldWidget). During typing
-    // the controller already holds the new value, so no reset fires — assigning
+    // the controller already holds the new value, so no reset fires – assigning
     // `controller.text` would otherwise collapse the selection to offset -1
     // (select-all), making the next keystroke replace the whole field.
     if (widget.area.windowTitle != _titleController.text) _titleController.text = widget.area.windowTitle;
@@ -1808,7 +1808,7 @@ class WorkspaceRunner {
     // the target monitor's physical rect and `getInvisibleBorder` returns physical
     // border widths. Positioning directly in physical coords (instead of routing
     // through setPosDPI's logical→physical guess) keeps the window on the intended
-    // monitor even across a mixed-DPI, multi-monitor layout — setPosDPI estimates
+    // monitor even across a mixed-DPI, multi-monitor layout – setPosDPI estimates
     // the target monitor from the window's *current* monitor scale, which lands the
     // window on the wrong monitor when it started on a differently-scaled one.
     final ({int bottom, int left, int right, int top}) border = Win32.getInvisibleBorder(hWnd);
@@ -1942,7 +1942,7 @@ class WorkspaceRunner {
     // Reuse is gated on the executable only. The saved title reflects whatever the
     // window showed at capture time (e.g. "Inbox - Gmail - Chrome") and drifts for
     // browsers/editors, so it must not decide whether an already-open app counts as
-    // a match — otherwise we'd relaunch an app that is already running. The title
+    // a match – otherwise we'd relaunch an app that is already running. The title
     // still ranks candidates in _findMatchingWindow when several windows share an exe.
     return windowExe == areaExe ||
         windowExe.endsWith(areaExe) ||

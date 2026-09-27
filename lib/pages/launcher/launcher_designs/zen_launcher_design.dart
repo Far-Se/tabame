@@ -32,7 +32,7 @@ class _ZenSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color accent = LauncherTheme.accentOf(context);
-    // A soft floating pill with generous margin — room to breathe.
+    // A soft floating pill with generous margin – room to breathe.
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Container(
@@ -65,7 +65,7 @@ class _ZenSearchBar extends StatelessWidget {
   }
 }
 
-/// The calm outer frame — soft dawn wash, big rounding, and a faint
+/// The calm outer frame – soft dawn wash, big rounding, and a faint
 /// rolling-hills horizon footer.
 class ZenLauncherFrame extends StatelessWidget {
   const ZenLauncherFrame({super.key, required this.child, this.resultCount = 0});
@@ -166,7 +166,7 @@ class _ZenFooter extends StatelessWidget {
   }
 }
 
-/// Two soft overlapping hills along the bottom edge — a quiet horizon.
+/// Two soft overlapping hills along the bottom edge – a quiet horizon.
 class _ZenHillsPainter extends CustomPainter {
   const _ZenHillsPainter(this.color);
 

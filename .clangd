@@ -1,7 +1,7 @@
 CompileFlags:
   # build/clangd/compile_commands.json is produced by tool\gen-clangd-db.bat
   # (Ninja generator). The normal `flutter build` uses the Visual Studio CMake
-  # generator, which cannot emit compile_commands.json — re-run that script
+  # generator, which cannot emit compile_commands.json – re-run that script
   # after adding new source files / plugins so clangd sees the updated flags.
   CompilationDatabase: "build/clangd"
   Add:
@@ -19,6 +19,6 @@ CompileFlags:
     - -WX
 
 Diagnostics:
-  # These files are #included fragments, not standalone units — unused
+  # These files are #included fragments, not standalone units – unused
   # functions/variables are expected when viewed in isolation.
   UnusedIncludes: None

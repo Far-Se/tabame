@@ -285,7 +285,7 @@ class WindowsScrollController extends ScrollController {
   }
 }
 
-// 2. The behavior — just wires up scrollbar + drag devices
+// 2. The behavior – just wires up scrollbar + drag devices
 class WindowsScrollBehavior extends MaterialScrollBehavior {
   const WindowsScrollBehavior();
 

@@ -100,7 +100,7 @@ void _workerMain(_WorkerArgs args) {
       throttleMap.remove(hwnd);
       return; // don't forward destroy events unless you want them in the UI
     }
-    // Skip child windows — only care about root top-level windows
+    // Skip child windows – only care about root top-level windows
     if (_getAncestor(hwnd, GA_ROOT) != hwnd) return;
 
     // Throttle high-frequency events
@@ -136,7 +136,7 @@ void _workerMain(_WorkerArgs args) {
   }
 
   // isolateLocal: callback runs on this isolate's event loop only.
-  // No ports held open on the main isolate — hot restart safe.
+  // No ports held open on the main isolate – hot restart safe.
   callable = NativeCallable<_WinEventProcNative>.isolateLocal(winEventProc);
 
   const flags = WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS;
@@ -160,7 +160,7 @@ void _workerMain(_WorkerArgs args) {
   };
   args.replyPort.send(shutdownReceiver.sendPort);
 
-  // Win32 message pump — required for WINEVENT_OUTOFCONTEXT delivery,
+  // Win32 message pump – required for WINEVENT_OUTOFCONTEXT delivery,
   // and also pumps Dart's event loop so isolateLocal callbacks fire.
   final msg = calloc<MSG>();
   PeekMessage(msg, NULL, 0, 0, PM_NOREMOVE);
@@ -176,7 +176,7 @@ Isolate? _workerIsolate;
 SendPort? _workerShutdownPort;
 
 /// Starts the window watcher. Returns a [ReceivePort] that delivers
-/// [WindowEvent]s on the main isolate. Safe to call again after hot restart —
+/// [WindowEvent]s on the main isolate. Safe to call again after hot restart –
 /// any previous worker is killed first.
 Future<ReceivePort> startWindowWatcher() async {
   await stopWindowWatcher();

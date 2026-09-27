@@ -47,7 +47,7 @@ inline AppBitmap HBitmapToAppBitmap(HBITMAP hbmp) {
 
   DIBSECTION ds{};
   if (GetObject(hbmp, sizeof(ds), &ds) != sizeof(ds)) {
-    // Not a DIB section — fall back to GetDIBits (icons from .exe files)
+    // Not a DIB section – fall back to GetDIBits (icons from .exe files)
     BITMAP bm{};
     if (!GetObject(hbmp, sizeof(bm), &bm))
       return result;
@@ -140,7 +140,7 @@ inline AppBitmap CropAndScaleIfPadded(AppBitmap src, int desiredSize) {
     if (p[3] <= 8)
       return true; // transparent
     if (p[3] >= 247) {
-      // Opaque — check the two known Windows bg colours (with a small
+      // Opaque – check the two known Windows bg colours (with a small
       // tolerance of ±6 per channel to survive minor scaling artefacts).
       auto closeEnough = [](uint8_t a, uint8_t b) -> bool {
         return (a >= b ? a - b : b - a) <= 6;
@@ -255,7 +255,7 @@ inline HBITMAP ExtractIconBitmapFromItem(IShellItem *item,
 
   if (FAILED(hr) || !bitmap) {
     // Some .url / internet-shortcut items only expose their icon via the
-    // thumbnail path — drop SIIGBF_ICONONLY as a fallback.
+    // thumbnail path – drop SIIGBF_ICONONLY as a fallback.
     hr = factory->GetImage(sz, SIIGBF_RESIZETOFIT | SIIGBF_SCALEUP, &bitmap);
   }
 
@@ -319,7 +319,7 @@ inline void ResolveExecutableAndArgs(IShellItem *item,
     }
   }
 
-  // Get IShellItem2 once — used in both (b) and (c).
+  // Get IShellItem2 once – used in both (b) and (c).
   ComPtr<IShellItem2> item2;
   item->QueryInterface(IID_PPV_ARGS(&item2));
 
@@ -348,7 +348,7 @@ inline void ResolveExecutableAndArgs(IShellItem *item,
       if (parsingPath)
         CoTaskMemFree(parsingPath);
     }
-    // Could not resolve the .url file path — leave outExe empty.
+    // Could not resolve the .url file path – leave outExe empty.
     return;
   }
 
@@ -379,14 +379,14 @@ inline void ResolveExecutableAndArgs(IShellItem *item,
         ReadStringProp(store.Get(), PKEY_AppUserModel_PackageInstallPath);
     if (!installPath.empty())
       outExe = installPath;
-    // outArgs stays empty — packaged apps are launched via AUMID
+    // outArgs stays empty – packaged apps are launched via AUMID
   }
 }
 
 } // namespace detail
 
 // ---------------------------------------------------------------------------
-// GetAllApps — enumerate shell:AppsFolder
+// GetAllApps – enumerate shell:AppsFolder
 // ---------------------------------------------------------------------------
 inline std::vector<AppInfo> GetAllApps() {
   std::vector<AppInfo> apps;
@@ -625,7 +625,7 @@ inline AppBitmap GetAppBitmap(const std::wstring &parsingName,
     if (bitmap) {
       result = detail::HBitmapToAppBitmap(bitmap);
       DeleteObject(bitmap);
-      // No CropAndScaleIfPadded — image list gives clean icons
+      // No CropAndScaleIfPadded – image list gives clean icons
     } else {
       // Fallback for UWP/MSIX or anything the image list couldn't serve
       bitmap = detail::ExtractIconBitmapFromItem(item.Get(), desiredSize);

@@ -147,15 +147,12 @@ class _WindowLayoutsPanelState extends State<WindowLayoutsPanel> {
       final List<WindowLayoutEntry> entries = List<WindowLayoutEntry>.from(s.entries);
       if (index < 0 || index >= entries.length) return s.copyWith(entries: entries);
       entries.removeAt(index);
-      // Removing an entry shifts every later index down by one — drop references
+      // Removing an entry shifts every later index down by one – drop references
       // to the removed entry and re-base the ones after it so hooks stay valid.
       for (int i = 0; i < entries.length; i++) {
         entries[i] = entries[i].copyWith(
-          hookedEntries: entries[i]
-              .hookedEntries
-              .where((int h) => h != index)
-              .map((int h) => h > index ? h - 1 : h)
-              .toList(),
+          hookedEntries:
+              entries[i].hookedEntries.where((int h) => h != index).map((int h) => h > index ? h - 1 : h).toList(),
         );
       }
       return s.copyWith(entries: entries);
@@ -361,89 +358,89 @@ class _WindowLayoutsPanelState extends State<WindowLayoutsPanel> {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           InkWell(
-        onTap: () => _restore(snapshot),
-        borderRadius: BorderRadius.circular(10),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
-          child: Row(
-            children: <Widget>[
-              Icon(
-                Icons.view_quilt_rounded,
-                size: 18,
-                color: monitorsMatch ? Design.accent : Design.text.withAlpha(90),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
+            onTap: () => _restore(snapshot),
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.view_quilt_rounded,
+                    size: 18,
+                    color: monitorsMatch ? Design.accent : Design.text.withAlpha(90),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Flexible(
-                          child: Text(
-                            snapshot.name,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                          ),
-                        ),
-                        if (!monitorsMatch) ...<Widget>[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withAlpha(24),
-                              borderRadius: BorderRadius.circular(99),
-                            ),
-                            child: Text(
-                              '≠ MONITORS',
-                              style: TextStyle(
-                                fontSize: Design.baseFontSize - 1,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.4,
-                                color: Colors.orange.shade400,
+                        Row(
+                          children: <Widget>[
+                            Flexible(
+                              child: Text(
+                                snapshot.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                               ),
                             ),
-                          ),
-                        ],
+                            if (!monitorsMatch) ...<Widget>[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withAlpha(24),
+                                  borderRadius: BorderRadius.circular(99),
+                                ),
+                                child: Text(
+                                  '≠ MONITORS',
+                                  style: TextStyle(
+                                    fontSize: Design.baseFontSize - 1,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.4,
+                                    color: Colors.orange.shade400,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${snapshot.entries.length} windows · $monitorCount monitor${monitorCount == 1 ? '' : 's'} · ${_formatDate(snapshot.createdAt)}',
+                          style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: Design.text.withAlpha(140)),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${snapshot.entries.length} windows · $monitorCount monitor${monitorCount == 1 ? '' : 's'} · ${_formatDate(snapshot.createdAt)}',
-                      style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: Design.text.withAlpha(140)),
-                    ),
-                  ],
-                ),
+                  ),
+                  _rowIconButton(
+                    icon: Icons.bolt_rounded,
+                    tooltip: snapshot.autoRestore
+                        ? 'Auto-restore on this monitor setup: ON'
+                        : 'Auto-restore when this monitor setup is detected',
+                    color: snapshot.autoRestore ? Design.accent : Design.text.withAlpha(80),
+                    onTap: () => _toggleAutoRestore(snapshot),
+                  ),
+                  _rowIconButton(
+                    icon: editing ? Icons.edit_rounded : Icons.edit_outlined,
+                    tooltip: editing ? 'Done editing' : 'Edit apps in this layout',
+                    color: editing ? Design.accent : Design.text.withAlpha(120),
+                    onTap: () => _toggleEdit(snapshot),
+                  ),
+                  _rowIconButton(
+                    icon: Icons.refresh_rounded,
+                    tooltip: 'Re-capture current windows into this layout',
+                    color: Design.text.withAlpha(120),
+                    onTap: () => _updateSnapshot(snapshot),
+                  ),
+                  _rowIconButton(
+                    icon: confirmingDelete ? Icons.delete_forever_rounded : Icons.delete_outline_rounded,
+                    tooltip: confirmingDelete ? 'Tap again to delete' : 'Delete layout',
+                    color: confirmingDelete ? Colors.red.shade400 : Design.text.withAlpha(120),
+                    onTap: () => _delete(snapshot),
+                  ),
+                ],
               ),
-              _rowIconButton(
-                icon: Icons.bolt_rounded,
-                tooltip: snapshot.autoRestore
-                    ? 'Auto-restore on this monitor setup: ON'
-                    : 'Auto-restore when this monitor setup is detected',
-                color: snapshot.autoRestore ? Design.accent : Design.text.withAlpha(80),
-                onTap: () => _toggleAutoRestore(snapshot),
-              ),
-              _rowIconButton(
-                icon: editing ? Icons.edit_rounded : Icons.edit_outlined,
-                tooltip: editing ? 'Done editing' : 'Edit apps in this layout',
-                color: editing ? Design.accent : Design.text.withAlpha(120),
-                onTap: () => _toggleEdit(snapshot),
-              ),
-              _rowIconButton(
-                icon: Icons.refresh_rounded,
-                tooltip: 'Re-capture current windows into this layout',
-                color: Design.text.withAlpha(120),
-                onTap: () => _updateSnapshot(snapshot),
-              ),
-              _rowIconButton(
-                icon: confirmingDelete ? Icons.delete_forever_rounded : Icons.delete_outline_rounded,
-                tooltip: confirmingDelete ? 'Tap again to delete' : 'Delete layout',
-                color: confirmingDelete ? Colors.red.shade400 : Design.text.withAlpha(120),
-                onTap: () => _delete(snapshot),
-              ),
-            ],
-          ),
-        ),
+            ),
           ),
           if (editing) _buildEditPanel(snapshot),
         ],
@@ -500,8 +497,8 @@ class _WindowLayoutsPanelState extends State<WindowLayoutsPanel> {
                       child: Text(
                         primary,
                         overflow: TextOverflow.ellipsis,
-                        style:
-                            TextStyle(fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: Design.text),
+                        style: TextStyle(
+                            fontSize: Design.baseFontSize + 1, fontWeight: FontWeight.w600, color: Design.text),
                       ),
                     ),
                     if (hookCount > 0) ...<Widget>[

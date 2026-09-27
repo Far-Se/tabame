@@ -14,7 +14,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Outrun" QuickMenu design — a 1980s Synthwave / Miami Vice aesthetic.
+/// "Outrun" QuickMenu design – a 1980s Synthwave / Miami Vice aesthetic.
 ///
 /// The menu drops into a neo-noir night highway: a deep purple void overlaid
 /// with a glowing wireframe perspective grid and a retro sliced sunset at the

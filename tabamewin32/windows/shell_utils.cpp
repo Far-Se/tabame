@@ -139,7 +139,7 @@ namespace
 
     void FocusWindowAsync(DWORD pid)
     {
-        // Detached thread — waits for the window without blocking the caller
+        // Detached thread – waits for the window without blocking the caller
         std::thread([pid]()
         {
             HWND hwnd = WaitForProcessWindow(pid, 5000);
@@ -250,7 +250,7 @@ static bool ShellExecuteFromExplorer(
     if (FAILED(hr))
         return false;
 
-    // Focus happens in the background — caller returns immediately
+    // Focus happens in the background – caller returns immediately
     FocusNewProcessAsync(std::move(pidsBefore));
     return true;
 }
@@ -316,7 +316,7 @@ static bool LaunchWithExplorerToken(
 
         if (launched)
         {
-            // Focus on background thread — no blocking here
+            // Focus on background thread – no blocking here
             FocusWindowAsync(pi.dwProcessId);
 
             CloseHandle(pi.hProcess);

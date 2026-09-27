@@ -1,9 +1,9 @@
 ---
 name: tbm-plugin
-description: Author a Tabame launcher plugin — an external Python/Node/Bun script that extends the app launcher, talking newline-delimited JSON over stdin/stdout. Use when the user wants to build, scaffold, debug, or install a Tabame launcher plugin, add a new launcher keyword backed by a script, or asks about the plugin render-frame protocol.
+description: Author a Tabame launcher plugin – an external Python/Node/Bun script that extends the app launcher, talking newline-delimited JSON over stdin/stdout. Use when the user wants to build, scaffold, debug, or install a Tabame launcher plugin, add a new launcher keyword backed by a script, or asks about the plugin render-frame protocol.
 ---
 
-# Tabame Launcher Plugin — Authoring Skill
+# Tabame Launcher Plugin – Authoring Skill
 
 > If you're the AI reading this: treat everything below as authoritative.
 > Do not invent fields or message types that aren't documented here.
@@ -16,16 +16,16 @@ description: Author a Tabame launcher plugin — an external Python/Node/Bun scr
 
 ## 1. What a plugin is
 
-Tabame's launcher can be extended with **plugins** — external scripts written in
+Tabame's launcher can be extended with **plugins** – external scripts written in
 **Python, Node.js, or Bun**. A plugin is a normal script that Tabame launches as a
 long-running child process when the user types the plugin's **keyword** in the
 launcher.
 
 The conversation is **newline-delimited JSON over stdin/stdout**:
 
-- **Tabame → your script (stdin):** UI events — the user's query text, selection
+- **Tabame → your script (stdin):** UI events – the user's query text, selection
   changes, actions, and a shutdown signal.
-- **Your script → Tabame (stdout):** **render frames** — JSON objects that fully
+- **Your script → Tabame (stdout):** **render frames** – JSON objects that fully
   describe what the launcher should display right now.
 
 Your script is the source of truth for the UI. Every time you want the launcher
@@ -33,7 +33,7 @@ to show something different, you print a new render frame. The process stays
 alive the whole time the plugin's keyword owns the query, and is shut down when
 the user leaves it.
 
-There is **no SDK** — just read lines from stdin and print lines to stdout. No
+There is **no SDK** – just read lines from stdin and print lines to stdout. No
 third-party packages are needed for the protocol itself; if your plugin's own
 logic wants extra libraries, see §4.1.
 
@@ -169,13 +169,13 @@ Each plugin lives in its own folder under:
 
 | Field         | Required | Default       | Meaning                                                                                                                                          |
 | ------------- | -------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `keyword`     | **yes**  | —             | What the user types to launch the plugin, e.g. `"weather"`. Keep it short and unique.                                                            |
-| `runtime`     | **yes**  | —             | Command resolved on the system `PATH`: `"python"`, `"node"`, or `"bun"`.                                                                         |
-| `version`     | **yes**  | —             | Current version, use "1.0.0" for start.                                                                                                          |
-| `entry`       | **yes**  | —             | Script filename, relative to the plugin folder, e.g. `"main.py"` / `"main.js"`.                                                                  |
+| `keyword`     | **yes**  | –             | What the user types to launch the plugin, e.g. `"weather"`. Keep it short and unique.                                                            |
+| `runtime`     | **yes**  | –             | Command resolved on the system `PATH`: `"python"`, `"node"`, or `"bun"`.                                                                         |
+| `version`     | **yes**  | –             | Current version, use "1.0.0" for start.                                                                                                          |
+| `entry`       | **yes**  | –             | Script filename, relative to the plugin folder, e.g. `"main.py"` / `"main.js"`.                                                                  |
 | `id`          | **yes**  | folder name   | Stable identifier.                                                                                                                               |
 | `name`        | **yes**  | folder name   | Human title shown in the launcher's discovery hint.                                                                                              |
-| `category`    | **yes**  | —             | Discovery category. Use exactly one canonical value from the category list below.                                                                |
+| `category`    | **yes**  | –             | Discovery category. Use exactly one canonical value from the category list below.                                                                |
 | `description` | **yes**  | `""`          | One-line description.                                                                                                                            |
 | `icon`        | **yes**  | `"extension"` | Icon for the discovery hint (see §11).                                                                                                           |
 | `args`        | no       | `[]`          | Extra command-line arguments inserted **before** `entry`.                                                                                        |
@@ -218,7 +218,7 @@ The launch command is effectively:
 Example for a Bun + TypeScript plugin: `"runtime": "bun"`, `"entry": "main.ts"`.
 
 **Installing / reloading:** drop the folder into the `plugins` directory, then
-just **re-open the launcher** — it rescans the plugins folder every time it opens,
+just **re-open the launcher** – it rescans the plugins folder every time it opens,
 so you don't need to restart Tabame. Fix your script, reopen the launcher, and the
 new version runs.
 
@@ -227,11 +227,11 @@ new version runs.
 While you're building a plugin, set `"dev": true` in `plugin.json`. Two things
 happen while your plugin is active:
 
-- **Hot reload** — Tabame watches the plugin folder and restarts your process
+- **Hot reload** – Tabame watches the plugin folder and restarts your process
   whenever a file changes (saves are debounced; `__pycache__`, `node_modules`,
   `.git`, `.log`/`.tmp` files are ignored). After the restart the current query
   is replayed, so you stay right where you were testing.
-- **Debug console** — a collapsible console strip appears under your plugin's
+- **Debug console** – a collapsible console strip appears under your plugin's
   view showing, live: everything you print to **stderr**, malformed stdout
   lines, frames dropped by the `rev` staleness rule, accepted frames, commands,
   and process starts/crashes. Click the strip to expand it. This is the fastest
@@ -268,7 +268,7 @@ search for.
 The runtime resolves imports from the plugin folder, so how you add a library
 depends on the runtime.
 
-**Python — declare them and Tabame installs them.** List packages in a `"pip"`
+**Python – declare them and Tabame installs them.** List packages in a `"pip"`
 array in `plugin.json`, and/or drop a `requirements.txt` next to your script:
 
 ```json
@@ -293,17 +293,17 @@ import requests          # resolved from .pluginlibs, no sys.path juggling
 
 Notes:
 
-- Installs are cached — pip only re-runs when your declared set changes, so
+- Installs are cached – pip only re-runs when your declared set changes, so
   normal launches stay instant.
 - `.pluginlibs` is self-contained inside the plugin folder, so the plugin stays
   portable. It's ignored by the dev-mode file watcher (no reload storms).
 - `pip` must be available for your `runtime` (Tabame calls `<runtime> -m pip`).
   If an install fails, the launcher shows the pip error instead of your UI.
 - No network/opaque-install worries? You can still vendor packages yourself by
-  running `pip install --target .pluginlibs <pkg>` in the plugin folder by hand —
+  running `pip install --target .pluginlibs <pkg>` in the plugin folder by hand –
   Tabame adds `.pluginlibs` to `PYTHONPATH` whenever it exists.
 
-**Node.js / Bun — ship a `package.json` and Tabame installs it for you.** If the
+**Node.js / Bun – ship a `package.json` and Tabame installs it for you.** If the
 plugin folder has a `package.json` but no (up-to-date) `node_modules`, Tabame runs
 `npm install` (or `bun install` for the Bun runtime) in the folder on the first
 launch, showing an "Installing dependencies…" spinner, then starts your script.
@@ -354,12 +354,12 @@ Notes:
 
 | Message            | When                                                                                                             | Fields                                                                                                                                                                                                                    |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `init`             | Once, right after your process starts                                                                            | `query`: initial text after the keyword; `protocol`: int protocol version (currently 14); `theme`: `{accent, text, background, dark}` — hex colors + dark-mode flag; `locale`: e.g. `"en-US"`                             |
+| `init`             | Once, right after your process starts                                                                            | `query`: initial text after the keyword; `protocol`: int protocol version (currently 14); `theme`: `{accent, text, background, dark}` – hex colors + dark-mode flag; `locale`: e.g. `"en-US"`                             |
 | `query`            | On every keystroke while the keyword is active (not sent in `inputMode: "submit"`)                               | `text`: current text after the keyword; `rev`: integer generation counter                                                                                                                                                 |
-| `submitQuery`      | **Enter** while the frame declared `inputMode: "submit"` — the whole query line at once (chat-style input)       | `text`, `rev`                                                                                                                                                                                                             |
+| `submitQuery`      | **Enter** while the frame declared `inputMode: "submit"` – the whole query line at once (chat-style input)       | `text`, `rev`                                                                                                                                                                                                             |
 | `select`           | When the highlighted item changes                                                                                | `id`: the selected item's id; `rev`                                                                                                                                                                                       |
 | `action`           | On **Enter** (fires `action` = `"default"`), a **Ctrl+K** pick, an action **shortcut**, or the empty state's CTA | `id`: the item's id (`""` for frame-level actions and the empty-state button); `action`: `"default"` or the chosen action's id; optional `ids`: bulk-selected IDs; optional `parameters`: values collected for the action |
-| `toggle`           | A tree disclosure was activated                                                                                  | `id`, `expanded`, `rev` — render the expanded/collapsed children yourself                                                                                                                                                 |
+| `toggle`           | A tree disclosure was activated                                                                                  | `id`, `expanded`, `rev` – render the expanded/collapsed children yourself                                                                                                                                                 |
 | `chartSelect`      | A point on an interactive chart was clicked                                                                      | `seriesId`, `index`, `value`, `rev`                                                                                                                                                                                       |
 | `chartRangeSelect` | A range was dragged on a chart with `selectableRange:true`                                                       | `startIndex`, `endIndex`, `rev`, plus the common event scope                                                                                                                                                              |
 | `toolbarChange`    | A filter, scope, sort, or view control changed                                                                   | `id`, optional `value`, `values`, or `direction`, `rev`, plus the common event scope                                                                                                                                      |
@@ -368,19 +368,19 @@ Notes:
 | `drop`             | Files were dropped on a declared page drop zone                                                                  | drop-zone `id`, absolute `paths`, `rev`, plus the common event scope                                                                                                                                                      |
 | `cancel`           | The user cancelled a declared operation                                                                          | `id`, `rev`                                                                                                                                                                                                               |
 | `oauth`            | Reply to an `oauth` command                                                                                      | `requestId` (echoed), plus provider callback query fields such as `code`, `state`, or `error`                                                                                                                             |
-| `submit`           | When the user submits a **form** view                                                                            | `values`: `{fieldId: value}` (strings, booleans, numbers, string lists — see §8); `button`: the pressed `form.buttons` id (absent for the default CTA)                                                                    |
+| `submit`           | When the user submits a **form** view                                                                            | `values`: `{fieldId: value}` (strings, booleans, numbers, string lists – see §8); `button`: the pressed `form.buttons` id (absent for the default CTA)                                                                    |
 | `change`           | A form field with `"watch": true` changed                                                                        | `id`: the field's id; `values`: all current field values                                                                                                                                                                  |
 | `validate`         | A form field with `validate:true` settled after its debounce                                                     | `id`, all current `values`, `rev`, plus scope; answer by re-rendering with `validating`, `valid`, or `error`                                                                                                              |
-| `loadMore`         | The user scrolled near the end of a frame with `hasMore: true`                                                   | `rev` — answer with a longer item list                                                                                                                                                                                    |
+| `loadMore`         | The user scrolled near the end of a frame with `hasMore: true`                                                   | `rev` – answer with a longer item list                                                                                                                                                                                    |
 | `storage`          | Reply to a `storage` command with `op` `get`/`keys`                                                              | `requestId` (echoed), and `key`+`value` or `keys`                                                                                                                                                                         |
 | `clipboard`        | Reply to a `clipboardRead` command                                                                               | `requestId` (echoed), `text`                                                                                                                                                                                              |
 | `browserBridge`    | Reply/event from the optional app-owned Chromium bridge                                                          | Replies echo `requestId` with `ok` and `result`/`error`; events carry `event` and `data`                                                                                                                                  |
-| `back`             | **Escape/back button** when `canGoBack: true` or page history has a previous entry                               | `rev`, optional `fromPageId`/`toPageId`, plus scope — render the previous screen                                                                                                                                          |
+| `back`             | **Escape/back button** when `canGoBack: true` or page history has a previous entry                               | `rev`, optional `fromPageId`/`toPageId`, plus scope – render the previous screen                                                                                                                                          |
 | `navigate`         | A page breadcrumb was activated                                                                                  | `targetPageId`, `rev`, plus the common event scope                                                                                                                                                                        |
 | `kanbanMove`       | A kanban card was dropped in a column                                                                            | `id`, `columnId`, `index`, `rev`, plus the common event scope                                                                                                                                                             |
 | `calendarNavigate` | Calendar date or mode navigation was activated                                                                   | `date` (`yyyy-mm-dd`), `mode` (`month` or `agenda`), `rev`, plus the common event scope                                                                                                                                   |
-| `tab`              | **Tab** pressed                                                                                                  | `id`: the highlighted item's id (`""` if none); `rev` — typically answered with a `setQuery` command                                                                                                                      |
-| `close`            | When the plugin is being shut down                                                                               | —                                                                                                                                                                                                                         |
+| `tab`              | **Tab** pressed                                                                                                  | `id`: the highlighted item's id (`""` if none); `rev` – typically answered with a `setQuery` command                                                                                                                      |
+| `close`            | When the plugin is being shut down                                                                               | –                                                                                                                                                                                                                         |
 
 Retained plugins also receive `{"type":"detach"}` when the launcher closes and
 `{"type":"attach"}` when it reopens. The host sends a fresh `query` after `attach`.
@@ -423,7 +423,7 @@ Any other line you print to **stdout** is treated as diagnostic log output (it i
 written to Tabame's `errors.log`, not shown). **Put debug prints on stderr**, and
 only ever print protocol messages to stdout.
 
-#### Commands — asking Tabame to do things
+#### Commands – asking Tabame to do things
 
 Instead of shelling out to `clip`/`start` yourself, ask the host:
 
@@ -432,18 +432,18 @@ Instead of shelling out to `clip`/`start` yourself, ask the host:
 | `copy`             | `text`                                                   | Puts `text` on the clipboard and shows a "Copied to clipboard" toast.                                                                                                                                                                                                                                                                                                                                |
 | `copyImage`        | `url` (HTTP(S)) or `path`/`file` (local image)           | Downloads or loads the image and places its pixels on the image clipboard. Windows currently; unsupported platforms show an error toast.                                                                                                                                                                                                                                                             |
 | `copyFile`         | `path`/`file`, or `paths` (local file/folder paths)      | Places one or more local files/folders on the clipboard as a native file-drop payload. Windows currently; unsupported platforms show an error toast.                                                                                                                                                                                                                                                 |
-| `paste`            | `text`                                                   | Puts `text` on the clipboard, **hides the launcher**, re-activates the previously focused window, and sends **Ctrl+V** — i.e. types the text where the user was working.                                                                                                                                                                                                                             |
+| `paste`            | `text`                                                   | Puts `text` on the clipboard, **hides the launcher**, re-activates the previously focused window, and sends **Ctrl+V** – i.e. types the text where the user was working.                                                                                                                                                                                                                             |
 | `open`             | `url` (or `path`)                                        | Opens a URL in the default browser, or a file/folder with its default handler.                                                                                                                                                                                                                                                                                                                       |
-| `hide`             | —                                                        | Hides the launcher.                                                                                                                                                                                                                                                                                                                                                                                  |
-| `toast`            | `text`, `style`?, `progress`?                            | Shows a transient chip over the results area. `style`: `"success"` (default), `"error"`, `"info"`, or `"progress"`. A `progress` toast **stays pinned** (with a spinner, or a determinate ring when `progress` 0–1 is given) until a later `toast` replaces it — re-send to update it in place.                                                                                                      |
+| `hide`             | –                                                        | Hides the launcher.                                                                                                                                                                                                                                                                                                                                                                                  |
+| `toast`            | `text`, `style`?, `progress`?                            | Shows a transient chip over the results area. `style`: `"success"` (default), `"error"`, `"info"`, or `"progress"`. A `progress` toast **stays pinned** (with a spinner, or a determinate ring when `progress` 0–1 is given) until a later `toast` replaces it – re-send to update it in place.                                                                                                      |
 | `setQuery`         | `text`                                                   | Rewrites the search field's **post-keyword** text (the keyword stays). Use it to autocomplete after a `tab` message or to drill down while keeping the query bar in sync. Triggers a normal `query` event back to you.                                                                                                                                                                               |
 | `clipboardRead`    | `requestId`?                                             | Asks for the clipboard's text; the host answers with a `{"type":"clipboard","requestId","text"}` message.                                                                                                                                                                                                                                                                                            |
 | `clipboardHistory` | `op`, `requestId`?, `offset`?, `limit`?, `query`?, `id`? | Reads Tabame's saved history. `op: "list"` replies with compact entries and `hasMore`; `"entry"` returns a bounded 12k preview; `"copy"` restores the complete original. Replies use `{"type":"clipboardHistory", ...}`.                                                                                                                                                                             |
-| `notify`           | `title`?, `text`                                         | Fires a **native Windows notification** (works even while finishing in the background — see `background`). `title` defaults to the plugin name.                                                                                                                                                                                                                                                      |
+| `notify`           | `title`?, `text`                                         | Fires a **native Windows notification** (works even while finishing in the background – see `background`). `title` defaults to the plugin name.                                                                                                                                                                                                                                                      |
 | `storage`          | `op`, `key`?, `value`?, `secret`?, `requestId`?          | Per-plugin persistent key-value store. `op` is `"set"`, `"get"`, `"delete"`, or `"keys"`. Plain values live in `.tabame-store.json` in the plugin folder; `"secret": true` routes the value to the **Windows Credential Manager** instead (strings only; not listed by `keys`). `get`/`keys` reply with a `{"type":"storage"}` message echoing `requestId`.                                          |
 | `background`       | `timeout`?                                               | Requests shutdown grace: after the launcher hides / the user leaves, the process is **not killed** for up to `timeout` seconds (default 30, max 300) so it can finish work. While detached it can still use `storage` and `notify`, but frames and UI commands are dropped. Send it **before** `hide`.                                                                                               |
 | `oauth`            | `authorizationUrl`, `requestId`?, `timeout`?             | Starts a host-owned ephemeral loopback callback listener and opens the authorization URL. `authorizationUrl` **must** include the literal `{redirectUri}` placeholder; Tabame URL-encodes and substitutes it. It replies with `{"type":"oauth",...}`. Exchange the returned code yourself and store tokens using `storage` with `secret: true`.                                                      |
-| `browserBridge`    | `op`, `requestId`, `method`?, `params`?, `timeoutMs`?    | Uses Tabame's optional persistent Chromium connector. `op:"status"` returns enabled/running/connected state plus pairing metadata. `op:"request"` forwards an allowlisted browser method—including generic `javascript.execute`—and replies with `{"type":"browserBridge","requestId","ok","result"}` (or `error`). Connection and tab-change events arrive as unsolicited `browserBridge` messages. |
+| `browserBridge`    | `op`, `requestId`, `method`?, `params`?, `timeoutMs`?    | Uses Tabame's optional persistent Chromium connector. `op:"status"` returns enabled/running/connected state plus pairing metadata. `op:"request"` forwards an allowlisted browser method–including generic `javascript.execute`–and replies with `{"type":"browserBridge","requestId","ok","result"}` (or `error`). Connection and tab-change events arrive as unsolicited `browserBridge` messages. |
 
 The `sound` command plays a Tabame sound (`{"type":"command","command":"sound","name":"beep"}`).
 It works while a retained process is detached. `background` also accepts
@@ -467,7 +467,7 @@ Example stdout lines:
 Notes:
 
 - Commands are fire-and-forget: **no `rev`**, no response.
-- Combine effects by printing several lines — the classic "Enter = copy and
+- Combine effects by printing several lines – the classic "Enter = copy and
   dismiss" is `copy` followed by `hide`.
 - `copyImage` accepts an HTTP(S) image URL, a `file://` URL, or a local path.
   Relative local paths resolve against the plugin folder. It copies image
@@ -477,7 +477,7 @@ Notes:
 - `hide` and `paste` close the launcher and send `close`. For long-running work,
   send `background` first; the process then remains alive during the grace
   period and can still send `notify`. Without `background`, expect shutdown.
-- A `copy` followed by `hide` skips the toast — the launcher is gone before it
+- A `copy` followed by `hide` skips the toast – the launcher is gone before it
   would render.
 
 #### Plugin-owned browser JavaScript
@@ -527,7 +527,7 @@ contract and a working temporary-tab data fetcher.
 
 Every `query`/`select` carries a `rev` that increases as the user types. When you
 send a render frame **in response to a query, echo that query's `rev`**. Tabame
-**drops any frame whose `rev` is older than the latest query** — this prevents a
+**drops any frame whose `rev` is older than the latest query** – this prevents a
 slow response to "rom" from overwriting the fresh results for "rome".
 
 - Responding to a query → echo its `rev`.
@@ -722,14 +722,14 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `calendar`          | object         | Calendar options: `{mode?:"month"                                                                                                                                                                                                                                                | "agenda",date?:"yyyy-mm-dd",weekStart?:"monday"                                              | "sunday",days?:1..90}`. Header navigation sends `calendarNavigate`.                                                                                                        |
 | `gallery`           | object         | Media grid options: `{columns?:2..8,aspectRatio?:0.5..2.5,fit?:"cover"                                                                                                                                                                                                           | "contain",showLabels?:bool}`.                                                                |
 | `loading`           | bool or object | When truthy and `items` empty, a spinner is shown. `{"progress":0..1}` is determinate; `{"style":"skeleton","count":6}` renders shape-matched placeholders.                                                                                                                      |
-| `loadingText`       | string         | Optional caption shown **under the spinner** while `loading`. Use this (not `emptyText`) for "Searching…"-style progress text — `emptyText` is only shown when _not_ loading.                                                                                                    |
+| `loadingText`       | string         | Optional caption shown **under the spinner** while `loading`. Use this (not `emptyText`) for "Searching…"-style progress text – `emptyText` is only shown when _not_ loading.                                                                                                    |
 | `emptyText`         | string         | Message when there are no items. Default `"No results"`.                                                                                                                                                                                                                         |
-| `empty`             | object         | Richer empty state: `{icon?, title?, hint?, action?}` — icon name (§11), bold title, dimmed hint, and an optional call-to-action button (`{id, title, icon?}`; clicking sends `{"type":"action","id":"","action":<id>}`). Overrides `emptyText`.                                 |
+| `empty`             | object         | Richer empty state: `{icon?, title?, hint?, action?}` – icon name (§11), bold title, dimmed hint, and an optional call-to-action button (`{id, title, icon?}`; clicking sends `{"type":"action","id":"","action":<id>}`). Overrides `emptyText`.                                 |
 | `placeholder`       | string         | Replaces the search field's hint text while this frame is shown (good affordance for sub-screens).                                                                                                                                                                               |
 | `grid.columns`      | int 1–12       | Number of columns in grid view. Default 4.                                                                                                                                                                                                                                       |
 | `grid.aspectRatio`  | number         | Tile width/height ratio. Default 1.0.                                                                                                                                                                                                                                            |
 | `detail.markdown`   | string         | Markdown body for detail view. (You may also pass `"detail": "..."` as a plain string.)                                                                                                                                                                                          |
-| `detail.append`     | string         | **Streaming:** a chunk added to the _end_ of the markdown currently on screen instead of replacing the document — send many small `append` frames (`rev: 0`) to stream an answer token by token. The view stays pinned to the bottom while the user is reading the end. See §13. |
+| `detail.append`     | string         | **Streaming:** a chunk added to the _end_ of the markdown currently on screen instead of replacing the document – send many small `append` frames (`rev: 0`) to stream an answer token by token. The view stays pinned to the bottom while the user is reading the end. See §13. |
 | `detail.metadata`   | array          | Key-value rows rendered under the markdown. See §7.1.                                                                                                                                                                                                                            |
 | `detail.wide`       | bool           | Widens the launcher window for the document (like the split preview does), restoring it when you leave. Default false.                                                                                                                                                           |
 | `form`              | object         | The form definition when `view` is `"form"`. See §8.                                                                                                                                                                                                                             |
@@ -739,7 +739,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `canGoBack`         | bool           | Manually makes **Escape send `{"type":"back"}`** instead of exiting. Page history can independently enable native back. Use this for non-page sub-screens, leave it false on the root, and handle the event. Default false.                                                      |
 | `actions`           | array          | **Frame-level actions** shown in the Ctrl+K palette regardless of the highlighted item (refresh, create, sign out…), after the item's own actions. Same shape as item actions (§9), fired with an empty `id`.                                                                    |
 | `floatingAction`    | object/array   | One or more prominent bottom-right buttons using the normal action shape (§9). Clicking dispatches a frame-level `action` with `id:""`; bulk-selected item IDs are included in `action.ids`.                                                                                     |
-| `selectId`          | string         | Moves the highlight to the item with this id — keep the cursor on the same row after a refresh/reorder (`rev: 0` re-render).                                                                                                                                                     |
+| `selectId`          | string         | Moves the highlight to the item with this id – keep the cursor on the same row after a refresh/reorder (`rev: 0` re-render).                                                                                                                                                     |
 | `hasMore`           | bool           | List/grid: more items exist. Scrolling near the end sends `{"type":"loadMore","rev"}`; answer with a **longer full list** (a "Loading more…" footer shows meanwhile). See §13.                                                                                                   |
 | `inputMode`         | string         | `"submit"`: keystrokes are **not** streamed to you; Enter sends one `{"type":"submitQuery","text","rev"}` with the whole line. A second Enter on unchanged text fires the selected item's default action instead. Right for chat/LLM plugins.                                    |
 | `items`             | array          | The rows/tiles. See §7.                                                                                                                                                                                                                                                          |
@@ -796,7 +796,7 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | Field                             | Type               | Notes                                                                                                                                                                                                                                                             |
 | --------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `id`                              | string             | **Give every item a stable, unique id.** It's echoed back in `select`/`action`.                                                                                                                                                                                   |
-| `title`                           | string             | Primary line. May contain `**bold**` and `` `code` `` spans — anything more is literal text.                                                                                                                                                                      |
+| `title`                           | string             | Primary line. May contain `**bold**` and `` `code` `` spans – anything more is literal text.                                                                                                                                                                      |
 | `subtitle`                        | string             | Secondary line (dimmed). Same markdown-lite subset.                                                                                                                                                                                                               |
 | `icon`                            | string             | Icon name (§11), a `#RRGGBB` color (renders a swatch), a `data:image/...` URI (up to 2 MB), or a `file://` / `https://` raster or SVG image.                                                                                                                      |
 | `section`                         | string             | List view: items are grouped under a slim header whenever this value differs from the previous item's. Keep items with the same section adjacent.                                                                                                                 |
@@ -811,8 +811,8 @@ slow response to "rom" from overwriting the fresh results for "rome".
 | `start`/`date`                    | ISO-8601 string    | Calendar item start. Use `start` for timed events; `date` is an all-day-friendly alias. May instead be nested inside a `calendar` object.                                                                                                                         |
 | `end`/`allDay`/`color`/`location` | mixed              | Optional calendar event details. `end` must not precede `start`; `color` is a hex tint. These may also be nested inside `calendar`.                                                                                                                               |
 | `media`                           | object/string      | Gallery media. Object: `{url,type?,thumbnail?,duration?,size?,width?,height?}`; type is image/video/audio/file. Audio/video tiles expose host playback, seek, buffering, and error controls. Sources support HTTP(S), `file://`, and `data:image/...` up to 2 MB. |
-| `accessories`                     | array              | Trailing badges. Each is a bare string or `{"text", "color"?, "icon"?}` — `color` tints the chip, `icon` is a §11 name.                                                                                                                                           |
-| `actions`                         | array              | Entries for the item's **Ctrl+K** menu. Each: `{id, title, icon?, shortcut?, destructive?, confirm?}` — see §9 for the last three.                                                                                                                                |
+| `accessories`                     | array              | Trailing badges. Each is a bare string or `{"text", "color"?, "icon"?}` – `color` tints the chip, `icon` is a §11 name.                                                                                                                                           |
+| `actions`                         | array              | Entries for the item's **Ctrl+K** menu. Each: `{id, title, icon?, shortcut?, destructive?, confirm?}` – see §9 for the last three.                                                                                                                                |
 | `preview`                         | object/string/null | Shown in the preview pane while this item is selected: `{"markdown"?, "image": {"url", "width"?}, "metadata"?, "diff"?}` or a plain markdown string. `diff` accepts the same `{text                                                                               | lines, mode?, oldLabel?, newLabel?}`payload as the`diff`view.`image`is an HTTP(S) raster displayed to the right of markdown;`width`is 48–280 px (default 160). Only visible when the frame sets`preview.enabled`. |
 
 ### 7.1 Metadata entries (`preview.metadata` / `detail.metadata`)
@@ -845,7 +845,7 @@ key-value row:
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `label`     | Left column, dimmed.                                                                                                                                                                                           |
 | `text`      | Right column value. Required unless `sparkline` is present.                                                                                                                                                    |
-| `color`     | `#RRGGBB` — tints the value and draws a small dot before it (or tints the sparkline/icon).                                                                                                                     |
+| `color`     | `#RRGGBB` – tints the value and draws a small dot before it (or tints the sparkline/icon).                                                                                                                     |
 | `icon`      | Icon name (§11) shown before the value.                                                                                                                                                                        |
 | `image`     | HTTP(S) URL of a raster image (PNG, JPG, or WebP), shown above the value. Invalid URLs or failed loads leave the text visible.                                                                                 |
 | `width`     | Image width in px (48–280); used with `image`. Default 132.                                                                                                                                                    |
@@ -973,7 +973,7 @@ default browser.
   lightbox** on click.
 - **Keyboard**: ↑/↓ scroll the document, PageUp/PageDown jump by a page
   (Home/End stay with the search field's caret).
-- **`"wide": true`** widens the launcher window for the document — right for
+- **`"wide": true`** widens the launcher window for the document – right for
   long-form answers (the text column is capped at a readable width).
 - The query line keeps working: each keystroke still sends you `query`, so a
   "markdown answer" plugin can simply re-render the document per query. For
@@ -991,7 +991,7 @@ is already reading the latest message.
 ### form
 
 A titled stack of inputs. Submitting sends you `{"type":"submit","values":{...}}`;
-**Escape cancels** — exiting the plugin, or sending `{"type":"back"}` when the
+**Escape cancels** – exiting the plugin, or sending `{"type":"back"}` when the
 frame enabled manual back or page history has a previous entry. Enter in a
 single-line field submits.
 
@@ -1009,7 +1009,7 @@ single-line field submits.
     ],
     "submitLabel": "Create", // optional, default "Submit"
     "buttons": [
-      // optional — replaces the single CTA
+      // optional – replaces the single CTA
       { "id": "create", "label": "Create" },
       { "id": "delete", "label": "Delete", "destructive": true },
     ],
@@ -1109,7 +1109,7 @@ single-line field submits.
 - **Validation:** `required: true` fields must be non-empty (checked before the
   submit reaches you, with an inline error); `number` bounds (`min`/`max`) are
   enforced the same way. For your own server-side validation, re-render the
-  same form with an `"error": "…"` string on the offending field — typed values
+  same form with an `"error": "…"` string on the offending field – typed values
   survive because the field set is unchanged.
 - `description` renders a dimmed hint under the field.
 - `sections` groups fields by their `section` id; a section may be
@@ -1125,12 +1125,12 @@ single-line field submits.
   `validate` event. Re-render with `validating:true` while checking, then
   `valid:true` or an `error`; JSON fields are also parsed locally before submit.
 - `"watch": true` sends you `{"type":"change","id",<values>}` on every change of
-  that field — re-render the form to update dependent dropdowns.
+  that field – re-render the form to update dependent dropdowns.
 - `buttons` replaces the single CTA with several; the `submit` message then
   carries the pressed button's id as `"button"`. `destructive: true` renders it
   in the danger tint.
 - After a submit, respond with a new frame (a confirmation `detail`, back to a
-  `list`, …) and/or commands (§5.2) — e.g. `toast` + `hide`.
+  `list`, …) and/or commands (§5.2) – e.g. `toast` + `hide`.
 - Re-rendering the _same_ form (same field ids) keeps what the user has typed;
   changing the field set resets it.
 - Great for create-flows and for a settings screen that writes `config.json`
@@ -1178,7 +1178,7 @@ latency regress?”), not merely decorate a dashboard.
 A prominent long-running job with `id`, `title`, optional `detail`, determinate
 `progress` (or indeterminate when omitted), and `cancellable`. Use the standalone
 `operation` view when the job is the page's whole purpose. The same `operation`
-field can accompany another view as a progress bar above its content—for example,
+field can accompany another view as a progress bar above its content–for example,
 a table that remains browsable during sync. Update with `rev:0`; handle `cancel`
 and render a durable success/error `detail`, `diff`, or refreshed destination
 when the job finishes.
@@ -1256,7 +1256,7 @@ normal item actions, keyboard selection, bulk selection, and `hasMore` paging.
 
 - Each item can carry an `actions` array, and the **frame** can carry its own
   `actions` array (frame-level: refresh, create, sign out…). Both appear in the
-  **Ctrl+K** palette — the item's first, then the frame's under a divider.
+  **Ctrl+K** palette – the item's first, then the frame's under a divider.
   Frame actions also work on `detail` and `form` views (which have no items).
 - **Enter** on an item sends `{"type":"action","id":<item>,"action":"default"}`.
   Treat `"default"` as "the primary thing this item does" (open it, run it,
@@ -1265,9 +1265,9 @@ normal item actions, keyboard selection, bulk selection, and `hasMore` paging.
   frame-level actions arrive with `"id": ""`.
 - **You decide what each action does.** Common patterns: open a URL, copy text,
   toggle state, delete, or navigate your own internal screens.
-- After handling an action, respond with a **command** (§5.2 — e.g. `copy` +
+- After handling an action, respond with a **command** (§5.2 – e.g. `copy` +
   `hide` for "copy and dismiss", or `open` for a link) and/or a new render frame
-  (with `rev: 0`) — e.g. a confirmation `detail` frame, or an updated list.
+  (with `rev: 0`) – e.g. a confirmation `detail` frame, or an updated list.
 - `floatingAction` renders one action object (or an array) as persistent
   bottom-right buttons. They use the same confirmation, parameter, shortcut,
   and bulk-selection dispatch path, but do not need the Ctrl+K palette.
@@ -1299,13 +1299,13 @@ Each action (item- or frame-level) supports:
 }
 ```
 
-- `shortcut` — lowercase `mod+key` (`ctrl`/`alt`/`shift` + a letter, digit,
+- `shortcut` – lowercase `mod+key` (`ctrl`/`alt`/`shift` + a letter, digit,
   `f1`–`f12`, or `enter`/`space`/`delete`/arrows…). Must include **Ctrl and/or
   Alt** (bare or Shift-only combos would collide with typing and are ignored).
-- `confirm` — `true` for a generic prompt, or the object above. The action only
+- `confirm` – `true` for a generic prompt, or the object above. The action only
   reaches you after the user accepts. Listing an action with `"id": "default"`
   and a `confirm` also gates Enter on the item.
-- `destructive` — pairs naturally with `confirm`; tints the palette row red.
+- `destructive` – pairs naturally with `confirm`; tints the palette row red.
 
 ---
 
@@ -1333,7 +1333,7 @@ Each action (item- or frame-level) supports:
 `_rounded`/`_outlined`/`_sharp`/`_filled` is ignored). Unknown names fall back to
 a generic plugin icon. You can also pass:
 
-- a **hex color** (`#F80`, `#FF8800`, `#AARRGGBB`) — renders a rounded color
+- a **hex color** (`#F80`, `#FF8800`, `#AARRGGBB`) – renders a rounded color
   swatch (color pickers, tag colors), or
 - a `data:image/...` URI (base64 or percent-encoded, up to 2 MB), or
 - a `file://` or `https://` URL to a raster image (PNG/JPG/WebP) or SVG.
@@ -1357,15 +1357,15 @@ refresh  sync  gamepad  game  book  note  run  open  reply  pin
 
 ## 12. Doing real work
 
-Because your plugin is an ordinary process, it can do anything the runtime can —
+Because your plugin is an ordinary process, it can do anything the runtime can –
 network requests, filesystem access, spawning tools. Some recipes:
 
-**HTTP / APIs** — use the runtime's HTTP client (`requests`/`urllib` in Python,
+**HTTP / APIs** – use the runtime's HTTP client (`requests`/`urllib` in Python,
 global `fetch` in Node 18+/Bun). Read secrets from a `config.json` in the plugin
 folder (the working directory) or from environment variables.
 
 **Clipboard, image/file clipboard payloads, opening URLs, hiding the launcher**
-— use **commands** (§5.2); don't shell out:
+– use **commands** (§5.2); don't shell out:
 
 ```python
 send({"type": "command", "command": "copy", "text": value})
@@ -1376,7 +1376,7 @@ send({"type": "command", "command": "open", "url": "https://example.com"})
 send({"type": "command", "command": "hide"})
 ```
 
-**Config file** — read `config.json` from the current working directory:
+**Config file** – read `config.json` from the current working directory:
 
 ```python
 import json, os
@@ -1399,7 +1399,7 @@ results = do_slow_search(text)     # network, etc.
 send({"type":"render","rev":rev,"view":"list","items":[to_item(r) for r in results]})
 ```
 
-(Use `loadingText` for the caption under the spinner — `emptyText` only shows when
+(Use `loadingText` for the caption under the spinner – `emptyText` only shows when
 the frame is _not_ loading.)
 Both frames carry the same `rev`, so if the user kept typing, Tabame drops the
 stale result automatically.
@@ -1487,14 +1487,14 @@ the document (scrolling up detaches the follow).
 ### Pagination (`hasMore` / `loadMore`)
 
 For large result sets, render the first page with `"hasMore": true`. When the
-user scrolls near the end you get `{"type":"loadMore","rev"}` — answer with the
+user scrolls near the end you get `{"type":"loadMore","rev"}` – answer with the
 **full list so far plus the next page** (same `rev`), keeping `hasMore` until
 everything is loaded. Pair with `selectId` if you re-order.
 
 ### Persistent state & secrets
 
 Use the `storage` command instead of hand-rolled files: `set`/`delete` are
-fire-and-forget; `get`/`keys` answer with a `{"type":"storage"}` message —
+fire-and-forget; `get`/`keys` answer with a `{"type":"storage"}` message –
 correlate with `requestId`. Tokens go in with `"secret": true` (Credential
 Manager, never a plaintext file):
 
@@ -1549,26 +1549,26 @@ except Exception as e:
 - [ ] Include exactly one required `category` from the canonical list in §3.
 - [ ] Only use documented `view` values, message types, and fields.
 - [ ] For a multi-workflow plugin, write a page map and choose each page's view
-      from its real task/data shape — do not ship the smoke-test list + preview
+      from its real task/data shape – do not ship the smoke-test list + preview
       as the product architecture.
 - [ ] Give conceptual destinations stable `page.id`s; handle `back.toPageId` and
       `navigate.targetPageId`; use `push`/`replace`/`none` intentionally.
 - [ ] Keep primary navigation and primary page verbs discoverable through Enter,
       page chrome, and `floatingAction`; do not bury the whole product in Ctrl+K.
-- [ ] Use **commands** (§5.2) for clipboard / open / hide / toast — don't shell out to `clip`/`start`.
+- [ ] Use **commands** (§5.2) for clipboard / open / hide / toast – don't shell out to `clip`/`start`.
 - [ ] Remember the working directory is the **plugin folder** (put `config.json` there).
-- [ ] Need libraries? Tabame auto-installs them on first run — **Python:** `"pip"` / `requirements.txt`; **Node/Bun:** a `package.json` (§4.1). Lazy-load heavy deps so a failed install degrades gracefully.
+- [ ] Need libraries? Tabame auto-installs them on first run – **Python:** `"pip"` / `requirements.txt`; **Node/Bun:** a `package.json` (§4.1). Lazy-load heavy deps so a failed install degrades gracefully.
 - [ ] Icons must be a name from §11, a `#RRGGBB` color, a `data:image/...` URI (up to 2 MB), or a `file://`/`https://` raster or SVG image.
 - [ ] Prefer `metadata` rows (§7.1) over markdown tables for structured facts.
-- [ ] Keep items sharing a `section` adjacent — headers appear on value _changes_ (lists **and** grids).
+- [ ] Keep items sharing a `section` adjacent – headers appear on value _changes_ (lists **and** grids).
 - [ ] Dispatch dashboard interactions with `pageId`/`panelId`/`elementId` scope.
 - [ ] Use `canGoBack: true` only for manual sub-screens outside page history (and handle `back`); leave it off your root screen.
-- [ ] Never set `canGoBack` on a frame you can't navigate away from — Escape would be trapped.
+- [ ] Never set `canGoBack` on a frame you can't navigate away from – Escape would be trapped.
 - [ ] Action `shortcut`s must include Ctrl and/or Alt; bare/Shift-only combos are ignored.
 - [ ] Gate destructive actions with `"confirm"` (and mark them `"destructive": true`).
 - [ ] Streaming: do slow/streamed work on a **thread**; every `detail.append` frame uses `rev: 0`.
 - [ ] `loadMore` answers must contain the full list (old pages + new), not just the new page.
-- [ ] Secrets go through `storage` with `"secret": true` — never into `config.json` you ship.
+- [ ] Secrets go through `storage` with `"secret": true` – never into `config.json` you ship.
 - [ ] Send `background` **before** `hide` when work must outlive the launcher, and join workers on `close`.
 - [ ] Develop with `"dev": true` (hot reload + debug console); set it back to `false` before sharing.
 
@@ -1760,7 +1760,7 @@ and desired workflows>`. Before coding, provide a compact page map: each page's
 > destinations. Choose from **all** documented views according to §8; do not
 > default to list + preview or hide primary navigation in Ctrl+K. Use proper page
 > history, breadcrumbs, visible floating actions, forms, loading/empty/error
-> states, and scoped dashboard panels where they improve the workflow—without
+> states, and scoped dashboard panels where they improve the workflow–without
 > adding irrelevant views merely for variety. Read secrets through `storage`
 > with `secret:true`. Follow every rule in §14 and give me `plugin.json`, the
 > complete script, install path, and a short walkthrough of the finished pages.

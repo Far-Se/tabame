@@ -14,7 +14,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Winamp" QuickMenu design — a faithful homage to the classic late-90s
+/// "Winamp" QuickMenu design – a faithful homage to the classic late-90s
 /// Nullsoft media player. Brushed-metal body, hard 3D bevels, recessed
 /// LCD wells with corner ticks and glass glare, LED dot-matrix section
 /// markers, and a live equalizer bar strip. Everything is sharp, metallic,
@@ -67,7 +67,7 @@ class MainMenuWinampWidget extends StatelessWidget {
                     else if (user.bottomBarOnTop)
                       const PinnedAndTrayList(),
 
-                    // Main LCD well — window switcher
+                    // Main LCD well – window switcher
                     _WinampBevel(
                       t: t,
                       inset: true,

@@ -12,12 +12,12 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Impact" QuickMenu design — a shonen manga action panel.
+/// "Impact" QuickMenu design – a shonen manga action panel.
 ///
 /// The menu reads as a printed comic panel rather than a software surface:
 /// a halftone (Ben-Day dot) ground standing in for gradients, a heavy ink
 /// border, a diagonal cut-corner "episode tab" in the top right holding the
-/// panel number, and a speed-line burst radiating from the top-left corner —
+/// panel number, and a speed-line burst radiating from the top-left corner –
 /// the visual shorthand manga uses for a sudden beat or an entrance panel.
 /// The footer is a solid ink gutter with a double ruled line, echoing the
 /// panel-gutter convention between comic frames.
@@ -112,7 +112,7 @@ class _ImpactPalette {
 }
 
 // ---------------------------------------------------------------------------
-// Ground — paper, ink border, halftone dot screen, backdrop
+// Ground – paper, ink border, halftone dot screen, backdrop
 // ---------------------------------------------------------------------------
 
 class _ImpactGround extends StatelessWidget {
@@ -180,7 +180,7 @@ class _HalftonePainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------------------------
-// Speed-line burst — radiates from the top-left corner, manga "impact" beat
+// Speed-line burst – radiates from the top-left corner, manga "impact" beat
 // ---------------------------------------------------------------------------
 
 class _SpeedlineBurstPainter extends CustomPainter {
@@ -211,7 +211,7 @@ class _SpeedlineBurstPainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------------------------
-// Episode tab — diagonal cut-corner plate, top right
+// Episode tab – diagonal cut-corner plate, top right
 // ---------------------------------------------------------------------------
 
 class _EpisodeTab extends StatelessWidget {
@@ -274,7 +274,7 @@ class _EpisodeTabPainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------------------------
-// Header — action row on a tinted plate, ruled off like a panel border
+// Header – action row on a tinted plate, ruled off like a panel border
 // ---------------------------------------------------------------------------
 
 class _ActionHeader extends StatelessWidget {
@@ -297,7 +297,7 @@ class _ActionHeader extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Footer — solid ink gutter with a double rule, panel-gutter convention
+// Footer – solid ink gutter with a double rule, panel-gutter convention
 // ---------------------------------------------------------------------------
 
 class _GutterFooter extends StatelessWidget {

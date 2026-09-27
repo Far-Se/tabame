@@ -9,7 +9,7 @@ import '../../widgets/panel_header.dart';
 import '../../widgets/windows_scroll.dart';
 
 /// Paired Bluetooth devices with one-click connect/disconnect and battery
-/// level — replaces the five-click Settings → Bluetooth round trip.
+/// level – replaces the five-click Settings → Bluetooth round trip.
 class BluetoothButton extends StatelessWidget {
   const BluetoothButton({super.key});
 
@@ -98,7 +98,7 @@ class _BluetoothPanelState extends State<BluetoothPanel> {
         _errorMessage = "${device.name}: ${device.connected ? 'disconnect' : 'connect'} failed";
       }
     });
-    // The radio takes a moment to settle — refresh twice to catch the final state.
+    // The radio takes a moment to settle – refresh twice to catch the final state.
     _refreshTimers.add(Timer(const Duration(milliseconds: 1500), () => _loadDevices(silent: true)));
     _refreshTimers.add(Timer(const Duration(seconds: 4), () => _loadDevices(silent: true)));
   }
@@ -179,7 +179,7 @@ class _BluetoothPanelState extends State<BluetoothPanel> {
           ),
           const SizedBox(height: 4),
           Text(
-            "Pair devices in Windows Settings first — this panel handles the daily connect/disconnect.",
+            "Pair devices in Windows Settings first – this panel handles the daily connect/disconnect.",
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(110)),
           ),
@@ -221,7 +221,7 @@ class _BluetoothPanelState extends State<BluetoothPanel> {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              "Connect toggles the device's Bluetooth services — audio devices respond best. Battery shows when the device reports it.",
+              "Connect toggles the device's Bluetooth services – audio devices respond best. Battery shows when the device reports it.",
               style: TextStyle(fontSize: Design.baseFontSize - 0.5, color: Design.text.withAlpha(110)),
             ),
           ),

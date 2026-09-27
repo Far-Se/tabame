@@ -407,7 +407,7 @@ class UnitConverter {
   }
 
   static String formatNumber(double value) {
-    if (!value.isFinite) return "—";
+    if (!value.isFinite) return "–";
     final double abs = value.abs();
     if (abs != 0 && (abs >= 1e12 || abs < 1e-4)) {
       return value.toStringAsExponential(4);

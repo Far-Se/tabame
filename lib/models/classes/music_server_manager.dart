@@ -474,7 +474,7 @@ class MusicServerManager {
     if (response.statusCode == 404) {
       return _PingResult.fail(
         'No Subsonic API found at $baseUrl (404). If this is Jellyfin, install the "Subsonic API" '
-        'plugin and restart the server — it is usually served under /sb.',
+        'plugin and restart the server – it is usually served under /sb.',
         retryWithSb: true,
       );
     }
@@ -1285,7 +1285,7 @@ class MusicServerManager {
   /// over any transport. Jellyfin's Subsonic plugin can't validate that token
   /// (Jellyfin stores only hashed passwords), so for [MusicServerType.jellyfin]
   /// we fall back to legacy hex-encoded password auth (`p=enc:...`). That is
-  /// effectively cleartext on the wire — the UI warns users to prefer https.
+  /// effectively cleartext on the wire – the UI warns users to prefer https.
   static Map<String, String> _authParams(MusicServerConfig config) {
     if (config.type == MusicServerType.jellyfin) {
       return <String, String>{'p': 'enc:${_hexEncode(config.password)}'};

@@ -1676,7 +1676,7 @@ class WinUtils {
     final int cursorY = point.ref.y;
     free(point);
 
-    // 2. Cancel the current drag loop — this releases mouse capture
+    // 2. Cancel the current drag loop – this releases mouse capture
     //    SendMessage is synchronous, so the drag is fully cancelled
     //    before we proceed
     SendMessage(hwnd, WM_CANCELMODE, 0, 0);
@@ -1684,7 +1684,7 @@ class WinUtils {
 
     // 3. Resize to original size, keeping current top-left position.
     //    We use the cursor position to re-center the window under the
-    //    cursor naturally — same behaviour as FancyZones
+    //    cursor naturally – same behaviour as FancyZones
     final int newX = cursorX - origW ~/ 2; // center window on cursor
     Win32.changePosition(hwnd, newX, -1, origW, origH);
 
@@ -1694,7 +1694,7 @@ class WinUtils {
 
     // 5. Re-post a WM_NCLBUTTONDOWN with HTCAPTION to re-start the
     //    drag loop from the new size/position.
-    //    PostMessage (async) is important here — SendMessage would
+    //    PostMessage (async) is important here – SendMessage would
     //    block until the drag loop exits (never), deadlocking.
     //    Pack cursor coords into lParam as LOWORD/HIWORD
     final int lParam = (cursorY << 16) | (cursorX & 0xFFFF);

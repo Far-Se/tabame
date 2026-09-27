@@ -45,7 +45,7 @@ String? getPackagePathByFullName(String fullName) {
   final Pointer<Utf16> pName = fullName.toNativeUtf16();
   final Pointer<Uint32> pLen = calloc<Uint32>();
   try {
-    // Pass 1 — get required buffer length (returns ERROR_INSUFFICIENT_BUFFER=122)
+    // Pass 1 – get required buffer length (returns ERROR_INSUFFICIENT_BUFFER=122)
     _getPackagePathByFullName(pName, pLen, nullptr);
     if (pLen.value == 0) return null;
 
@@ -79,7 +79,7 @@ List<String> getPackagesByFamily(String familyName) {
   final Pointer<Uint32> pBufLen = calloc<Uint32>();
 
   try {
-    // Pass 1 — discover count + buffer size
+    // Pass 1 – discover count + buffer size
     _getPackagesByFamily(pFamily, pCount, nullptr, pBufLen, nullptr);
     if (pCount.value == 0) return const <String>[];
 
@@ -365,7 +365,7 @@ _ManifestInfo? _parseManifest(String installLocation) {
     final XmlDocument doc = XmlDocument.parse(manifestFile.readAsStringSync());
     final List<_ManifestApp> apps = <_ManifestApp>[];
 
-    // Namespace-agnostic search — manifests use several uap* namespaces
+    // Namespace-agnostic search – manifests use several uap* namespaces
     final Iterable<XmlElement> applicationElements = doc.findAllElements('Application');
     for (final XmlElement app in applicationElements) {
       final String appId = app.getAttribute('Id') ?? '';
@@ -498,7 +498,7 @@ int launchAppxByAumid(String aumid) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Public API — build AppxApp list from already-enumerated packages
+// Public API – build AppxApp list from already-enumerated packages
 // ─────────────────────────────────────────────────────────────────────────────
 
 List<AppxApp> getAllAppxApps(List<AppxPackage> packages) {

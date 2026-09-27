@@ -204,7 +204,7 @@ class YtDlpOptions {
       args.addAll(<String>['--ffmpeg-location', ffmpegPath.trim()]);
     }
 
-    // Raw passthrough — anything the curated controls don't cover.
+    // Raw passthrough – anything the curated controls don't cover.
     args.addAll(_tokenizeArgs(customArgs));
 
     // Progress + robustness (kept just before the URL).
@@ -238,7 +238,7 @@ class YtDlpJob {
 }
 
 // ─────────────────────────────────────────────
-//  Service — thin wrapper around the yt-dlp executable
+//  Service – thin wrapper around the yt-dlp executable
 // ─────────────────────────────────────────────
 
 class _YtDlpService {

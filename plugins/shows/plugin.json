@@ -5,6 +5,6 @@
   "version": "1.0.0",
   "entry": "main.py",
   "icon": "video",
-  "description": "Track TV shows via TMDB — season calendar, next air dates, and episode ratings",
+  "description": "Track TV shows via TMDB – season calendar, next air dates, and episode ratings",
   "pip": ["requests", "pillow>=10"]
 }

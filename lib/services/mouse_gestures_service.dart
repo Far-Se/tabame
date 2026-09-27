@@ -16,7 +16,7 @@ import '../models/win32/win_utils.dart';
 import '../pages/color_picker/win32_helper.dart';
 
 /// Hot corners + right/middle-button mouse gestures, driven by a lightweight cursor
-/// poller in the QuickMenu process (no extra native hooks — the generic
+/// poller in the QuickMenu process (no extra native hooks – the generic
 /// `WinHooks` channel handler would clobber the main tabamewin32 listener).
 ///
 /// Hot corners: the cursor dwelling in a corner of the primary display for
@@ -26,7 +26,7 @@ import '../pages/color_picker/win32_helper.dart';
 /// Gestures: while the right or middle mouse button is held, the pointer path is sampled
 /// at 20 ms and tokenized into cardinal strokes (L/R/U/D, e.g. "RD" = right
 /// then down). On release the matching binding fires. The button is only
-/// observed — never swallowed — so ordinary right-clicks are untouched; if a
+/// observed – never swallowed – so ordinary right-clicks are untouched; if a
 /// context menu popped on release, it is dismissed with an Escape keypress.
 class MouseGesturesService with TabameListener {
   MouseGesturesService._();
@@ -92,7 +92,7 @@ class MouseGesturesService with TabameListener {
         (MouseGestureBinding binding) => binding.enabled && binding.action.isSet && binding.button == button,
       );
 
-  /// Raw physical cursor position — corner checks compare against the physical
+  /// Raw physical cursor position – corner checks compare against the physical
   /// GetSystemMetrics sizes, so the DPI-scaled WinUtils.getMousePos won't do.
   PointXY _cursorPos() {
     final Pointer<POINT> point = calloc<POINT>();
@@ -168,7 +168,7 @@ class MouseGesturesService with TabameListener {
     if (match == null) return;
 
     final GestureAction action = match.action;
-    // The release may have opened a context menu under the cursor — dismiss it
+    // The release may have opened a context menu under the cursor – dismiss it
     // (menu windows use the #32768 class) before running the action.
     Timer(const Duration(milliseconds: 120), () {
       try {

@@ -358,7 +358,7 @@ class GoogleTranslator {
       languageIso = body[2].toString();
     }
 
-    // body[8] is Google's "did you mean this language?" suggestion — only flag it,
+    // body[8] is Google's "did you mean this language?" suggestion – only flag it,
     // don't replace the detected language with it
     if (body is List && body.length > 8 && body[8] is List && body[8].isNotEmpty && body[8][0] is List) {
       final String suggested = body[8][0][0]?.toString() ?? '';

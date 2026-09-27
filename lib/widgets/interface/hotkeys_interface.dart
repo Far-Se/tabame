@@ -382,7 +382,7 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
     );
   }
 
-  /// Finds — or lazily creates — the hotkey whose action fires the `ExpandSnippet`
+  /// Finds – or lazily creates – the hotkey whose action fires the `ExpandSnippet`
   /// tabame function, then opens its settings so the user can bind a trigger key.
   /// Manage the actual snippet list from the QuickMenu "Text Snippets" button.
   void _openTextSnippetsHotkey() {
@@ -1731,7 +1731,7 @@ class _QuickClickHotkeysPageState extends State<QuickClickHotkeysPage> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              qch.hotkey.isEmpty ? "No hotkey set — tap to configure" : qch.displayHotkey.toUpperCase(),
+                              qch.hotkey.isEmpty ? "No hotkey set – tap to configure" : qch.displayHotkey.toUpperCase(),
                               style: texts2.bodySmall?.copyWith(
                                 color: qch.hotkey.isEmpty ? colors2.onSurfaceVariant.withAlpha(140) : accent,
                               ),
@@ -2129,7 +2129,7 @@ class _QuickClickHotkeySelectorState extends State<_QuickClickHotkeySelector> {
         // ── Dropdown picker ───────────────────────────────────────────
         DropdownButton<String>(
           value: _keyNames.contains(currentName) ? currentName : null,
-          hint: const Text("—", style: TextStyle(fontSize: 13)),
+          hint: const Text("–", style: TextStyle(fontSize: 13)),
           isDense: true,
           underline: const SizedBox.shrink(),
           items: <DropdownMenuItem<String>>[

@@ -164,7 +164,7 @@ class _MouseControlPanelState extends State<MouseControlPanel> {
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         child: Text(
-                          'No gestures yet — add one below.',
+                          'No gestures yet – add one below.',
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: Design.text.withAlpha(110)),
                         ),

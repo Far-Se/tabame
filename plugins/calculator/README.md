@@ -1,4 +1,4 @@
-# Calculator — Tabame plugin
+# Calculator – Tabame plugin
 
 A fast launcher calculator for arithmetic, functions, saved formulas, unit
 conversion, and currency conversion.
@@ -41,15 +41,15 @@ When the result is selected:
 
 Whitespace is ignored. The calculator supports:
 
-| Feature | Syntax | Example |
-| --- | --- | --- |
-| Addition, subtraction | `+`, `-` | `12 - 5` |
-| Multiplication, division | `*`, `/` | `18 / 3` |
-| Powers | `^` | `2^10` |
-| Parentheses | `(...)` | `(10 + 5) * 2` |
-| Percentage | postfix `%` | `250 * 15%` |
-| Factorial | postfix `!` | `5!` |
-| Scientific notation | `e` notation | `1.5e3` |
+| Feature                  | Syntax       | Example        |
+| ------------------------ | ------------ | -------------- |
+| Addition, subtraction    | `+`, `-`     | `12 - 5`       |
+| Multiplication, division | `*`, `/`     | `18 / 3`       |
+| Powers                   | `^`          | `2^10`         |
+| Parentheses              | `(...)`      | `(10 + 5) * 2` |
+| Percentage               | postfix `%`  | `250 * 15%`    |
+| Factorial                | postfix `!`  | `5!`           |
+| Scientific notation      | `e` notation | `1.5e3`        |
 
 ### Functions and constants
 
@@ -93,14 +93,14 @@ Use `value unit to target`. Conversions can be chained:
 
 Supported units and aliases are case-insensitive:
 
-| Category | Units |
-| --- | --- |
-| Length | `mm`, `cm`, `m`, `km`, `in`, `ft`, `yd`, `mi`, `nmi` |
-| Weight | `mg`, `g`, `kg`, `t`, `lb`, `oz` |
-| Volume | `ml`, `cl`, `l`, `gal`, `qt`, `pt`, `cup`, `floz`, `tbsp`, `tsp` |
-| Time | `s`, `min`, `h`, `day`, `week`, `month`, `year` |
-| Data | `b`, `kb`, `mb`, `gb`, `tb`, `pb`, `kib`, `mib`, `gib`, `tib` |
-| Temperature | `c` / `celsius`, `f` / `fahrenheit`, `k` / `kelvin` |
+| Category    | Units                                                            |
+| ----------- | ---------------------------------------------------------------- |
+| Length      | `mm`, `cm`, `m`, `km`, `in`, `ft`, `yd`, `mi`, `nmi`             |
+| Weight      | `mg`, `g`, `kg`, `t`, `lb`, `oz`                                 |
+| Volume      | `ml`, `cl`, `l`, `gal`, `qt`, `pt`, `cup`, `floz`, `tbsp`, `tsp` |
+| Time        | `s`, `min`, `h`, `day`, `week`, `month`, `year`                  |
+| Data        | `b`, `kb`, `mb`, `gb`, `tb`, `pb`, `kib`, `mib`, `gib`, `tib`    |
+| Temperature | `c` / `celsius`, `f` / `fahrenheit`, `k` / `kelvin`              |
 
 Full names are accepted for most physical units, such as `kilometers`,
 `ounces`, `hours`, and `gallons`. Data units ending in `iB` use binary
@@ -171,9 +171,9 @@ Saved results appear in history. For a history item:
 
 Other available actions include:
 
-- **Refresh Currency Rates** — bypass the current rate cache.
-- **Clear Variables** (`Ctrl+Shift+C`) — remove all saved variables and formulas.
-- **Clear History** (`Ctrl+Shift+H`) — remove all saved calculation history.
+- **Refresh Currency Rates** – bypass the current rate cache.
+- **Clear Variables** (`Ctrl+Shift+C`) – remove all saved variables and formulas.
+- **Clear History** (`Ctrl+Shift+H`) – remove all saved calculation history.
 
 History and variables use Tabame storage, so they are separate from the
 calculator source files and survive reopening the launcher.

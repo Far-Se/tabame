@@ -15,7 +15,7 @@ import '../window_watcher.dart';
 /// Captures and restores the placement of every open top-level window.
 ///
 /// Placement round-trips through GetWindowPlacement/SetWindowPlacement, so the
-/// normal rect, maximized and minimized states survive exactly — a maximized
+/// normal rect, maximized and minimized states survive exactly – a maximized
 /// window re-maximizes on the monitor its normal rect belongs to. Snapshots
 /// carry a monitor-arrangement fingerprint so a snapshot marked auto-restore
 /// re-applies itself when its display setup comes back (dock/undock).

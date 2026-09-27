@@ -1,4 +1,4 @@
-# Image Converter — Tabame plugin
+# Image Converter – Tabame plugin
 
 Keyword: `img`
 
@@ -11,11 +11,11 @@ Reopen the Tabame launcher. On first run it auto-installs Pillow (shows an
 "Installing dependencies…" spinner once).
 
 ## Use
-- `img` — shows recent conversions and quick actions (pick file, pick folder,
+- `img` – shows recent conversions and quick actions (pick file, pick folder,
   paste path from clipboard, settings).
-- `img C:\path\to\photo.png` — shows the file; Enter to choose an output
+- `img C:\path\to\photo.png` – shows the file; Enter to choose an output
   format (PNG, JPEG, WebP, BMP, GIF, TIFF, ICO, PDF).
-- `img C:\some\folder` — browse a folder; Enter on a subfolder to go deeper,
+- `img C:\some\folder` – browse a folder; Enter on a subfolder to go deeper,
   Enter on an image to convert it, or Ctrl+K → "Batch convert all images in
   this folder" to convert everything at once.
 - Shorthand: `img photo.png to webp` converts instantly with your default
@@ -25,7 +25,7 @@ Reopen the Tabame launcher. On first run it auto-installs Pillow (shows an
   format-specific options (JPEG/WebP quality, PNG compression, ICO sizes,
   TIFF compression, combine-to-multi-page-PDF for batches), output folder,
   overwrite, filename suffix.
-- Batch jobs run in the background — the launcher hides and you get a
+- Batch jobs run in the background – the launcher hides and you get a
   Windows notification when it's done.
 - Result screen shows before/after size and dimensions, with actions to open
   the file, reveal it in Explorer, copy its path, delete the original, or

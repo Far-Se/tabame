@@ -237,7 +237,7 @@ def default_workspace():
             {
                 "id": board_id,
                 "name": "Starter workspace",
-                "description": "A practical walkthrough—rename it, or create a clean board from Ctrl+N.",
+                "description": "A practical walkthrough–rename it, or create a clean board from Ctrl+N.",
                 "color": BOARD_COLORS["blue"],
                 "columns": template_columns(),
                 "cards": cards,

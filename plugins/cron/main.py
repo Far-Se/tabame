@@ -382,7 +382,7 @@ def render_root(rev: int, text: str):
         )
         return
 
-    # Valid cron — show details
+    # Valid cron – show details
     description = describe_cron(expr)
     runs = get_next_runs(expr, 8)
 
@@ -416,7 +416,7 @@ def render_root(rev: int, text: str):
     parts = expr.split()
     field_details = []
     for part, name in zip(parts, CRON_FIELD_NAMES):
-        field_details.append(f"- **{name}:** `{part}` — {describe_field(part, name)}")
+        field_details.append(f"- **{name}:** `{part}` – {describe_field(part, name)}")
 
     preview_md = f"""## Cron Expression
 {expr}
@@ -466,7 +466,7 @@ def render_detail(rev: int, expr: str):
 
     field_details = []
     for part, name in zip(parts, CRON_FIELD_NAMES):
-        field_details.append(f"- **{name}:** `{part}` — {describe_field(part, name)}")
+        field_details.append(f"- **{name}:** `{part}` – {describe_field(part, name)}")
 
     send(
         {
@@ -500,7 +500,7 @@ def render_detail(rev: int, expr: str):
                     {"label": "Description", "text": description},
                     {
                         "label": "Next run",
-                        "text": runs[0] if runs else "—",
+                        "text": runs[0] if runs else "–",
                         "color": "#22C55E",
                     },
                 ],

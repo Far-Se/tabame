@@ -18,7 +18,7 @@ Use these files as the baseline references:
 
 ## 1. Design Philosophy
 
-- **High Performance**: Interfaces should feel like professional tools (DAWs, IDEs, flight panels) — fast, utilitarian, desktop-oriented.
+- **High Performance**: Interfaces should feel like professional tools (DAWs, IDEs, flight panels) – fast, utilitarian, desktop-oriented.
 - **Information Density**: Maximize data visibility in small spaces without causing cognitive overload.
 - **Tactile Feedback**: Every interaction (hover, drag, tap) must have immediate, precise visual feedback.
 - **Distilled Aesthetics**: Ruthlessly remove generic "AI slop" or standard Material/Cupertino defaults. Avoid glossy/high-glow effects or saturated solid blocks. Use custom shapes, subtle outlines, and alpha-blended color to keep a technical, matte tone.
@@ -60,7 +60,7 @@ Every new quick menu button **must** be registered in `lib/models/util/quick_act
 // 1. Add import at the top (alphabetical)
 import '../../widgets/itzy/quickmenu/button_example.dart';
 
-// 2. Add an entry to quickActionsMap — key is the button's identifier,
+// 2. Add an entry to quickActionsMap – key is the button's identifier,
 //    widget is a factory (not a const instance directly)
 final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   ...
@@ -71,7 +71,7 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
 };
 ```
 
-`QuickAction.name` is optional and rarely set — the map key is what drives discovery/pinning in settings and the top/bottom bars (see `lib/widgets/quickmenu/top_bar.dart`, `lib/widgets/quickmenu/bottom_bar.dart`, `lib/widgets/interface/quickmenu/quickactions_settings.dart`).
+`QuickAction.name` is optional and rarely set – the map key is what drives discovery/pinning in settings and the top/bottom bars (see `lib/widgets/quickmenu/top_bar.dart`, `lib/widgets/quickmenu/bottom_bar.dart`, `lib/widgets/interface/quickmenu/quickactions_settings.dart`).
 
 ## 4. Panel Structure
 
@@ -108,22 +108,22 @@ class _ExamplePanelState extends State<ExamplePanel> {
 }
 ```
 
-`PanelHeader` (`lib/widgets/widgets/panel_header.dart`) takes `title`, `icon`, and optionally `accent` (defaults to `Design.accent`), `buttonPressed` + `buttonIcon` (+ `buttonTooltip`) for a single trailing action, and `extraActions` for more. It also handles window-drag behavior — always put it first in the column, never recreate its drag/border chrome manually.
+`PanelHeader` (`lib/widgets/widgets/panel_header.dart`) takes `title`, `icon`, and optionally `accent` (defaults to `Design.accent`), `buttonPressed` + `buttonIcon` (+ `buttonTooltip`) for a single trailing action, and `extraActions` for more. It also handles window-drag behavior – always put it first in the column, never recreate its drag/border chrome manually.
 
 Prefer this hierarchy:
 
 - `PanelHeader` first.
 - `Flexible` body second.
-- `WindowsScrollView`, `ListView`, or `MouseScrollWidget` inside the body depending on content density — never `SingleChildScrollView`.
+- `WindowsScrollView`, `ListView`, or `MouseScrollWidget` inside the body depending on content density – never `SingleChildScrollView`.
 - `Material(type: MaterialType.transparency)` around interactive body content when Ink reactions need a Material ancestor.
 
 ## 5. Design Tokens
 
-Reference `Design` (`lib/models/settings.dart`) directly inside widget bodies — do not thread `accent`/`onSurface`-style colors through function parameters; that indirection is unnecessary now that `Design` is globally available.
+Reference `Design` (`lib/models/settings.dart`) directly inside widget bodies – do not thread `accent`/`onSurface`-style colors through function parameters; that indirection is unnecessary now that `Design` is globally available.
 
-- **Accent**: `Design.accent` — drives all interactive/selected state.
-- **Text**: `Design.text` — replaces `Theme.of(context).colorScheme.onSurface`.
-- **Base font size**: `Design.baseFontSize` — replaces hardcoded sizes; add an offset like `Design.baseFontSize + 2.5` for emphasis.
+- **Accent**: `Design.accent` – drives all interactive/selected state.
+- **Text**: `Design.text` – replaces `Theme.of(context).colorScheme.onSurface`.
+- **Base font size**: `Design.baseFontSize` – replaces hardcoded sizes; add an offset like `Design.baseFontSize + 2.5` for emphasis.
 - **Border radius**: `Design.borderRadius` for theme-driven rounding when a fixed radius isn't called for.
 
 ### Typography
@@ -132,7 +132,7 @@ Reference `Design` (`lib/models/settings.dart`) directly inside widget bodies �
 - **Metadata/small labels**: `Design.baseFontSize - 1` to `Design.baseFontSize + 0.5` (≈9–11px).
 - **Headings**: `Design.baseFontSize + 2.5` and up.
 - **Letter spacing**: `0.3` to `0.7` for technical/uppercase labels.
-- **Weights**: `FontWeight.w400` for content, `w600`/`w700` for labels, counts, and headings — never `w900`.
+- **Weights**: `FontWeight.w400` for content, `w600`/`w700` for labels, counts, and headings – never `w900`.
 
 ### Spacing & Rhythm
 
@@ -158,7 +158,7 @@ Reference `Design` (`lib/models/settings.dart`) directly inside widget bodies �
 
 ### Section Labels
 
-Divide content within a panel with labels instead of standard headers — pattern is icon + label + optional count pill + divider:
+Divide content within a panel with labels instead of standard headers – pattern is icon + label + optional count pill + divider:
 
 ```dart
 Widget _buildSectionLabel({required String label, required int count, required IconData icon}) {
@@ -278,7 +278,7 @@ Widget _buildFixedBottomBar({required String label, required VoidCallback onTap}
 }
 ```
 
-Avoid "screaming" solid backgrounds, heavy shadows, or glossy gradients — use a subtle accent fill with a more defined accent border instead, and precise single-pixel borders elsewhere.
+Avoid "screaming" solid backgrounds, heavy shadows, or glossy gradients – use a subtle accent fill with a more defined accent border instead, and precise single-pixel borders elsewhere.
 
 Use these reference-specific patterns for inspiration:
 
@@ -297,7 +297,7 @@ Design the panel for quick execution, not deep navigation:
 - Prefer inline state transitions over opening nested dialogs unless destructive confirmation is required.
 - Close the quick menu after launching an external app, file, or command.
 - Do not hide critical actions behind hover-only affordances if the action is essential.
-- Use hover feedback on desktop rows and cards — subtle hover tint plus an optional accent bar or trailing icon.
+- Use hover feedback on desktop rows and cards – subtle hover tint plus an optional accent bar or trailing icon.
 - For list items that should not be traversed with arrows/tabs, wrap them with `CancelTraversal(child:)`.
 
 For button actions:
@@ -379,7 +379,7 @@ Before finishing a new quick menu button:
 7. Confirm settings are persisted through `Boxes.updateSettings(...)` when needed.
 8. Confirm empty, loading, and error states exist where relevant.
 9. Confirm the panel closes the quick menu after external execution if that matches the feature type.
-10. Confirm the result still feels like a desktop utility tool — dense, technical, instrument-panel — not a generic mobile card stack.
+10. Confirm the result still feels like a desktop utility tool – dense, technical, instrument-panel – not a generic mobile card stack.
 11. Confirm the button is added to `quickActionsMap` in `lib/models/util/quick_action_list.dart` (import + map entry with `widget: () => const ExampleButton()`).
 
 ## 12. Practical Defaults

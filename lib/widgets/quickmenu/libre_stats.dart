@@ -121,7 +121,7 @@ class _LibreStatsState extends State<LibreStats> {
 
     String? body = await _fetchBody(baseUrl!);
 
-    // Configured URL failed — try the known fallback hosts on the same port.
+    // Configured URL failed – try the known fallback hosts on the same port.
     if (body == null) {
       for (final String candidate in _fallbackUrls(baseUrl!)) {
         if (candidate == baseUrl) continue;
@@ -134,9 +134,9 @@ class _LibreStatsState extends State<LibreStats> {
       }
     }
 
-    if (body == null) return; // Nothing reachable — keep last known values.
+    if (body == null) return; // Nothing reachable – keep last known values.
 
-    // SensorId constants — adjust if your hardware uses different paths.
+    // SensorId constants – adjust if your hardware uses different paths.
     final double gpuVideo = _extractByName(body, 'GPU Video Engine', type: 'Load');
     final double gpuCore = _extractByName(body, 'GPU Core', type: 'Load');
     hardwareData = HardwareData(
@@ -186,7 +186,7 @@ class _LibreStatsState extends State<LibreStats> {
     final double height = user.expandedTaskbar ? 32 : 27;
     final Color onSurface = Design.text;
 
-    // Fixed widths per column — measured once against the widest possible value.
+    // Fixed widths per column – measured once against the widest possible value.
     final double wCpuLbl = _measureText('CPU ', labelStyle);
     final double wRamLbl = _measureText('RAM ', labelStyle);
     final double wGpuLbl = _measureText('GPU ', labelStyle);

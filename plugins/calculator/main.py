@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Calculator — a Tabame launcher plugin.
+Calculator – a Tabame launcher plugin.
 
 Extended math (functions, constants, %, !, ^) plus inline currency and
 unit conversion via a natural "to" keyword, e.g.:
@@ -758,7 +758,7 @@ class Parser:
             raise CalcError(f"Unknown unit '{target_tok}'")
         kind, canon = cls
         if val.unit is None:
-            raise CalcError(f"Nothing to convert — put a unit before 'to {target_tok}'")
+            raise CalcError(f"Nothing to convert – put a unit before 'to {target_tok}'")
         if kind != val.kind:
             raise CalcError(
                 f"Can't convert {unit_display(val.unit, val.kind)} to {unit_display(canon, kind)} (different categories)"
@@ -1193,7 +1193,7 @@ def build_breakdown_md(text, val, trace):
         for step in trace:
             lines.append(f"- {step}")
     else:
-        lines.append("_Straightforward arithmetic — no conversions applied._")
+        lines.append("_Straightforward arithmetic – no conversions applied._")
     return "\n".join(lines)
 
 
@@ -1207,7 +1207,7 @@ def build_metadata(val, trace):
         )
         meta.append({"label": "Rate source", "text": source, "icon": "info"})
         meta.append(
-            {"label": "Rates as of", "text": str(RATES_STATE.get("date") or "—")}
+            {"label": "Rates as of", "text": str(RATES_STATE.get("date") or "–")}
         )
     if trace:
         meta.append({"separator": True})
@@ -1270,7 +1270,7 @@ def render(rev, text, select_id=None):
             "empty": {
                 "icon": "calculator",
                 "title": "Professional Calculator",
-                "hint": "Extended math, currency & unit conversion — try an example below",
+                "hint": "Extended math, currency & unit conversion – try an example below",
             },
             "items": variable_items()
             if variables
@@ -1441,7 +1441,7 @@ def handle_action(msg):
                     "command": "toast",
                     "text": "Rates refreshed"
                     if ok
-                    else "Refresh failed — using cached/fallback rates",
+                    else "Refresh failed – using cached/fallback rates",
                     "style": "success" if ok else "error",
                 }
             )

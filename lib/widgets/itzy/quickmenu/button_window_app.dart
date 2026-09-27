@@ -446,7 +446,7 @@ class IconService {
       if (raw is Uint8List && _diskReady) {
         final String key = cacheKey ?? path;
         final bool saved = await IconDiskCache.instance.save(key, raw);
-        if (!saved) return null; // junk icon — don't cache
+        if (!saved) return null; // junk icon – don't cache
       }
 
       // Promote to memory cache.

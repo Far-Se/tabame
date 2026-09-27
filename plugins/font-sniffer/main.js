@@ -1,6 +1,6 @@
 "use strict";
 
-// Font Sniffer — a Tabame launcher plugin.
+// Font Sniffer – a Tabame launcher plugin.
 //
 // The user types a website URL after the `fonts` keyword and presses Enter.
 // We load the page in a headless Chromium (Puppeteer) and report the fonts the
@@ -12,7 +12,7 @@
 // Protocol: newline-delimited JSON over stdin/stdout (see TABAME_PLUGIN_SKILL.md).
 
 // Puppeteer is loaded lazily (inside getBrowser) so the URL prompt still works
-// even before dependencies exist — Tabame auto-installs them on first run, but if
+// even before dependencies exist – Tabame auto-installs them on first run, but if
 // that ever fails we show a friendly hint instead of crashing on a missing module.
 
 const os = require("os");
@@ -221,8 +221,8 @@ function parseFontFaces(cssText, baseUrl, out) {
   }
 }
 
-// Reads every stylesheet's text via CDP — including cross-origin sheets that the
-// page's own JS can't touch (CORS) — and extracts their @font-face sources. This
+// Reads every stylesheet's text via CDP – including cross-origin sheets that the
+// page's own JS can't touch (CORS) – and extracts their @font-face sources. This
 // is what lets us attach real font-file URLs for CDN-hosted web fonts.
 async function collectFontFaces(page, pageUrl) {
   const client = await page.target().createCDPSession();
@@ -261,7 +261,7 @@ async function scan(url) {
   const browser = await getBrowser();
   const page = await browser.newPage();
   // Record the font files the browser actually fetched (any origin). These are
-  // the ground-truth URLs — pages often declare several @font-face sources but
+  // the ground-truth URLs – pages often declare several @font-face sources but
   // only one resolves, so we prefer a URL we saw load over a parsed guess.
   const loadedFontUrls = new Set();
   page.on("response", (res) => {
@@ -282,7 +282,7 @@ async function scan(url) {
     try {
       await page.goto(url, { waitUntil: "load", timeout: 45000 });
     } catch (navError) {
-      // Slow/never-idle pages still render enough to sniff — press on unless the
+      // Slow/never-idle pages still render enough to sniff – press on unless the
       // navigation produced no document at all.
       log("goto warning:", navError.message);
     }
@@ -347,7 +347,7 @@ async function scan(url) {
         font.weight = pick.weight;
       }
     }
-    // Every font file the browser fetched (any origin, any referencing method —
+    // Every font file the browser fetched (any origin, any referencing method –
     // CSS @font-face or a <link rel=preload as=font>). This is the ground-truth
     // download source, independent of whether we matched a file to a family.
     const files = [...loadedFontUrls].filter((u) => /^https?:\/\//i.test(u));
@@ -366,7 +366,7 @@ function renderInput(rev, text) {
       {
         id: "hint",
         title: "Type a website URL",
-        subtitle: "e.g. `stripe.com` — then press Enter to scan its fonts",
+        subtitle: "e.g. `stripe.com` – then press Enter to scan its fonts",
         icon: "globe",
       },
     ];
@@ -551,7 +551,7 @@ async function doDownload(font) {
     send({
       type: "command",
       command: "toast",
-      text: `${font.family} is a system font — nothing to download`,
+      text: `${font.family} is a system font – nothing to download`,
     });
     return;
   }
@@ -611,7 +611,7 @@ async function renderSpecimenFor(family, srcUrl, format, kindLabel) {
     <div class="mid">abcdefghijklmnopqrstuvwxyz</div>
     <div class="row">0123456789 &nbsp; &amp; ! ? @ # $ % ^ * ( ) [ ] { } / \\ &lt; &gt;</div>
     <div class="weights"><span class="w300">Light</span><span class="w400">Regular</span><span class="w600">Semibold</span><span class="w700">Bold</span></div>
-    <div class="small">Pack my box with five dozen liquor jugs — Sphinx of black quartz, judge my vow.</div>
+    <div class="small">Pack my box with five dozen liquor jugs – Sphinx of black quartz, judge my vow.</div>
   </div></body></html>`;
 
   const browser = await getBrowser();
@@ -707,7 +707,7 @@ async function doPreview(font) {
   }
 }
 
-// Ctrl+K "Preview font" on a loaded font file — renders it straight from its URL.
+// Ctrl+K "Preview font" on a loaded font file – renders it straight from its URL.
 async function doPreviewFile(url) {
   if (busy) return;
   busy = true;
@@ -990,7 +990,7 @@ function handleAction(id, action) {
   }
   if (screen !== "results") return;
 
-  // A loaded font file (network resource) — download / preview / open / copy.
+  // A loaded font file (network resource) – download / preview / open / copy.
   if (id.startsWith("file:")) {
     const url = id.slice("file:".length);
     switch (action) {

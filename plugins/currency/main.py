@@ -348,13 +348,13 @@ def instructions_frame(rev):
         "",
         "Type an amount and two currencies, then press **Enter**:",
         "",
-        "- `curr 10 USD to EUR` — convert 10 USD to EUR",
-        "- `curr £100 to €` — symbols can be before or after the amount",
-        "- `curr USD EUR` — convert 1 USD to EUR",
-        f"- `curr EUR` — convert your default amount of **{DEFAULT_FROM}** to EUR",
-        "- `curr 10 USD EUR 1y` — with a 1 year rate chart",
-        "- `curr watch` — render your favorite pairs",
-        "- `curr codes eu` — browse currency codes",
+        "- `curr 10 USD to EUR` – convert 10 USD to EUR",
+        "- `curr £100 to €` – symbols can be before or after the amount",
+        "- `curr USD EUR` – convert 1 USD to EUR",
+        f"- `curr EUR` – convert your default amount of **{DEFAULT_FROM}** to EUR",
+        "- `curr 10 USD EUR 1y` – with a 1 year rate chart",
+        "- `curr watch` – render your favorite pairs",
+        "- `curr codes eu` – browse currency codes",
         "",
         f"No input? Defaults to **{DEFAULT_AMOUNT:g} {DEFAULT_FROM} → {DEFAULT_TO}**.",
     ]
@@ -541,7 +541,7 @@ def convert(rev, amount, from_code, to_code, period_token):
         error_frame(rev, str(e))
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            error_frame(rev, f"No data found for **{from_code}/{to_code}**. Check the codes and try again — `curr codes` lists them all.")
+            error_frame(rev, f"No data found for **{from_code}/{to_code}**. Check the codes and try again – `curr codes` lists them all.")
         else:
             error_frame(rev, f"Frankfurter returned an error ({e.code}). Try again in a moment.")
     except urllib.error.URLError as e:

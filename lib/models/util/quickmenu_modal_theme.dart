@@ -25,7 +25,7 @@ import 'quickmenu_tui_theme.dart';
 /// active QuickMenu design, the same way the launcher's Ctrl+K actions modal
 /// follows the launcher design via [LauncherModalTokens]/[LauncherModalFrame].
 ///
-/// The popup hosts arbitrary panel content, so only the frame is themed here —
+/// The popup hosts arbitrary panel content, so only the frame is themed here –
 /// each design's fill, border, corner radius and signature textures (matrix
 /// grid, gazette page rules, player brushed metal, terminal accent border…)
 /// are re-derived from the same `Design.*` theme values the design widgets in
@@ -162,7 +162,7 @@ class QuickMenuModalFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData inheritedTheme = Theme.of(context);
 
-    // Popups opened over the launcher page speak the launcher design instead —
+    // Popups opened over the launcher page speak the launcher design instead –
     // the same frame the Ctrl+K actions modal uses.
     if (Globals.quickMenuPage == QuickMenuPage.launcher) {
       final LauncherDesign launcherDesign = user.launcherDesign;
@@ -1161,7 +1161,7 @@ class QuickMenuModalFrame extends StatelessWidget {
       QuickMenuDesigns.console2 => _FrameSpec(
           decoration: BoxDecoration(
             borderRadius: radius, // Design.borderRadius is 0 for this theme anyway
-            color: bg.withValues(alpha: 1.0), // opaque — terminal windows don't glass
+            color: bg.withValues(alpha: 1.0), // opaque – terminal windows don't glass
             border: Border.all(
               color: accent.withValues(alpha: isDark ? 0.55 : 0.45),
               width: 1,
@@ -1450,7 +1450,7 @@ class _ConsoleBrushedPainter extends CustomPainter {
 }
 
 /// Four Phillips-head rivets pinning the corners of the frame, inset just
-/// inside the border — the modal-preview version of the full widget's
+/// inside the border – the modal-preview version of the full widget's
 /// `_Rivet` widgets, collapsed into one painter since there's no need for
 /// separate widget/gesture handling here.
 class _ConsoleRivetPainter extends CustomPainter {
@@ -1521,7 +1521,7 @@ class _LedgerMarginPainter extends CustomPainter {
       oldDelegate.rule != rule || oldDelegate.holeRing != holeRing;
 }
 
-/// Folded page-corner, top right — two thin strokes standing in for a
+/// Folded page-corner, top right – two thin strokes standing in for a
 /// dog-eared corner, kept as an overlay so it always sits above content.
 class _LedgerFoldPainter extends CustomPainter {
   const _LedgerFoldPainter(this.color);
@@ -1609,7 +1609,7 @@ class _HalftonePainter extends CustomPainter {
   bool shouldRepaint(covariant _HalftonePainter oldDelegate) => oldDelegate.color != color;
 }
 
-/// Focus lines radiating from the popup's center — a manga "impact frame".
+/// Focus lines radiating from the popup's center – a manga "impact frame".
 class _MangaBurstLinesPainter extends CustomPainter {
   const _MangaBurstLinesPainter(this.color);
   final Color color;
@@ -1661,7 +1661,7 @@ class _MangaCornerTicksPainter extends CustomPainter {
   bool shouldRepaint(covariant _MangaCornerTicksPainter oldDelegate) => oldDelegate.color != color;
 }
 
-/// Ben-Day dot screen — the halftone shading manga uses instead of gradients.
+/// Ben-Day dot screen – the halftone shading manga uses instead of gradients.
 /// Dot size grows slightly toward the bottom-right to fake a light source.
 class _ImpactHalftonePainter extends CustomPainter {
   const _ImpactHalftonePainter(this.color);
@@ -1709,7 +1709,7 @@ class _ImpactSpeedlinePainter extends CustomPainter {
       canvas.drawLine(origin, end, line);
     }
 
-    // Diagonal cut-corner tab, top-right — filled ink triangle with accent edge.
+    // Diagonal cut-corner tab, top-right – filled ink triangle with accent edge.
     final Path cut = Path()
       ..moveTo(size.width - 26, 0)
       ..lineTo(size.width, 0)
@@ -1724,7 +1724,7 @@ class _ImpactSpeedlinePainter extends CustomPainter {
         ..strokeWidth = 2,
     );
 
-    // Double inkline along the bottom edge — manga panel gutter convention.
+    // Double inkline along the bottom edge – manga panel gutter convention.
     final Paint gutter = Paint()
       ..color = ink.withValues(alpha: 0.85)
       ..strokeWidth = 1;
@@ -1812,7 +1812,7 @@ class _OutrunFramePainter extends CustomPainter {
   bool shouldRepaint(covariant _OutrunFramePainter oldDelegate) => oldDelegate.accent != accent;
 }
 
-/// Tiny floating dust motes — used as a modal underlay.
+/// Tiny floating dust motes – used as a modal underlay.
 class _AnimeDustPainter extends CustomPainter {
   const _AnimeDustPainter(this.color);
 
@@ -1850,7 +1850,7 @@ class _AnimeDustPainter extends CustomPainter {
   bool shouldRepaint(covariant _AnimeDustPainter oldDelegate) => oldDelegate.color != color;
 }
 
-/// Star-shaped corner brackets — replaces sharp HUD lines with soft
+/// Star-shaped corner brackets – replaces sharp HUD lines with soft
 /// 5-point stars in each corner.
 class _AnimeStarBracketPainter extends CustomPainter {
   const _AnimeStarBracketPainter({required this.accent, required this.tick});
@@ -2013,14 +2013,14 @@ class _OutrunNeonBracketPainter extends CustomPainter {
       oldDelegate.accent != accent || oldDelegate.secondary != secondary;
 }
 
-/// A scatter of tiny fixed sparkles across the modal — same low-key dust
+/// A scatter of tiny fixed sparkles across the modal – same low-key dust
 /// texture language as the QuickMenu panel's sparkle field, but static
 /// (no timer) since the modal frame paints once per build.
 class _SparkleDustPainter extends CustomPainter {
   const _SparkleDustPainter(this.color);
   final Color color;
 
-  // Fixed, seeded-looking positions — deterministic so repaints don't jitter.
+  // Fixed, seeded-looking positions – deterministic so repaints don't jitter.
   static const List<Offset> _spots = <Offset>[
     Offset(0.08, 0.12),
     Offset(0.22, 0.30),
@@ -2193,7 +2193,7 @@ class _TechHUDOverlayPainter extends CustomPainter {
   bool shouldRepaint(covariant _TechHUDOverlayPainter oldDelegate) => oldDelegate.accent != accent;
 }
 
-/// A little bow tucked into the top-right corner, top right — two curved
+/// A little bow tucked into the top-right corner, top right – two curved
 /// ribbon tails and a knot. Same "corner accent" role the ledger design
 /// gives its folded page-corner.
 class _RibbonCornerPainter extends CustomPainter {
@@ -2271,7 +2271,7 @@ class _FoundryCornerMarkPainter extends CustomPainter {
   bool shouldRepaint(covariant _FoundryCornerMarkPainter oldDelegate) => oldDelegate.color != color;
 }
 
-/// Thick cartoon frame with hard offset shadow (no blur — pure cutout).
+/// Thick cartoon frame with hard offset shadow (no blur – pure cutout).
 class _FamilyGuyFramePainter extends CustomPainter {
   const _FamilyGuyFramePainter({required this.outline, required this.shadow});
 
@@ -2369,7 +2369,7 @@ class ConsoleFramePainter extends CustomPainter {
       oldDelegate.accent != accent || oldDelegate.armLength != armLength || oldDelegate.inset != inset;
 }
 
-/// A blinking block cursor ("█") — used inline in the title strip and can
+/// A blinking block cursor ("█") – used inline in the title strip and can
 /// also be dropped in as a standalone overlay widget for popups.
 class ConsoleCursorBlink extends StatefulWidget {
   final bool inline;

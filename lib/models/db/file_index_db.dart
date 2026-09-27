@@ -166,7 +166,7 @@ class FileIndexDb {
     ''');
 
     // -----------------------------------------------------------------
-    // folder_watch table — persists the last-known write time for each
+    // folder_watch table – persists the last-known write time for each
     // watched root folder so that changes made while the app is closed
     // are detected on the next launch.
     //
@@ -220,7 +220,7 @@ class FileIndexDb {
         );
       ''');
     } catch (e) {
-      debugPrint('FTS5 Trigram not supported — full-text search disabled: $e');
+      debugPrint('FTS5 Trigram not supported – full-text search disabled: $e');
       return db;
     }
 
@@ -646,19 +646,19 @@ class FileIndexDb {
     final int dotIndex = name.lastIndexOf('.');
     final String stem = dotIndex > 0 ? name.substring(0, dotIndex) : name;
 
-    // Tier 1 — exact full name match (e.g. query "test.dart" == name "test.dart")
+    // Tier 1 – exact full name match (e.g. query "test.dart" == name "test.dart")
     if (name == query) return 4000.0 + timesOpened;
 
-    // Tier 2 — exact stem match (query "test" == stem "test" of "test.dart")
+    // Tier 2 – exact stem match (query "test" == stem "test" of "test.dart")
     if (stem == query) return 3500.0 + timesOpened;
 
-    // Tier 3 — name starts with query (e.g. "test_util.dart" for query "test")
+    // Tier 3 – name starts with query (e.g. "test_util.dart" for query "test")
     if (name.startsWith(query)) return 3000.0 + timesOpened;
 
-    // Tier 4 — stem starts with query (e.g. stem "test_util" for query "test")
+    // Tier 4 – stem starts with query (e.g. stem "test_util" for query "test")
     if (stem.startsWith(query)) return 2500.0 + timesOpened;
 
-    // Tier 5 — name contains query as a substring (e.g. "music_db_test.dart")
+    // Tier 5 – name contains query as a substring (e.g. "music_db_test.dart")
     // Score is penalised by how much extra characters surround the match,
     // so shorter names rank higher when multiple files contain the query.
     if (name.contains(query)) {

@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 /// A parsed plugin action shortcut (`"ctrl+shift+c"`, `"alt+enter"`, …).
 ///
-/// Shortcuts must include Ctrl and/or Alt — a bare key or Shift+key would
+/// Shortcuts must include Ctrl and/or Alt – a bare key or Shift+key would
 /// collide with typing in the search field, so those parse as invalid and the
 /// action stays reachable only through the Ctrl+K palette.
 class PluginShortcut {
@@ -43,7 +43,7 @@ class PluginShortcut {
   };
 
   /// Parses a lowercase `mod+mod+key` string; null when invalid or unsafe
-  /// (missing a Ctrl/Alt modifier). Results are memoized — frames re-arrive on
+  /// (missing a Ctrl/Alt modifier). Results are memoized – frames re-arrive on
   /// every keystroke.
   static PluginShortcut? parse(String? value) {
     if (value == null || value.isEmpty) return null;

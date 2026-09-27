@@ -14,7 +14,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Outrun" QuickMenu design — a synthwave / retrowave HUD inspired by the
+/// "Outrun" QuickMenu design – a synthwave / retrowave HUD inspired by the
 /// 1986 Sega classic. Features a perspective highway grid rolling toward a
 /// purple-pink sunset, neon pink/cyan glow on every container, palm-tree
 /// silhouettes, and sharp 80s chrome brackets.
@@ -153,7 +153,7 @@ class _OutrunPalette {
 }
 
 // ---------------------------------------------------------------------------
-// Background ground — sunset, grid, palms
+// Background ground – sunset, grid, palms
 // ---------------------------------------------------------------------------
 
 class _OutrunGround extends StatelessWidget {
@@ -244,7 +244,7 @@ class _OutrunGround extends StatelessWidget {
               ),
             ),
 
-            // Palm silhouettes — left
+            // Palm silhouettes – left
             Positioned(
               top: 8,
               left: 6,
@@ -255,7 +255,7 @@ class _OutrunGround extends StatelessWidget {
               ),
             ),
 
-            // Palm silhouettes — right
+            // Palm silhouettes – right
             Positioned(
               top: 14,
               right: 10,
@@ -431,7 +431,7 @@ class Outrun2GridPainter extends CustomPainter {
       );
     }
 
-    // Horizontal road segments — exponential perspective spacing
+    // Horizontal road segments – exponential perspective spacing
     for (int i = showHorizon ? 0 : 1; i < 18; i++) {
       final double t = i / 18.0;
       final double y = size.height - (size.height - horizonY) * (1 - pow(t, 3).toDouble());
@@ -448,7 +448,7 @@ class Outrun2GridPainter extends CustomPainter {
       oldDelegate.color != color || oldDelegate.showHorizon != showHorizon;
 }
 
-/// Stylized palm-tree silhouette — curved trunk and spiky fronds.
+/// Stylized palm-tree silhouette – curved trunk and spiky fronds.
 class _OutrunPalmPainter extends CustomPainter {
   const _OutrunPalmPainter({required this.color});
 
@@ -463,7 +463,7 @@ class _OutrunPalmPainter extends CustomPainter {
     final double w = size.width;
     final double h = size.height;
 
-    // Trunk — curved
+    // Trunk – curved
     final Path trunk = Path()
       ..moveTo(w * 0.65, h)
       ..quadraticBezierTo(w * 0.55, h * 0.55, w * 0.48, h * 0.18)

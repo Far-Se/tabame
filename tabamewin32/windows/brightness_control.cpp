@@ -27,8 +27,8 @@
 // root\WMI's WmiMonitorBrightness / WmiMonitorBrightnessMethods.
 //
 // Displays are identified by an opaque string id:
-//   "ddc:<monitorIndex>:<physicalIndex>"  — resolved by re-enumeration on set.
-//   "wmi:<instanceName>"                  — resolved by WMI instance path.
+//   "ddc:<monitorIndex>:<physicalIndex>"  – resolved by re-enumeration on set.
+//   "wmi:<instanceName>"                  – resolved by WMI instance path.
 // ---------------------------------------------------------------------------
 
 struct BrightnessDisplayInfo {

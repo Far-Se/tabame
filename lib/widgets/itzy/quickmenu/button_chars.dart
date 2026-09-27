@@ -264,7 +264,7 @@ final Map<String, List<String>> customChars = <String, List<String>>{
     '”',
     '‘',
     '’',
-    '—',
+    '–',
     '–',
     '…',
     '¿',

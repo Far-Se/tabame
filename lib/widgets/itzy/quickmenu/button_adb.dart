@@ -1670,7 +1670,7 @@ class _ToggleTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool on = value ?? false;
-    final String state = value == null ? "—" : (on ? "ON" : "OFF");
+    final String state = value == null ? "–" : (on ? "ON" : "OFF");
     return InkWell(
       borderRadius: BorderRadius.circular(10),
       hoverColor: Design.accent.withAlpha(14),

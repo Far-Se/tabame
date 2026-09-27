@@ -60,7 +60,7 @@ class _CommandSearchBar extends StatelessWidget {
               ],
             ),
           ),
-          // Bright prompt underline — the blinking-cursor line of the console.
+          // Bright prompt underline – the blinking-cursor line of the console.
           Container(
             height: 1.5,
             decoration: BoxDecoration(

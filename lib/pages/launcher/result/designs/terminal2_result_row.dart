@@ -19,7 +19,7 @@ extension _Terminal2ResultRow on LauncherResultRow {
           ),
           child: Row(
             children: <Widget>[
-              // Selection caret — the TUI line cursor.
+              // Selection caret – the TUI line cursor.
               SizedBox(
                 width: 14,
                 child: Text(

@@ -380,7 +380,7 @@ class CalculatorWidgetState extends State<CalculatorWidget> {
                 _buildInfoSection(
                   "Currency Conversion",
                   "Type an amount (or variable) with two 3-letter currency codes and "
-                      "'to' — no prefix needed. It auto-converts using live rates.",
+                      "'to' – no prefix needed. It auto-converts using live rates.",
                   <String>["100 USD to EUR", "\$a RON to USD", "50 gbp to jpy"],
                   accent,
                   onSurface,

@@ -13,6 +13,14 @@ class _LauncherSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color accent = this.accent ?? LauncherTheme.accentOf(context);
     switch (design) {
+      case LauncherDesign.liquidGlass:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+          child: Text(label,
+              overflow: TextOverflow.ellipsis,
+              style: LiquidGlassTokens.font(
+                  size: Design.baseFontSize + 1, color: LiquidGlassTokens.dim, weight: FontWeight.w600)),
+        );
       case LauncherDesign.ivoryGrove:
         return Padding(
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 5),
@@ -278,7 +286,7 @@ class _LauncherSectionHeader extends StatelessWidget {
         );
       case LauncherDesign.fluent:
         // A "Best match" group label: plain semibold Segoe in the foreground
-        // color — Windows 11 search never decorates its headers.
+        // color – Windows 11 search never decorates its headers.
         final Color fg = Theme.of(context).colorScheme.onSurface;
         return Padding(
           padding: const EdgeInsets.only(left: 16, top: 12, bottom: 4),

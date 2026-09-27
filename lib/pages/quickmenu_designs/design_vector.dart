@@ -13,7 +13,7 @@ import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
 /// "Vector" turns the QuickMenu into a heads-up flight instrument: there is
-/// no boxed panel — the content floats on dark glass held together by four
+/// no boxed panel – the content floats on dark glass held together by four
 /// accent reticle brackets and mid-edge alignment ticks. Every functional
 /// zone is indexed like an avionics page (`01 ▏QUICK ACTIONS`, `02 ▏WINDOWS`…)
 /// with a hairline rule, the window switcher sits inside a faint "radar
@@ -22,7 +22,7 @@ import 'design_backdrop_stable.dart';
 /// Layering note: the static HUD chrome (glass background, shader wash,
 /// scanlines, reticle brackets) and the interactive window list each sit in
 /// their own [RepaintBoundary]. The window list is the one part of this
-/// panel that rebuilds on hover (to drive tooltips) — isolating it stops
+/// panel that rebuilds on hover (to drive tooltips) – isolating it stops
 /// that rebuild from forcing a repaint of the shader-masked background and
 /// reticle overlay, which is what caused the visible jitter.
 class MainMenuVectorWidget extends StatelessWidget {
@@ -255,7 +255,7 @@ class _SectionIndex extends StatelessWidget {
 }
 
 /// The HUD signature: four accent corner brackets and mid-edge alignment
-/// ticks. Deliberately no full frame — the glass stays open and airy.
+/// ticks. Deliberately no full frame – the glass stays open and airy.
 class _VectorReticlePainter extends CustomPainter {
   const _VectorReticlePainter({required this.accent, required this.tick});
 

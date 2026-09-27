@@ -1,4 +1,4 @@
-# Browser Tabs — Tabame launcher plugin
+# Browser Tabs – Tabame launcher plugin
 
 Type **`bwt`** to immediately list every tab in the paired Chromium profile.
 There is no command menu or drill-down: the tab list is the plugin's root view.

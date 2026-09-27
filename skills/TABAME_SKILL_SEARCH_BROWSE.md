@@ -3,7 +3,7 @@ name: tbm-plugin-search-browse
 description: Author a Tabame QuickLaunch plugin for searching, filtering, browsing, and selecting data using list/grid/table/tree/gallery views, split previews, detail pages, pagination, and Ctrl+K actions. Use for contacts, bookmarks, files, packages, media, commands, API search, dictionaries, and similar result-oriented plugins.
 ---
 
-# Tabame QuickLaunch Plugin — Search & Browse Skill
+# Tabame QuickLaunch Plugin – Search & Browse Skill
 
 > Treat this document as authoritative for this plugin category. Do not invent
 > fields, views, commands, or message types. This skill intentionally covers
@@ -269,18 +269,18 @@ Commands are stdout messages with no `rev`:
 
 Relevant commands:
 
-| Command            | Fields                               | Effect                                                        |
-| ------------------ | ------------------------------------ | ------------------------------------------------------------- |
-| `copy`             | `text`                               | Copy and show a toast.                                        |
+| Command            | Fields                               | Effect                                                         |
+| ------------------ | ------------------------------------ | -------------------------------------------------------------- |
+| `copy`             | `text`                               | Copy and show a toast.                                         |
 | `copyImage`        | `url` (HTTP(S)) or `path`/`file`     | Copy image pixels to the image clipboard; Windows currently.   |
 | `copyFile`         | `path`/`file` or `paths`             | Copy local files/folders as file-drop clipboard data; Windows. |
-| `paste`            | `text`                               | Copy, hide launcher, reactivate previous window, send Ctrl+V. |
-| `open`             | `url` or `path`                      | Open URL/file/folder with default handler.                    |
-| `hide`             | —                                    | Hide launcher.                                                |
-| `toast`            | `text`, optional `style`, `progress` | Show success/error/info/progress feedback.                    |
-| `setQuery`         | `text`                               | Replace post-keyword query; triggers another `query`.         |
-| `clipboardRead`    | optional `requestId`                 | Request clipboard text; reply is `clipboard`.                 |
-| `clipboardHistory` | `op`, request/paging fields          | Read Tabame clipboard history.                                |
+| `paste`            | `text`                               | Copy, hide launcher, reactivate previous window, send Ctrl+V.  |
+| `open`             | `url` or `path`                      | Open URL/file/folder with default handler.                     |
+| `hide`             | –                                    | Hide launcher.                                                 |
+| `toast`            | `text`, optional `style`, `progress` | Show success/error/info/progress feedback.                     |
+| `setQuery`         | `text`                               | Replace post-keyword query; triggers another `query`.          |
+| `clipboardRead`    | optional `requestId`                 | Request clipboard text; reply is `clipboard`.                  |
+| `clipboardHistory` | `op`, request/paging fields          | Read Tabame clipboard history.                                 |
 
 Examples:
 

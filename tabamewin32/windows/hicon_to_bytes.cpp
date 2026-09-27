@@ -71,7 +71,7 @@ bool GetIconData(HICON hIcon, int nColorBits, std::vector<char> &buff) {
                  bits.data(), pBmInfo, DIB_RGB_COLORS))
     return Cleanup(false);
 
-  // After forcing biBitCount the driver may leave biSizeImage = 0 — compute
+  // After forcing biBitCount the driver may leave biSizeImage = 0 – compute
   // manually
   if (pBmInfo->bmiHeader.biSizeImage == 0) {
     DWORD stride =

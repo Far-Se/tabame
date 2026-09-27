@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Currency Converter — Tabame launcher plugin.
+Currency Converter – Tabame launcher plugin.
 
 Usage in launcher:  fx 100 usd eur   |   fx £100 to €   |   fx eur
 Data source: Frankfurter (frankfurter.app), free & keyless, ECB daily rates.
@@ -115,7 +115,7 @@ def compute_52w(frm, to):
 # ------------------------------------------------------------------ query
 
 
-# Typed shortcuts for range, e.g. "fx 100 usd ron 1w" or "usd eur all" —
+# Typed shortcuts for range, e.g. "fx 100 usd ron 1w" or "usd eur all" –
 # faster than the ctrl+k "Change timeframe" action. Note "all" intentionally
 # takes priority over the (unsupported) ALL currency code, since range intent
 # is far more common when someone types it in this context.
@@ -467,7 +467,7 @@ def draw_card(frm, to, rate, amount, dates, values, range_key, lo52, hi52, out_p
             lbl = dates[i][5:] if dates and i < len(dates) else ""
             d.text((lx - 22, c_bottom + 12), lbl, font=f_axis, fill=(130, 135, 148))
 
-    # footer — reserve its own band, well clear of the source line beneath it
+    # footer – reserve its own band, well clear of the source line beneath it
     source_y = H - margin - 26
     fy = source_y - 62
     d.line([(pad, fy), (W - margin, fy)], fill=(32, 36, 45), width=1)
@@ -497,7 +497,7 @@ def draw_card(frm, to, rate, amount, dates, values, range_key, lo52, hi52, out_p
 
 
 def next_cache_path():
-    # A strictly unique filename per render — reusing a small pool of names
+    # A strictly unique filename per render – reusing a small pool of names
     # (e.g. alternating cache_0/cache_1) lets image widgets that cache by
     # path/URL keep showing a stale bitmap even after the file on disk changes.
     global _cache_counter

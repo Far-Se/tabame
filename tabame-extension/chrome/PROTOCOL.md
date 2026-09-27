@@ -71,18 +71,18 @@ Failed response:
 
 ### Allowlisted methods
 
-| Method | Parameters | Result |
-|---|---|---|
-| `bridge.ping` | — | Connector and browser version |
-| `tabs.list` | — | All tabs, including optional group metadata |
-| `tabs.audible` | — | Audible tabs, group metadata, and current candidate |
-| `tabs.activate` | `tabId` | Updated tab |
-| `tabs.close` | `tabId` | Completion |
-| `tabs.mute` | `tabId`, optional `muted` | Updated tab |
-| `tabs.pin` | `tabId`, optional `pinned` | Updated tab |
-| `tabs.reload` | `tabId` | Completion |
-| `tabs.duplicate` | `tabId` | New tab |
-| `tabs.open` | `url`, optional `active` | New tab |
+| Method               | Parameters                                                                              | Result                                                                                     |
+| -------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `bridge.ping`        | –                                                                                       | Connector and browser version                                                              |
+| `tabs.list`          | –                                                                                       | All tabs, including optional group metadata                                                |
+| `tabs.audible`       | –                                                                                       | Audible tabs, group metadata, and current candidate                                        |
+| `tabs.activate`      | `tabId`                                                                                 | Updated tab                                                                                |
+| `tabs.close`         | `tabId`                                                                                 | Completion                                                                                 |
+| `tabs.mute`          | `tabId`, optional `muted`                                                               | Updated tab                                                                                |
+| `tabs.pin`           | `tabId`, optional `pinned`                                                              | Updated tab                                                                                |
+| `tabs.reload`        | `tabId`                                                                                 | Completion                                                                                 |
+| `tabs.duplicate`     | `tabId`                                                                                 | New tab                                                                                    |
+| `tabs.open`          | `url`, optional `active`                                                                | New tab                                                                                    |
 | `javascript.execute` | `code`, optional `tabId`, `input`, `world`, `allFrames`/`frameIds`, `injectImmediately` | Runs plugin-supplied JavaScript in an HTTP(S) tab and returns its JSON-serializable result |
 
 `tabs.open` accepts only HTTP and HTTPS URLs.

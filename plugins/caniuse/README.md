@@ -1,7 +1,7 @@
 # Can I Use plugin for the Tabame launcher
 
 Search [caniuse.com](https://caniuse.com) for web-platform feature browser
-compatibility straight from the launcher — no API key, no config.
+compatibility straight from the launcher – no API key, no config.
 
 ## Install
 
@@ -19,9 +19,9 @@ down, a stale cache is used rather than failing.
 
 Type the keyword **`ciu`** followed by a feature name:
 
-- `ciu grid` — CSS Grid Layout
-- `ciu :has` — the `:has()` selector
-- `ciu webp` — the WebP image format
+- `ciu grid` – CSS Grid Layout
+- `ciu :has` – the `:has()` selector
+- `ciu webp` – the WebP image format
 - `ciu container queries`
 - `ciu dialog`
 
@@ -46,14 +46,14 @@ Results are ranked by relevance and then by global support. Each row shows:
 
 ### Keys
 
-- **Enter** — open the highlighted feature on caniuse.com.
-- **Ctrl+K** — per-item action menu (open, copy URL, copy feature name).
-- **Esc** — leave the plugin.
+- **Enter** – open the highlighted feature on caniuse.com.
+- **Ctrl+K** – per-item action menu (open, copy URL, copy feature name).
+- **Esc** – leave the plugin.
 
 ## Notes
 
 - Data comes from the public caniuse dataset mirrored on jsdelivr, with raw
-  GitHub as a fallback. No npm dependencies — plain JS using the runtime's
+  GitHub as a fallback. No npm dependencies – plain JS using the runtime's
   global `fetch`.
 - Clipboard and "open in browser" are handled by the plugin itself (via `clip`
   and `start`), so they work without any extra launcher support.

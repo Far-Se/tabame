@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-JSON Query — Tabame launcher plugin.
+JSON Query – Tabame launcher plugin.
 
 Load a JSON file / clipboard / pasted text, then filter and project it with
 a small query language, view single entries, and export results (whole
@@ -371,7 +371,7 @@ def project_selected_json(node, selected_paths, path=()):
 
 state = {
     "screen": "root",  # root | form_file | form_paste | select_key | browse | detail | export_form | export_only_select | export_only_form
-    "data": None,  # list[dict] — the array currently being browsed
+    "data": None,  # list[dict] – the array currently being browsed
     "raw": None,  # the original parsed JSON value, kept for shape-preserving exports
     "browse_path": (),  # path of the list/object currently being browsed in raw
     "source": None,  # human-readable source label (breadcrumb)
@@ -444,7 +444,7 @@ def render_root(query_text=""):
             "rev": 0,
             "view": "list",
             "canGoBack": False,
-            "placeholder": "json — pick a source, or search the menu",
+            "placeholder": "json – pick a source, or search the menu",
             "emptyText": "No matching option",
             "items": items,
         }
@@ -499,7 +499,7 @@ def render_select_key(query_text=""):
             "rev": 0,
             "view": "list",
             "canGoBack": True,
-            "placeholder": f"Pick a key to browse into — {breadcrumb() or 'root'}",
+            "placeholder": f"Pick a key to browse into – {breadcrumb() or 'root'}",
             "emptyText": "No matching key",
             "actions": [{"id": "export_only", "title": "Export Only", "icon": "download"}],
             "items": items,

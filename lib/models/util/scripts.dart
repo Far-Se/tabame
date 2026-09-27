@@ -302,7 +302,7 @@ Add-Type -AssemblyName System.Drawing
 \$fontHex    = New-Object System.Drawing.Font("Consolas", 11, [System.Drawing.FontStyle]::Bold)
 \$fontRgb    = New-Object System.Drawing.Font("Consolas", 8,  [System.Drawing.FontStyle]::Regular)
 
-# Swatch path — static shape, allocated once
+# Swatch path – static shape, allocated once
 \$swatchPath = New-Object System.Drawing.Drawing2D.GraphicsPath
 \$swatchPath.AddArc(\$swatchRX, \$swatchRY, \$sr2, \$sr2, 180, 90)
 \$swatchPath.AddArc(\$sRtS,     \$swatchRY, \$sr2, \$sr2, 270, 90)
@@ -364,7 +364,7 @@ for (\$i = 0; \$i -le \$gridSize; \$i++) {
 # ── Bitmap buffer ─────────────────────────────────────────────────────────────
 \$bmp = New-Object System.Drawing.Bitmap(\$gridSize, \$gridSize)
 
-# ── Paint handler — zero allocations ─────────────────────────────────────────
+# ── Paint handler – zero allocations ─────────────────────────────────────────
 \$form.Add_Paint({
     param(\$sender, \$e)
     \$g = \$e.Graphics
@@ -385,7 +385,7 @@ for (\$i = 0; \$i -le \$gridSize; \$i++) {
     # Divider 1
     \$g.DrawLine(\$penDiv, \$pad, \$divY, \$lineEnd, \$divY)
 
-    # Swatch (update brush color in-place — no allocation)
+    # Swatch (update brush color in-place – no allocation)
     \$brushSwatch.Color = [System.Drawing.Color]::FromArgb(255, \$script:currentR, \$script:currentG, \$script:currentB)
     \$g.SmoothingMode   = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
     \$g.FillPath(\$brushSwatch, \$swatchPath)

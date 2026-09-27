@@ -160,7 +160,7 @@ class _PortableQuickSnapPanelState extends State<PortableQuickSnapPanel> {
                 DropdownMenuItem<PlatformWindow>(
                   value: window,
                   child: Text(
-                    window.title.isEmpty ? window.applicationName : '${window.applicationName} — ${window.title}',
+                    window.title.isEmpty ? window.applicationName : '${window.applicationName} – ${window.title}',
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

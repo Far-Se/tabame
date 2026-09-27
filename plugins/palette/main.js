@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Color Palette — a Tabame launcher plugin.
+ * Color Palette – a Tabame launcher plugin.
  *
  * Keyword: "palette"
  *   palette                 -> list of your saved palettes
@@ -28,7 +28,7 @@ function send(frame) {
 }
 
 function log(...args) {
-  console.error(...args); // debug only — never print non-protocol lines to stdout
+  console.error(...args); // debug only – never print non-protocol lines to stdout
 }
 
 function cmd(command, fields = {}) {
@@ -149,7 +149,7 @@ function contrastRatio(hexA, hexB) {
 async function extractDominantColors(filePath, count) {
   const Jimp = require("jimp");
   const image = await Jimp.read(filePath);
-  image.resize(120, Jimp.AUTO); // downscale first — keeps the pixel scan fast
+  image.resize(120, Jimp.AUTO); // downscale first – keeps the pixel scan fast
   const { data } = image.bitmap; // RGBA buffer
 
   const step = 32; // quantize each channel into 8 buckets (256 / 32)
@@ -407,7 +407,7 @@ function renderPalette(rev, selectId, query = "") {
     : palette.colors;
 
   // Quick-add: if what's typed in the search box parses as a color that
-  // isn't already saved, offer a tile to add it directly — no form needed.
+  // isn't already saved, offer a tile to add it directly – no form needed.
   const quickAddHex = parseColor(query.trim());
   const alreadySaved =
     quickAddHex && palette.colors.some((c) => c.hex === quickAddHex);
@@ -470,7 +470,7 @@ function renderPalette(rev, selectId, query = "") {
             { separator: true },
             {
               label: "Label",
-              text: c.name || "—",
+              text: c.name || "–",
               actions: [{ id: "edit", title: "Edit", icon: "edit" }],
             },
             {
@@ -491,7 +491,7 @@ function renderPalette(rev, selectId, query = "") {
     grid: { columns: 5, aspectRatio: 1.1 },
     preview: { enabled: true, wide: false },
     canGoBack: true,
-    placeholder: `Search or type a hex to quick-add — ${palette.name}`,
+    placeholder: `Search or type a hex to quick-add – ${palette.name}`,
     actions: [
       { id: "addColor", title: "Add Color", icon: "add", shortcut: "ctrl+n" },
       {
@@ -562,7 +562,7 @@ function renderAddColorForm(rev, errors = {}) {
     view: "form",
     canGoBack: true,
     form: {
-      title: `Add Color — ${palette.name}`,
+      title: `Add Color – ${palette.name}`,
       submitLabel: "Add",
       fields: [
         {
@@ -910,7 +910,7 @@ function handleMessage(msg) {
     case "change":
     case "loadMore":
     case "tab":
-      // Not used by this plugin — previews/actions cover the needed cases.
+      // Not used by this plugin – previews/actions cover the needed cases.
       break;
     case "close":
       process.exit(0);

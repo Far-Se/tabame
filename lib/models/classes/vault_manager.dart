@@ -22,7 +22,7 @@ class VaultManager {
   static String get _writableFilePath => AppPaths.settingsPath('vault.json', forWrite: true);
 
   /// Sentinel the UI used for "no password" vaults. Legacy files were encrypted
-  /// with `sha256("n0p@s5")` — a constant — so they are read here only to be
+  /// with `sha256("n0p@s5")` – a constant – so they are read here only to be
   /// migrated onto the device key.
   static const String _legacyNoPassword = 'n0p@s5';
 

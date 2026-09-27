@@ -80,6 +80,7 @@ flutter:
     - resources/shaders/super_mario.frag
     - resources/shaders/liquid_metal.frag
     - resources/shaders/optical_glass.frag
+    - resources/shaders/liquid_glass.frag
     - resources/shaders/toon.frag
     - resources/shaders/capillary.frag
     - resources/shaders/thermal.frag

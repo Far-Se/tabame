@@ -5,7 +5,7 @@
   "runtime": "python",
   "version": "1.0.0",
   "entry": "main.py",
-  "description": "wt [city] [weekly|w] [f] — forecast image; add f for Fahrenheit",
+  "description": "wt [city] [weekly|w] [f] – forecast image; add f for Fahrenheit",
   "icon": "weather",
   "pip": ["pillow>=10"],
   "dev": false

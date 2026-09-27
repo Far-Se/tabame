@@ -86,7 +86,7 @@ static bool gdiInitialized = false;
 using namespace std;
 
 // ===========================================================================
-// Type aliases & argument helpers — reduce Flutter boilerplate
+// Type aliases & argument helpers – reduce Flutter boilerplate
 // ===========================================================================
 using MethodCall = flutter::MethodCall<flutter::EncodableValue>;
 using MethodResult =
@@ -140,7 +140,7 @@ inline void OK(MethodResult &r, int v) { r->Success(EVal(v)); }
 inline void OK(MethodResult &r, const std::string &v) { r->Success(EVal(v)); }
 
 // ===========================================================================
-// Encoding helpers — reusable serializers for common data types
+// Encoding helpers – reusable serializers for common data types
 // ===========================================================================
 namespace Encode {
 EMap DevicePropsToMap(const DeviceProps &d) {
@@ -473,7 +473,7 @@ using HandlerFn = std::function<void(
     Tabamewin32Plugin *self, const MethodCall &call, MethodResult result)>;
 
 // -----------------------------------------------------------------------
-// Individual handlers — grouped by domain
+// Individual handlers – grouped by domain
 // -----------------------------------------------------------------------
 namespace Handlers {
 // ===== Audio =====
@@ -1862,7 +1862,7 @@ void CopyTextSnippetH(Tabamewin32Plugin *, const MethodCall &call, MethodResult 
 } // namespace Handlers
 
 // -----------------------------------------------------------------------
-// Dispatch table — maps method names to handler functions
+// Dispatch table – maps method names to handler functions
 // -----------------------------------------------------------------------
 static const std::unordered_map<std::string, HandlerFn> &GetDispatchTable() {
   static const std::unordered_map<std::string, HandlerFn> table = {
@@ -2096,7 +2096,7 @@ Tabamewin32Plugin::~Tabamewin32Plugin() {
 }
 
 // -----------------------------------------------------------------------
-// Method dispatch — O(1) lookup via hash map
+// Method dispatch – O(1) lookup via hash map
 // -----------------------------------------------------------------------
 void Tabamewin32Plugin::HandleMethodCall(const MethodCall &method_call,
                                          MethodResult result) {

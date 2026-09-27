@@ -17,7 +17,7 @@ import '../quicklinks/quicklink_search.dart';
 class MixedSearchHandler {
   static void handle(LauncherSearchContext context, LauncherSearchMode searchMode) {
     // -------------------------------------------------------------------------
-    // Browsing mode: user drilled into a folder — delegate entirely to the
+    // Browsing mode: user drilled into a folder – delegate entirely to the
     // DesktopSearchHandler which already handles browsingPath correctly,
     // injecting "Open Folder in Explorer" + "Go Back" pinned items and listing
     // the folder contents (filtered by query if one is typed).
@@ -110,7 +110,7 @@ class MixedSearchHandler {
     if (!shouldRunFilesystem) return;
 
     Timer(const Duration(milliseconds: 300), () async {
-      // Guard: query changed during debounce — stop spinner and bail out.
+      // Guard: query changed during debounce – stop spinner and bail out.
       // The isDisposed check inside context.setSearching handles disposal.
       if (!context.isActiveSearch(context.requestId, context.query, trimLeft: true)) {
         context.setSearching(false);
@@ -141,7 +141,7 @@ class MixedSearchHandler {
       } catch (_) {}
 
       // Guard: query changed while background scan was running, or widget was
-      // disposed while we were awaiting — stop spinner and bail out.
+      // disposed while we were awaiting – stop spinner and bail out.
       if (!context.isActiveSearch(context.requestId, context.query, trimLeft: true)) {
         context.setSearching(false);
         return;

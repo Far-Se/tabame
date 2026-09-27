@@ -1578,7 +1578,7 @@ class WindowLayoutEntry {
   int height;
   int showCmd;
   // Indices (within the snapshot's [entries] list) of windows hooked to follow
-  // this one — i.e. this entry is the master in `user.hookedWins`. Persists the
+  // this one – i.e. this entry is the master in `user.hookedWins`. Persists the
   // otherwise runtime-only hook relationships so they survive a restart.
   List<int> hookedEntries;
 
@@ -1647,7 +1647,7 @@ class WindowLayoutSnapshot extends SavedMap {
   String id;
   String name;
   int createdAt;
-  // Fingerprint of the monitor arrangement when captured — used to warn about
+  // Fingerprint of the monitor arrangement when captured – used to warn about
   // mismatched setups and to auto-apply on display change.
   String monitorSignature;
   bool autoRestore;

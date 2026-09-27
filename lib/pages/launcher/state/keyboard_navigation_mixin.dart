@@ -518,7 +518,7 @@ mixin _KeyboardNavigationMixin on _LauncherStateMembersMixin {
   void _refreshVisibleWindowResults() {
     if (_results.isEmpty) return;
     // A new query is in flight: the rows on screen belong to the previous
-    // query and are about to be replaced — patching them now would stamp them
+    // query and are about to be replaced – patching them now would stamp them
     // with the current query text (see _setResults) and let the stale
     // selection be carried over into the new results.
     if (_isSearching) return;
@@ -533,7 +533,7 @@ mixin _KeyboardNavigationMixin on _LauncherStateMembersMixin {
     for (final LauncherSearchResultItem result in _results) {
       final PlatformWindow? currentWindow = result.window;
 
-      // Not a window item — keep as-is
+      // Not a window item – keep as-is
       if (currentWindow == null) {
         nextResults.add(result);
         continue;
@@ -541,13 +541,13 @@ mixin _KeyboardNavigationMixin on _LauncherStateMembersMixin {
 
       final PlatformWindow? latestWindow = latestWindows[currentWindow];
 
-      // Window no longer exists — drop it
+      // Window no longer exists – drop it
       if (latestWindow == null) {
         changed = true;
         continue;
       }
 
-      // Window exists but something changed — update it
+      // Window exists but something changed – update it
       if (latestWindow.title != currentWindow.title ||
           latestWindow.executable != currentWindow.executable ||
           latestWindow.isPinned != currentWindow.isPinned ||
@@ -557,7 +557,7 @@ mixin _KeyboardNavigationMixin on _LauncherStateMembersMixin {
         continue;
       }
 
-      // Unchanged — keep as-is
+      // Unchanged – keep as-is
       nextResults.add(result);
     }
 

@@ -1,7 +1,7 @@
 part of '../launcher_design_builder.dart';
 
 BoxDecoration _terminalOuterDecoration(Color surface, Color accent) {
-  // Console screen — [surface] is the forced terminal palette background
+  // Console screen – [surface] is the forced terminal palette background
   // (light or dark) supplied by the launcher theme.
   return BoxDecoration(
     borderRadius: BorderRadius.circular(Design.borderRadius),
@@ -54,7 +54,7 @@ class _TerminalSearchBar extends StatelessWidget {
   }
 }
 
-/// A small blinking block — the idle terminal cursor.
+/// A small blinking block – the idle terminal cursor.
 class _TerminalBlinkCursor extends StatefulWidget {
   const _TerminalBlinkCursor({required this.color});
 
@@ -105,7 +105,7 @@ class _TerminalBlinkCursorState extends State<_TerminalBlinkCursor> with SingleT
   }
 }
 
-/// The console window — a forced-dark screen with a faux title bar, a
+/// The console window – a forced-dark screen with a faux title bar, a
 /// keyboard status line, and a subtle CRT scanline overlay.
 class TerminalLauncherFrame extends StatelessWidget {
   const TerminalLauncherFrame({super.key, required this.child, this.resultCount = 0});

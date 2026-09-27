@@ -1,4 +1,4 @@
-# Timezone Converter — Tabame plugin
+# Timezone Converter – Tabame plugin
 
 Convert a time between local time, named regions, city aliases, and IANA
 timezone identifiers from the Tabame launcher.

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
-// Ask Claude — a Tabame launcher plugin.
+// Ask Claude – a Tabame launcher plugin.
 //
 // Keyword: "ask". On first use it opens (or reuses) a claude.ai tab through
 // Tabame's app-owned browser bridge. Every message you submit from the
@@ -63,7 +63,7 @@ const DEFAULT_CONFIG = {
     "[data-is-streaming]",
   ],
   // Generic fallback used only if the assistant-specific selectors above
-  // find nothing — filtered to exclude anything matching userMessageSelectors.
+  // find nothing – filtered to exclude anything matching userMessageSelectors.
   messageSelectors: [
     '[data-testid$="-message"]',
     "main [data-message-author-role]",
@@ -101,7 +101,7 @@ const SHUTDOWN_TAB_WAIT_MS = 500;
 const SHUTDOWN_TAB_CLOSE_TIMEOUT_MS = 1_000;
 
 // Shared helpers injected into both in-page scripts. Assistant messages
-// only — never the bubble you just typed. Prefers the dedicated assistant
+// only – never the bubble you just typed. Prefers the dedicated assistant
 // selectors; if none match, falls back to the generic message list with
 // anything that also looks like a user message excluded.
 const MESSAGE_HELPERS_SNIPPET = `
@@ -182,7 +182,7 @@ function messageText(node) {
 `;
 
 // Runs inside the connected Claude.ai tab. Types the message, clicks send
-// (or presses Enter), and returns immediately — it does NOT wait for a
+// (or presses Enter), and returns immediately – it does NOT wait for a
 // reply. Waiting happens on the Node side via POLL_SCRIPT below, in short,
 // individually-timed steps, so a single call can never hang the whole
 // round trip.
@@ -228,7 +228,7 @@ if (sendBtn && !sendBtn.disabled) {
 return { beforeCount, url: location.href };
 `;
 
-// Runs inside the connected Claude.ai tab, once per poll. Cheap and quick —
+// Runs inside the connected Claude.ai tab, once per poll. Cheap and quick –
 // just reports current state, never waits. Node decides when to stop
 // polling. Includes diagnostics (url, whether the prompt box is still
 // found) so a stalled wait can report something actionable instead of
@@ -1415,7 +1415,7 @@ async function handleInit(rev, text) {
  * assistant message appears and its text stops changing (and no streaming
  * marker is present), or the overall budget runs out. Each poll is capped
  * at POLL_REQUEST_TIMEOUT_MS, so a single flaky round trip can't hang the
- * whole wait — it's just retried on the next tick. Calls onProgress() after
+ * whole wait – it's just retried on the next tick. Calls onProgress() after
  * every poll with the latest response text so the chat can update live.
  */
 async function waitForReply(
@@ -1443,7 +1443,7 @@ async function waitForReply(
       consecutiveFailures = 0;
     } catch (error) {
       // A single poll failing (e.g. the tab briefly navigating) isn't
-      // fatal — log and try again next tick rather than aborting the wait.
+      // fatal – log and try again next tick rather than aborting the wait.
       consecutiveFailures += 1;
       log(
         "Poll attempt failed, will retry:",
@@ -1500,7 +1500,7 @@ async function waitForReply(
   if (!sawNewMessage) {
     throw new Error("Claude never started responding before the timeout.");
   }
-  // We did see a reply start — return whatever text we last captured
+  // We did see a reply start – return whatever text we last captured
   // rather than erroring out, in case it only needed a bit more settle time.
   if (lastText.trim()) return lastText.trim();
   throw new Error("Claude's response did not finish before the timeout.");
@@ -1517,7 +1517,7 @@ async function handleSubmit(rev, text) {
   }
   if (state.busy) {
     command("toast", {
-      text: "Claude is still responding — please wait.",
+      text: "Claude is still responding – please wait.",
       style: "info",
     });
     renderChat(rev);

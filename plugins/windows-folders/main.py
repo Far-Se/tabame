@@ -356,7 +356,7 @@ def build_items(query_text):
                 # "preview": {
                 #     "markdown": f"## {f['name']}",
                 #     "metadata": [
-                #         {"label": "Path", "text": p or "—"},
+                #         {"label": "Path", "text": p or "–"},
                 #         {
                 #             "label": "Status",
                 #             "text": "Exists" if exists else "Not found",

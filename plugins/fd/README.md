@@ -28,8 +28,8 @@ needed.
 
 Type `fd` followed by a filename fragment:
 
-- `fd invoice` — smart-case literal substring search.
-- `fd README` — uppercase makes fd's smart-case search case-sensitive.
+- `fd invoice` – smart-case literal substring search.
+- `fd README` – uppercase makes fd's smart-case search case-sensitive.
 - In **Glob** mode: `fd report*.pdf`.
 - In **Regular expression** mode: `fd ^report.*\.pdf$`.
 
@@ -39,11 +39,11 @@ the configured display limit.
 
 ### Result actions
 
-- **Enter** — open the file/folder and dismiss Tabame.
-- **Ctrl+K** — open its containing folder, copy its full/name/parent path, or
+- **Enter** – open the file/folder and dismiss Tabame.
+- **Ctrl+K** – open its containing folder, copy its full/name/parent path, or
   paste the path into the previously focused app.
-- **Ctrl+R** — rerun the current search.
-- **Ctrl+Shift+S** — open Settings.
+- **Ctrl+R** – rerun the current search.
+- **Ctrl+Shift+S** – open Settings.
 
 ### File icons
 

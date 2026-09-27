@@ -50,7 +50,7 @@ Future<void> startQuickSnap() async {
   });
 
   // Standalone processes don't go through registerAll(), so the native "views"
-  // hook that emits moveStart/moveEnd is off by default — enable it here or the
+  // hook that emits moveStart/moveEnd is off by default – enable it here or the
   // drag never registers (no live mouse-based zone highlight) and the drop never
   // snaps/resizes the window. Right-click-to-trigger is turned off: this view is
   // driven purely by plain title-bar window drags.
@@ -116,7 +116,7 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
 
   /// hwnd -> z-order rank (0 = top of the stack). Windows snapped into the same
   /// zone overlap almost exactly, so the lowest-ranked one is the single window
-  /// actually visible there — the strip highlights it so you can tell which is
+  /// actually visible there – the strip highlights it so you can tell which is
   /// on top without alt-tabbing through the stack.
   final Map<int, int> _zOrder = <int, int>{};
 
@@ -125,7 +125,7 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
   bool _clickThroughEnabled = true;
   bool _dragging = false;
 
-  /// Zone index (within [_zones]) the dragged window is currently over —
+  /// Zone index (within [_zones]) the dragged window is currently over –
   /// distinct from [_hoveredZone], which only tracks the taskbar strip.
   int _dragHoverZone = -1;
 
@@ -140,12 +140,12 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
 
   /// Width (in physical pixels) of the right band that reveals a monitor's
   /// switcher when the cursor enters it. Kept tiny so the switcher only appears
-  /// when the cursor is right at the screen edge — docked to the right rather
+  /// when the cursor is right at the screen edge – docked to the right rather
   /// than the top so it doesn't cover the per-zone taskbar strips.
   static const double _switcherRevealBand = 3;
 
   /// Once revealed, the switcher stays visible until the cursor moves further
-  /// than this (physical pixels) left of the monitor's right edge — a hysteresis
+  /// than this (physical pixels) left of the monitor's right edge – a hysteresis
   /// band so the panel doesn't flicker away the moment you leave the 2px strip.
   static const double _switcherHideBand = 110;
 
@@ -228,8 +228,8 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
   /// Hot restart leaves this transparent, always-on-top layered overlay showing
   /// its pre-restart frame: the Dart tree rebuilds (presets/state stay correct)
   /// but the Windows embedder never re-presents to the layered surface, so the
-  /// whole overlay looks frozen. A genuine size change — not the same-size
-  /// SWP_FRAMECHANGED setupOverlay already issues — forces the embedder to
+  /// whole overlay looks frozen. A genuine size change – not the same-size
+  /// SWP_FRAMECHANGED setupOverlay already issues – forces the embedder to
   /// recreate its swap chain and resume the frame loop. No-op cost on cold start.
   void _kickRenderSurface() {
     final int hwnd = Win32Window.getHwnd();
@@ -307,7 +307,7 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
 
   /// One-time startup pass: snaps every currently-open window into a QuickSnap
   /// zone so the grid isn't just an overlay listing windows at their pre-launch
-  /// sizes — each window is physically moved/resized into the zone it belongs
+  /// sizes – each window is physically moved/resized into the zone it belongs
   /// to. A window is placed into the zone (on its own monitor) whose rect
   /// contains its center; if its center sits outside every zone, it falls back
   /// to the nearest zone by center distance. Minimized windows are skipped so
@@ -664,7 +664,7 @@ class _ZoneRegion extends StatelessWidget {
   final Color accent;
   final bool emphasized;
 
-  /// True when a window is currently being dragged over this exact zone —
+  /// True when a window is currently being dragged over this exact zone –
   /// the region that will receive the resize if the user drops here.
   final bool dragTarget;
   final double stripHeight;
@@ -934,7 +934,7 @@ class _GridSwitcherTabState extends State<_GridSwitcherTab> {
   }
 }
 
-/// Paints a scaled-down preview of a preset's zones — the same mini layout the
+/// Paints a scaled-down preview of a preset's zones – the same mini layout the
 /// full-screen overlay draws in its notch tabs.
 class _MiniPainter extends CustomPainter {
   _MiniPainter({required this.preset, required this.accent});

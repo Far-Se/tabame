@@ -10,7 +10,7 @@ import 'launcher_search_context.dart';
 import 'search_utils.dart';
 
 /// Searches Windows' recently-used items (`%AppData%\Microsoft\Windows\Recent`)
-/// — the same list Explorer's "Recent files" and app jump lists feed on. Each
+/// – the same list Explorer's "Recent files" and app jump lists feed on. Each
 /// entry is a .lnk shortcut named after its target; targets are resolved via
 /// IShellLink and dead entries are skipped.
 class RecentSearchHandler {

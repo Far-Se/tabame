@@ -1,4 +1,4 @@
-# To-Do & Reminders — Tabame Launcher Plugin
+# To-Do & Reminders – Tabame Launcher Plugin
 
 A comprehensive to-do list you drive entirely from the Tabame launcher: quick
 natural-language add, due dates, priorities, tags, sections, a full edit
@@ -16,7 +16,7 @@ Reopen the launcher, then type `todo`.
 
 ## Using it
 
-**Quick add** — type after `todo` and press Enter:
+**Quick add** – type after `todo` and press Enter:
 
 ```
 todo Buy milk tomorrow 5pm !h #errands #home
@@ -41,12 +41,12 @@ row previews exactly what will be created before you commit with Enter.
 
 **Everything else** is done from the list, via **Enter** or **Ctrl+K**:
 
-- **Enter** on a task — toggle complete / reopen it
-- **Ctrl+K** on a task — Edit, Snooze 1 Day, Set Due Today/Tomorrow, Clear
+- **Enter** on a task – toggle complete / reopen it
+- **Ctrl+K** on a task – Edit, Snooze 1 Day, Set Due Today/Tomorrow, Clear
   Due Date, set/clear Priority, Delete (confirmed)
-- **Ctrl+K** on the list itself (or **Ctrl+N**) — New Task (full form),
+- **Ctrl+K** on the list itself (or **Ctrl+N**) – New Task (full form),
   Show/Hide Completed, Clear Completed Tasks
-- **New Task (full form)** — title, notes, due date, due time, priority
+- **New Task (full form)** – title, notes, due date, due time, priority
   dropdown, and a tags field with autocomplete from your existing tags
 
 Tasks are grouped into **Overdue / Today / Tomorrow / This Week / Later /
@@ -62,7 +62,7 @@ inspect it, back it up, or point another tool at it).
 
 ## Background reminders (optional)
 
-The plugin process only runs while you're actively in the `todo` keyword —
+The plugin process only runs while you're actively in the `todo` keyword –
 like any Tabame plugin, it can't ring an alarm while the launcher is closed.
 `reminder_watcher.py` is a small standalone script (not a Tabame plugin,
 just a normal Python script) that watches the same `tasks.json` and fires a
@@ -82,7 +82,7 @@ Then register it to run at logon, e.g. via Task Scheduler:
   `"%localappdata%\Tabame\plugins\todo-reminders\reminder_watcher.py"`
 
 It checks every 30 seconds and marks a task `"notified": true` after
-alerting so it won't repeat — snoozing, editing, or changing a task's due
+alerting so it won't repeat – snoozing, editing, or changing a task's due
 date automatically re-arms it.
 
 ## Files

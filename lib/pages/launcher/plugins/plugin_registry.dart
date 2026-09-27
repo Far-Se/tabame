@@ -11,7 +11,7 @@ import 'plugin_manifest.dart';
 
 /// Scans the plugins folder and answers keyword lookups for the launcher.
 ///
-/// The registry is a process-wide cache: [load] rescans disk (cheap — a handful
+/// The registry is a process-wide cache: [load] rescans disk (cheap – a handful
 /// of tiny `plugin.json` files) and is called each time the launcher opens so
 /// newly-dropped plugins appear without a restart.
 abstract final class PluginRegistry {

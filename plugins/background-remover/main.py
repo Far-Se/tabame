@@ -1206,7 +1206,7 @@ def start_model_load(model_key):
     STATE["busy"] = True
     operation_id = next_operation()
     definition = MODEL_DEFINITIONS[model_key]
-    render_loading(f"Loading {definition['name']} — downloading the model if needed…")
+    render_loading(f"Loading {definition['name']} – downloading the model if needed…")
     settings = copy.deepcopy(STATE["settings"])
 
     def worker():
@@ -1250,7 +1250,7 @@ def start_processing(settings):
     STATE["busy"] = True
     operation_id = next_operation()
     definition = MODEL_DEFINITIONS[model_key]
-    render_loading(f"Running {definition['name']} — removing the background…")
+    render_loading(f"Running {definition['name']} – removing the background…")
     options = copy.deepcopy(STATE["settings"])
 
     def worker():

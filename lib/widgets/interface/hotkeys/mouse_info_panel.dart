@@ -371,7 +371,7 @@ Will open Task Manager and navigate tabs.
           ),
           const SizedBox(height: 2),
           SelectableText(
-            value.isEmpty ? "—" : value,
+            value.isEmpty ? "–" : value,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withAlpha(240),
               fontFamily: 'Consolas',

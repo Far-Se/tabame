@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tabame launcher plugin — Google Drive
+Tabame launcher plugin – Google Drive
 Keyword: gdrive
 
 Search Drive by filename, browse into folders, open results in the
@@ -28,7 +28,7 @@ state = {
     "checked_storage": False,
     "auth_pending": False,
     "files": {},  # last rendered file id -> file dict, for actions
-    "folder_stack": [],  # [{"id","name"}, ...] — empty = unrestricted search
+    "folder_stack": [],  # [{"id","name"}, ...] – empty = unrestricted search
 }
 
 
@@ -309,7 +309,7 @@ def do_search(rev, query):
                 "metadata": [
                     {"label": "Name", "text": f["name"]},
                     {"label": "Type", "text": "Folder" if is_folder else mime},
-                    {"label": "Owner", "text": owner or "—"},
+                    {"label": "Owner", "text": owner or "–"},
                     {"label": "Modified", "text": (f.get("modifiedTime") or "")[:10]},
                     {"label": "Size", "text": human_size(f.get("size", 0))},
                     {
@@ -413,7 +413,7 @@ def start_oauth_flow():
             creds = flow.run_local_server(
                 port=0,
                 open_browser=True,
-                success_message="Signed in — you can close this tab.",
+                success_message="Signed in – you can close this tab.",
             )
             state["creds"] = creds
             save_token_to_storage(creds)

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/settings.dart';
 import 'win32_helper.dart';
 
-/// Colours — matches the PowerShell palette 1-to-1.
+/// Colours – matches the PowerShell palette 1-to-1.
 class _Pal {
   static const ui.Color bg = Color(0xFF121214);
   static const ui.Color border = Color(0xFF373741);
@@ -249,7 +249,7 @@ class ColorPickerPainter extends CustomPainter {
       )..layout();
       labelTp.paint(canvas, Offset(labelX, _Layout.rgbY));
 
-      // Numeric value — right-padded to 3 chars
+      // Numeric value – right-padded to 3 chars
       final TextPainter valTp = TextPainter(
         text: TextSpan(
           text: values[i].toString().padLeft(3),

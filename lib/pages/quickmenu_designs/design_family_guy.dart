@@ -12,7 +12,7 @@ import '../../widgets/quickmenu/taskbar_stats.dart';
 import '../../widgets/quickmenu/top_bar.dart';
 import 'design_backdrop_stable.dart';
 
-/// "Family Guy" QuickMenu design — thick cartoon outlines, bright flat colors,
+/// "Family Guy" QuickMenu design – thick cartoon outlines, bright flat colors,
 /// and character silhouettes from the show. Peter, Stewie, and Brian peek
 /// from the corners while the UI uses bold black strokes and that signature
 /// cutaway-gag box style.
@@ -342,7 +342,7 @@ class _FamilyGuySectionMarker extends StatelessWidget {
   }
 }
 
-/// The signature "cutaway gag" box — thick black outline, flat fill,
+/// The signature "cutaway gag" box – thick black outline, flat fill,
 /// and a hard drop shadow offset diagonally.
 class _FamilyGuyCutawayBox extends StatelessWidget {
   const _FamilyGuyCutawayBox({
@@ -445,7 +445,7 @@ class _CartoonArrowPainter extends CustomPainter {
       oldDelegate.color != color || oldDelegate.outline != outline;
 }
 
-/// Peter Griffin silhouette — round body, cleft chin bump, pants line.
+/// Peter Griffin silhouette – round body, cleft chin bump, pants line.
 class _PeterSilhouettePainter extends CustomPainter {
   const _PeterSilhouettePainter({required this.color});
 
@@ -483,7 +483,7 @@ class _PeterSilhouettePainter extends CustomPainter {
   bool shouldRepaint(covariant _PeterSilhouettePainter oldDelegate) => oldDelegate.color != color;
 }
 
-/// Brian Griffin silhouette — dog snout, ears, collar, tail.
+/// Brian Griffin silhouette – dog snout, ears, collar, tail.
 class _BrianSilhouettePainter extends CustomPainter {
   const _BrianSilhouettePainter({required this.color});
 
@@ -531,7 +531,7 @@ class _BrianSilhouettePainter extends CustomPainter {
   bool shouldRepaint(covariant _BrianSilhouettePainter oldDelegate) => oldDelegate.color != color;
 }
 
-/// Stewie Griffin silhouette — football head, overalls, shoes.
+/// Stewie Griffin silhouette – football head, overalls, shoes.
 class StewieSilhouettePainter extends CustomPainter {
   const StewieSilhouettePainter({required this.color});
 

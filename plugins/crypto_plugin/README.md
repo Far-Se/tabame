@@ -1,7 +1,7 @@
-# Crypto — Tabame plugin
+# Crypto – Tabame plugin
 
-Generates a dark, crypto-app style price card — logo, chart, volume, and a
-stats row — for any coin, over whatever period you ask for.
+Generates a dark, crypto-app style price card – logo, chart, volume, and a
+stats row – for any coin, over whatever period you ask for.
 
 ## Usage
 
@@ -28,7 +28,7 @@ to re-render the same coin over a different range without retyping.
 If you don't type a ticker, it falls back to `defaultTicker` in
 `config.json` (see below), or shows quick instructions if none is set.
 
-Works with any coin CoinGecko tracks — common tickers (BTC, ETH, SOL, DOGE,
+Works with any coin CoinGecko tracks – common tickers (BTC, ETH, SOL, DOGE,
 SHIB, PEPE, and 40+ more) resolve instantly; anything else is looked up by
 symbol automatically.
 
@@ -39,7 +39,7 @@ symbol automatically.
 2. Open the Tabame launcher (it rescans plugins on open).
 3. Type `crypto btc` and press Enter.
 
-The first launch installs Pillow into the plugin's own `.pluginlibs` folder —
+The first launch installs Pillow into the plugin's own `.pluginlibs` folder –
 you'll see a short "Installing dependencies…" step once.
 
 ## Optional config
@@ -60,7 +60,7 @@ period, and/or quote currency:
 
 ## How it works
 
-- Price, volume, and market data come from CoinGecko's public API — no key
+- Price, volume, and market data come from CoinGecko's public API – no key
   needed. Ticker-to-coin resolution uses a small built-in map for common
   coins (skips an extra lookup) and falls back to CoinGecko's search
   endpoint for anything else.

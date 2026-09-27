@@ -18,7 +18,7 @@
 //
 // Paired classic-Bluetooth devices are enumerated with the Win32 Bluetooth
 // APIs. Connect/disconnect works by toggling the device's installed service
-// enablement (BluetoothSetServiceState) — the same trick command-line BT
+// enablement (BluetoothSetServiceState) – the same trick command-line BT
 // tools use: enabling a service makes Windows connect it, disabling drops the
 // link. Battery level comes from the DEVPKEY_Bluetooth_Battery PnP property
 // that Windows exposes for HFP-capable devices (most headphones/earbuds).
@@ -35,12 +35,12 @@ struct BtDeviceInfo {
   int battery = -1;               // percent, -1 when unknown
 };
 
-// {104EA319-6EE2-4701-BD47-8DDBF425BBE5}, 2 — battery percentage byte.
+// {104EA319-6EE2-4701-BD47-8DDBF425BBE5}, 2 – battery percentage byte.
 static const DEVPROPKEY kDevpkeyBluetoothBattery = {
     {0x104EA319, 0x6EE2, 0x4701, {0xBD, 0x47, 0x8D, 0xDB, 0xF4, 0x25, 0xBB, 0xE5}},
     2};
 
-// A2DP AudioSink + Handsfree — the fallback service pair for audio devices
+// A2DP AudioSink + Handsfree – the fallback service pair for audio devices
 // that don't report their installed services.
 static const GUID kBtAudioSinkGuid = {
     0x0000110B, 0x0000, 0x1000, {0x80, 0x00, 0x00, 0x80, 0x5F, 0x9B, 0x34, 0xFB}};
@@ -103,7 +103,7 @@ std::vector<BtDeviceInfo> EnumBluetoothDevices() {
   search.fReturnRemembered = TRUE;
   search.fReturnConnected = TRUE;
   search.fReturnUnknown = FALSE;
-  search.fIssueInquiry = FALSE; // paired devices only — no radio inquiry delay
+  search.fIssueInquiry = FALSE; // paired devices only – no radio inquiry delay
   search.cTimeoutMultiplier = 0;
   search.hRadio = nullptr; // all local radios
 

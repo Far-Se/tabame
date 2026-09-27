@@ -22,7 +22,7 @@ extension _OrbitResultRow on LauncherResultRow {
               padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
               child: Row(
                 children: <Widget>[
-                  // Track marker — a dim cross that locks into a chevron.
+                  // Track marker – a dim cross that locks into a chevron.
                   SizedBox(
                     width: 15,
                     child: Text(
@@ -78,7 +78,7 @@ extension _OrbitResultRow on LauncherResultRow {
                       padding: const EdgeInsets.only(left: 6),
                       child: badge,
                     ),
-                  // Lock readout — only on the locked row.
+                  // Lock readout – only on the locked row.
                   AnimatedSize(
                     duration: Duration(milliseconds: animMs),
                     curve: curve,

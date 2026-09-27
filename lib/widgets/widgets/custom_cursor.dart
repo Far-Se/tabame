@@ -45,7 +45,7 @@ class _Logger {
 ///
 //ignore: must_be_immutable
 class CustomMouseCursor extends MouseCursor {
-  /// This is the cursor's key — the name registered with the Windows platform
+  /// This is the cursor's key – the name registered with the Windows platform
   /// cursor system.  It is final.
   final String _key;
 
@@ -573,7 +573,7 @@ class CustomMouseCursor extends MouseCursor {
           '  _updateImageToNewDpi() updating by SCALING image/hotspot by adjustHotSpotRatio=$rescaleRatioRequiredForImage  (changed to hotX=$hotX hotY=$hotY)');
     }
 
-    // On windows our buffer is in raw BGRA format — decode it back to a
+    // On windows our buffer is in raw BGRA format – decode it back to a
     // ui.Image so it can be re-scaled.
     final _CustomMouseCursorDPRBitmapCache cacheEntry = _dprBitmapCache[nativeDevicePixelRatio]!;
     final Uint8List rawBgraUint8 = cacheEntry.imageBuffer;
@@ -791,7 +791,7 @@ class CustomMouseCursor extends MouseCursor {
     if (_Logger.logging) {
       _Logger.log('disposeAll() called');
     }
-    // Take a snapshot before iterating — dispose() calls remove() on the same
+    // Take a snapshot before iterating – dispose() calls remove() on the same
     // map, so iterating .values directly throws ConcurrentModificationError.
     final List<CustomMouseCursor> all = _cursorCacheOfAllCreatedCursors.values.toList();
     _cursorCacheOfAllCreatedCursors.clear();
@@ -889,7 +889,7 @@ class CustomMouseCursor extends MouseCursor {
   static bool _noOnMetricsChangedHook = false;
 
   /// This method allows user to specify that they don't want us to hook the
-  /// onMetricsChanged() — if we hook it then it will conflict with user's hook,
+  /// onMetricsChanged() – if we hook it then it will conflict with user's hook,
   /// so we must provide way to opt out.  If user opts out they must MANUALLY
   /// call `CustomMouseCursor.ensurePointersMatchDevicePixelRatio(context)`.
   static set noOnMetricsChangedHook(bool newVal) {
@@ -909,7 +909,7 @@ class CustomMouseCursor extends MouseCursor {
   static double _getCurrentDevicePixelRatioFromWindow() {
     final FlutterView? view = PlatformDispatcher.instance.implicitView;
     if (view == null) {
-      throw ('CustomMouseCursor detected null PlatformDispatcher.instance.implicitView — multiple window environments are not yet supported.');
+      throw ('CustomMouseCursor detected null PlatformDispatcher.instance.implicitView – multiple window environments are not yet supported.');
     }
     return view.devicePixelRatio;
   }

@@ -157,7 +157,7 @@ def get_image_info(path):
             mode = img.mode
             w, h = img.size
             dpi = img.info.get("dpi", (None, None))
-            dpi_str = f"{int(dpi[0])}" if dpi[0] else "—"
+            dpi_str = f"{int(dpi[0])}" if dpi[0] else "–"
             file_size = os.path.getsize(path)
             exif_count = 0
             try:
@@ -691,7 +691,7 @@ def render_resize(rev, text):
 
     items.append({
         "id": "current_size",
-        "title": f"Width: {state.get('resize_w', '—')}  Height: {state.get('resize_h', '—')}",
+        "title": f"Width: {state.get('resize_w', '–')}  Height: {state.get('resize_h', '–')}",
         "subtitle": f"Percent: {state.get('resize_percent', '100')}%",
         "icon": "info",
     })
@@ -1029,10 +1029,10 @@ def render_help(rev, text):
 
 ## Resize Syntax
 You can type dimensions directly:
-- `1920x1080` — exact width x height
-- `50%` — scale to 50%
-- `1080p` / `720p` / `4k` — resolution presets
-- Single number like `800` — fit long edge to 800px
+- `1920x1080` – exact width x height
+- `50%` – scale to 50%
+- `1080p` / `720p` / `4k` – resolution presets
+- Single number like `800` – fit long edge to 800px
 
 ## Tips
 - **Batch mode**: Select a folder to convert all images at once
@@ -1043,10 +1043,10 @@ You can type dimensions directly:
 - **Preserve structure**: Maintains subfolder layout in batch operations
 
 ## Shortcuts
-- **Enter** — Execute the highlighted action
-- **Ctrl+K** — View available actions for selected item
-- **Escape** — Go back or exit
-- **Tab** — Autocomplete (when available)
+- **Enter** – Execute the highlighted action
+- **Ctrl+K** – View available actions for selected item
+- **Escape** – Go back or exit
+- **Tab** – Autocomplete (when available)
 """
 
     send({

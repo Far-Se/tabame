@@ -14,7 +14,7 @@ extension _TransitResultRow on LauncherResultRow {
       child: _interactive(
         child: Stack(
           children: <Widget>[
-            // The route line — runs edge-to-edge so neighbouring rows join
+            // The route line – runs edge-to-edge so neighbouring rows join
             // into one continuous metro line.
             Positioned(
               left: lineLeft,
@@ -33,7 +33,7 @@ extension _TransitResultRow on LauncherResultRow {
               ).withLauncherCorners(),
               child: Row(
                 children: <Widget>[
-                  // Station marker — a stop dot that grows into an
+                  // Station marker – a stop dot that grows into an
                   // interchange roundel on selection.
                   SizedBox(
                     width: 26,
@@ -82,7 +82,7 @@ extension _TransitResultRow on LauncherResultRow {
                       padding: const EdgeInsets.only(left: 6),
                       child: badge,
                     ),
-                  // "You are here" pointer — only at the current stop.
+                  // "You are here" pointer – only at the current stop.
                   AnimatedSize(
                     duration: Duration(milliseconds: animMs),
                     curve: curve,

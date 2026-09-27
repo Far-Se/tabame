@@ -44,7 +44,7 @@ const List<_FaqItem> _faqItems = <_FaqItem>[
   _FaqItem(
       question: "Why does Tabame ask for administrator privileges?",
       answer:
-          """Some features — such as closing protected system windows, forcing focus on elevated apps — require elevated permissions. You can enable "Run as Administrator" in Settings → Configuration. The app needs to be restarted."""),
+          """Some features – such as closing protected system windows, forcing focus on elevated apps – require elevated permissions. You can enable "Run as Administrator" in Settings → Configuration. The app needs to be restarted."""),
   _FaqItem(question: "How do I make Tabame start with Windows?", answer: """
 Go to Settings → Configuration and enable "Launch at Startup". Tabame will register a start-up shortcut in your shell startup folder automatically."""),
   _FaqItem(

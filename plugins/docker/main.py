@@ -102,8 +102,8 @@ def fetch_containers():
             "ports": c.get("Ports", "") or "",
             "created": c.get("RunningFor") or c.get("CreatedAt", ""),
             "command": (c.get("Command", "") or "").strip('"'),
-            "cpu": stat.get("CPUPerc", "—"),
-            "mem": stat.get("MemPerc", "—"),
+            "cpu": stat.get("CPUPerc", "–"),
+            "mem": stat.get("MemPerc", "–"),
         })
     return out, None
 
@@ -232,8 +232,8 @@ def container_list_item(c):
             "markdown": f"**{c['name']}**\n\n`{c['id'][:12]}`\n\n{c['status']}",
             "metadata": [
                 {"label": "Image", "text": c["image"]},
-                {"label": "Ports", "text": c["ports"] or "—"},
-                {"label": "Command", "text": c["command"] or "—"},
+                {"label": "Ports", "text": c["ports"] or "–"},
+                {"label": "Command", "text": c["command"] or "–"},
                 {"label": "CPU", "text": c["cpu"]},
                 {"label": "Mem", "text": c["mem"]},
             ],
@@ -314,7 +314,7 @@ def render_home(rev):
         for row in dfitems:
             meta.append({
                 "label": row.get("Type", ""),
-                "text": f"{row.get('Size', '—')} ({row.get('Reclaimable', '—')} reclaimable)",
+                "text": f"{row.get('Size', '–')} ({row.get('Reclaimable', '–')} reclaimable)",
             })
 
     kanban_items = []
@@ -347,7 +347,7 @@ def render_home(rev):
                     "detail": {"markdown": f"**{running} running** · {stopped} stopped", "metadata": meta},
                 },
                 {
-                    "id": "lifecycle", "title": "Container lifecycle — drag to start / stop / pause",
+                    "id": "lifecycle", "title": "Container lifecycle – drag to start / stop / pause",
                     "view": "kanban", "height": 260,
                     "kanban": {"columns": [
                         {"id": "running", "title": "Running", "color": "#22C55E"},
@@ -419,7 +419,7 @@ def render_containers(rev, text=""):
         rows.append({
             "id": "c:" + c["id"], "title": c["name"] or c["id"][:12], "subtitle": c["id"][:12],
             "cells": {
-                "status": c["status"], "image": c["image"], "ports": c["ports"] or "—",
+                "status": c["status"], "image": c["image"], "ports": c["ports"] or "–",
                 "cpu": c["cpu"], "mem": c["mem"], "created": c["created"],
             },
             "actions": container_actions(c),
@@ -465,13 +465,13 @@ def build_container_panels(c, inspect, log_lines):
     meta = [
         {"label": "Status", "text": c["status"]},
         {"label": "Image", "text": c["image"]},
-        {"label": "Command", "text": c["command"] or "—"},
-        {"label": "Ports", "text": c["ports"] or "—"},
+        {"label": "Command", "text": c["command"] or "–"},
+        {"label": "Ports", "text": c["ports"] or "–"},
         {"label": "Created", "text": c["created"]},
     ]
     if inspect:
         rp = ((inspect.get("HostConfig") or {}).get("RestartPolicy") or {}).get("Name", "")
-        ip = (inspect.get("NetworkSettings") or {}).get("IPAddress", "") or "—"
+        ip = (inspect.get("NetworkSettings") or {}).get("IPAddress", "") or "–"
         meta.append({"label": "Restart policy", "text": rp or "no"})
         meta.append({"label": "IP address", "text": ip})
 
@@ -482,14 +482,14 @@ def build_container_panels(c, inspect, log_lines):
             "detail": {"markdown": f"### {c['name']}\n`{c['id'][:12]}`", "metadata": meta},
         },
         {
-            "id": "stats", "title": "CPU / Memory — live", "view": "chart", "height": 200,
+            "id": "stats", "title": "CPU / Memory – live", "view": "chart", "height": 200,
             "chart": {"title": "Usage %", "series": [
                 {"id": "cpu", "label": "CPU %", "values": series["cpu"] or [0], "color": "#63A0EA"},
                 {"id": "mem", "label": "Mem %", "values": series["mem"] or [0], "color": "#F59E0B"},
             ]},
         },
         {
-            "id": "logs", "title": "Recent logs (tail 50 — open Logs to follow live)", "view": "log", "height": 220,
+            "id": "logs", "title": "Recent logs (tail 50 – open Logs to follow live)", "view": "log", "height": 220,
             "log": {"follow": False, "wrap": False, "lines": log_lines},
         },
     ]

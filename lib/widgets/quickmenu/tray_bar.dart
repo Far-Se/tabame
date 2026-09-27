@@ -274,7 +274,7 @@ void executeTrayBarButton(TrayBarButton button) {
   }
 }
 
-// Modern shell notification codes — not reliably exported by package:win32, so
+// Modern shell notification codes – not reliably exported by package:win32, so
 // pinned to their documented literal values.
 const int _kNinSelect = 0x0400; // WM_USER + 0  (V3+ left-click "select")
 const int _kNinContextMenu = 0x007B; // == WM_CONTEXTMENU (V3+ right-click)
@@ -290,7 +290,7 @@ int _packCoord(int low, int high) => (low & 0xFFFF) | ((high & 0xFFFF) << 16);
 /// icon's registered version, unlike yasb/systray's `IconWidget.send_action`
 /// (systray_widget.py), which intercepts `NIM_SETVERSION` and so always sends
 /// the one correct wParam/lParam layout. To compensate:
-///   1. We grant the owning process foreground rights first — otherwise
+///   1. We grant the owning process foreground rights first – otherwise
 ///      Windows' foreground lock silently swallows the context menu / window
 ///      the app tries to show (this is the main reason right-clicks were a
 ///      "hit or miss" with raw PostMessage).
@@ -299,11 +299,11 @@ int _packCoord(int low, int high) => (low & 0xFFFF) | ((high & 0xFFFF) << 16);
 ///      and V4 layouts back-to-back looked harmless, but apps that crack the
 ///      message with `LOWORD(lParam)` (a very common idiom) read the
 ///      notification code out of *either* layout and process the click
-///      twice — e.g. qBittorrent's window would restore but render blank
+///      twice – e.g. qBittorrent's window would restore but render blank
 ///      until manually minimized/restored, because the second toggle raced
 ///      the first window-show before it had finished painting.
 ///   3. After button-up we additionally send `NIN_SELECT` / `NIN_CONTEXTMENU`
-///      using the V4 (coord-packed) layout — these are V3+-only notification
+///      using the V4 (coord-packed) layout – these are V3+-only notification
 ///      codes that legacy apps don't recognize, so there's no double-trigger
 ///      risk in sending just the one layout for them.
 void sendTrayClick(TrayBarInfo info, TrayClickType clickType) {

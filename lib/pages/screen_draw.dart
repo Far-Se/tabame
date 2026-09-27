@@ -618,7 +618,7 @@ class AnnotationController extends ChangeNotifier {
     if (activeTool == DrawTool.pen) {
       // Apply iterative Laplacian smoothing to the raw pen points before committing.
       // Each interior point is pulled toward the average of its neighbours.
-      // We run 3 passes with alpha=0.5 — smooths jitter while preserving shape.
+      // We run 3 passes with alpha=0.5 – smooths jitter while preserving shape.
       List<Offset> pts = List<Offset>.from(currentShape!.points);
       const int passes = 3;
       const double alpha = 0.5;
@@ -1334,7 +1334,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   // Key = tool, value = shape being previewed
   DrawShape? _liveRegionShape; // current in-progress region preview (with fetched pixels)
 
-  // imageDraw: no live drag — committed on pan-end, moveable only via Select
+  // imageDraw: no live drag – committed on pan-end, moveable only via Select
   // (nothing extra needed here since imageDraw goes through the normal shape commit path)
 
   // Magnifier: live circle lens from screen capture
@@ -1356,7 +1356,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
   bool _vdSnapshotInProgress = false;
   bool _lastDrawingModeActive = false;
 
-  // Toolbar real size — measured after first build for crosshair hit-test.
+  // Toolbar real size – measured after first build for crosshair hit-test.
   final GlobalKey _toolbarKey = GlobalKey();
   Size _toolbarSize = const Size(52, 600); // sensible fallback
 
@@ -1902,7 +1902,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
         if (committedTool != DrawTool.blur && committedTool != DrawTool.pixelate) {
           ctrl.setTool(DrawTool.select);
         } else {
-          // Stay on the same tool — just clear selectMode so the crosshair returns.
+          // Stay on the same tool – just clear selectMode so the crosshair returns.
           selectMode = false;
           setState(() {});
         }
@@ -2030,7 +2030,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       w = vdRect.width.round().clamp(1, 100000);
       h = vdRect.height.round().clamp(1, 100000);
     } else if (ctrl.activeTool == DrawTool.blur || ctrl.activeTool == DrawTool.pixelate) {
-      // Never force-refresh mid-drag — always crop from the snapshot taken at
+      // Never force-refresh mid-drag – always crop from the snapshot taken at
       // pan-start so we don't re-blur already-blurred pixels (feedback loop).
       bytes = await _captureMonitorRegion(localRect);
       w = localRect.width.round().clamp(1, 100000);
@@ -2078,7 +2078,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
       w = vdRect.width.round().clamp(1, 100000);
       h = vdRect.height.round().clamp(1, 100000);
     } else if (ctrl.activeTool == DrawTool.blur || ctrl.activeTool == DrawTool.pixelate) {
-      // Crop from the same frozen snapshot used during the drag — never re-capture
+      // Crop from the same frozen snapshot used during the drag – never re-capture
       // at commit time (the screen now shows the live preview blur on top).
       bytes = await _captureMonitorRegion(region);
       w = region.width.round().clamp(1, 100000);
@@ -2773,7 +2773,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
     }
 
     final bool shouldClose = ctrl.captureAndClose;
-    // captureAndClose is a persistent preference — do not reset it here.
+    // captureAndClose is a persistent preference – do not reset it here.
 
     if (shouldClose) {
       await windowManager.close();
@@ -2792,7 +2792,7 @@ class _AnnotationOverlayState extends State<AnnotationOverlay> {
 class _CrosshairLayer extends StatefulWidget {
   final void Function(Offset)? onHover;
 
-  /// Widget-local rect of the toolbar — cursor shows as arrow inside it.
+  /// Widget-local rect of the toolbar – cursor shows as arrow inside it.
   final Rect toolbarRect;
   final bool justTheMouse;
   const _CrosshairLayer({
@@ -2845,7 +2845,7 @@ class _CrosshairPainter extends CustomPainter {
     canvas.drawLine(Offset(0, pos!.dy), Offset(size.width, pos!.dy), paint);
     canvas.drawLine(Offset(pos!.dx, 0), Offset(pos!.dx, size.height), paint);
 
-    // Coordinate label — flip near edges
+    // Coordinate label – flip near edges
     final TextPainter tp = TextPainter(
       text: TextSpan(
         text: '${pos!.dx.round()}, ${pos!.dy.round()}',
@@ -3146,7 +3146,7 @@ class _SpotlightCommittedPainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------------------------
-// Magnifier lens widget — renders a real screen-captured circular zoom lens
+// Magnifier lens widget – renders a real screen-captured circular zoom lens
 // ---------------------------------------------------------------------------
 
 class _MagnifierLens extends StatefulWidget {
@@ -3248,7 +3248,7 @@ class _MagnifierPainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------------------------
-// Live region widget — renders blur/pixelate/smartDelete/spotlight live preview
+// Live region widget – renders blur/pixelate/smartDelete/spotlight live preview
 // ---------------------------------------------------------------------------
 
 class _LiveRegionWidget extends StatefulWidget {
@@ -3864,7 +3864,7 @@ class _HotkeysModal extends StatelessWidget {
                       _HkEntry('Text background', 'Choose color in the text dialog'),
                       _HkEntry('Balloon body', 'Choose color in the balloon dialog'),
                       _HkEntry('Measure distance',
-                          'Hover over an area — measures same-color pixel runs horizontally & vertically'),
+                          'Hover over an area – measures same-color pixel runs horizontally & vertically'),
                     ]),
                   ],
                 ),
@@ -4554,7 +4554,7 @@ class _WidthPopupBtnState extends State<_WidthPopupBtn> {
 }
 
 // ---------------------------------------------------------------------------
-// Popup-action descriptor — used by _ToolBtnWithPopup
+// Popup-action descriptor – used by _ToolBtnWithPopup
 // ---------------------------------------------------------------------------
 
 /// A single extra action shown in the hover popup of a tool button.
@@ -4870,7 +4870,7 @@ class _ScreenCaptureBtnWithPopupState extends State<_ScreenCaptureBtnWithPopup> 
       borderRadius: BorderRadius.circular(6),
       onTap: () {
         onTap();
-        // Don't auto-hide — user may want to adjust other settings too.
+        // Don't auto-hide – user may want to adjust other settings too.
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -4927,7 +4927,7 @@ class _ScreenCaptureBtnWithPopupState extends State<_ScreenCaptureBtnWithPopup> 
 /// Wraps a normal [_ToolBtn] and, on hover, shows a compact panel to the
 /// right containing one or more [_PopupAction] buttons.
 ///
-/// Pattern is identical to [_ColorPopupBtn] / [_WidthPopupBtn] — uses
+/// Pattern is identical to [_ColorPopupBtn] / [_WidthPopupBtn] – uses
 /// [CompositedTransformTarget] + [OverlayEntry] so the popup floats above
 /// the toolbar's scroll container without clipping.
 ///
@@ -5215,7 +5215,7 @@ class _LoadImageButton extends StatelessWidget {
         image.height,
       );
     } finally {
-      // Always restore drawing mode — even if the picker was cancelled — so the
+      // Always restore drawing mode – even if the picker was cancelled – so the
       // toolbox/overlay never gets stuck in pass-through.
       controller.toggleDrawingMode(activated: true);
     }

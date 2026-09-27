@@ -383,7 +383,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
           final RenderBox box = context.findRenderObject() as RenderBox;
           final double newHeight = box.size.height;
           // Ignore sub-pixel jitter from layout rounding (ShaderMask /
-          // shrinkWrap ListView / shadow bounds) — only propagate real
+          // shrinkWrap ListView / shadow bounds) – only propagate real
           // height changes, otherwise this can drive a visible reposition
           // of the window for a value that never actually changed.
           if ((newHeight - Globals.quickMenuCurrentHeight).abs() > 0.5) {
@@ -1105,7 +1105,7 @@ class _TaskBarItemState extends State<TaskBarItem> {
 }
 
 // -----------------------------------------------------------------------------
-// MEDIA CAROUSEL — shows internal player + all SMTC sessions as swipeable pages
+// MEDIA CAROUSEL – shows internal player + all SMTC sessions as swipeable pages
 // -----------------------------------------------------------------------------
 
 class TaskBarMediaCarousel extends StatefulWidget {
@@ -1123,7 +1123,7 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickM
 
   // Perceptual (average) hash of each session's last-seen thumbnail, keyed by
   // session id. SMTC re-encodes the artwork stream on every read, so raw bytes
-  // differ each fetch — we compare downscaled pixels instead to detect a real
+  // differ each fetch – we compare downscaled pixels instead to detect a real
   // visual change (e.g. browser swaps its generic icon for the album art).
   final Map<String, int?> _lastThumbHash = <String, int?>{};
   static const int _kThumbHashThreshold = 6; // Hamming distance (out of 64).
@@ -1197,7 +1197,7 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickM
             changed = true;
             break;
           }
-          // Same track — detect a real (visual) artwork swap via perceptual hash.
+          // Same track – detect a real (visual) artwork swap via perceptual hash.
           if (_thumbnailChanged(_lastThumbHash[o.id], newHashes[n.id])) {
             changed = true;
             break;
@@ -1213,7 +1213,7 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickM
         _emitSessions(sessions);
       }
     } catch (_) {
-      // SMTC unavailable — emit empty list so the UI hides the carousel.
+      // SMTC unavailable – emit empty list so the UI hides the carousel.
       _lastThumbHash.clear();
       if (_lastMediaSessions.isNotEmpty) {
         _emitSessions(<PlatformMediaSession>[]);
@@ -1262,7 +1262,7 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickM
     }
   }
 
-  /// Number of set bits (Hamming weight) — unsigned shift handles bit 63.
+  /// Number of set bits (Hamming weight) – unsigned shift handles bit 63.
   int _popcount(int x) {
     int count = 0;
     while (x != 0) {
@@ -1376,7 +1376,7 @@ class _TaskBarMusicItemState extends State<TaskBarMusicItem> {
   @override
   void didUpdateWidget(TaskBarMusicItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // New track — restart the poller if artwork is still missing.
+    // New track – restart the poller if artwork is still missing.
     if (oldWidget.item != widget.item) {
       _artworkPoller?.cancel();
       _startArtworkPollerIfNeeded();

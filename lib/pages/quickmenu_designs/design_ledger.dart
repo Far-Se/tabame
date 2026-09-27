@@ -14,8 +14,8 @@ import 'design_backdrop_stable.dart';
 
 /// "Ledger" turns the QuickMenu into a ruled accounting page: a punched
 /// binder-hole margin runs down the far left, a folded page-corner marks
-/// the top right, and every section reads like a ledger line — label,
-/// dotted leader, page number — closed off by a double rule. Where Vector
+/// the top right, and every section reads like a ledger line – label,
+/// dotted leader, page number – closed off by a double rule. Where Vector
 /// is an instrument HUD and Matrix is a stack of floating cards, Ledger
 /// stays flat and paper-like: no glow, no shadowed panels, just ruled
 /// lines and print-shop restraint.
@@ -202,7 +202,7 @@ class _LedgerGround extends StatelessWidget {
 }
 
 /// Binder margin: a hairline rule the full height of the panel, with a
-/// short run of hollow punch-holes near the top — just enough to read as
+/// short run of hollow punch-holes near the top – just enough to read as
 /// "ledger page", without pretending to be a literal 3-ring binder.
 class _LedgerMarginPainter extends CustomPainter {
   const _LedgerMarginPainter({required this.p});
@@ -265,7 +265,7 @@ class _PageFoldPainter extends CustomPainter {
 
 /// Ledger-line section header: LABEL ····················· 0N, closed
 /// with a single hairline. The number sits at the margin like a page
-/// reference, reversed from a typical index — this is a page of entries,
+/// reference, reversed from a typical index – this is a page of entries,
 /// not an instrument readout.
 class _LedgerHeading extends StatelessWidget {
   const _LedgerHeading({required this.label, required this.code, required this.p});

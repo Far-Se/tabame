@@ -1,7 +1,7 @@
 part of '../launcher_design_builder.dart';
 
 BoxDecoration _orbitOuterDecoration(Color surface, Color accent) {
-  // Guidance scope — [surface] is the forced HUD palette. A thin
+  // Guidance scope – [surface] is the forced HUD palette. A thin
   // phosphor edge, a deep instrument shadow, no glow.
   return BoxDecoration(
     borderRadius: BorderRadius.circular(Design.borderRadius),
@@ -57,7 +57,7 @@ class _OrbitSearchBar extends StatelessWidget {
               Expanded(
                 child: _LauncherSearchField(content),
               ),
-              // Acquisition scope — sweeps while the query resolves, holds an
+              // Acquisition scope – sweeps while the query resolves, holds an
               // idle crosshair otherwise.
               Padding(
                 padding: const EdgeInsets.only(left: 8),
@@ -66,7 +66,7 @@ class _OrbitSearchBar extends StatelessWidget {
             ],
           ),
         ),
-        // Graduation strip — the measured underline of the input.
+        // Graduation strip – the measured underline of the input.
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
           child: SizedBox(
@@ -135,8 +135,8 @@ class _OrbitScanScopeState extends State<_OrbitScanScope> with SingleTickerProvi
   }
 }
 
-/// The scope glyph: outer ring, cardinal ticks, center dot, and — while
-/// sweeping — a beam with a dim trailing edge.
+/// The scope glyph: outer ring, cardinal ticks, center dot, and – while
+/// sweeping – a beam with a dim trailing edge.
 class _OrbitScopeIconPainter extends CustomPainter {
   const _OrbitScopeIconPainter({required this.color, this.sweep});
 
@@ -186,7 +186,7 @@ class _OrbitScopeIconPainter extends CustomPainter {
       oldDelegate.color != color || oldDelegate.sweep != sweep;
 }
 
-/// A graduation strip: a baseline with ticks — taller every 5th — like the
+/// A graduation strip: a baseline with ticks – taller every 5th – like the
 /// scale along a flight instrument's bezel.
 class _OrbitTickStripPainter extends CustomPainter {
   const _OrbitTickStripPainter({required this.color});
@@ -215,7 +215,7 @@ class _OrbitTickStripPainter extends CustomPainter {
   bool shouldRepaint(covariant _OrbitTickStripPainter oldDelegate) => oldDelegate.color != color;
 }
 
-/// The guidance scope — forced HUD palette, faint range rings radiating from
+/// The guidance scope – forced HUD palette, faint range rings radiating from
 /// beyond the top-right corner, bearing ticks down the left edge, and a
 /// telemetry strip along the bottom.
 class OrbitLauncherFrame extends StatelessWidget {
@@ -372,7 +372,7 @@ class _OrbitTelemetryFooter extends StatelessWidget {
   }
 }
 
-/// The blinking status lamp in the telemetry strip — lit ~60% of the cycle.
+/// The blinking status lamp in the telemetry strip – lit ~60% of the cycle.
 class _OrbitStatusDot extends StatefulWidget {
   const _OrbitStatusDot({required this.color});
 
