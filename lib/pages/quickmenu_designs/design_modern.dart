@@ -109,9 +109,9 @@ class MainMenuModernWidget extends StatelessWidget {
                     const Padding(
                       padding: EdgeInsets.fromLTRB(3, 3, 6, 4),
                       child: TopBar(),
-                    )
-                  else
-                    const PinnedAndTrayList(),
+                    ),
+                  // else
+                  // const PinnedAndTrayList(),
                   const TaskBar(),
                   Divider(thickness: 1, height: 1, color: Design.text.withValues(alpha: 0.08)),
                   if (!user.bottomBarOnTop) const PinnedAndTrayList(),

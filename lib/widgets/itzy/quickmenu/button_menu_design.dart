@@ -11,6 +11,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/classes/saved_maps.dart';
 import '../../../models/design_settings.dart';
 import '../../../models/globals.dart';
+import '../../../models/win32/win_utils.dart';
 import '../../../platform/app_paths.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/theme_colors.dart';
@@ -177,12 +178,14 @@ class _QuickMenuDesignPanelState extends State<_QuickMenuDesignPanel> {
     await Boxes.switchQuickMenuDesign(design);
     if (!mounted) return;
     setState(() {});
+    WinUtils.fixDrawBug(delay: const Duration(milliseconds: 100));
   }
 
   Future<void> _switchLauncherDesign(LauncherDesign design) async {
     await Boxes.switchLauncherDesign(design);
     if (!mounted) return;
     setState(() {});
+    WinUtils.fixDrawBug(delay: const Duration(milliseconds: 100));
   }
 
   void _syncSelectedBackdrop({String? selectedPath}) {
