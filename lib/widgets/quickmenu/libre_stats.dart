@@ -1,15 +1,15 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import '../../platform/windows/tabamewin32_api.dart';
 import '../../platform/windows/win32_api.dart';
 
 import '../../models/classes/boxes.dart';
+import '../../models/globals.dart';
 import '../../models/settings.dart';
 import '../../models/tray_watcher.dart';
+import '../../services/libre_stats_service.dart';
 
 class LibreStats extends StatefulWidget {
   final bool withTopDivider;
@@ -20,11 +20,12 @@ class LibreStats extends StatefulWidget {
   State<LibreStats> createState() => _LibreStatsState();
 }
 
-class _LibreStatsState extends State<LibreStats> {
+class _LibreStatsState extends State<LibreStats> with QuickMenuTriggers {
   static const Duration _kRefreshInterval = Duration(seconds: 1);
 
   Timer? _statsTimer;
-  HardwareData hardwareData = const HardwareData(cpuTemp: 0, cpuUsage: 0, ramUsage: 0, gpuUsage: 0, gpuTemp: 0);
+  Future<void>? _refreshInFlight;
+  final LibreStatsService _stats = LibreStatsService.instance;
 
   late double wUsage;
   late double wTemp;
@@ -47,105 +48,40 @@ class _LibreStatsState extends State<LibreStats> {
     color: Design.text,
   );
 
-  String? baseUrl;
   @override
   void initState() {
     super.initState();
-    baseUrl = Boxes.pref.getString('libreUrl');
     wUsage = _maxWidth(const <String>['100%', '0%'], valueStyle);
     wTemp = _maxWidth(const <String>['100°', '0°'], valueStyle);
     wRam = _maxWidth(const <String>['100%', '0%'], valueStyle);
-    _fetchStats();
-    _startTimer();
+    QuickMenuFunctions.addListener(this);
+    if (QuickMenuFunctions.isQuickMenuVisible) unawaited(_refreshStats());
   }
 
   @override
   void dispose() {
     _statsTimer?.cancel();
+    QuickMenuFunctions.removeListener(this);
     super.dispose();
   }
 
-  void _startTimer() {
-    _statsTimer = Timer.periodic(_kRefreshInterval, (_) async {
-      if (!mounted || !QuickMenuFunctions.isQuickMenuVisible) return;
-      await _fetchStats();
-      if (mounted) setState(() {});
+  @override
+  Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
+    _statsTimer?.cancel();
+    if (visible && type == QuickMenuPage.quickMenu) unawaited(_refreshStats());
+  }
+
+  Future<void> _refreshStats() {
+    // Opening prefetches and widget refreshes share the same network request.
+    return _refreshInFlight ??= _stats.refresh().then((_) {
+      if (mounted && QuickMenuFunctions.isQuickMenuVisible) setState(() {});
+    }).whenComplete(() {
+      _refreshInFlight = null;
+      if (!mounted || !QuickMenuFunctions.isQuickMenuVisible || Globals.quickMenuPage != QuickMenuPage.quickMenu)
+        return;
+      _statsTimer?.cancel();
+      _statsTimer = Timer(_kRefreshInterval, () => unawaited(_refreshStats()));
     });
-  }
-
-  double _extractByName(String body, String text, {String? type}) {
-    final String typeClause = type != null ? '(?=(?:[^}]){0,350}"Type"\\s*:\\s*"${RegExp.escape(type)}")' : '';
-    final RegExp re = RegExp(
-      '"Text"\\s*:\\s*"${RegExp.escape(text)}"'
-      '$typeClause'
-      r'(?:[^}]{0,350}?)"Value"\s*:\s*"([\d.]+)',
-      dotAll: true,
-    );
-    final Match? m = re.firstMatch(body);
-    if (m == null) return 0;
-    return double.tryParse(m.group(1)!) ?? 0;
-  }
-
-  // Hosts to try (on the same port as the configured baseUrl) when the
-  // configured baseUrl stops responding.
-  static const List<String> _fallbackHosts = <String>[
-    '192.168.100.73',
-    '169.254.83.107',
-    '172.21.128.1',
-    '0.0.0.0',
-  ];
-
-  /// Fetches the LibreHardwareMonitor JSON from [url], returning the body on
-  /// success or `null` on any failure (non-200, timeout, network error).
-  Future<String?> _fetchBody(String url) async {
-    try {
-      final Uri uri = Uri.parse('$url${url.endsWith('/') ? '' : '/'}data.json');
-      final http.Response response = await http.get(uri).timeout(const Duration(seconds: 3));
-      if (response.statusCode != 200) return null;
-      return response.body;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// Builds the candidate fallback URLs using the port from [baseUrl].
-  List<String> _fallbackUrls(String url) {
-    final Uri uri = Uri.tryParse(url) ?? Uri();
-    final int port = uri.hasPort ? uri.port : 8085;
-    return _fallbackHosts.map((String host) => 'http://$host:$port/').toList();
-  }
-
-  Future<void> _fetchStats() async {
-    if (baseUrl == null) return;
-    if (baseUrl == "") return;
-
-    String? body = await _fetchBody(baseUrl!);
-
-    // Configured URL failed – try the known fallback hosts on the same port.
-    if (body == null) {
-      for (final String candidate in _fallbackUrls(baseUrl!)) {
-        if (candidate == baseUrl) continue;
-        final String? fallbackBody = await _fetchBody(candidate);
-        if (fallbackBody != null) {
-          baseUrl = candidate; // Switch in-memory only (not Boxes settings).
-          body = fallbackBody;
-          break;
-        }
-      }
-    }
-
-    if (body == null) return; // Nothing reachable – keep last known values.
-
-    // SensorId constants – adjust if your hardware uses different paths.
-    final double gpuVideo = _extractByName(body, 'GPU Video Engine', type: 'Load');
-    final double gpuCore = _extractByName(body, 'GPU Core', type: 'Load');
-    hardwareData = HardwareData(
-      cpuUsage: _extractByName(body, 'CPU Total', type: 'Load'),
-      cpuTemp: _extractByName(body, 'CPU Package', type: 'Temperature'),
-      ramUsage: _extractByName(body, 'Memory', type: 'Load'),
-      gpuUsage: max(gpuCore, gpuVideo),
-      gpuTemp: _extractByName(body, 'GPU Core', type: 'Temperature'),
-    );
   }
 
   Future<void> _focusTaskManager() async {
@@ -196,11 +132,12 @@ class _LibreStatsState extends State<LibreStats> {
     // Spacer between the three chips.
     const double chipGap = 6;
 
-    final String cpuUsage = '${hardwareData.cpuUsage.toStringAsFixed(0)}%';
-    final String cpuTemp = '${hardwareData.cpuTemp.toStringAsFixed(0)}°';
-    final String ramUsage = '${hardwareData.ramUsage.toStringAsFixed(0)}%';
-    final String gpuUsage = '${hardwareData.gpuUsage.toStringAsFixed(0)}%';
-    final String gpuTemp = '${hardwareData.gpuTemp.toStringAsFixed(0)}°';
+    final HardwareData? hardwareData = _stats.cached;
+    final String cpuUsage = hardwareData == null ? '—' : '${hardwareData.cpuUsage.toStringAsFixed(0)}%';
+    final String cpuTemp = hardwareData == null ? '—' : '${hardwareData.cpuTemp.toStringAsFixed(0)}°';
+    final String ramUsage = hardwareData == null ? '—' : '${hardwareData.ramUsage.toStringAsFixed(0)}%';
+    final String gpuUsage = hardwareData == null ? '—' : '${hardwareData.gpuUsage.toStringAsFixed(0)}%';
+    final String gpuTemp = hardwareData == null ? '—' : '${hardwareData.gpuTemp.toStringAsFixed(0)}°';
 
     // Each chip: [label][usage][gap][temp]  or  [label][usage]
     Widget cpuChip = Row(

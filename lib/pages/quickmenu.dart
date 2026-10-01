@@ -32,6 +32,7 @@ import '../models/win32/win_utils.dart';
 import '../models/win32/window.dart';
 import '../models/window_watcher.dart';
 import '../services/file_indexer.dart';
+import '../services/libre_stats_service.dart';
 import '../services/mouse_gestures_service.dart';
 import '../services/wallpaper_service.dart';
 import 'emoji_page.dart';
@@ -248,6 +249,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       Debug.add("Standalone launcher: init");
       return;
     }
+    if (user.libreStats) unawaited(LibreStatsService.instance.refresh());
     NativeHooks.unHook();
     NativeHooks.addListener(this);
     _quickSnapEvents = QuickSnapService.instance.events.listen(_onQuickSnapEvent, onError: (_) {});
@@ -409,6 +411,9 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
 
   DateTime lastTimeShown = DateTime.now();
   Future<void> _onQuickMenuToggled(bool visible, QuickMenuPage type) async {
+    if (visible && type == QuickMenuPage.quickMenu && user.libreStats) {
+      unawaited(LibreStatsService.instance.refresh());
+    }
     user.launcherSearchText = "";
     Globals.clearQuickMenuSearchInput();
     unixVisible = DateTime.now().millisecondsSinceEpoch;
