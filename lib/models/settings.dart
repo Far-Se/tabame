@@ -208,7 +208,7 @@ class Settings {
   String wallpapersFolder = "";
   String fancyshotFolder = "";
   String lastQuickSnapZoneId = "";
-  String lastChangelog = Globals.version;
+  String lastChangelog = "0.0";
   String language = Platform.localeName.substring(0, 2);
   VolumeOSDStyle volumeOSDStyle = VolumeOSDStyle.normal;
   TaskBarAppsStyle taskBarAppsStyle = TaskBarAppsStyle.activeMonitorFirst;
