@@ -12,10 +12,6 @@ on:
         options:
           - nightly
           - official
-      tag_name:
-        description: "Optional official release tag. Nightly always uses the exact nightly tag."
-        required: false
-        type: string
       run_tests:
         description: "Run Flutter tests before packaging."
         required: true
@@ -26,7 +22,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: tabame-windows-release-${{ inputs.tag_name || (inputs.release_type == 'nightly' && 'nightly') || github.ref_name }}
+  group: tabame-windows-release-${{ inputs.release_type || 'nightly' }}
   cancel-in-progress: false
 
 jobs:
@@ -100,28 +96,13 @@ jobs:
             $releaseType = "nightly"
           }
 
-          $tagName = "${{ inputs.tag_name }}"
           if ($releaseType -eq "official") {
-            if ([string]::IsNullOrWhiteSpace($tagName)) {
-              if ("${{ github.ref_type }}" -eq "tag") {
-                $tagName = "${{ github.ref_name }}"
-              } else {
-                $tagName = "v$appVersion"
-              }
+            if ($appVersion -notmatch '^\d+\.\d+\.\d+$') {
+              throw "Official updates require a <major>.<minor>.<patch> version in pubspec.yaml."
             }
-            if ($tagName -eq "nightly") {
-              throw "The nightly tag is reserved for nightly releases."
-            }
-            if ($appVersion -notmatch '^\d+\.\d+\.\d+$' -or $tagName -cne "v$appVersion") {
-              throw "Official updates require a v<major>.<minor>.<patch> tag matching pubspec.yaml exactly."
-            }
+            $tagName = "v$appVersion"
           } else {
-            if ([string]::IsNullOrWhiteSpace($tagName)) {
-              $tagName = "nightly"
-            }
-            if ($tagName -ne "nightly") {
-              throw "Nightly releases must use the exact nightly tag."
-            }
+            $tagName = "nightly"
           }
 
           if ($releaseType -eq "official") {
