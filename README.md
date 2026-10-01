@@ -8,7 +8,7 @@
 
 <p align="center">
 
-[![Official Downloads](https://img.shields.io/github/downloads/Far-Se/tabame/total?style=flat-square&label=Official+Release&color=DA2531)](https://github.com/Far-Se/tabame/releases/tag/v1.3)
+[![Download Official Version](https://img.shields.io/github/downloads/Far-Se/tabame/total?style=flat-square&label=Official+Release&color=DA2531)](https://github.com/Far-Se/tabame/releases/tag/v1.3)
 [![Nightly Build](https://img.shields.io/badge/Nightly-Build-0637FB?style=flat-square)](https://github.com/Far-Se/tabame/releases/tag/nightly)
 ![Made with Flutter](https://img.shields.io/badge/made%20with-Flutter-02569B?style=flat-square&logo=flutter&logoColor=white)
 ![GitHub License](https://img.shields.io/github/license/Far-Se/tabame)
@@ -21,7 +21,7 @@
 
 </p>
 
-# PSA: You can grab the [nightly build](https://github.com/Far-Se/tabame/releases/tag/nightly)
+<!--# PSA: You can grab the [nightly build](https://github.com/Far-Se/tabame/releases/tag/nightly)-->
 
 ## 🤔 What is this?
 
@@ -61,10 +61,13 @@ You will need to use the mouse, so either setup the QuickMenu hotkey with a "mov
 
 # 📥 How to install
 
-Download the Windows format you prefer from [Releases](https://github.com/Far-Se/tabame/releases/):
+Download the ZIP Archive from [Releases](https://github.com/Far-Se/tabame/releases/) then extract it wherever you want then open `tabame.exe`
 
-- `*-setup.exe` is the recommended installer. It installs just for your account without an administrator prompt.
-- `*.zip` is portable. Extract it anywhere and run `tabame.exe`.
+I didn't make a `.msi` installer because it's another app that needs to pass that annoying Windows popup.
+
+<!--- `*-setup.exe` is the recommended installer. It installs just for your account without an administrator prompt.-->
+
+<!--- `*.zip` is portable. Extract it anywhere and run `tabame.exe`.-->
 
 Updates keep settings, plugins, and other user data in `%LOCALAPPDATA%\Tabame`.
 
@@ -216,28 +219,28 @@ The Launcher is one text box that searches everything. Open it straight from the
 
 By default it blends results from files, windows and apps. If you want to narrow it down, start your query with a prefix:
 
-| Prefix              | What it searches                         |
-| ------------------- | ---------------------------------------- |
-| _(nothing)_         | Mixed results: files, windows, apps      |
-| `/`                 | QuickActions                             |
-| `.`                 | Active windows                           |
-| `,`                 | Browser tabs                             |
-| `>` `?` or a space  | Deep file search (your indexed folders)  |
-| `'`                 | Apps + bookmarks + CLI together          |
-| `b `                | Bookmarks only                           |
+| Prefix              | What it searches                                   |
+| ------------------- | -------------------------------------------------- |
+| _(nothing)_         | Mixed results: files, windows, apps                |
+| `/`                 | QuickActions                                       |
+| `.`                 | Active windows                                     |
+| `,`                 | Browser tabs                                       |
+| `>` `?` or a space  | Deep file search (your indexed folders)            |
+| `'`                 | Apps + bookmarks + CLI together                    |
+| `b `                | Bookmarks only                                     |
 | `ql `               | Quicklinks: websites, searches, files, and folders |
-| `cli `              | Your CLI snippet book                    |
-| `app `              | Apps only                                |
-| `;`                 | Desktop files                            |
-| `n `                | Notion documents                         |
-| `o `                | Obsidian notes                           |
-| `r `                | Recent files                             |
-| `s `                | Steam games                              |
-| `t `                | Terminal profiles                        |
-| `m ` or `m1 `–`m5 ` | Media control (generic or per-app slots) |
-| `sp `               | Spotify commands                         |
-| `$`                 | Function commands (see below)            |
-| `timer `            | Make a timer right away                  |
+| `cli `              | Your CLI snippet book                              |
+| `app `              | Apps only                                          |
+| `;`                 | Desktop files                                      |
+| `n `                | Notion documents                                   |
+| `o `                | Obsidian notes                                     |
+| `r `                | Recent files                                       |
+| `s `                | Steam games                                        |
+| `t `                | Terminal profiles                                  |
+| `m ` or `m1 `–`m5 ` | Media control (generic or per-app slots)           |
+| `sp `               | Spotify commands                                   |
+| `$`                 | Function commands (see below)                      |
+| `timer `            | Make a timer right away                            |
 
 Save your everyday destinations with **[Quicklinks](docs/quicklinks.md)**. Search **Create Quicklink** to add one, use aliases such as `google flutter widgets` for parameterized searches, and open **Search Quicklinks** to manage your library.
 
