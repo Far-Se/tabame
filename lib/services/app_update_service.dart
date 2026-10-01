@@ -240,7 +240,10 @@ abstract final class AppUpdateService {
       await script.writeAsString(await rootBundle.loadString('resources/updater/apply-update.ps1'), flush: true);
       final String powershell = p.join(Platform.environment['SystemRoot'] ?? r'C:\Windows', 'System32',
           'WindowsPowerShell', 'v1.0', 'powershell.exe');
-      await Process.start(
+      // A normal child has valid standard handles and a hidden console on
+      // Windows. It survives our explicit exit(0) after the ready marker.
+      // A detached launch discards early PowerShell failures and its exit code.
+      final Process helper = await Process.start(
           powershell,
           <String>[
             '-NoProfile',
@@ -260,18 +263,43 @@ abstract final class AppUpdateService {
             '-Token',
             token,
           ],
-          mode: ProcessStartMode.detached);
+          mode: ProcessStartMode.normal);
+      final StringBuffer diagnostics = StringBuffer();
+      void captureOutput(List<int> bytes) {
+        const int limit = 8192;
+        if (diagnostics.length >= limit) return;
+        final String text = utf8.decode(bytes, allowMalformed: true);
+        final int remaining = limit - diagnostics.length;
+        diagnostics.write(text.length > remaining ? text.substring(0, remaining) : text);
+      }
+
+      final Future<void> outputDone = Future.wait<void>(<Future<void>>[
+        helper.stdout.forEach(captureOutput),
+        helper.stderr.forEach(captureOutput),
+      ]).then<void>((_) {}).catchError((Object error) {
+        if (diagnostics.length < 8192) diagnostics.write('Could not read helper output: $error');
+      });
+      int? helperExitCode;
+      unawaited(helper.exitCode.then((int code) => helperExitCode = code));
+      await helper.stdin.close();
       final File ready = _file('ready-$token');
+      final File done = _file('done-$token');
       for (int attempt = 0; attempt < 100; attempt++) {
         if (await ready.exists()) exit(0);
-        if (await _file('done-$token').exists()) {
-          await _file('done-$token').delete();
-          break;
+        if (helperExitCode != null || await done.exists()) {
+          await outputDone.timeout(const Duration(seconds: 1), onTimeout: () {});
+          if (await done.exists()) await done.delete();
+          throw StateError('The update helper exited before startup handoff '
+              '(exit code: ${helperExitCode ?? 'unavailable'}). '
+              'See ${_file('update.log').path}.\n$diagnostics');
         }
         await Future<void>.delayed(const Duration(milliseconds: 100));
       }
       // The helper also has a timeout; a failed handoff never blocks startup.
+      throw TimeoutException('The update helper did not acknowledge startup within 10 seconds. '
+          'See ${_file('update.log').path}.\n$diagnostics');
     } catch (error, stack) {
+      status.value = 'The update could not start. See the error log or check again.';
       await ErrorLogger.log('UpdateHandoff', error.toString(), stack);
     }
   }

@@ -67,11 +67,24 @@ State is isolated by installation path under
 | `installed-files.json`        | Last successfully managed application files  |
 | `result.json`, `update.log`   | Installation outcome and helper diagnostics  |
 
-Download errors go to the normal `errors.log`. All executable replacements
+Download errors and early helper launch failures go to the normal `errors.log`.
+The handoff captures PowerShell output and detects an early exit instead of
+silently waiting ten seconds. The helper uses a normal process with redirected
+standard handles; it continues after Tabame explicitly exits on acknowledgment.
+All executable replacements
 happen in the bundled Windows PowerShell helper, copied outside the managed payload
 before handoff. Paths and arguments are passed as data. Its process launches use
 [hidden windows](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/start-process),
 and it rejects path traversal and reparse points before touching installation files.
+
+If a download is ready but restarting keeps opening the old version, inspect
+`errors.log` for `UpdateHandoff` and the installation's `update.log`. A pending
+descriptor plus abandoned `apply-*.ps1` files, without `update.log`, `stage`, or
+`journal.json`, indicates failure before the helper starts its transaction. The
+ZIP download may still be valid. Older builds discarded the helper's output and
+silently continued startup after the handoff timeout. Updating the helper in a
+new release cannot repair the already installed Dart launch code: those builds
+need a one-time manual upgrade using the official ZIP or installer.
 
 A journal remaining after interruption is recovered on the next normal launch,
 provided the application can still start. This is a file-copy transaction, not

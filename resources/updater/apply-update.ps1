@@ -112,6 +112,7 @@ function Start-Tabame([bool]$WithHealthToken) {
 }
 
 try {
+    Write-Log "Starting update handoff for parent $ParentId (token $Token)."
     Assert-NoLinks $root
     Assert-NoLinks $install
     if ($install -eq [IO.Path]::GetPathRoot($install).TrimEnd('\') -or $install -eq $root -or
