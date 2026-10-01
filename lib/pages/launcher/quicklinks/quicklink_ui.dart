@@ -71,10 +71,14 @@ class QuicklinkUi {
   }
 
   static Future<void> showManager(BuildContext context) =>
-      showDialog<void>(context: context, builder: (_) => const _QuicklinkManager());
+      showDialog<void>(context: context, barrierColor: Colors.transparent, builder: (_) => const _QuicklinkManager());
 
   static Future<void> edit(BuildContext context, {Quicklink? link, bool duplicate = false}) => showDialog<void>(
-      context: context, barrierDismissible: false, builder: (_) => _QuicklinkEditor(link: link, duplicate: duplicate));
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.transparent,
+        builder: (_) => _QuicklinkEditor(link: link, duplicate: duplicate),
+      );
 
   static Future<void> _guard(BuildContext context, FutureOr<void> Function() operation) async {
     try {
@@ -87,6 +91,7 @@ class QuicklinkUi {
 
   static Future<void> _message(BuildContext context, String title, String message) => showDialog<void>(
       context: context,
+      barrierColor: Colors.transparent,
       builder: (BuildContext dialogContext) => AlertDialog(
             title: Text(title),
             content: SingleChildScrollView(child: SelectableText(message)),
@@ -160,6 +165,7 @@ class QuicklinkUi {
   static Future<void> showLibrary(BuildContext context) async {
     final Quicklink? template = await showDialog<Quicklink>(
       context: context,
+      barrierColor: Colors.transparent,
       builder: (BuildContext dialogContext) => _QuicklinkDialog(
         title: 'Add from Library',
         subtitle: 'Choose a search, then customize it before saving.',
@@ -232,6 +238,7 @@ class QuicklinkUi {
             onExecute: (_) async {
               final bool? confirmed = await showDialog<bool>(
                   context: context,
+                  barrierColor: Colors.transparent,
                   builder: (BuildContext dialogContext) => AlertDialog(
                         title: const Text('Delete Quicklink?'),
                         content: Text('Remove "${link.name}" from your library?'),

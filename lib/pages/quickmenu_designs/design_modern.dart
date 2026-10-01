@@ -111,7 +111,7 @@ class MainMenuModernWidget extends StatelessWidget {
                       child: TopBar(),
                     ),
                   // else
-                  // const PinnedAndTrayList(),
+                  if (user.bottomBarOnTop) const PinnedAndTrayList(),
                   const TaskBar(),
                   Divider(thickness: 1, height: 1, color: Design.text.withValues(alpha: 0.08)),
                   if (!user.bottomBarOnTop) const PinnedAndTrayList(),

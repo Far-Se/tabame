@@ -1147,7 +1147,8 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickM
     super.initState();
     QuickMenuFunctions.addListener(this);
     _pageController = PageController();
-    // timer = Timer.periodic(const Duration(milliseconds: 300), (_) => _pollMediaSession());
+    // The carousel can mount after the menu's show notification.
+    if (QuickMenuFunctions.isQuickMenuVisible) _startMediaPolling();
   }
 
   @override
@@ -1161,12 +1162,16 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickM
   @override
   Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
     if (visible) {
-      timer?.cancel();
-      _pollMediaSession();
-      timer = Timer.periodic(const Duration(milliseconds: 300), (_) => _pollMediaSession());
+      _startMediaPolling();
     } else {
       timer?.cancel();
     }
+  }
+
+  void _startMediaPolling() {
+    timer?.cancel();
+    _pollMediaSession();
+    timer = Timer.periodic(kTimerInterval, (_) => _pollMediaSession());
   }
 
   void _emitSessions(List<PlatformMediaSession> sessions) {

@@ -33,17 +33,17 @@ class _TestingButtonState extends State<TestingButton> {
       message: "Testing",
       icon: xIcon != null ? Image.memory(xIcon!) : const Icon(Icons.science),
       onTap: () async {
-        user.lastChangelog = "v1.9";
+        // user.lastChangelog = "v1.9";
 
-        QuickMenuFunctions.refreshQuickMenu();
-        return;
-        if (kReleaseMode || true) {
-          showQuickMenuModal(
-            context: context,
-            child: const TestingChild(),
-          );
-          return;
-        }
+        // QuickMenuFunctions.refreshQuickMenu();
+        // return;
+        // if (kReleaseMode || true) {
+        //   showQuickMenuModal(
+        //     context: context,
+        //     child: const TestingChild(),
+        //   );
+        //   return;
+        // }
         final MediaSessionResult result = await MediaSessionPlugin.getMediaSessions();
 
         print('Current: ${result.currentSession?.title}');
