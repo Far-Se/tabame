@@ -1946,7 +1946,7 @@ class _PluginViewState extends State<PluginView> {
                   child: Text(
                     weekday.toUpperCase(),
                     style: TextStyle(
-                      fontSize: Design.baseFontSize,
+                      fontSize: Design.baseFontSize + 0.5,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
                       color: Design.text.withAlpha(95),
@@ -2997,7 +2997,7 @@ class _PluginChatMessageState extends State<_PluginChatMessage> {
                                 Text(
                                   accessory.text,
                                   style: TextStyle(
-                                    fontSize: accessory.icon == 'clock' ? 10 : Design.baseFontSize,
+                                    fontSize: accessory.icon == 'clock' ? 10 : Design.baseFontSize + 0.5,
                                     color: accessory.color ?? Design.text.withAlpha(105),
                                   ),
                                 ),
@@ -3202,7 +3202,7 @@ class _DiscordChatBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextStyle bodyStyle =
-        style ?? TextStyle(fontSize: Design.baseFontSize + 0.5, height: 1.4, color: Design.text.withAlpha(205));
+        style ?? TextStyle(fontSize: Design.baseFontSize + 2.5, height: 1.4, color: Design.text.withAlpha(205));
     final List<InlineSpan> spans = <InlineSpan>[];
     int offset = 0;
     for (final RegExpMatch match in _inlineToken.allMatches(text)) {
@@ -3451,7 +3451,7 @@ class _PluginCalendarDayCell extends StatelessWidget {
                 '+${eventCount - visibleCount} more',
                 maxLines: 1,
                 style: TextStyle(
-                    fontSize: Design.baseFontSize, fontWeight: FontWeight.w600, color: Design.text.withAlpha(85)),
+                    fontSize: Design.baseFontSize + 0.5, fontWeight: FontWeight.w600, color: Design.text.withAlpha(85)),
               ),
             ),
         ]),
@@ -3496,7 +3496,7 @@ class _PluginCalendarEventChip extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-                fontSize: Design.baseFontSize, fontWeight: FontWeight.w600, color: Design.text.withAlpha(190)),
+                fontSize: Design.baseFontSize + 0.5, fontWeight: FontWeight.w600, color: Design.text.withAlpha(190)),
           ),
         ),
       ),
@@ -3989,7 +3989,7 @@ class _PluginGalleryTile extends StatelessWidget {
                             BoxDecoration(color: Colors.black.withAlpha(165), borderRadius: BorderRadius.circular(3)),
                         child: Text(media!.duration,
                             style: TextStyle(
-                                fontSize: Design.baseFontSize, fontWeight: FontWeight.w700, color: Colors.white)),
+                                fontSize: Design.baseFontSize + 0.5, fontWeight: FontWeight.w700, color: Colors.white)),
                       ),
                     ),
                   if (onPlayPause != null)
@@ -4053,7 +4053,7 @@ class _PluginGalleryTile extends StatelessWidget {
                           mediaError!,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: Design.baseFontSize, color: Colors.white),
+                          style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: Colors.white),
                         ),
                       ),
                     ),
@@ -4091,7 +4091,7 @@ class _PluginGalleryTile extends StatelessWidget {
                       item.subtitle.isNotEmpty ? item.subtitle : meta,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(95)),
+                      style: TextStyle(fontSize: Design.baseFontSize + 0.5, color: Design.text.withAlpha(95)),
                     ),
                 ]),
               ),
