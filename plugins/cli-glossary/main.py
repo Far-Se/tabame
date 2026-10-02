@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI Agent Glossary - a persistent Tabame launcher plugin.
+"""AI Agent CLI Glossary - a persistent Tabame launcher plugin.
 
 The plugin stores prompt templates and agent command presets as plain JSON next
 to this file.  It deliberately builds subprocess argv lists instead of shell
@@ -637,7 +637,7 @@ def render_home(rev: int, page_history: str = "none") -> None:
         "view": "list",
         "page": page_payload(
             "glossary:home",
-            "CLI Agent Glossary",
+            "AI Agent CLI Glossary",
             page_history,
             preserve_state=True,
         ),

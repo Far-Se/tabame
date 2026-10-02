@@ -275,6 +275,21 @@ The Launcher isn't limited to what ships in the box - you can extend it with you
 3. Type the plugin's **keyword** to activate it, then keep typing to query it live.
 4. Manage installed plugins (enable/disable, browse a gallery) from the **PluginManager** QuickAction / QuickMenu button.
 
+## How to use Claude without API
+
+1. You need to install the Browser Connection Extension: [Chrome](https://chromewebstore.google.com/detail/tabame-connector/affgkglfpdpkdfolkogkaplllgmmkhdd) or [Firefox](https://addons.mozilla.org/en-US/firefox/addon/tabame-connector-for-firefox/)
+2. Connect to the Extension through "Browser" Launcher Plugin (needs to be installed).
+3. Install plugin `Ask Claude`.
+4. Type the keyword for the plugin (default "ask").
+5. You can Create Custom predefined prompts from `Ask Claude` Settings.
+
+## How to use Codex/Claude subscription in Launcher
+
+1. Do the steps 1 and 2 from above instructions.
+2. Install the `AI Agent Glossary`.
+3. Type the keyword (default aask).
+4. You can create custom predefined prompts from the `AI Agent Glossary` Settings
+
 ## Creating a plugin with AI
 
 You don't need to hand-write the protocol plumbing - an AI coding assistant (Claude Code, etc.) can build a plugin for you from a plain description of what you want, because the whole protocol is written down as a spec it can read and follow:

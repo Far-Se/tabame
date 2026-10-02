@@ -771,7 +771,7 @@ class LauncherPluginHost {
           'command ${command.name}${command.text != null ? ' text=${_truncate(command.text!)}' : ''}${command.url != null ? ' url=${_truncate(command.url!)}' : ''}');
       // Host services (storage, clipboard, notifications, background grace)
       // are executed here; UI side effects are forwarded to the launcher.
-      if (_handleHostCommand(command, manifest, live: live)) return;
+      if (_handleHostCommand(process, command, manifest, live: live)) return;
       if (!live) {
         debugLog.add(PluginDebugKind.dropped, 'Dropped UI command "${command.name}" from background process');
         return;
@@ -785,7 +785,7 @@ class LauncherPluginHost {
 
   /// Executes commands that are host services rather than launcher UI effects.
   /// Returns true when the command was consumed.
-  bool _handleHostCommand(PluginCommand command, PluginManifest manifest, {required bool live}) {
+  bool _handleHostCommand(Process process, PluginCommand command, PluginManifest manifest, {required bool live}) {
     switch (command.name) {
       case 'storage':
         _handleStorageCommand(command, manifest, live: live);
@@ -839,8 +839,10 @@ class LauncherPluginHost {
         _handleOAuthCommand(command);
         return true;
       case 'browserbridge':
-        if (!live) return true;
-        _handleBrowserBridgeCommand(command);
+        // Closing plugins still need the bridge to release their browser tabs.
+        // Other browser operations remain restricted to the active plugin.
+        if (!live && (command.data['op'] != 'request' || command.data['method'] != 'tabs.close')) return true;
+        _handleBrowserBridgeCommand(process, command);
         return true;
     }
     return false;
@@ -859,13 +861,16 @@ class LauncherPluginHost {
     }
   }
 
-  void _handleBrowserBridgeCommand(PluginCommand command) {
+  void _handleBrowserBridgeCommand(Process process, PluginCommand command) {
+    // Replies belong to the requesting process, including in-flight tab opens
+    // and cleanup requests that complete after deactivation.
+    void reply(Map<String, Object?> message) => unawaited(_sendToProcess(process, message));
     final Object? requestId = command.data['requestId'];
     final Object? rawOp = command.data['op'];
     final String op = rawOp is String ? rawOp.toLowerCase() : 'status';
 
     if (op == 'status') {
-      _send(<String, Object?>{
+      reply(<String, Object?>{
         'type': 'browserBridge',
         if (requestId != null) 'requestId': requestId,
         'ok': true,
@@ -877,7 +882,7 @@ class LauncherPluginHost {
     }
 
     if (op != 'request') {
-      _send(<String, Object?>{
+      reply(<String, Object?>{
         'type': 'browserBridge',
         if (requestId != null) 'requestId': requestId,
         'ok': false,
@@ -888,7 +893,7 @@ class LauncherPluginHost {
 
     final Object? rawMethod = command.data['method'];
     if (rawMethod is! String || rawMethod.isEmpty) {
-      _send(<String, Object?>{
+      reply(<String, Object?>{
         'type': 'browserBridge',
         if (requestId != null) 'requestId': requestId,
         'ok': false,
@@ -909,14 +914,14 @@ class LauncherPluginHost {
       timeout: Duration(milliseconds: timeoutMs),
     )
         .then((Object? result) {
-      _send(<String, Object?>{
+      reply(<String, Object?>{
         'type': 'browserBridge',
         if (requestId != null) 'requestId': requestId,
         'ok': true,
         'result': result,
       });
     }).catchError((Object error) {
-      _send(<String, Object?>{
+      reply(<String, Object?>{
         'type': 'browserBridge',
         if (requestId != null) 'requestId': requestId,
         'ok': false,
@@ -1128,19 +1133,24 @@ class LauncherPluginHost {
   void _send(Map<String, Object?> message) {
     final Process? process = _process;
     if (process == null || _closing) return;
+    unawaited(_sendToProcess(process, message, requireLive: true));
+  }
+
+  Future<void> _sendToProcess(Process process, Map<String, Object?> message, {bool requireLive = false}) {
     final String encoded = jsonEncode(message);
     // Chain behind any in-flight write so `writeln` never runs while a previous
     // `flush()` is still pending (which throws "StreamSink is bound to a
     // stream"). Flushing each line keeps keystroke/select/action events
     // reaching the child immediately instead of sitting in the sink buffer.
     _writeChain = _writeChain.then((_) async {
-      if (_process != process || _closing) return; // Superseded/shut down.
+      if (requireLive && (_process != process || _closing)) return;
       process.stdin.writeln(encoded);
       await process.stdin.flush();
     }).catchError((Object error, StackTrace stack) {
       // The pipe may close as the plugin exits; log but keep the chain alive.
       unawaited(ErrorLogger.log('LauncherPluginHost', 'stdin write failed: $error', stack));
     });
+    return _writeChain;
   }
 
   /// Stops the current plugin. Short background jobs get bounded finish time;
@@ -1200,20 +1210,10 @@ class LauncherPluginHost {
       // Keep the same process and its state machine alive, without a visible UI.
       // Re-entry attaches to this process so there is never a second timer.
       if (_retained[manifest.id]?.process != process) return;
-      try {
-        process.stdin.writeln(jsonEncode(<String, Object?>{'type': 'detach'}));
-        await process.stdin.flush();
-      } catch (_) {
-        // Exit handling will remove a process whose pipe already closed.
-      }
+      await _sendToProcess(process, <String, Object?>{'type': 'detach'});
       return;
     }
-    try {
-      process.stdin.writeln(jsonEncode(<String, Object?>{'type': 'close'}));
-      await process.stdin.flush();
-    } catch (_) {
-      // Ignore – the pipe may already be gone.
-    }
+    await _sendToProcess(process, <String, Object?>{'type': 'close'});
 
     if (backgroundGrace != null) {
       // Detached finish: keep the stdout listener alive (storage writes and
@@ -1267,12 +1267,7 @@ class LauncherPluginHost {
   Future<void> _stopRetained(String id, {String reason = 'shutdown'}) async {
     final _RetainedPluginProcess? retained = _retained.remove(id);
     if (retained == null) return;
-    try {
-      retained.process.stdin.writeln(jsonEncode(<String, Object?>{'type': 'close', 'reason': reason}));
-      await retained.process.stdin.flush();
-    } catch (_) {
-      // The process may already have exited.
-    }
+    await _sendToProcess(retained.process, <String, Object?>{'type': 'close', 'reason': reason});
     try {
       await retained.process.exitCode.timeout(const Duration(seconds: 2), onTimeout: () {
         retained.process.kill();

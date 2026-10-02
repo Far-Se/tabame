@@ -58,7 +58,11 @@ Go to Settings → Configuration and enable "Launch at Startup". Tabame will reg
   _FaqItem(
       question: "How to use Claude in Launcher without API?",
       answer:
-          """You need to install the Tabame Browser Connection Extension that can be found in the Plugin Settings Button. Then install the plugin 'Ask Claude'."""),
+          """You need to install the Tabame Browser Connection Extension that can be found in the Plugin Manager QuickAction. Connect it to Tabame using `browser` plugin. Install the plugin 'Ask Claude'."""),
+  _FaqItem(
+      question: "I have a Codex/Claude subscription, can I use it in Tabame Launcher?",
+      answer:
+          """Yes, You need the Tabame Browser Connection Extension, connect it to Tabame using `browser` plugin then install the `AI Agent CLI Glossary`. Then you can configured predefined prompts."""),
   _FaqItem(
       question: "What is the Light Switch feature?",
       answer:

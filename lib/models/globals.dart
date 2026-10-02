@@ -56,7 +56,7 @@ class Globals {
   static QuickMenuPage quickMenuPage = QuickMenuPage.quickMenu;
   static bool debugHooks = true;
   static bool debugHotkeys = true;
-  static String version = "v1.9.0";
+  static String version = "v2.1.0";
   static WinRect? focusedRect;
   static int virtualDesktop = 0;
   static CustomMouseCursor? customCursor;
