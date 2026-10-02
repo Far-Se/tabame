@@ -46,19 +46,20 @@ class MainMenuWindows98Widget extends StatelessWidget {
                 children: <Widget>[
                   const DragToMoveArea(child: _Win98TitleBar()),
                   const SizedBox(height: 2),
-                  if (!user.quickActionsAtBottom)
+                  if (!user.quickMenuBarLayout.quickActionsAtBottom)
                     const _Win98RaisedBand(
                       padding: EdgeInsets.fromLTRB(3, 2, 3, 2),
                       child: TopBar(),
-                    )
-                  else if (user.bottomBarOnTop)
+                    ),
+                  if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                     const _Win98RaisedBand(child: PinnedAndTrayList())
                   else
                     const SizedBox(height: 2),
                   const SizedBox(height: 2),
                   const _Win98InsetField(child: TaskBar()),
                   const SizedBox(height: 2),
-                  if (!user.bottomBarOnTop) const _Win98RaisedBand(child: PinnedAndTrayList()),
+                  if (user.quickMenuBarLayout.hasContentAtBottom)
+                    const _Win98RaisedBand(child: PinnedAndTrayList.atBottom()),
                   if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                   if (user.libreStats) const LibreStats(withTopDivider: false),
                   const SizedBox(height: 2),

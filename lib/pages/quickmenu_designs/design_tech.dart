@@ -50,7 +50,7 @@ class MainMenuTechWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  if (!user.quickActionsAtBottom) ...<Widget>[
+                  if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                     // _TechHeader(label: 'QUICK ACTIONS', p: p),
                     // const SizedBox(height: 4),
                     _TechCard(
@@ -60,7 +60,9 @@ class MainMenuTechWidget extends StatelessWidget {
                         child: TopBar(),
                       ),
                     ),
-                  ] else if (user.bottomBarOnTop) ...<Widget>[
+                  ],
+                  if (user.quickMenuBarLayout.pinnedTrayAtTop &&
+                      user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                     // _TechHeader(label: 'SYSTEM TRAY', p: p),
                     const PinnedAndTrayList(),
                   ] else
@@ -74,9 +76,9 @@ class MainMenuTechWidget extends StatelessWidget {
                       child: TaskBar(),
                     ),
                   ),
-                  if (!user.bottomBarOnTop) ...<Widget>[
+                  if (user.quickMenuBarLayout.hasContentAtBottom) ...<Widget>[
                     // _TechHeader(label: 'SYSTEM TRAY', p: p),
-                    const PinnedAndTrayList(),
+                    const PinnedAndTrayList.atBottom(),
                   ],
                   if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                   if (user.libreStats) const LibreStats(withTopDivider: false),

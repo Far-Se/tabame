@@ -148,12 +148,12 @@ class MainMenuAnimeWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     DragToMoveArea(child: _RibbonHeader(t: t)),
-                    if (!user.quickActionsAtBottom)
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom)
                       const Padding(
                         padding: EdgeInsets.fromLTRB(9, 3, 9, 0),
                         child: TopBar(),
-                      )
-                    else if (user.bottomBarOnTop)
+                      ),
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                       const PinnedAndTrayList(),
 
                     // Window switcher, "taped" onto the card like a photo.
@@ -163,7 +163,7 @@ class MainMenuAnimeWidget extends StatelessWidget {
                       child: const TaskBar(),
                     ),
 
-                    if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                    if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                     if (user.libreStats) const LibreStats(withTopDivider: false),
 

@@ -11,6 +11,7 @@ import '../../../models/util/app_opacity.dart';
 import '../../../models/util/quickmenu_modal.dart';
 import '../../../models/window_watcher.dart';
 import '../../widgets/mini_switch.dart';
+import 'quickmenu_bar_layout_settings.dart';
 
 class QMTaskbar extends StatefulWidget {
   const QMTaskbar({super.key});
@@ -192,33 +193,7 @@ class _QMTaskbarState extends State<QMTaskbar> {
             },
           ),
           const Divider(height: 1),
-          _buildToggleTile(
-            title: "Quick Actions at the bottom",
-            subtitle: "Put Quick Action on the bottom, between pinned and tray",
-            value: user.quickActionsAtBottom,
-            onChanged: (bool v) async {
-              user.quickActionsAtBottom = v;
-              user.bottomBarOnTop = false;
-              await Boxes.updateSettings("quickActionsAtBottom", user.quickActionsAtBottom);
-              await Boxes.updateSettings("bottomBarOnTop", user.bottomBarOnTop);
-              if (!mounted) return;
-              setState(() {});
-            },
-          ),
-          if (user.quickActionsAtBottom) ...<Widget>[
-            const Divider(height: 1),
-            _buildToggleTile(
-              title: "Bottom Bar at top",
-              subtitle: "Put Buttom bar at the top to not get crowded",
-              value: user.bottomBarOnTop,
-              onChanged: (bool v) async {
-                user.bottomBarOnTop = v;
-                await Boxes.updateSettings("bottomBarOnTop", user.bottomBarOnTop);
-                if (!mounted) return;
-                setState(() {});
-              },
-            ),
-          ],
+          const QuickMenuBarLayoutSettings(),
           const Divider(height: 1),
           _buildToggleTile(
             title: "Show Media Sessions",

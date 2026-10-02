@@ -55,7 +55,7 @@ class MainMenuWinampWidget extends StatelessWidget {
                     // Title / LED strip
                     DragToMoveArea(child: _WinampTitleBar(t: t)),
 
-                    if (!user.quickActionsAtBottom)
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom)
                       _WinampBevel(
                         t: t,
                         margin: const EdgeInsets.fromLTRB(4, 2, 4, 2),
@@ -63,8 +63,8 @@ class MainMenuWinampWidget extends StatelessWidget {
                           padding: EdgeInsets.fromLTRB(3, 2, 8, 2),
                           child: TopBar(),
                         ),
-                      )
-                    else if (user.bottomBarOnTop)
+                      ),
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                       const PinnedAndTrayList(),
 
                     // Main LCD well – window switcher
@@ -99,7 +99,7 @@ class MainMenuWinampWidget extends StatelessWidget {
                       ),
                     ),
 
-                    if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                    if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                     if (user.libreStats) const LibreStats(withTopDivider: false),
 

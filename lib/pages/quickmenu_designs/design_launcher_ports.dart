@@ -79,13 +79,14 @@ class MainMenuLauncherPortWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            if (!user.quickActionsAtBottom) ...<Widget>[
+            if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
               const Padding(
                 padding: EdgeInsets.fromLTRB(7, 6, 10, 5),
                 child: TopBar(),
               ),
               Divider(height: 1, thickness: 0.7, color: divider),
-            ] else if (user.bottomBarOnTop)
+            ],
+            if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
               const Padding(
                 padding: EdgeInsets.only(top: 4),
                 child: PinnedAndTrayList(),
@@ -100,7 +101,7 @@ class MainMenuLauncherPortWidget extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: design == QuickMenuDesigns.ukiyoe ? 16 : 12),
               child: Divider(height: 1, thickness: 0.6, color: divider),
             ),
-            if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+            if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
             if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
             if (user.libreStats) const LibreStats(withTopDivider: false),
             const Padding(

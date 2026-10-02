@@ -108,13 +108,12 @@ class MainMenuTerminalWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     _TermTitleBar(chrome: chrome),
-                    if (!user.quickActionsAtBottom)
-                      const TopBar()
-                    else if (user.bottomBarOnTop)
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom) const TopBar(),
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                       const PinnedAndTrayList(),
                     // const _PromptLine(command: "tabame ls", flags: "--windows"),
                     const TaskBar(),
-                    if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                    if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                     if (user.libreStats) const LibreStats(withTopDivider: false),
                     // const _IdlePrompt(),

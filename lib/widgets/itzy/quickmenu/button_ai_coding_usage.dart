@@ -77,7 +77,7 @@ class _UsageButtonState extends State<_UsageButton> with QuickMenuTriggers {
           key: _tooltipKey,
           ignorePointer: false,
           enableTapToDismiss: false,
-          preferBelow: !user.quickActionsAtBottom,
+          preferBelow: !user.quickMenuBarLayout.quickActionsAtBottom,
           verticalOffset: 14,
           waitDuration: const Duration(milliseconds: 110),
           exitDuration: const Duration(milliseconds: 500),

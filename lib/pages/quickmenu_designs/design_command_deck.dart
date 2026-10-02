@@ -134,7 +134,8 @@ class _MainMenuCommandDeckWidgetState extends State<MainMenuCommandDeckWidget> {
   Widget build(BuildContext context) {
     Theme.of(context);
     final _DeckPalette palette = _DeckPalette.fromTheme();
-    final bool showActionRail = !user.quickActionsAtBottom;
+    final bool showActionRail =
+        user.quickMenuBarLayout.quickActionsAtTop && !user.quickMenuBarLayout.quickActionsMerged;
 
     return ConstrainedBox(
       constraints: BoxConstraints(
@@ -159,7 +160,11 @@ class _MainMenuCommandDeckWidgetState extends State<MainMenuCommandDeckWidget> {
                     selectedMonitor: _monitorFilter,
                     onMonitorSelected: _selectMonitor,
                   ),
-                  if (user.bottomBarOnTop) _DeckUtilityShelf(palette: palette),
+                  if (user.quickMenuBarLayout.pinnedTrayAtTop)
+                    _DeckUtilityShelf(
+                      palette: palette,
+                      includeQuickActions: user.quickMenuBarLayout.quickActionsMerged,
+                    ),
                   // _DeckFocusBay(
                   //   palette: palette,
                   //   window: _activeWindow,
@@ -172,7 +177,8 @@ class _MainMenuCommandDeckWidgetState extends State<MainMenuCommandDeckWidget> {
                     onWindowHover: _handleWindowHover,
                     onWindowsChanged: _handleWindowsChanged,
                   ),
-                  if (!user.bottomBarOnTop) _DeckUtilityShelf(palette: palette),
+                  if (user.quickMenuBarLayout.hasContentAtBottom)
+                    _DeckUtilityShelf(palette: palette, includeQuickActions: true, atBottom: true),
                   if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                   if (user.libreStats) const LibreStats(withTopDivider: false),
                   _DeckFooter(palette: palette),
@@ -814,9 +820,11 @@ class _DeckWorkspace extends StatelessWidget {
 }
 
 class _DeckUtilityShelf extends StatelessWidget {
-  const _DeckUtilityShelf({required this.palette});
+  const _DeckUtilityShelf({required this.palette, this.includeQuickActions = false, this.atBottom = false});
 
   final _DeckPalette palette;
+  final bool includeQuickActions;
+  final bool atBottom;
 
   @override
   Widget build(BuildContext context) {
@@ -825,7 +833,12 @@ class _DeckUtilityShelf extends StatelessWidget {
         color: palette.surface,
         border: Border(bottom: BorderSide(color: palette.rule, width: 0.8)),
       ),
-      child: const PinnedAndTrayList(),
+      child: atBottom
+          ? PinnedAndTrayList.atBottom(includeQuickActions: includeQuickActions)
+          : PinnedAndTrayList(
+              includeQuickActions: includeQuickActions,
+              hideWhenQuickActionsAtTop: false,
+            ),
     );
   }
 }

@@ -31,7 +31,7 @@ class OpenSettingsButton extends StatelessWidget {
             child: IconButton(
               padding: const EdgeInsets.all(0),
               splashRadius: 25,
-              icon: const Icon(Icons.settings),
+              icon: const Icon(Icons.settings, size: 16),
               onPressed: () {
                 // if (Boxes.quickTimers.isNotEmpty) {
                 //   WinUtils.msgBox("You Have Running Timers", "You Have Running Timers and you can not open Settings because you will loose them.");

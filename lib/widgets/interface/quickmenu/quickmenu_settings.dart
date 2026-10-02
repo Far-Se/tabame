@@ -8,6 +8,7 @@ import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
 import '../../../models/util/app_opacity.dart';
 import '../../widgets/mini_switch.dart';
+import 'quickmenu_bar_layout_settings.dart';
 
 class InterfaceQMGeneralSettingsPage extends StatefulWidget {
   const InterfaceQMGeneralSettingsPage({super.key});
@@ -91,29 +92,7 @@ class _InterfaceQMGeneralSettingsPageState extends State<InterfaceQMGeneralSetti
             setState(() {});
           },
         ),
-        _buildToggleSetting(
-          title: "Quick Actions at the bottom",
-          subtitle: "Put Quick Action on the bottom, between pinned and tray.",
-          value: user.quickActionsAtBottom,
-          onChanged: (bool val) async {
-            user.quickActionsAtBottom = val;
-            user.bottomBarOnTop = false;
-            await Boxes.updateSettings("quickActionsAtBottom", val);
-            await Boxes.updateSettings("bottomBarOnTop", val);
-            setState(() {});
-          },
-        ),
-        if (user.quickActionsAtBottom)
-          _buildToggleSetting(
-            title: "Bottom Bar at top",
-            subtitle: "Put Buttom bar at the top to not get crowded.",
-            value: user.bottomBarOnTop,
-            onChanged: (bool val) async {
-              user.bottomBarOnTop = val;
-              await Boxes.updateSettings("bottomBarOnTop", val);
-              setState(() {});
-            },
-          ),
+        const QuickMenuBarLayoutSettings(),
         _buildToggleSetting(
           title: "Launcher Full Width Popups",
           subtitle: "Launcher Popups will be full width",

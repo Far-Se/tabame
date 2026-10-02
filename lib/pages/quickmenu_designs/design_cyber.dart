@@ -50,14 +50,16 @@ class MainMenuCyberWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  if (!user.quickActionsAtBottom) ...<Widget>[
+                  if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                     // _AnimeHeader(label: 'INITIATE', p: p),
                     const SizedBox(height: 4),
                     const Padding(
                       padding: EdgeInsets.fromLTRB(4, 0, 4, 0),
                       child: TopBar(),
                     ),
-                  ] else if (user.bottomBarOnTop) ...<Widget>[
+                  ],
+                  if (user.quickMenuBarLayout.pinnedTrayAtTop &&
+                      user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                     _AnimeHeader(label: 'DOCK', p: p),
                     const PinnedAndTrayList(),
                   ] else
@@ -76,9 +78,9 @@ class MainMenuCyberWidget extends StatelessWidget {
                       child: TaskBar(),
                     ),
                   ),
-                  if (!user.bottomBarOnTop) ...<Widget>[
+                  if (user.quickMenuBarLayout.hasContentAtBottom) ...<Widget>[
                     _AnimeHeader(label: 'SYSTEM TRAY', p: p),
-                    const PinnedAndTrayList(),
+                    const PinnedAndTrayList.atBottom(),
                   ],
                   if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                   if (user.libreStats) const LibreStats(withTopDivider: false),

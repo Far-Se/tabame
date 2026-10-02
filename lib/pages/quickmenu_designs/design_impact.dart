@@ -52,12 +52,11 @@ class MainMenuImpactWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     _ActionHeader(p: p),
-                    if (!user.quickActionsAtBottom)
-                      const TopBar()
-                    else if (user.bottomBarOnTop)
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom) const TopBar(),
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                       const PinnedAndTrayList(),
                     const TaskBar(),
-                    if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                    if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                     if (user.libreStats) const LibreStats(withTopDivider: false),
                     _GutterFooter(p: p),
@@ -284,7 +283,7 @@ class _ActionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (user.quickActionsAtBottom) return const SizedBox.shrink();
+    if (user.quickMenuBarLayout.quickActionsAtBottom) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.fromLTRB(4, 3, 34, 4),
       decoration: BoxDecoration(

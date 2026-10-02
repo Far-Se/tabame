@@ -113,10 +113,11 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  if (!user.quickActionsAtBottom) ...<Widget>[
+                  if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                     Container(padding: const EdgeInsets.fromLTRB(4, 5, 10, 6), child: const TopBar()),
                     Divider(thickness: 1, height: 1, color: themeX.colorScheme.onSurface.withValues(alpha: 0.08))
-                  ] else if (user.bottomBarOnTop)
+                  ],
+                  if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                     const PinnedAndTrayList()
                   else
                     const SizedBox(height: 3),
@@ -126,7 +127,7 @@ class MainMenuInterfaceWidget extends StatelessWidget {
                     child:
                         Divider(thickness: 1, height: 1, color: themeX.colorScheme.onSurface.withValues(alpha: 0.08)),
                   ),
-                  if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                  if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                   if (user.taskManagerStats) const TaskbarStats(),
                   if (user.libreStats) const LibreStats(),
                   Container(padding: const EdgeInsets.fromLTRB(0, 4, 2, 6), child: const BottomBar()),

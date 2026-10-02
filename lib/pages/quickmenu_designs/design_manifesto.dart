@@ -42,12 +42,11 @@ class MainMenuManifestoWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     // _IssueHeader(p: p),
-                    if (!user.quickActionsAtBottom)
-                      _ActionDeck(p: p)
-                    else if (user.bottomBarOnTop)
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom) _ActionDeck(p: p),
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                       const PinnedAndTrayList(),
                     _WindowField(p: p),
-                    if (!user.bottomBarOnTop) _PinnedField(p: p),
+                    if (user.quickMenuBarLayout.hasContentAtBottom) _PinnedField(p: p, atBottom: true),
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                     if (user.libreStats) const LibreStats(withTopDivider: false),
                     _SignalFooter(p: p),
@@ -238,9 +237,10 @@ class _WindowField extends StatelessWidget {
 }
 
 class _PinnedField extends StatelessWidget {
-  const _PinnedField({required this.p});
+  const _PinnedField({required this.p, this.atBottom = false});
 
   final _ManifestoPalette p;
+  final bool atBottom;
 
   @override
   Widget build(BuildContext context) {
@@ -251,7 +251,7 @@ class _PinnedField extends StatelessWidget {
           bottom: BorderSide(color: p.ink.withValues(alpha: 0.35)),
         ),
       ),
-      child: const PinnedAndTrayList(),
+      child: atBottom ? const PinnedAndTrayList.atBottom() : const PinnedAndTrayList(),
     );
   }
 }

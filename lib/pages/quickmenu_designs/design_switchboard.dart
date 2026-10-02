@@ -94,13 +94,20 @@ class _MainMenuSwitchboardWidgetState extends State<MainMenuSwitchboardWidget> {
                 child: LayoutBuilder(
                   builder: (BuildContext context, BoxConstraints constraints) {
                     final bool sideFader = constraints.maxWidth >= 390;
-                    final bool showKeyBank = !user.quickActionsAtBottom && !user.bottomBarOnTop;
+                    final bool showKeyBank = !user.quickMenuBarLayout.quickActionsMerged;
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
                         _buildHeader(),
-                        if (user.bottomBarOnTop) const _SwitchboardShelf(child: PinnedAndTrayList()),
+                        if (user.quickMenuBarLayout.pinnedTrayAtTop)
+                          _SwitchboardShelf(
+                            child: PinnedAndTrayList(
+                              includeQuickActions: user.quickMenuBarLayout.quickActionsMerged,
+                              hideWhenQuickActionsAtTop: false,
+                            ),
+                          ),
+                        if (showKeyBank && user.quickMenuBarLayout.quickActionsAtTop) const _SwitchboardKeyBank(),
                         Flexible(
                           child: Stack(
                             children: <Widget>[
@@ -142,8 +149,13 @@ class _MainMenuSwitchboardWidgetState extends State<MainMenuSwitchboardWidget> {
                           ),
                         ),
                         if (!sideFader) SwitchboardAudioFader(key: _faderKey, vertical: false),
-                        if (!user.bottomBarOnTop) const _SwitchboardShelf(child: PinnedAndTrayList()),
-                        if (showKeyBank) const _SwitchboardKeyBank(),
+                        if (user.quickMenuBarLayout.hasContentAtBottom)
+                          _SwitchboardShelf(
+                            child: PinnedAndTrayList.atBottom(
+                              includeQuickActions: user.quickMenuBarLayout.quickActionsMerged,
+                            ),
+                          ),
+                        if (showKeyBank && user.quickMenuBarLayout.quickActionsAtBottom) const _SwitchboardKeyBank(),
                         if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                         if (user.libreStats) const LibreStats(withTopDivider: false),
                         const _SwitchboardShelf(child: BottomBar()),
@@ -181,7 +193,7 @@ class _MainMenuSwitchboardWidgetState extends State<MainMenuSwitchboardWidget> {
               ),
             ),
           ),
-          if (user.quickActionsAtBottom || user.bottomBarOnTop)
+          if (user.quickMenuBarLayout.quickActionsAtBottom || user.quickMenuBarLayout.pinnedTrayAtTop)
             _SwitchboardControl(
               tooltip: 'Search apps and commands · start typing',
               icon: Icons.search_rounded,

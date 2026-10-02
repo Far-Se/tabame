@@ -218,7 +218,7 @@ class MainMenuPlayerWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     _BrandStrip(t: t),
-                    if (!user.quickActionsAtBottom)
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom)
                       _Bevel(
                         t: t,
                         margin: const EdgeInsets.fromLTRB(5, 2, 5, 2),
@@ -227,8 +227,8 @@ class MainMenuPlayerWidget extends StatelessWidget {
                           padding: EdgeInsets.fromLTRB(3, 2, 8, 2),
                           child: TopBar(),
                         ),
-                      )
-                    else if (user.bottomBarOnTop)
+                      ),
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                       const PinnedAndTrayList(),
 
                     // Main LCD well – the window switcher behind glass.
@@ -259,7 +259,7 @@ class MainMenuPlayerWidget extends StatelessWidget {
                       ),
                     ),
 
-                    if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                    if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                     if (user.libreStats) const LibreStats(withTopDivider: false),
 

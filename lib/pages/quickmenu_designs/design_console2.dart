@@ -145,13 +145,14 @@ class MainMenuConsole2Widget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     // DragToMoveArea(child: _ConsoleTitleStrip(accent: accent, dividerColor: dividerColor)),
-                    if (!user.quickActionsAtBottom) ...<Widget>[
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                       Container(
                         padding: const EdgeInsets.fromLTRB(4, 5, 10, 6),
                         child: const TopBar(),
                       ),
                       _AsciiDivider(color: dividerColor),
-                    ] else if (user.bottomBarOnTop)
+                    ],
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                       const PinnedAndTrayList()
                     else
                       const SizedBox(height: 3),
@@ -160,7 +161,7 @@ class MainMenuConsole2Widget extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: _AsciiDivider(color: dividerColor),
                     ),
-                    if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                    if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                     if (user.taskManagerStats) const TaskbarStats(),
                     if (user.libreStats) const LibreStats(),
                     Container(

@@ -144,13 +144,14 @@ class MainMenuFluentWidget extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    if (!user.quickActionsAtBottom) ...<Widget>[
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                       const Padding(
                         padding: EdgeInsets.fromLTRB(6, 6, 10, 5),
                         child: TopBar(),
                       ),
                       Container(height: 1, margin: const EdgeInsets.symmetric(horizontal: 1), color: t.divider),
-                    ] else if (user.bottomBarOnTop)
+                    ],
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                       const Padding(
                         padding: EdgeInsets.only(top: 4),
                         child: PinnedAndTrayList(),
@@ -177,7 +178,7 @@ class MainMenuFluentWidget extends StatelessWidget {
                       ),
                     ),
 
-                    if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                    if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                     if (user.libreStats) const LibreStats(withTopDivider: false),
 

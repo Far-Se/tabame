@@ -72,8 +72,15 @@ class _MainMenuOrbitWidgetState extends State<MainMenuOrbitWidget> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     _buildHeader(),
-                    if (!user.quickActionsAtBottom) const _OrbitDock(),
-                    if (user.bottomBarOnTop) const _OrbitShelf(child: PinnedAndTrayList(includeQuickActions: false)),
+                    if (user.quickMenuBarLayout.quickActionsAtTop && !user.quickMenuBarLayout.quickActionsMerged)
+                      const _OrbitDock(),
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop)
+                      _OrbitShelf(
+                        child: PinnedAndTrayList(
+                          includeQuickActions: user.quickMenuBarLayout.quickActionsMerged,
+                          hideWhenQuickActionsAtTop: false,
+                        ),
+                      ),
                     _buildWindowHeading(),
                     Flexible(
                       child: Stack(
@@ -95,8 +102,14 @@ class _MainMenuOrbitWidgetState extends State<MainMenuOrbitWidget> {
                         ],
                       ),
                     ),
-                    if (!user.bottomBarOnTop) const _OrbitShelf(child: PinnedAndTrayList(includeQuickActions: false)),
-                    if (user.quickActionsAtBottom) const _OrbitDock(),
+                    if (user.quickMenuBarLayout.hasContentAtBottom)
+                      _OrbitShelf(
+                        child: PinnedAndTrayList.atBottom(
+                          includeQuickActions: user.quickMenuBarLayout.quickActionsMerged,
+                        ),
+                      ),
+                    if (user.quickMenuBarLayout.quickActionsAtBottom && !user.quickMenuBarLayout.quickActionsMerged)
+                      const _OrbitDock(),
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                     if (user.libreStats) const LibreStats(withTopDivider: false),
                     const _OrbitShelf(

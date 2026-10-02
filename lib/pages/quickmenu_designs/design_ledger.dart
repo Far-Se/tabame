@@ -52,13 +52,15 @@ class MainMenuLedgerWidget extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    if (!user.quickActionsAtBottom) ...<Widget>[
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                       // _LedgerHeading(label: 'QUICK ACTIONS', code: '01', p: p),
                       const Padding(
                         padding: EdgeInsets.fromLTRB(2, 2, 2, 4),
                         child: TopBar(),
                       ),
-                    ] else if (user.bottomBarOnTop) ...<Widget>[
+                    ],
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop &&
+                        user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                       // _LedgerHeading(label: 'PINNED / TRAY', code: '01', p: p),
                       const Padding(
                         padding: EdgeInsets.fromLTRB(2, 2, 2, 4),
@@ -82,11 +84,11 @@ class MainMenuLedgerWidget extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (!user.bottomBarOnTop) ...<Widget>[
+                    if (user.quickMenuBarLayout.hasContentAtBottom) ...<Widget>[
                       _LedgerHeading(label: 'PINNED / TRAY', code: '03', p: p),
                       const Padding(
                         padding: EdgeInsets.fromLTRB(2, 2, 2, 4),
-                        child: PinnedAndTrayList(),
+                        child: PinnedAndTrayList.atBottom(),
                       ),
                     ],
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),

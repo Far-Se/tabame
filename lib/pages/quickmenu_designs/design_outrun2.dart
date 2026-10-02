@@ -50,7 +50,7 @@ class MainMenuOutrun2Widget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  if (!user.quickActionsAtBottom) ...<Widget>[
+                  if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                     const SizedBox(height: 4),
                     _OutrunNeonBox(
                       p: p,
@@ -59,7 +59,9 @@ class MainMenuOutrun2Widget extends StatelessWidget {
                         child: TopBar(),
                       ),
                     ),
-                  ] else if (user.bottomBarOnTop) ...<Widget>[
+                  ],
+                  if (user.quickMenuBarLayout.pinnedTrayAtTop &&
+                      user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                     // _OutrunSectionMarker(label: 'PINNED', p: p),
                     const PinnedAndTrayList(),
                   ] else
@@ -72,9 +74,9 @@ class MainMenuOutrun2Widget extends StatelessWidget {
                       child: TaskBar(),
                     ),
                   ),
-                  if (!user.bottomBarOnTop) ...<Widget>[
+                  if (user.quickMenuBarLayout.hasContentAtBottom) ...<Widget>[
                     // _OutrunSectionMarker(label: 'PINNED', p: p),
-                    const PinnedAndTrayList(),
+                    const PinnedAndTrayList.atBottom(),
                   ],
                   if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                   if (user.libreStats) const LibreStats(withTopDivider: false),

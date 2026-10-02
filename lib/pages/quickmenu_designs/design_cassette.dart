@@ -157,10 +157,11 @@ class MainMenuCassetteWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     DragToMoveArea(child: _FasciaHeader(p: p)),
-                    if (!user.quickActionsAtBottom) _ButtonPlate(p: p),
-                    if (user.bottomBarOnTop) const PinnedAndTrayList(),
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom) _ButtonPlate(p: p),
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
+                      const PinnedAndTrayList(),
                     _CrtScreen(p: p, hasBackdrop: hasBackdrop),
-                    if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                    if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                     if (user.libreStats) const LibreStats(withTopDivider: false),
                     _StatusPlate(p: p, shellAlpha: shellAlpha),

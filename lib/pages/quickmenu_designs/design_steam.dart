@@ -155,7 +155,7 @@ class MainMenuSteamWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     // Nav header strip.
-                    if (!user.quickActionsAtBottom) ...<Widget>[
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                       ColoredBox(
                         color: t.header.withValues(alpha: hasBackdrop ? 0.85 : 1.0),
                         child: const Padding(
@@ -177,7 +177,8 @@ class MainMenuSteamWidget extends StatelessWidget {
                           ),
                         ),
                       ),
-                    ] else if (user.bottomBarOnTop)
+                    ],
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                       const Padding(
                         padding: EdgeInsets.only(top: 4),
                         child: PinnedAndTrayList(),
@@ -226,7 +227,7 @@ class MainMenuSteamWidget extends StatelessWidget {
                       ),
                     ),
 
-                    if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                    if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                     if (user.libreStats) const LibreStats(withTopDivider: false),
 

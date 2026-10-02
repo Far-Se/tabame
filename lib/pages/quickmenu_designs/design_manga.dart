@@ -147,16 +147,16 @@ class MainMenuMangaWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     DragToMoveArea(child: _ImpactHeader(m: m)),
-                    if (!user.quickActionsAtBottom)
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom)
                       const Padding(
                         padding: EdgeInsets.fromLTRB(6, 3, 6, 0),
                         child: TopBar(),
-                      )
-                    else if (user.bottomBarOnTop)
+                      ),
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                       const PinnedAndTrayList(),
                     DragToMoveArea(child: _PanelLabel(text: 'WINDOWS', m: m)),
                     const TaskBar(),
-                    if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                    if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                     if (user.libreStats) const LibreStats(withTopDivider: false),
                     _CaptionFooter(m: m),

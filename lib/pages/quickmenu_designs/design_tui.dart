@@ -39,18 +39,20 @@ class MainMenuTuiWidget extends StatelessWidget {
                     // Padding(
                     //     padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
                     //     child: Text('Tabame QuickMenu', style: QuickMenuTuiTheme.text())),
-                    if (!user.quickActionsAtBottom) ...<Widget>[
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                       const _TuiSeparator(),
                       const TopBar(),
-                    ] else if (user.bottomBarOnTop) ...<Widget>[
+                    ],
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop &&
+                        user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                       const _TuiSeparator(),
                       const PinnedAndTrayList(),
                     ],
                     const _TuiSeparator(),
                     const Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: TaskBar()),
-                    if (!user.bottomBarOnTop) ...<Widget>[
+                    if (user.quickMenuBarLayout.hasContentAtBottom) ...<Widget>[
                       const _TuiSeparator(),
-                      const PinnedAndTrayList(),
+                      const PinnedAndTrayList.atBottom(),
                     ],
                     if (user.taskManagerStats) ...<Widget>[
                       const _TuiSeparator(),

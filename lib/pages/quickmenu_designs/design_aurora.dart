@@ -165,7 +165,7 @@ class MainMenuAuroraWidget extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      if (!user.quickActionsAtBottom) ...<Widget>[
+                      if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                         Container(
                           padding: const EdgeInsets.fromLTRB(4, 6, 10, 6),
                           decoration: BoxDecoration(
@@ -181,7 +181,8 @@ class MainMenuAuroraWidget extends StatelessWidget {
                           child: const TopBar(),
                         ),
                         Divider(thickness: 0.6, height: 1, color: hairline),
-                      ] else if (user.bottomBarOnTop)
+                      ],
+                      if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                         const PinnedAndTrayList()
                       else
                         const SizedBox(height: 4),
@@ -202,7 +203,7 @@ class MainMenuAuroraWidget extends StatelessWidget {
                         ),
                       ),
 
-                      if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                      if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                       if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                       if (user.libreStats) const LibreStats(withTopDivider: false),
                       Container(

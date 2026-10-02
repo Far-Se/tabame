@@ -25,6 +25,7 @@ import 'classes/saved_maps.dart';
 import 'design_settings.dart';
 import 'globals.dart';
 import 'glass_effect.dart';
+import 'quick_menu_bar_layout.dart';
 import '../platform/app_paths.dart';
 import 'util/solar_calculator.dart';
 
@@ -146,11 +147,9 @@ class Settings {
   bool keepPopupsOpen = true;
   bool useCustomCursor = true;
   bool expandedTaskbar = true;
-  bool bottomBarOnTop = false;
   bool quickSnapOverlay = true;
   bool noopKeyListener = false;
   bool showSystemUsage = false;
-  bool mergePinnedTray = false;
   bool taskbarHoverSlide = true;
   bool trktivityEnabled = false;
   bool taskManagerStats = false;
@@ -168,7 +167,7 @@ class Settings {
   String pluginShortcut = '';
   bool dragPopupsByIconOnly = true;
   bool keepPopupOpenOnDemand = false;
-  bool quickActionsAtBottom = false;
+  QuickMenuBarLayout quickMenuBarLayout = QuickMenuBarLayout.defaultLayout;
   GlassEffect glassEffect = GlassEffect.none;
   Map<GlassEffect, GlassEffectOptions> glassEffectOptions = <GlassEffect, GlassEffectOptions>{};
   GlassEffectOptions get activeGlassOptions => glassEffectOptions[glassEffect] ?? const GlassEffectOptions();

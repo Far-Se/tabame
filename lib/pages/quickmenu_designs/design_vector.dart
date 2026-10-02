@@ -54,14 +54,16 @@ class MainMenuVectorWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  if (!user.quickActionsAtBottom) ...<Widget>[
+                  if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                     const SizedBox(height: 2),
                     // _SectionIndex(index: '01', label: 'QUICK ACTIONS', p: p),
                     const Padding(
                       padding: EdgeInsets.fromLTRB(6, 1, 8, 3),
                       child: TopBar(),
                     ),
-                  ] else if (user.bottomBarOnTop) ...<Widget>[
+                  ],
+                  if (user.quickMenuBarLayout.pinnedTrayAtTop &&
+                      user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                     // _SectionIndex(index: '01', label: 'PINNED / TRAY', p: p),
                     const PinnedAndTrayList(),
                   ] else
@@ -77,9 +79,9 @@ class MainMenuVectorWidget extends StatelessWidget {
                       child: TaskBar(),
                     ),
                   ),
-                  if (!user.bottomBarOnTop) ...<Widget>[
+                  if (user.quickMenuBarLayout.hasContentAtBottom) ...<Widget>[
                     _SectionIndex(index: '¤', label: 'PINNED / TRAY', p: p),
-                    const PinnedAndTrayList(),
+                    const PinnedAndTrayList.atBottom(),
                   ],
                   if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                   if (user.libreStats) const LibreStats(withTopDivider: false),

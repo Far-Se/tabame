@@ -86,7 +86,7 @@ class MainMenuFamilyGuyWidget extends StatelessWidget {
                   // Title strip with "cutaway" style
                   // _FamilyGuyTitleBar(p: p),
 
-                  if (!user.quickActionsAtBottom) ...<Widget>[
+                  if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                     const SizedBox(height: 4),
                     _FamilyGuyCutawayBox(
                       p: p,
@@ -95,7 +95,9 @@ class MainMenuFamilyGuyWidget extends StatelessWidget {
                         child: TopBar(),
                       ),
                     ),
-                  ] else if (user.bottomBarOnTop) ...<Widget>[
+                  ],
+                  if (user.quickMenuBarLayout.pinnedTrayAtTop &&
+                      user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                     _FamilyGuySectionMarker(label: 'PINNED', p: p),
                     const PinnedAndTrayList(),
                   ] else
@@ -110,9 +112,9 @@ class MainMenuFamilyGuyWidget extends StatelessWidget {
                     ),
                   ),
 
-                  if (!user.bottomBarOnTop) ...<Widget>[
+                  if (user.quickMenuBarLayout.hasContentAtBottom) ...<Widget>[
                     // _FamilyGuySectionMarker(label: 'PINNED', p: p),
-                    const PinnedAndTrayList(),
+                    const PinnedAndTrayList.atBottom(),
                   ],
 
                   if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),

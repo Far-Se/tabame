@@ -53,7 +53,7 @@ class MainMenuAnime2Widget extends StatelessWidget {
                 children: <Widget>[
                   // Decorative top sparkle strip
 
-                  if (!user.quickActionsAtBottom) ...<Widget>[
+                  if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                     const SizedBox(height: 4),
                     _AnimeBubble(
                       p: p,
@@ -62,7 +62,9 @@ class MainMenuAnime2Widget extends StatelessWidget {
                         child: TopBar(),
                       ),
                     ),
-                  ] else if (user.bottomBarOnTop) ...<Widget>[
+                  ],
+                  if (user.quickMenuBarLayout.pinnedTrayAtTop &&
+                      user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                     // _AnimeSectionMarker(label: 'PINNED', p: p),
                     const PinnedAndTrayList(),
                   ] else
@@ -77,9 +79,9 @@ class MainMenuAnime2Widget extends StatelessWidget {
                     ),
                   ),
 
-                  if (!user.bottomBarOnTop) ...<Widget>[
+                  if (user.quickMenuBarLayout.hasContentAtBottom) ...<Widget>[
                     _AnimeSectionMarker(label: 'PINNED', p: p),
-                    const PinnedAndTrayList(),
+                    const PinnedAndTrayList.atBottom(),
                   ],
 
                   if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),

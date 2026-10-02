@@ -126,7 +126,7 @@ class _MainMenuRundownWidgetState extends State<MainMenuRundownWidget> {
   Widget build(BuildContext context) {
     Theme.of(context);
     final _RundownPalette palette = _RundownPalette.fromTheme();
-    final bool showRail = !user.quickActionsAtBottom;
+    final bool showRail = user.quickMenuBarLayout.quickActionsAtTop && !user.quickMenuBarLayout.quickActionsMerged;
 
     return ConstrainedBox(
       constraints: BoxConstraints(
@@ -161,7 +161,14 @@ class _MainMenuRundownWidgetState extends State<MainMenuRundownWidget> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        if (user.bottomBarOnTop) _RundownSection(palette: palette, child: const PinnedAndTrayList()),
+        if (user.quickMenuBarLayout.pinnedTrayAtTop)
+          _RundownSection(
+            palette: palette,
+            child: PinnedAndTrayList(
+              includeQuickActions: user.quickMenuBarLayout.quickActionsMerged,
+              hideWhenQuickActionsAtTop: false,
+            ),
+          ),
         // _RundownHeader(
         //   palette: palette,
         //   windows: _windows,
@@ -181,7 +188,11 @@ class _MainMenuRundownWidgetState extends State<MainMenuRundownWidget> {
             onWindowsChanged: _handleWindowsChanged,
           ),
         ),
-        if (!user.bottomBarOnTop) _RundownSection(palette: palette, child: const PinnedAndTrayList()),
+        if (user.quickMenuBarLayout.hasContentAtBottom)
+          _RundownSection(
+            palette: palette,
+            child: const PinnedAndTrayList.atBottom(includeQuickActions: true),
+          ),
         if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
         if (user.libreStats) const LibreStats(withTopDivider: false),
         _RundownFooter(palette: palette),

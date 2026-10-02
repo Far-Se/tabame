@@ -143,14 +143,14 @@ class MainMenuTerminal2Widget extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: <Widget>[
-                            if (!user.quickActionsAtBottom)
+                            if (!user.quickMenuBarLayout.quickActionsAtBottom)
                               _TerminalSection(
                                 palette: palette,
                                 label: 'COMMANDS',
                                 command: 'tabame actions --quick',
                                 child: const TopBar(),
-                              )
-                            else if (user.bottomBarOnTop)
+                              ),
+                            if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                               _TerminalSection(
                                 palette: palette,
                                 label: 'COMMANDS + LINKS',
@@ -164,14 +164,14 @@ class MainMenuTerminal2Widget extends StatelessWidget {
                               columnHeader: true,
                               child: const TaskBar(),
                             ),
-                            if (!user.bottomBarOnTop)
+                            if (user.quickMenuBarLayout.hasContentAtBottom)
                               _TerminalSection(
                                 palette: palette,
-                                label: user.quickActionsAtBottom ? 'COMMANDS + LINKS' : 'LINKS',
-                                command: user.quickActionsAtBottom
+                                label: user.quickMenuBarLayout.quickActionsAtBottom ? 'COMMANDS + LINKS' : 'LINKS',
+                                command: user.quickMenuBarLayout.quickActionsAtBottom
                                     ? 'tabame bar --combined'
                                     : 'tabame links --pinned --tray',
-                                child: const PinnedAndTrayList(),
+                                child: const PinnedAndTrayList.atBottom(),
                               ),
                             if (user.taskManagerStats)
                               _TerminalSection(

@@ -152,7 +152,7 @@ class MainMenuGazetteWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
                       _Masthead(g: g),
-                      if (!user.quickActionsAtBottom) ...<Widget>[
+                      if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                         const Padding(
                           padding: EdgeInsets.fromLTRB(3, 2, 8, 2),
                           child: TopBar(),
@@ -162,12 +162,13 @@ class MainMenuGazetteWidget extends StatelessWidget {
                           margin: const EdgeInsets.symmetric(horizontal: 6),
                           color: g.rule,
                         ),
-                      ] else if (user.bottomBarOnTop)
+                      ],
+                      if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                         const PinnedAndTrayList(),
                       _DispatchColumn(g: g),
-                      if (!user.bottomBarOnTop) ...<Widget>[
+                      if (user.quickMenuBarLayout.hasContentAtBottom) ...<Widget>[
                         _DottedRule(g: g),
-                        const PinnedAndTrayList(),
+                        const PinnedAndTrayList.atBottom(),
                       ],
                       if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                       if (user.libreStats) const LibreStats(withTopDivider: false),

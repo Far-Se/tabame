@@ -150,9 +150,7 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
                   mainAxisAlignment: MainAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: user.quickActionsAtBottom && !user.bottomBarOnTop
-                      ? _buildBottomQuickActionsSections()
-                      : _buildDefaultSections(),
+                  children: _buildDefaultSections(),
                 ),
               ),
             ),
@@ -164,15 +162,19 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
 
   List<Widget> _buildDefaultSections() {
     return <Widget>[
-      _sectionCard(key: _topKey, child: user.bottomBarOnTop ? const PinnedAndTrayList() : const TopBar()),
+      if (user.quickMenuBarLayout.hasContentAtTop)
+        _sectionCard(
+          key: _topKey,
+          child: user.quickMenuBarLayout.quickActionsAtBottom ? const PinnedAndTrayList() : const TopBar(),
+        ),
       const SizedBox(height: 8),
       _sectionCard(key: _taskKey, child: const TaskBar()),
-      if (!user.bottomBarOnTop) ...<Widget>[
+      if (user.quickMenuBarLayout.hasContentAtBottom) ...<Widget>[
         const SizedBox(height: 8),
         _sectionCard(
             key: _listKey,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            child: const PinnedAndTrayList())
+            child: const PinnedAndTrayList.atBottom())
       ],
       //_sectionCard(key: _listKey, child: const PinnedAndTrayList(), padding: const EdgeInsets.symmetric(vertical: 2)),
       const SizedBox(height: 8),
@@ -188,28 +190,6 @@ class _MainMenuMatrixWidgetState extends State<MainMenuMatrixWidget> {
               const BottomBar(),
             ],
           )),
-    ];
-  }
-
-  List<Widget> _buildBottomQuickActionsSections() {
-    return <Widget>[
-      _sectionCard(key: _taskKey, child: const TaskBar()),
-      const SizedBox(height: 8),
-      _sectionCard(
-        key: _listKey,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            const PinnedAndTrayList(),
-            const SizedBox(height: 6),
-            if (user.taskManagerStats) const TaskbarStats(),
-            if (user.libreStats) const LibreStats(),
-            const BottomBar(),
-          ],
-        ),
-      ),
     ];
   }
 

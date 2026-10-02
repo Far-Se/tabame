@@ -150,17 +150,17 @@ class _MainMenuConsoleWidgetState extends State<MainMenuConsoleWidget>
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
                         DragToMoveArea(child: _ConsoleHeader(accent: accent, breathe: _breathe)),
-                        if (!user.quickActionsAtBottom)
+                        if (!user.quickMenuBarLayout.quickActionsAtBottom)
                           const Padding(
                             padding: EdgeInsets.fromLTRB(6, 0, 6, 2),
                             child: TopBar(),
-                          )
-                        else if (user.bottomBarOnTop)
+                          ),
+                        if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                           const PinnedAndTrayList(),
                         _GrooveDivider(color: themeX.colorScheme.onSurface),
                         const TaskBar(),
                         _GrooveDivider(color: themeX.colorScheme.onSurface),
-                        if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                        if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                         if (user.taskManagerStats) const TaskbarStats(),
                         if (user.libreStats) const LibreStats(),
                         _SignalStrip(

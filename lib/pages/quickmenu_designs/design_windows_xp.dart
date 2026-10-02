@@ -58,12 +58,12 @@ class MainMenuWindowsXpWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 const DragToMoveArea(child: _XpMenuHeader()),
-                if (!user.quickActionsAtBottom)
+                if (!user.quickMenuBarLayout.quickActionsAtBottom)
                   const _XpInsetBand(
                     padding: EdgeInsets.fromLTRB(4, 3, 5, 3),
                     child: TopBar(),
-                  )
-                else if (user.bottomBarOnTop)
+                  ),
+                if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                   const _XpPinnedBand()
                 else
                   const SizedBox(height: 3),
@@ -75,7 +75,7 @@ class MainMenuWindowsXpWidget extends StatelessWidget {
                   ),
                 ),
                 const _XpOrangeDivider(),
-                if (!user.bottomBarOnTop) const _XpPinnedBand(),
+                if (user.quickMenuBarLayout.hasContentAtBottom) const _XpPinnedBand.atBottom(),
                 if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                 if (user.libreStats) const LibreStats(withTopDivider: false),
                 const _XpFooter(),
@@ -182,7 +182,10 @@ class _XpInsetBand extends StatelessWidget {
 }
 
 class _XpPinnedBand extends StatelessWidget {
-  const _XpPinnedBand();
+  const _XpPinnedBand() : atBottom = false;
+  const _XpPinnedBand.atBottom() : atBottom = true;
+
+  final bool atBottom;
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +204,7 @@ class _XpPinnedBand extends StatelessWidget {
           bottom: const BorderSide(color: Color(0xFFB8C7DA)),
         ),
       ),
-      child: const PinnedAndTrayList(),
+      child: atBottom ? const PinnedAndTrayList.atBottom() : const PinnedAndTrayList(),
     );
   }
 }

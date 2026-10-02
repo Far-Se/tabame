@@ -52,7 +52,7 @@ class MainMenuOutrunWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  if (!user.quickActionsAtBottom) ...<Widget>[
+                  if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                     // _OutrunHeader(label: 'SYSTEM', p: p),
                     // const SizedBox(height: 4),
                     _NeonBox(
@@ -63,10 +63,9 @@ class MainMenuOutrunWidget extends StatelessWidget {
                         child: TopBar(),
                       ),
                     ),
-                  ] else ...<Widget>[
-                    // _OutrunHeader(label: 'TRAY', p: p),
+                  ],
+                  if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                     const PinnedAndTrayList(),
-                  ], //else
                   // const SizedBox(height: 4),
                   DragToMoveArea(child: _OutrunHeader(label: 'WINDOWS', p: p)),
                   _NeonBox(
@@ -77,9 +76,9 @@ class MainMenuOutrunWidget extends StatelessWidget {
                       child: TaskBar(),
                     ),
                   ),
-                  if (!user.bottomBarOnTop) ...<Widget>[
+                  if (user.quickMenuBarLayout.hasContentAtBottom) ...<Widget>[
                     // _OutrunHeader(label: 'TRAY', p: p),
-                    const PinnedAndTrayList(),
+                    const PinnedAndTrayList.atBottom(),
                   ],
                   if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                   if (user.libreStats) const LibreStats(withTopDivider: false),

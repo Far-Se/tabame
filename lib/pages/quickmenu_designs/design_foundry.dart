@@ -39,19 +39,20 @@ class MainMenuFoundryWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     // _FoundryHeader(palette: palette),
-                    if (!user.quickActionsAtBottom)
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom)
                       _FoundryBand(
                         index: '01',
                         label: 'ACTIONS',
                         palette: palette,
                         child: const Padding(padding: EdgeInsets.fromLTRB(3, 2, 3, 3), child: TopBar()),
-                      )
-                    else if (user.bottomBarOnTop)
+                      ),
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                       _FoundryBand(index: '02', label: 'PINNED', palette: palette, child: const PinnedAndTrayList()),
                     DragToMoveArea(
                         child: _FoundryBand(index: '03', label: 'WINDOWS', palette: palette, child: const TaskBar())),
-                    if (!user.bottomBarOnTop)
-                      _FoundryBand(index: '04', label: 'PINNED', palette: palette, child: const PinnedAndTrayList()),
+                    if (user.quickMenuBarLayout.hasContentAtBottom)
+                      _FoundryBand(
+                          index: '04', label: 'PINNED', palette: palette, child: const PinnedAndTrayList.atBottom()),
                     if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                     if (user.libreStats) const LibreStats(withTopDivider: false),
                     _FoundryFooter(

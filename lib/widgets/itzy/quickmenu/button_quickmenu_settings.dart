@@ -16,6 +16,7 @@ import '../../../models/util/quick_action_list.dart';
 import '../../../models/win32/win32.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../interface/quickmenu/tray_bar_buttons_editor.dart';
+import '../../interface/quickmenu/quickmenu_bar_layout_settings.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/extracted_icon.dart';
 import '../../widgets/mini_switch.dart';
@@ -494,35 +495,7 @@ class _BehaviorTabState extends State<_BehaviorTab> {
                 setState(() {});
               },
             ),
-            _toggle(
-              context: context,
-              title: "Quick Actions at the bottom",
-              subtitle: "Place Quick Actions between pinned and tray",
-              value: user.quickActionsAtBottom,
-              onChanged: (bool v) async {
-                user.quickActionsAtBottom = v;
-                user.bottomBarOnTop = false;
-                await Boxes.updateSettings("quickActionsAtBottom", v);
-                await Boxes.updateSettings("bottomBarOnTop", false);
-                if (!mounted) return;
-                setState(() {});
-                QuickMenuFunctions.refreshQuickMenu();
-              },
-            ),
-            if (user.quickActionsAtBottom)
-              _toggle(
-                context: context,
-                title: "Bottom Bar at top",
-                subtitle: "Move the bottom bar up to avoid crowding",
-                value: user.bottomBarOnTop,
-                onChanged: (bool v) async {
-                  user.bottomBarOnTop = v;
-                  await Boxes.updateSettings("bottomBarOnTop", v);
-                  if (!mounted) return;
-                  setState(() {});
-                  QuickMenuFunctions.refreshQuickMenu();
-                },
-              ),
+            const QuickMenuBarLayoutSettings(),
             _toggle(
               context: context,
               title: "Launcher Full Width Popups",
@@ -598,35 +571,7 @@ class _TaskbarTabState extends State<_TaskbarTab> {
                 setState(() {});
               },
             ),
-            _toggle(
-              context: context,
-              title: "Quick Actions at the bottom",
-              subtitle: "Place Quick Actions between pinned and tray",
-              value: user.quickActionsAtBottom,
-              onChanged: (bool v) async {
-                user.quickActionsAtBottom = v;
-                user.bottomBarOnTop = false;
-                await Boxes.updateSettings("quickActionsAtBottom", v);
-                await Boxes.updateSettings("bottomBarOnTop", false);
-                if (!mounted) return;
-                setState(() {});
-                QuickMenuFunctions.refreshQuickMenu();
-              },
-            ),
-            if (user.quickActionsAtBottom)
-              _toggle(
-                context: context,
-                title: "Bottom Bar at top",
-                subtitle: "Move the bottom bar up to avoid crowding",
-                value: user.bottomBarOnTop,
-                onChanged: (bool v) async {
-                  user.bottomBarOnTop = v;
-                  await Boxes.updateSettings("bottomBarOnTop", v);
-                  if (!mounted) return;
-                  setState(() {});
-                  QuickMenuFunctions.refreshQuickMenu();
-                },
-              ),
+            const QuickMenuBarLayoutSettings(),
             _toggle(
               context: context,
               title: "Show Media Sessions",
@@ -927,20 +872,6 @@ class _BottomBarTabState extends State<_BottomBarTab> {
                 QuickMenuFunctions.refreshQuickMenu();
               },
             ),
-            if (user.showTrayBar)
-              _toggle(
-                context: context,
-                title: "Merge Pinned Apps with Tray",
-                subtitle: "Show pinned apps first, then continue with tray icons",
-                value: user.mergePinnedTray,
-                onChanged: (bool v) async {
-                  user.mergePinnedTray = v;
-                  await Boxes.updateSettings("mergePinnedTray", v);
-                  if (!mounted) return;
-                  setState(() {});
-                  QuickMenuFunctions.refreshQuickMenu();
-                },
-              ),
             if (user.showTrayBar) ...<Widget>[
               const SizedBox(height: 4),
               _buildTrayList(context),

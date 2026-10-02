@@ -99,13 +99,14 @@ class MainMenuSereneWidget extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    if (!user.quickActionsAtBottom) ...<Widget>[
+                    if (!user.quickMenuBarLayout.quickActionsAtBottom) ...<Widget>[
                       Container(
                         padding: const EdgeInsets.fromLTRB(4, 5, 10, 6),
                         child: const TopBar(),
                       ),
                       _Hairline(color: dividerColor),
-                    ] else if (user.bottomBarOnTop)
+                    ],
+                    if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                       const PinnedAndTrayList()
                     else
                       const SizedBox(height: 3),
@@ -114,7 +115,7 @@ class MainMenuSereneWidget extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: _Hairline(color: dividerColor),
                     ),
-                    if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                    if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                     if (user.taskManagerStats) const TaskbarStats(),
                     if (user.libreStats) const LibreStats(),
                     Container(

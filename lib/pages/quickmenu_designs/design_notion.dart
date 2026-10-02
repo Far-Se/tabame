@@ -80,7 +80,7 @@ class MainMenuNotionWidget extends StatelessWidget {
               children: <Widget>[
                 DragToMoveArea(child: _NotionBreadcrumbBar(tokens: tokens)),
                 // _NotionPageIdentity(tokens: tokens),
-                if (!user.quickActionsAtBottom)
+                if (!user.quickMenuBarLayout.quickActionsAtBottom)
                   DecoratedBox(
                     decoration: BoxDecoration(
                       color: tokens.sidebar,
@@ -93,8 +93,8 @@ class MainMenuNotionWidget extends StatelessWidget {
                       padding: EdgeInsets.fromLTRB(7, 4, 7, 4),
                       child: TopBar(),
                     ),
-                  )
-                else if (user.bottomBarOnTop)
+                  ),
+                if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
                   _NotionUtilityBand(tokens: tokens)
                 else
                   SizedBox(height: 1, child: ColoredBox(color: tokens.divider)),
@@ -105,7 +105,7 @@ class MainMenuNotionWidget extends StatelessWidget {
                     child: TaskBar(),
                   ),
                 ),
-                if (!user.bottomBarOnTop) _NotionUtilityBand(tokens: tokens),
+                if (user.quickMenuBarLayout.hasContentAtBottom) _NotionUtilityBand(tokens: tokens, atBottom: true),
                 if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
                 if (user.libreStats) const LibreStats(withTopDivider: false),
                 _NotionFooter(tokens: tokens),
@@ -247,9 +247,10 @@ class _NotionPageIdentity extends StatelessWidget {
 }
 
 class _NotionUtilityBand extends StatelessWidget {
-  const _NotionUtilityBand({required this.tokens});
+  const _NotionUtilityBand({required this.tokens, this.atBottom = false});
 
   final _NotionQuickMenuTokens tokens;
+  final bool atBottom;
 
   @override
   Widget build(BuildContext context) {
@@ -258,9 +259,9 @@ class _NotionUtilityBand extends StatelessWidget {
         color: tokens.sidebar,
         border: Border(top: BorderSide(color: tokens.divider)),
       ),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        child: PinnedAndTrayList(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: atBottom ? const PinnedAndTrayList.atBottom() : const PinnedAndTrayList(),
       ),
     );
   }

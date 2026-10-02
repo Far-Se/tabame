@@ -17,6 +17,7 @@ import '../../interface/quickmenu/tray_bar_buttons_editor.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_tooltip.dart';
 import '../../widgets/extracted_icon.dart';
+import '../../interface/quickmenu/quickmenu_bar_layout_settings.dart';
 import '../../widgets/windows_scroll.dart';
 
 enum BottomBarSection { all, trayOnly, weatherSystemOnly }
@@ -232,20 +233,11 @@ class QMBottomBarState extends State<QMBottomBar> {
                 if (mounted) setState(() {});
               },
             ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: QuickMenuBarLayoutSettings(),
+            ),
             if (user.showTrayBar) ...<Widget>[
-              SwitchListTile(
-                title: const Text("Merge Pinned Apps with Tray",
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                subtitle: Text("Show pinned apps first, then continue with tray icons in a single bar",
-                    style: TextStyle(fontSize: Design.baseFontSize + 2)),
-                secondary: const Icon(Icons.join_full, size: 20),
-                value: user.mergePinnedTray,
-                onChanged: (bool newValue) async {
-                  user.mergePinnedTray = newValue;
-                  await Boxes.updateSettings("mergePinnedTray", user.mergePinnedTray);
-                  if (mounted) setState(() {});
-                },
-              ),
               Padding(
                 padding: const EdgeInsets.only(top: 8, bottom: 16),
                 child: _buildTrayList(),

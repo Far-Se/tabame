@@ -105,16 +105,17 @@ class MainMenuModernWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  if (!user.quickActionsAtBottom)
+                  if (!user.quickMenuBarLayout.quickActionsAtBottom)
                     const Padding(
                       padding: EdgeInsets.fromLTRB(3, 3, 6, 4),
                       child: TopBar(),
                     ),
                   // else
-                  if (user.bottomBarOnTop) const PinnedAndTrayList(),
+                  if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
+                    const PinnedAndTrayList(),
                   const TaskBar(),
                   Divider(thickness: 1, height: 1, color: Design.text.withValues(alpha: 0.08)),
-                  if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+                  if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
                   if (user.taskManagerStats) const TaskbarStats(),
                   if (user.libreStats) const LibreStats(),
                   const Padding(

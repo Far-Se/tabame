@@ -84,8 +84,9 @@ class MainMenuArcadeWidget extends StatelessWidget {
               ],
             ),
           ),
-          if (!user.quickActionsAtBottom) const TopBar(),
-          if (user.bottomBarOnTop) PinnedAndTrayList(includeQuickActions: user.quickActionsAtBottom),
+          if (!user.quickMenuBarLayout.quickActionsAtBottom) const TopBar(),
+          if (user.quickMenuBarLayout.pinnedTrayAtTop && user.quickMenuBarLayout.quickActionsAtBottom)
+            PinnedAndTrayList(includeQuickActions: user.quickMenuBarLayout.quickActionsAtBottom),
           Padding(
             padding: const EdgeInsets.fromLTRB(10, 7, 10, 3),
             child: Row(children: <Widget>[
@@ -96,7 +97,7 @@ class MainMenuArcadeWidget extends StatelessWidget {
             ]),
           ),
           const Flexible(fit: FlexFit.loose, child: TaskBar()),
-          if (!user.bottomBarOnTop) const PinnedAndTrayList(),
+          if (user.quickMenuBarLayout.hasContentAtBottom) const PinnedAndTrayList.atBottom(),
           if (user.taskManagerStats) const TaskbarStats(withTopDivider: false),
           if (user.libreStats) const LibreStats(withTopDivider: false),
           Container(

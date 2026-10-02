@@ -15,6 +15,7 @@ import '../../../services/ai_coding_usage_service.dart';
 import '../../design_settings.dart';
 import '../../globals.dart';
 import '../../glass_effect.dart';
+import '../../quick_menu_bar_layout.dart';
 import '../../settings.dart';
 import '../../util/quick_action_list.dart';
 import '../../win32/win32.dart';
@@ -151,13 +152,11 @@ class Boxes {
       ..mouseGestureMaxDelay = pref.getInt("mouseGestureMaxDelay") ?? user.mouseGestureMaxDelay
       ..newVersion = pref.getString("newVersion") ?? user.newVersion
       ..showTrayBar = pref.getBool("showTrayBar") ?? user.showTrayBar
-      ..mergePinnedTray = pref.getBool("mergePinnedTray") ?? user.mergePinnedTray
       ..showWeather = pref.getBool("showWeather") ?? user.showWeather
       ..customSpash = pref.getString("customSpash") ?? user.customSpash
       ..volumeSetBack = pref.getBool("volumeSetBack") ?? user.volumeSetBack
       ..quickSnapGrid = pref.getBool("quickSnapGrid") ?? user.quickSnapGrid
       ..lastChangelog = pref.getString("lastChangelog") ?? user.lastChangelog
-      ..bottomBarOnTop = pref.getBool("bottomBarOnTop") ?? user.bottomBarOnTop
       ..keepPopupsOpen = pref.getBool("keepPopupsOpen") ?? user.keepPopupsOpen
       ..expandedTaskbar = pref.getBool("expandedTaskbar") ?? user.expandedTaskbar
       ..taskbarHoverSlide = pref.getBool("taskbarHoverSlide") ?? user.taskbarHoverSlide
@@ -186,7 +185,12 @@ class Boxes {
       ..hideTabameOnUnfocus = pref.getBool("hideTabameOnUnfocus") ?? user.hideTabameOnUnfocus
       ..mediaControlForApp = pref.getBool("showMediaControlForApp") ?? user.mediaControlForApp
       ..lastQuickSnapZoneId = pref.getString("lastQuickSnapZoneId") ?? user.lastQuickSnapZoneId
-      ..quickActionsAtBottom = pref.getBool("quickActionsAtBottom") ?? user.quickActionsAtBottom
+      ..quickMenuBarLayout = QuickMenuBarLayout.fromJson(
+        pref.getString("quickMenuBarLayout"),
+        legacyQuickActionsAtBottom: pref.getBool("quickActionsAtBottom") ?? false,
+        legacyBottomBarOnTop: pref.getBool("bottomBarOnTop") ?? false,
+        legacyMergePinnedTray: pref.getBool("mergePinnedTray") ?? false,
+      )
       ..dragPopupsByIconOnly = pref.getBool("dragPopupsByIconOnly") ?? user.dragPopupsByIconOnly
       ..hideTaskbarOnStartup = pref.getBool("hideTaskbarOnStartup") ?? user.hideTaskbarOnStartup
       ..persistentReminders = pref.getStringList("persistentReminders") ?? user.persistentReminders
@@ -212,6 +216,9 @@ class Boxes {
       ..keystrokesScale = pref.getInt("keystrokesScale") ?? user.keystrokesScale
       ..keystrokesFadeMs = pref.getInt("keystrokesFadeMs") ?? user.keystrokesFadeMs
       ..themeType = ThemeType.values[pref.getInt("themeType") ?? 0]; // must be set after schedule
+    if (pref.getString("quickMenuBarLayout") == null) {
+      await pref.setString("quickMenuBarLayout", user.quickMenuBarLayout.toJson());
+    }
     if (!pref.containsKey("lastChangelog")) pref.setString("lastChangelog", "v0.1");
     Debug.add("Registered: Fetched All");
 
