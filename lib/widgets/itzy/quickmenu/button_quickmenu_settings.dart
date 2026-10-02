@@ -1427,6 +1427,16 @@ class _QuickActionsTabState extends State<_QuickActionsTab> {
     _persist();
   }
 
+  void _sortDisabledByName() {
+    setState(() {
+      _disabled.sort((String a, String b) {
+        final int byName = _label(a).toLowerCase().compareTo(_label(b).toLowerCase());
+        return byName != 0 ? byName : a.compareTo(b);
+      });
+    });
+    _persist();
+  }
+
   String _label(String item) {
     return item
         .replaceAllMapped(RegExp(r'([A-Z])', caseSensitive: true), (Match m) => ' ${m[0]}')
@@ -1469,7 +1479,21 @@ class _QuickActionsTabState extends State<_QuickActionsTab> {
                 },
               ),
               const SizedBox(height: 12),
-              _buildSectionHeader(context, "DISABLED", Icons.block_rounded, active: false),
+              _buildSectionHeader(
+                context,
+                "DISABLED",
+                Icons.block_rounded,
+                active: false,
+                trailing: TextButton(
+                  onPressed: _sortDisabledByName,
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 28),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: const Text("Reorder"),
+                ),
+              ),
               const SizedBox(height: 4),
               ReorderableListView.builder(
                 shrinkWrap: true,
@@ -1498,7 +1522,13 @@ class _QuickActionsTabState extends State<_QuickActionsTab> {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String label, IconData icon, {required bool active}) {
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String label,
+    IconData icon, {
+    required bool active,
+    Widget? trailing,
+  }) {
     final ThemeData theme = Theme.of(context);
     final Color color = active ? theme.colorScheme.primary : theme.hintColor;
     return Row(
@@ -1514,6 +1544,7 @@ class _QuickActionsTabState extends State<_QuickActionsTab> {
             color: color.withValues(alpha: active ? 0.7 : 0.4),
           ),
         ),
+        if (trailing != null) ...<Widget>[const Spacer(), trailing],
       ],
     );
   }

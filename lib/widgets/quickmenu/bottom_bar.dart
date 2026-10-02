@@ -249,6 +249,7 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
           : Row(
               children: <Widget>[
                 Expanded(child: _quickActionsBar()),
+                if (user.lastChangelog != Globals.version) const CheckChangelogButton(),
                 const OpenSettingsButton(),
               ],
             ),
@@ -265,7 +266,6 @@ class _BarWithQuickActionsState extends State<BarWithQuickActions> with QuickMen
         if (kDebugMode) const TestingButton(),
         if (user.persistentReminders.isNotEmpty) const PersistentRemindersWidget(),
         ...List<Widget>.generate(showWidgets.length, (int i) => showWidgets[i]),
-        if (user.lastChangelog != Globals.version) const CheckChangelogButton(),
       ],
     );
   }
