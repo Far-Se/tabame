@@ -1,0 +1,13 @@
+{
+  "id": "fx-atlas",
+  "name": "Currency Converter",
+  "category": "Finance",
+  "keyword": "crr",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "description": "Currency conversion with a beautifully rendered exchange-rate chart, period statistics, and shareable images. Try fxa 100 EUR USD.",
+  "icon": "currency",
+  "pip": ["pillow>=10.1,<13"],
+  "dev": false
+}

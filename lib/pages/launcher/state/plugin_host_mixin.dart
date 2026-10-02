@@ -1318,7 +1318,7 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
   }
 
   /// Suggests enabled plugins while the user is typing their effective
-  /// keyword, e.g. `;weat` resolves to the `;weather ` launcher prefix.
+  /// keyword or title, e.g. `;weat` or `;Weather` resolves to `;weather `.
   /// Returning null means the query is not using the configured plugin
   /// shortcut; an empty list means it is, but no plugin matches yet.
   List<LauncherSearchResultItem>? _pluginKeywordSuggestions(String query) {
@@ -1328,13 +1328,12 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
     final String lowerQuery = query.toLowerCase();
     if (!lowerQuery.startsWith(shortcut.toLowerCase())) return null;
 
-    final String typedKeyword = query.substring(shortcut.length);
-    if (typedKeyword.contains(RegExp(r'\s'))) return null;
-
     final List<PluginManifest> matches = PluginRegistry.manifests
         .where(
           (PluginManifest plugin) =>
-              plugin.enabled && PluginRegistry.launchKeyword(plugin).toLowerCase().startsWith(lowerQuery),
+              plugin.enabled &&
+              (PluginRegistry.launchKeyword(plugin).toLowerCase().startsWith(lowerQuery) ||
+                  PluginRegistry.launchTitle(plugin).toLowerCase().startsWith(lowerQuery)),
         )
         .toList()
       ..sort((PluginManifest a, PluginManifest b) {

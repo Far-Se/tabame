@@ -132,7 +132,7 @@ class LauncherState extends State<Launcher>
         _ResultActionsMixin,
         _ResultRowBuildersMixin {
   static const double _minResultsHeight = 300;
-  static const double _maxResultsHeight = 454;
+  static const double _defaultResultsHeight = 454;
   // Preserve the existing saved-height scale; the results panel excludes this inset.
   static const double _resultsHeightInset = 27;
   static const double _designResultExtent = 52;
@@ -169,7 +169,7 @@ class LauncherState extends State<Launcher>
   bool _isRepairingFileIndex = false;
   final List<String> _copiedFiles = <String>[];
   LauncherDesign _design = LauncherDesign.serene;
-  double _resultsMaxHeight = _maxResultsHeight;
+  double _resultsMaxHeight = _defaultResultsHeight;
   bool _isResizeHandleHovered = false;
   bool _isResizingResults = false;
   ({double pointerY, double height})? _heightResizeStart;
@@ -489,8 +489,9 @@ class LauncherState extends State<Launcher>
     _design = user.launcherDesign;
     _isFilePreviewVisible = Boxes.pref.getBool(_filePreviewVisiblePreferenceKey) ?? true;
     _previewWidthPercent = Boxes.pref.getDouble(_previewWidthPercentPreferenceKey)?.clamp(0.0, 100.0).toDouble();
-    _resultsMaxHeight = (Boxes.pref.getDouble('launcherResultsHeight') ?? _maxResultsHeight)
-        .clamp(_minResultsHeight, _maxResultsHeight);
+    // The default is not a cap: restore the height saved by the resize handle.
+    _resultsMaxHeight =
+        math.max(_minResultsHeight, Boxes.pref.getDouble('launcherResultsHeight') ?? _defaultResultsHeight);
     // Rescan the plugins folder so freshly-dropped plugins are available without
     // an app restart. If a keyword becomes matchable after the scan, re-run the
     // current query so it activates.

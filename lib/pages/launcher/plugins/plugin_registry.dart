@@ -51,6 +51,14 @@ abstract final class PluginRegistry {
   /// Returns the launch prefix used by launcher shortcut rows.
   static String launchPrefix(PluginManifest manifest) => '${launchKeyword(manifest)} ';
 
+  /// Returns the optional title alias users can type to activate [manifest].
+  /// Title aliases stay prefixed so a plugin name does not claim ordinary
+  /// launcher searches when no plugin shortcut is configured.
+  static String launchTitle(PluginManifest manifest) {
+    final String title = manifest.name.trim();
+    return shortcut.isEmpty || title.isEmpty ? '' : '$shortcut$title';
+  }
+
   /// Rescans Tabame's platform-correct plugin root. Malformed manifests are
   /// logged and skipped rather than aborting the whole scan.
   static Future<void> load() async {
@@ -203,27 +211,52 @@ abstract final class PluginRegistry {
     return null;
   }
 
-  /// Returns the plugin whose effective launcher keyword activates [query], or
-  /// null. When a global shortcut is configured, it is included before the
-  /// manifest keyword (so `;weather` and `;weather rome` match when the shortcut
-  /// is `;`, while bare `weather` remains available to other launcher results).
+  /// Returns the plugin whose keyword or prefixed title activates [query], or
+  /// null. When a global shortcut is configured, it is included before either
+  /// alias (so `;weather` and `;Weather` match when the shortcut is `;`).
   static PluginManifest? matchKeyword(String query) {
     if (_byKeyword.isEmpty) return null;
-    final String lower = query.toLowerCase();
-    for (final MapEntry<String, PluginManifest> entry in _byKeyword.entries) {
-      final String keyword = launchKeywordFor(entry.key);
-      if (lower == keyword || lower.startsWith('$keyword ')) return entry.value;
+    PluginManifest? matchedPlugin;
+    int matchedAliasLength = -1;
+    bool matchedKeyword = false;
+    for (final PluginManifest manifest in _byKeyword.values) {
+      final String? alias = _matchedLaunchAlias(query, manifest);
+      final bool isKeyword = alias != null && alias.toLowerCase() == launchKeyword(manifest).toLowerCase();
+      if (alias != null &&
+          (alias.length > matchedAliasLength || (alias.length == matchedAliasLength && isKeyword && !matchedKeyword))) {
+        matchedPlugin = manifest;
+        matchedAliasLength = alias.length;
+        matchedKeyword = isKeyword;
+      }
     }
-    return null;
+    return matchedPlugin;
   }
 
-  /// Strips the effective plugin keyword (and following space) from a raw
+  /// Strips the matched keyword or title (and following space) from a raw
   /// query, leaving the text the plugin should treat as its own query.
   static String queryAfterKeyword(String query, PluginManifest manifest) {
-    final String lower = query.toLowerCase();
-    final String keyword = launchKeyword(manifest).toLowerCase();
-    if (lower == keyword) return '';
-    if (lower.startsWith('$keyword ')) return query.substring(keyword.length + 1);
-    return query;
+    final String? alias = _matchedLaunchAlias(query, manifest);
+    if (alias == null) return query;
+    if (query.length == alias.length) return '';
+    return query.substring(alias.length + 1);
+  }
+
+  static String? _matchedLaunchAlias(String query, PluginManifest manifest) {
+    final String lowerQuery = query.toLowerCase();
+    final String keyword = launchKeyword(manifest);
+    final String title = launchTitle(manifest);
+    final List<String> aliases = <String>[
+      keyword,
+      if (title.isNotEmpty && title.toLowerCase() != keyword.toLowerCase()) title,
+    ];
+    String? matchedAlias;
+    for (final String alias in aliases) {
+      final String lowerAlias = alias.toLowerCase();
+      if ((lowerQuery == lowerAlias || lowerQuery.startsWith('$lowerAlias ')) &&
+          (matchedAlias == null || alias.length > matchedAlias.length)) {
+        matchedAlias = alias;
+      }
+    }
+    return matchedAlias;
   }
 }
