@@ -317,6 +317,10 @@ abstract final class AppUpdateService {
   }
 
   static Future<RandomAccessFile?> _tryLock() async {
+    // QuickMenu can stay running after the update directory is removed.
+    // Recover here so background checks do not require a new Interface process
+    // to recreate the directory during initialize().
+    await Directory(_directory).create(recursive: true);
     final RandomAccessFile file = await _file('update.lock').open(mode: FileMode.append);
     try {
       await file.lock(FileLock.exclusive);

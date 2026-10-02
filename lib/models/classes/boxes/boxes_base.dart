@@ -212,7 +212,7 @@ class Boxes {
       ..keystrokesScale = pref.getInt("keystrokesScale") ?? user.keystrokesScale
       ..keystrokesFadeMs = pref.getInt("keystrokesFadeMs") ?? user.keystrokesFadeMs
       ..themeType = ThemeType.values[pref.getInt("themeType") ?? 0]; // must be set after schedule
-
+    if (!pref.containsKey("lastChangelog")) pref.setString("lastChangelog", "v0.1");
     Debug.add("Registered: Fetched All");
 
     if (pref.getBool("DEBUGGING") ?? false == true) {

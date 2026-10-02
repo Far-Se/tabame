@@ -70,12 +70,14 @@ Future<void> main(List<String> arguments) async {
       await AppStartup.initialize();
       await TimestampLogger.init();
       runApp(const Tabame());
+      // Background checks must also run while QuickMenu is hidden or waiting
+      // for a frame. Only update health acknowledgement depends on the UI.
+      if (user.page == TPage.quickmenu && !Globals.isStandaloneLauncher) AppUpdateService.start();
       await WidgetsBinding.instance.endOfFrame;
       void completeUpdateStartup() {
         if (!Globals.fullLoaded.value) return;
         Globals.fullLoaded.removeListener(completeUpdateStartup);
         unawaited(AppUpdateService.acknowledgeLaunch(arguments));
-        if (user.page == TPage.quickmenu && !Globals.isStandaloneLauncher) AppUpdateService.start();
       }
 
       Globals.fullLoaded.addListener(completeUpdateStartup);

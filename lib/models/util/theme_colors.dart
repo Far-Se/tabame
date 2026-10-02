@@ -14,6 +14,45 @@ const Map<String, Alignment> panelAlignmentMap = <String, Alignment>{
 const List<List<int>> lightThemeOptions = <List<int>>[
   //fav
   <int>[0xffD5E0FB, 0xff3A404A, 0xff446EE9],
+
+  // Richer palettes: background, text, accent.
+  <int>[0xffF1DDA9, 0xff41321B, 0xff8B361F], // Honey / auburn
+  <int>[0xffD0E2D7, 0xff203B31, 0xff126255], // Eucalyptus / lagoon
+  <int>[0xffDCD5EC, 0xff342C48, 0xff693B89], // Wisteria / blackberry
+  <int>[0xffF0CEC0, 0xff472B26, 0xff953B29], // Coral sand / mahogany
+  <int>[0xffD3E1F4, 0xff263650, 0xff304FA4], // Cornflower / ultramarine
+  <int>[0xffDEE7BF, 0xff333D22, 0xff3C652F], // Pear / juniper
+  <int>[0xffECD4E6, 0xff462C40, 0xff853461], // Orchid / wine
+  <int>[0xffF3E4C6, 0xff403624, 0xff275997], // Champagne / lapis
+  <int>[0xffCDE8E5, 0xff213C3D, 0xff30578D], // Aquamarine / ink
+  <int>[0xffF1D8BA, 0xff423322, 0xff31644D], // Melon / forest
+  <int>[0xffE2DCE7, 0xff3B3040, 0xff993E3B], // Frosted grape / brick
+  <int>[0xffF2EDC4, 0xff3B3B24, 0xff286253], // Lemon cream / spruce
+  <int>[0xffDCE8EC, 0xff2A3B43, 0xff885019], // Blue porcelain / ochre
+  <int>[0xffE5CBCF, 0xff402B33, 0xff1E626B], // Dusty rose / peacock
+  <int>[0xffE8DFCE, 0xff3D342C, 0xff694592], // Oat milk / violet
+  <int>[0xffD3DEC9, 0xff2D3A28, 0xff8A3050], // Fern / cranberry
+
+  // Curated palettes: background, text, accent.
+  <int>[0xffF5EBDD, 0xff392E26, 0xffA43F28], // Parchment / rust
+  <int>[0xffE8EDDA, 0xff303A28, 0xff38663C], // Matcha / pine
+  <int>[0xffDEF0E9, 0xff203C35, 0xff087568], // Sea glass / teal
+  <int>[0xffFBE5D6, 0xff482D27, 0xffAC422B], // Apricot / terracotta
+  <int>[0xffE5EDF5, 0xff273746, 0xff245CC0], // Glacier / cobalt
+  <int>[0xffEDE8F5, 0xff393048, 0xff7243B0], // Lavender / iris
+  <int>[0xffF5E3EA, 0xff452B3A, 0xffA13266], // Rosewater / mulberry
+  <int>[0xffF6EECF, 0xff3E3923, 0xff6C651B], // Butter / olive
+  <int>[0xffE5F0F0, 0xff253D40, 0xff126C7B], // Mist / petrol
+  <int>[0xffF4EDE9, 0xff40302D, 0xffA12C42], // Porcelain / garnet
+  <int>[0xffEBEEDB, 0xff333C2B, 0xff794474], // Pistachio / plum
+  <int>[0xffEDE3D2, 0xff39362D, 0xff29658C], // Sand / marine
+  <int>[0xffEEE5EF, 0xff403045, 0xff306E61], // Lilac / spruce
+  <int>[0xffF2EEE4, 0xff38352D, 0xffA64A17], // Linen / burnt orange
+  <int>[0xffE6EEF2, 0xff2B3943, 0xffAA315A], // Ice / raspberry
+  <int>[0xffE1F2E7, 0xff253D32, 0xff514BB0], // Mint / indigo
+  <int>[0xffF3E3DF, 0xff44302F, 0xff276C57], // Blush / evergreen
+  <int>[0xffE4EBDD, 0xff323B2C, 0xff984821], // Celadon / copper
+
   // manually added
   <int>[0xffDDD9FF, 0xff3A404A, 0xff446EE9],
   <int>[0xffF2F5F6, 0xff1A3938, 0xffCF5653],
@@ -233,6 +272,45 @@ const List<List<int>> darkThemeOptions = <List<int>>[
   <int>[0xFF1E1F28, 0xFFFAF9F8, 0xDCFFDCAA],
   <int>[0xff192734, 0xFFFAF9F8, 0xDCFFDCAA],
   <int>[0xFF3B414D, 0xFFFAF9F8, 0xDCFFDCAA],
+
+  // Richer palettes: background, text, accent.
+  <int>[0xff203657, 0xffE4EDFA, 0xffF4BC95], // Cobalt dusk / peach
+  <int>[0xff1C3C35, 0xffE3F2E8, 0xffEDDA7A], // Jade / daffodil
+  <int>[0xff3B233D, 0xffF3E4F2, 0xff83DDCB], // Mulberry / seafoam
+  <int>[0xff3D2B22, 0xffF5E9DC, 0xffA4C8FF], // Burnt umber / cornflower
+  <int>[0xff173D47, 0xffE1F1F4, 0xffFFAEBC], // Atlantic / flamingo
+  <int>[0xff342C4C, 0xffEDE7F7, 0xffEFDC91], // Damson / butter
+  <int>[0xff41232D, 0xffF6E5E8, 0xffC4DF95], // Bordeaux / pistachio
+  <int>[0xff333A24, 0xffEDF0DC, 0xffFFB28A], // Loden / persimmon
+  <int>[0xff29373D, 0xffE4F0F1, 0xffD1E883], // Gunmetal / chartreuse
+  <int>[0xff301923, 0xffF2E0E9, 0xff92D9EA], // Black cherry / glacier
+  <int>[0xff16382D, 0xffE0EFE5, 0xffEDB1D3], // Deep spruce / rose quartz
+  <int>[0xff2D3147, 0xffE8EAF5, 0xffFFC68C], // Smoky indigo / papaya
+  <int>[0xff3D3326, 0xffF2EBDD, 0xffA8C9F5], // Bronze / forget-me-not
+  <int>[0xff35283F, 0xffEFE4F5, 0xffB9E5A3], // Night orchid / celery
+  <int>[0xff1E2428, 0xffE7EEF0, 0xffF9C26B], // Soot / amber
+  <int>[0xff171E25, 0xffE3EBF2, 0xff69E9BF], // Obsidian / electric mint
+
+  // Curated palettes: background, text, accent.
+  <int>[0xff151E2D, 0xffE4ECF5, 0xffFF907C], // Midnight / coral
+  <int>[0xff142923, 0xffE1EEE5, 0xff7DDEB2], // Pine / mint
+  <int>[0xff291B30, 0xffEFE3F1, 0xffC9DF79], // Aubergine / lime
+  <int>[0xff2B211D, 0xffF1E7DB, 0xffF5B47E], // Espresso / apricot
+  <int>[0xff102B32, 0xffDDEFF0, 0xff64D8D1], // Deep sea / turquoise
+  <int>[0xff191C32, 0xffE6E7F6, 0xffABAFFF], // Ink / periwinkle
+  <int>[0xff301C24, 0xffF4E3E7, 0xffF597B2], // Oxblood / rose
+  <int>[0xff272A1C, 0xffE9EDDA, 0xffE6C768], // Olive / marigold
+  <int>[0xff242E3A, 0xffE4EDF3, 0xff8CCDF0], // Storm / ice
+  <int>[0xff2C2233, 0xffEDE4F2, 0xffFFB078], // Plum / tangerine
+  <int>[0xff252826, 0xffE7ECE6, 0xffCDDE74], // Charcoal / citron
+  <int>[0xff183138, 0xffE2EFF0, 0xffFFA68A], // Petrol / melon
+  <int>[0xff25232B, 0xffEBE6F1, 0xffD5A2EB], // Graphite / orchid
+  <int>[0xff302820, 0xffF1E8DC, 0xffB9D59B], // Walnut / sage
+  <int>[0xff16263D, 0xffE2EBF7, 0xffF1CA76], // Marine / gold
+  <int>[0xff202D26, 0xffE4EEE4, 0xffC4ADF0], // Moss / lilac
+  <int>[0xff302320, 0xffF4E6DF, 0xff87CDE5], // Ember / sky
+  <int>[0xff252B35, 0xffE5EBF2, 0xffF4A2A6], // Slate / guava
+
   //Collectec From internet
   <int>[0xff0A0A0A, 0xFFFAF9F8, 0xDCFFDCAA],
   <int>[0xff121212, 0xFFFAF9F8, 0xDCFFDCAA],

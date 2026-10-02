@@ -42,18 +42,17 @@ class _ChangelogState extends State<Changelog> {
   @override
   Widget build(BuildContext context) {
     const Map<String, _ChangelogRelease> changelog = <String, _ChangelogRelease>{
-//       '2.1.0': _ChangelogRelease(date: '1 Oct 2026', content: """
-// ## UI
-// - Added Blur/Acrylic Background
-// - Fixed Issues with QuickMenu Focus
-// - Added Multiple Launcher/QuickMenu Designs
-// - Added QuickLinks to Launcher
-// - Added Squircles and Bezel QuickMenu/Launcher corners
-// ## Plugins
-// - Added Pomodoro Timer
-// - Expanded Symbols Plugin
-
-//         """),
+      '2.1.0': _ChangelogRelease(date: '1 Oct 2026', content: """
+## UI
+- Added Blur/Acrylic Background
+- Fixed Issues with QuickMenu Focus
+- Added Multiple Launcher/QuickMenu Designs
+- Added QuickLinks to Launcher
+- Added Squircles and Bezel QuickMenu/Launcher corners
+## Plugins
+- Added Pomodoro Timer
+- Expanded Symbols Plugin
+"""),
       '2.0': _ChangelogRelease(date: '29 Sept 2026', content: """
 ## UI
 Refactor the whole UI, added more QuickMenu Designs.

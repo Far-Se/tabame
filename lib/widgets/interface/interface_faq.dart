@@ -56,6 +56,10 @@ Go to Settings → Configuration and enable "Launch at Startup". Tabame will reg
       answer:
           """Enable Auto Update in Settings → System Status. Tabame downloads stable releases in the background and applies them at the next app launch, without a weekly update prompt. With Auto Update off, use "Check for Updates" to prepare a release manually. Updates wait until other Tabame windows are closed. You can also download releases from GitHub."""),
   _FaqItem(
+      question: "How to use Claude in Launcher without API?",
+      answer:
+          """You need to install the Tabame Browser Connection Extension that can be found in the Plugin Settings Button. Then install the plugin 'Ask Claude'."""),
+  _FaqItem(
       question: "What is the Light Switch feature?",
       answer:
           "Light Switch automatically switches your Windows theme between light and dark mode. You can set fixed on/off times, or let Tabame calculate local sunrise and sunset based on your coordinates."),
