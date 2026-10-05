@@ -37,7 +37,7 @@ abstract final class AppUpdateService {
       Platform.isWindows &&
       kReleaseMode &&
       p.basename(Platform.resolvedExecutable).toLowerCase() == 'tabame.exe' &&
-      !File(p.join(_installDirectory, 'AppxManifest.xml')).existsSync();
+      !AppPaths.isPackagedInstall;
 
   static Future<void> initialize() async {
     try {
@@ -58,7 +58,9 @@ abstract final class AppUpdateService {
     _versionReady = true;
     if (!supported) {
       //TODO: Implement multiplatform
-      status.value = 'Use your platform installer to update Tabame.';
+      status.value = AppPaths.isPackagedInstall
+          ? 'Updates are managed by Windows for this packaged installation.'
+          : 'Use your platform installer to update Tabame.';
       return;
     }
     await Directory(_directory).create(recursive: true);

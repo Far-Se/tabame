@@ -1,10 +1,10 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import '../../platform/windows/win32_api.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
@@ -13,6 +13,8 @@ import '../../services/app_update_service.dart';
 import '../../models/util/solar_calculator.dart';
 import '../../models/win32/win32.dart';
 import '../../models/win32/win_utils.dart';
+import '../../platform/app_paths.dart';
+import '../../platform/windows/startup_manager.dart';
 import '../widgets/custom_tooltip.dart';
 import '../widgets/mini_switch.dart';
 import '../widgets/windows_scroll.dart';
@@ -33,16 +35,20 @@ class SettingsPage extends StatefulWidget {
   SettingsPageState createState() => SettingsPageState();
 }
 
-class SettingsPageState extends State<SettingsPage> {
+class SettingsPageState extends State<SettingsPage> with WidgetsBindingObserver {
   final WizardlyContextMenu wizardlyContextMenu = WizardlyContextMenu();
 
   bool _checkingUpdates = false;
+  bool _changingStartup = false;
+  StartupStatus? _startupStatus;
   final Set<String> _expandedCards = <String>{"maintenance"};
   final GlobalKey _uninstallKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_refreshStartupStatus());
     if (user.args.contains("-uninstall")) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final BuildContext? uninstallContext = _uninstallKey.currentContext;
@@ -54,9 +60,56 @@ class SettingsPageState extends State<SettingsPage> {
   }
 
   @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(_refreshStartupStatus());
+  }
+
+  Future<void> _refreshStartupStatus() async {
+    final StartupStatus status = await StartupManager.getStatus();
+    if (mounted) setState(() => _startupStatus = status);
+  }
+
+  Future<void> _setStartupEnabled(bool enabled) async {
+    if (_changingStartup) return;
+    setState(() => _changingStartup = true);
+    final StartupStatus status = enabled ? await StartupManager.enable() : await StartupManager.disable();
+    if (!mounted) return;
+    setState(() {
+      _startupStatus = status;
+      _changingStartup = false;
+    });
+  }
+
+  String _startupSubtitle(StartupStatus? status) {
+    switch (status) {
+      case null:
+        return "Checking the Windows startup status…";
+      case StartupStatus.enabled:
+      case StartupStatus.disabled:
+        return "Start Tabame automatically when you log in to Windows.";
+      case StartupStatus.enabledByPolicy:
+        return "Startup is enabled by your organization’s Windows policy.";
+      case StartupStatus.disabledByUser:
+        return "Tabame was disabled from Windows Startup settings. Enable it from Settings > Apps > Startup.";
+      case StartupStatus.disabledByPolicy:
+        return "Startup is disabled by your administrator or Windows policy.";
+      case StartupStatus.unavailable:
+        return "Windows startup settings are unavailable on this platform.";
+      case StartupStatus.error:
+        return "Windows startup status could not be read. Try changing the setting again.";
+    }
+  }
+
+  void _openStartupSettings() => WinUtils.open("ms-settings:startupapps");
+
+  @override
   Widget build(BuildContext context) {
-    final bool runOnStartup = WinUtils.checkIfRegisterAsStartup();
-    if (!runOnStartup) user.runAsAdministrator = false;
     final Color accent = Design.accent;
     final Color background = Design.background;
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
@@ -88,7 +141,7 @@ class SettingsPageState extends State<SettingsPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           _buildSectionTitle("Configuration"),
-                          _buildGeneralCard(runOnStartup, accent, onSurface),
+                          _buildGeneralCard(_startupStatus, accent, onSurface),
                           const SizedBox(height: 16),
                           _buildSectionTitle("Light Switch"),
                           _buildLightSwitchCard(accent, background, onSurface),
@@ -146,7 +199,9 @@ class SettingsPageState extends State<SettingsPage> {
   Widget _buildUpdateCard(Color accent, Color background, Color onSurface) {
     return _settingsCard(
       title: "Version & Updates",
-      subtitle: "Check the status of Tabame and install the latest improvements.",
+      subtitle: AppPaths.isPackagedInstall
+          ? "Windows manages updates for this packaged installation."
+          : "Check the status of Tabame and install the latest improvements.",
       alwaysExpanded: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,31 +249,34 @@ class SettingsPageState extends State<SettingsPage> {
                     ],
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: _checkingUpdates || !AppUpdateService.supported ? null : _checkForUpdates,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accent,
-                    foregroundColor: background,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                if (!AppPaths.isPackagedInstall)
+                  ElevatedButton.icon(
+                    onPressed: _checkingUpdates || !AppUpdateService.supported ? null : _checkForUpdates,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accent,
+                      foregroundColor: background,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(_checkingUpdates ? "Preparing update…" : "Check for Updates"),
                   ),
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: Text(_checkingUpdates ? "Preparing update…" : "Check for Updates"),
-                ),
               ],
             ),
           ),
           const SizedBox(height: 12),
-          _toggleTile(
-            title: "Auto Update",
-            subtitle: "Download updates in the background and apply them at the next app launch.",
-            value: user.autoCheckForUpdates,
-            onChanged: (bool value) async {
-              setState(() => user.autoCheckForUpdates = value);
-              await Boxes.updateSettings("autoUpdate", user.autoCheckForUpdates);
-            },
-          ),
-          const SizedBox(height: 8),
+          if (!AppPaths.isPackagedInstall) ...<Widget>[
+            _toggleTile(
+              title: "Auto Update",
+              subtitle: "Download updates in the background and apply them at the next app launch.",
+              value: user.autoCheckForUpdates,
+              onChanged: (bool value) async {
+                setState(() => user.autoCheckForUpdates = value);
+                await Boxes.updateSettings("autoUpdate", user.autoCheckForUpdates);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
@@ -231,7 +289,8 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildGeneralCard(bool runOnStartup, Color accent, Color onSurface) {
+  Widget _buildGeneralCard(StartupStatus? startupStatus, Color accent, Color onSurface) {
+    final bool runOnStartup = startupStatus?.isEnabled ?? false;
     return _settingsCard(
       id: "general",
       title: "Configuration",
@@ -240,19 +299,17 @@ class SettingsPageState extends State<SettingsPage> {
         children: <Widget>[
           _toggleTile(
             title: "Launch at Startup",
-            subtitle: "Start Tabame automatically when you log in to Windows.",
-            value: runOnStartup,
-            onChanged: (bool value) async {
-              if (value) {
-                await WinUtils.setStartUpShortcut(true);
-              } else {
-                await WinUtils.setStartUpShortcut(false);
-                user.runAsAdministrator = false;
-                await Boxes.updateSettings("runAsAdministrator", false);
-              }
-              if (!mounted) return;
-              setState(() {});
-            },
+            subtitle: _startupSubtitle(startupStatus),
+            value: startupStatus?.isEnabled,
+            trailing: _changingStartup
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : startupStatus == StartupStatus.disabledByUser
+                    ? TextButton(onPressed: _openStartupSettings, child: const Text("Open Startup settings"))
+                    : null,
+            onChanged: startupStatus == null || _changingStartup ? null : _setStartupEnabled,
           ),
           if (runOnStartup) ...<Widget>[
             const SizedBox(height: 8),
@@ -321,8 +378,7 @@ class SettingsPageState extends State<SettingsPage> {
 To export settings, copy *settings.json* from [this folder](data). To import, exit Tabame and replace the file with your copy.
 ''',
             ({String? s, String? s2, String? s3}) {
-              final String path = WinUtils.getKnownFolder(FOLDERID_LocalAppData);
-              WinUtils.open("$path\\Tabame\\");
+              WinUtils.open(WinUtils.getTabameAppDataFolder());
             },
           ),
           const SizedBox(height: 10),
@@ -738,8 +794,8 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
   Widget _toggleTile({
     required String title,
     required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
+    required bool? value,
+    required ValueChanged<bool>? onChanged,
     Widget? trailing,
   }) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
@@ -770,7 +826,13 @@ To export settings, copy *settings.json* from [this folder](data). To import, ex
             trailing,
           ],
           const SizedBox(width: 10),
-          MiniToggleSwitch(value: value, onChanged: onChanged),
+          if (value == null)
+            const SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            MiniToggleSwitch(value: value, onChanged: onChanged),
         ],
       ),
     );

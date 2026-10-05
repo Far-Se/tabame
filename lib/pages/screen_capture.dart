@@ -459,7 +459,7 @@ class ScreenCapture {
     await ClipboardService.instance.writeFile(filePath);
   }
 
-  /// Save PNG to %localappdata%\Tabame\screenshots\<timestamp>.png
+  /// Save PNG under Tabame's default FancyShot data folder.
   static Future<String> saveToFile(Uint8List pngBytes) async {
     return await ScreenUtils.saveScreenshot(pngBytes);
   }

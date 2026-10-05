@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -10,6 +11,7 @@ import '../../models/classes/hotkeys.dart';
 import '../../models/classes/save_settings.dart';
 import '../../models/globals.dart';
 import '../../platform/app_paths.dart';
+import '../../platform/windows/startup_manager.dart';
 import '../../models/settings.dart';
 import '../../models/util/main_hotkey.dart';
 import '../../models/win32/win32.dart';
@@ -51,7 +53,12 @@ class FirstRunState extends State<FirstRun> {
   /// leave us pointing at the wrong entry.
   final Map<_Feature, int> _featureIndex = <_Feature, int>{};
 
-  int currentStep = 0;
+  int currentStep = AppPaths.isPackagedInstall ? 1 : 0;
+
+  int get _firstVisibleStep => AppPaths.isPackagedInstall ? 1 : 0;
+
+  StartupStatus? _startupStatus;
+  bool _changingStartup = false;
 
   // ── Modal State Setter (QuickSnap toggle modal only) ──
   StateSetter? _activeModalState;
@@ -66,6 +73,43 @@ class FirstRunState extends State<FirstRun> {
     _syncQuickClickEnabled();
     WinUtils.fixDrawBug();
     WinUtils.disableClickThrough(Win32.hWnd);
+    unawaited(_refreshStartupStatus());
+  }
+
+  Future<void> _refreshStartupStatus() async {
+    final StartupStatus status = await StartupManager.getStatus();
+    if (mounted) setState(() => _startupStatus = status);
+  }
+
+  Future<void> _setStartupEnabled(bool enabled) async {
+    if (_changingStartup) return;
+    setState(() => _changingStartup = true);
+    final StartupStatus status = enabled ? await StartupManager.enable() : await StartupManager.disable();
+    if (!mounted) return;
+    setState(() {
+      _startupStatus = status;
+      _changingStartup = false;
+    });
+  }
+
+  String _startupDescription() {
+    switch (_startupStatus) {
+      case null:
+        return "Checking the Windows startup status…";
+      case StartupStatus.enabled:
+      case StartupStatus.disabled:
+        return "Launch Tabame with Windows so your hotkey is available immediately.";
+      case StartupStatus.enabledByPolicy:
+        return "Startup is enabled by your organization’s Windows policy.";
+      case StartupStatus.disabledByUser:
+        return "Tabame was disabled from Windows Startup settings. Enable it from Settings > Apps > Startup.";
+      case StartupStatus.disabledByPolicy:
+        return "Startup is disabled by your administrator or Windows policy.";
+      case StartupStatus.unavailable:
+        return "Windows startup settings are unavailable on this platform.";
+      case StartupStatus.error:
+        return "Windows startup status could not be read. Try changing the setting again.";
+    }
   }
 
   @override
@@ -338,9 +382,9 @@ class FirstRunState extends State<FirstRun> {
                     controller: pageController,
                     allowImplicitScrolling: false,
                     physics: const NeverScrollableScrollPhysics(),
-                    onPageChanged: (int index) => setState(() => currentStep = index),
+                    onPageChanged: (int index) => setState(() => currentStep = index + _firstVisibleStep),
                     children: <Widget>[
-                      _buildInstallLocationPage(theme, accent),
+                      if (!AppPaths.isPackagedInstall) _buildInstallLocationPage(theme, accent),
                       _buildHotkeysPage(theme, accent),
                       _buildSetupPage(theme, accent),
                       _buildSettingsOutroPage(theme, accent),
@@ -364,11 +408,11 @@ class FirstRunState extends State<FirstRun> {
   // ─────────────────────────── HERO ────────────────────────────
 
   Widget _buildHero(ThemeData theme, Color accent) {
-    const List<_StepMeta> steps = <_StepMeta>[
-      _StepMeta(0, "Location"),
-      _StepMeta(1, "Hotkeys"),
-      _StepMeta(2, "Preferences"),
-      _StepMeta(3, "Settings"),
+    final List<_StepMeta> steps = <_StepMeta>[
+      if (!AppPaths.isPackagedInstall) const _StepMeta(0, "Location"),
+      const _StepMeta(1, "Hotkeys"),
+      const _StepMeta(2, "Preferences"),
+      const _StepMeta(3, "Settings"),
     ];
 
     return Container(
@@ -448,8 +492,8 @@ class FirstRunState extends State<FirstRun> {
   Widget _buildStepChip(ThemeData theme, Color accent, int step, String label) {
     final bool active = currentStep == step;
     final bool done = currentStep > step;
-    final bool locked =
-        (_isRunningFromTempFolder && step > 0) || (step > 1 && _hotkeyFor(_Feature.quickMenu).key.isEmpty);
+    final bool locked = (!AppPaths.isPackagedInstall && _isRunningFromTempFolder && step > 0) ||
+        (step > 1 && _hotkeyFor(_Feature.quickMenu).key.isEmpty);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -950,13 +994,20 @@ class FirstRunState extends State<FirstRun> {
                       theme,
                       accent: accent,
                       title: "Run on startup",
-                      description: "Launch Tabame with Windows so your hotkey is available immediately.",
-                      value: WinUtils.checkIfRegisterAsStartup(),
-                      onChanged: (bool value) async {
-                        await WinUtils.setStartUpShortcut(value);
-                        if (!mounted) return;
-                        setState(() {});
-                      },
+                      description: _startupDescription(),
+                      value: _startupStatus?.isEnabled,
+                      trailing: _changingStartup
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : _startupStatus == StartupStatus.disabledByUser
+                              ? TextButton(
+                                  onPressed: () => WinUtils.open("ms-settings:startupapps"),
+                                  child: const Text("Open Startup settings"),
+                                )
+                              : null,
+                      onChanged: _startupStatus == null || _changingStartup ? null : _setStartupEnabled,
                     ),
                     const SizedBox(height: 14),
                     _toggleCard(
@@ -972,21 +1023,23 @@ class FirstRunState extends State<FirstRun> {
                         setState(() {});
                       },
                     ),
-                    const SizedBox(height: 14),
-                    _toggleCard(
-                      theme,
-                      accent: accent,
-                      title: "Automatic updates",
-                      description:
-                          "Download updates in the background and apply them automatically at the next app launch.",
-                      value: user.autoCheckForUpdates,
-                      onChanged: (bool value) async {
-                        user.autoCheckForUpdates = value;
-                        await Boxes.updateSettings("autoUpdate", value);
-                        if (!mounted) return;
-                        setState(() {});
-                      },
-                    ),
+                    if (!AppPaths.isPackagedInstall) ...<Widget>[
+                      const SizedBox(height: 14),
+                      _toggleCard(
+                        theme,
+                        accent: accent,
+                        title: "Automatic updates",
+                        description:
+                            "Download updates in the background and apply them automatically at the next app launch.",
+                        value: user.autoCheckForUpdates,
+                        onChanged: (bool value) async {
+                          user.autoCheckForUpdates = value;
+                          await Boxes.updateSettings("autoUpdate", value);
+                          if (!mounted) return;
+                          setState(() {});
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1175,6 +1228,7 @@ class FirstRunState extends State<FirstRun> {
 
   Widget _buildStickyFooter(ThemeData theme, Color accent) {
     final bool isInstallStep = currentStep == 0;
+    final bool isFirstStep = currentStep == _firstVisibleStep;
     final bool isHotkeysStep = currentStep == 1;
     final bool isLastStep = currentStep == 3;
     final bool runningFromTempFolder = _isRunningFromTempFolder;
@@ -1207,7 +1261,7 @@ class FirstRunState extends State<FirstRun> {
         ),
         child: Row(
           children: <Widget>[
-            if (!isInstallStep) ...<Widget>[
+            if (!isFirstStep) ...<Widget>[
               OutlinedButton.icon(
                 onPressed: () => _goToStep(currentStep - 1),
                 icon: const Icon(Icons.arrow_back_rounded),
@@ -1302,8 +1356,8 @@ class FirstRunState extends State<FirstRun> {
     required Color accent,
     required String title,
     required String description,
-    required bool value,
-    required ValueChanged<bool> onChanged,
+    required bool? value,
+    required ValueChanged<bool>? onChanged,
     Widget? trailing,
   }) {
     return Container(
@@ -1318,7 +1372,7 @@ class FirstRunState extends State<FirstRun> {
         child: InkWell(
           borderRadius: BorderRadius.circular(24),
           // Inverts the current boolean value when the card is tapped
-          onTap: () => onChanged(!value),
+          onTap: value == null || onChanged == null ? null : () => onChanged(!value),
           child: Padding(
             padding: const EdgeInsets.all(18),
             child: Row(
@@ -1344,12 +1398,18 @@ class FirstRunState extends State<FirstRun> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                MiniToggleSwitch(
-                  value: value,
-                  activeThumbColor: accent,
-                  // The switch itself also continues to handle its own tap events
-                  onChanged: onChanged,
-                ),
+                if (value == null)
+                  const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  MiniToggleSwitch(
+                    value: value,
+                    activeThumbColor: accent,
+                    // The switch itself also continues to handle its own tap events
+                    onChanged: onChanged,
+                  ),
               ],
             ),
           ),
@@ -1361,11 +1421,12 @@ class FirstRunState extends State<FirstRun> {
   // ─────────────────────── NAVIGATION ─────────────────────────
 
   Future<void> _goToStep(int step) async {
-    if (_isRunningFromTempFolder && step > 0) return;
+    if (step < _firstVisibleStep || step > 3) return;
+    if (!AppPaths.isPackagedInstall && _isRunningFromTempFolder && step > 0) return;
     if (step > 1 && _hotkeyFor(_Feature.quickMenu).key.isEmpty) return;
     if (step == currentStep) return;
     await pageController.animateToPage(
-      step,
+      step - _firstVisibleStep,
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOutCubic,
     );

@@ -69,19 +69,19 @@ I didn't make a `.msi` installer because it's another app that needs to pass tha
 
 <!--- `*.zip` is portable. Extract it anywhere and run `tabame.exe`.-->
 
-Updates keep settings, plugins, and other user data in `%LOCALAPPDATA%\Tabame`.
+Settings, plugins, and other user data are stored in Tabame's application support folder. Open Settings → Integration & Maintenance and use the data-folder link to find it. Existing data from `%LOCALAPPDATA%\Tabame` is copied there automatically the next time Tabame starts.
 
 ### 📤 How to uninstall:
 
-For an EXE install, use **Settings → Apps → Installed apps → Tabame → Uninstall**. For the ZIP, close Tabame and delete the extracted folder. Uninstalling the app keeps `%LOCALAPPDATA%\Tabame` so a reinstall can reuse your settings.
+For an EXE install, use **Settings → Apps → Installed apps → Tabame → Uninstall**. For the ZIP, close Tabame and delete the extracted folder. Back up the application support folder first if you want to keep your settings and data.
 
 ## 🐛 Found a bug?
 
 Please [open an issue](https://github.com/Far-Se/tabame/issues) - it really helps. It works on my machine, but every PC is a little different.
 
 **Please attach a redacted copy of `errors.log`.** Remove tokens, credentials,
-private clipboard/screen content, and sensitive paths before sharing it. You'll
-find it at `%localappdata%/Tabame` (paste that into the Explorer address bar).
+private clipboard/screen content, and sensitive paths before sharing it. Open
+Settings → Integration & Maintenance and use the data-folder link to find `errors.log`.
 
 ## 🛠️ Build it yourself
 
@@ -270,7 +270,7 @@ The Launcher isn't limited to what ships in the box - you can extend it with you
 
 ## Using a plugin
 
-1. Get a plugin folder (write your own, or grab one someone else made) and drop it into `%localappdata%\Tabame\plugins\<plugin-id>\`.
+1. Get a plugin folder (write your own, or grab one someone else made) and drop it into `plugins\<plugin-id>` inside Tabame's application support folder. Open Settings → Integration & Maintenance and use the data-folder link to find it.
 2. Reopen the Launcher - it rescans the plugins folder every time it opens, so there's no need to restart Tabame.
 3. Type the plugin's **keyword** to activate it, then keep typing to query it live.
 4. Manage installed plugins (enable/disable, browse a gallery) from the **PluginManager** QuickAction / QuickMenu button.
@@ -299,7 +299,7 @@ You don't need to hand-write the protocol plumbing - an AI coding assistant (Cla
 1. Point your assistant at `skills/TABAME_PLUGIN_SKILL.md` (or `skills/TABAME_PLUGIN_SKILL.min.md`) in this repo - it's the full, authoritative spec: every message type, render-frame field, view type and icon name, plus a matching `plugin.json` template.
 2. Look at `plugins/echo/`, `plugins/linear/` and `plugins/caniuse/` for working examples to copy the shape of (Python/Node, list/grid/detail views, calling an external API, reading secrets from `config.json`).
 3. Describe what you want in plain terms - the keyword to type, what each result should show, what Enter should do, what extra actions belong on Ctrl+K - and let the AI scaffold `plugin.json` + the entry script from the spec.
-4. Drop the resulting folder into `%localappdata%\Tabame\plugins\<id>\` and reopen the Launcher to try it.
+4. Drop the resulting folder into `plugins\<id>` inside Tabame's application support folder and reopen the Launcher to try it.
 
 If you're working inside this repo with Claude Code, the `tbm-plugin` skill wraps this whole workflow for you - just ask it to build, scaffold or debug a plugin.
 

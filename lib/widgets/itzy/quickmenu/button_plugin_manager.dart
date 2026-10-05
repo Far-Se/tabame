@@ -40,6 +40,7 @@ const String _submitPluginUrl = 'https://github.com/Far-Se/tabame/issues/new?tem
 const String _chromeConnectorUrl =
     'https://chromewebstore.google.com/detail/tabame-connector/affgkglfpdpkdfolkogkaplllgmmkhdd?authuser=0&hl=en';
 const String _firefoxConnectorUrl = 'https://addons.mozilla.org/en-US/firefox/addon/tabame-connector-for-firefox/';
+const String _galleryKnownIdsKey = 'pluginGalleryKnownIds';
 
 enum _PanelMode { installed, gallery, makeYourOwn }
 
@@ -67,6 +68,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   String _keywordError = '';
 
   List<PluginGalleryEntry>? _galleryEntries;
+  Set<String> _newGalleryPluginIds = <String>{};
   bool _galleryLoading = false;
   String _galleryError = '';
   String? _installingId;
@@ -217,10 +219,21 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
       _galleryError = '';
     });
     try {
+      final List<String>? cachedIds = Boxes.pref.getStringList(_galleryKnownIdsKey);
+      final Set<String>? knownIds = cachedIds?.map((String id) => id.toLowerCase()).toSet();
       final List<PluginGalleryEntry> entries = await PluginGallery.fetchIndex(force: force);
+      final Set<String> refreshedIds = entries.map((PluginGalleryEntry entry) => entry.id.toLowerCase()).toSet();
+      final Set<String> newIds = knownIds == null ? <String>{} : refreshedIds.difference(knownIds);
+      entries.sort((PluginGalleryEntry a, PluginGalleryEntry b) {
+        final bool aIsNew = newIds.contains(a.id.toLowerCase());
+        final bool bIsNew = newIds.contains(b.id.toLowerCase());
+        if (aIsNew != bIsNew) return aIsNew ? -1 : 1;
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
+      await Boxes.pref.setStringList(_galleryKnownIdsKey, refreshedIds.toList());
       if (!mounted) return;
       setState(() {
-        entries.sort((PluginGalleryEntry a, PluginGalleryEntry b) => a.name.compareTo(b.name));
+        _newGalleryPluginIds = newIds;
         _galleryEntries = entries;
         _galleryLoading = false;
       });
@@ -1106,6 +1119,7 @@ Build a plugin with your favorite AI coding assistant:
               for (final PluginGalleryEntry entry in filteredEntries) ...<Widget>[
                 _GalleryCard(
                   entry: entry,
+                  isNew: _newGalleryPluginIds.contains(entry.id.toLowerCase()),
                   installedManifest: _findInstalledPlugin(entry.id),
                   installing: _installingId == entry.id,
                   onInstall: () => _install(entry),
@@ -1731,6 +1745,7 @@ class _PluginKeywordDialogState extends State<_PluginKeywordDialog> {
 class _GalleryCard extends StatelessWidget {
   const _GalleryCard({
     required this.entry,
+    required this.isNew,
     required this.installedManifest,
     required this.installing,
     required this.onInstall,
@@ -1738,6 +1753,7 @@ class _GalleryCard extends StatelessWidget {
   });
 
   final PluginGalleryEntry entry;
+  final bool isNew;
   final PluginManifest? installedManifest;
   final bool installing;
   final VoidCallback onInstall;
@@ -1788,6 +1804,10 @@ class _GalleryCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (isNew) ...<Widget>[
+                      const SizedBox(width: 6),
+                      _pill('NEW', accent.withAlpha(25), accent, icon: Icons.fiber_new_rounded),
+                    ],
                     if (onOpenHomepage != null) ...<Widget>[
                       const SizedBox(height: 4),
                       Tooltip(

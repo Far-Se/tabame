@@ -7,10 +7,10 @@ import 'package:path_provider/path_provider.dart';
 /// Owns Tabame's platform-neutral application data locations.
 ///
 /// The service is initialized once, before any storage-backed service is used.
-/// On Windows the canonical root deliberately remains
-/// `%LOCALAPPDATA%\\Tabame`; [path_provider] still supplies the host cache and
-/// temporary locations used by the service. On other platforms application data
-/// is rooted below the host's application-support directory.
+/// Windows uses the host's application-support directory, which also works for
+/// packaged Store installations. Other platforms store data below that
+/// directory. The previous Windows `%LOCALAPPDATA%\\Tabame` folder remains a
+/// migration source.
 ///
 /// A legacy root is probed during initialization and copied into the canonical
 /// root without overwriting existing files. The copy is intentionally
@@ -20,6 +20,11 @@ class AppPaths {
   AppPaths._();
 
   static final AppPaths instance = AppPaths._();
+
+  /// Whether Windows launched Tabame from a packaged installation such as
+  /// Microsoft Store/MSIX. Package installs own their location and updates.
+  static final bool isPackagedInstall = Platform.isWindows &&
+      File(p.join(Directory(Platform.resolvedExecutable).parent.path, 'AppxManifest.xml')).existsSync();
 
   String? _rootPath;
   String? _legacyRootPath;
@@ -68,7 +73,7 @@ class AppPaths {
     final String localAppData = _environmentPath('LOCALAPPDATA') ?? cacheDirectory.path;
     final String legacyRoot = legacyRootOverride ?? p.join(localAppData, 'Tabame');
     final String canonicalRoot =
-        rootOverride ?? (Platform.isWindows ? p.join(localAppData, 'Tabame') : p.join(supportDirectory.path, 'Tabame'));
+        rootOverride ?? (Platform.isWindows ? supportDirectory.path : p.join(supportDirectory.path, 'Tabame'));
 
     _rootPath = canonicalRoot;
     _legacyRootPath = legacyRoot;

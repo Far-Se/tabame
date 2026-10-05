@@ -309,8 +309,8 @@ class ScreenRegionCapture {
     await ClipboardService.instance.writeFile(filePath);
   }
 
-  /// Save [pngBytes] to %localappdata%\Tabame\screenshots\<year - Mon>\<ts>.png
-  /// and return the full path.
+  /// Saves [pngBytes] under Tabame's default FancyShot data folder and returns
+  /// the full path.
   static Future<String> saveToFile(Uint8List pngBytes) async {
     final DateTime date = DateTime.now();
     final String shortMonth = intl.DateFormat('MMM').format(date);

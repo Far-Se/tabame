@@ -7,6 +7,7 @@
 #include "flutter/generated_plugin_registrant.h"
 #include <flutter/standard_method_codec.h>
 
+#include "startup_manager.h"
 #include "utils.h"
 
 namespace {
@@ -30,8 +31,9 @@ bool IsCurrentProcessElevated() {
 
 }  // namespace
 
-FlutterWindow::FlutterWindow(const flutter::DartProject& project)
-    : project_(project) {}
+FlutterWindow::FlutterWindow(const flutter::DartProject& project,
+                             bool initially_hidden)
+    : project_(project), initially_hidden_(initially_hidden) {}
 
 FlutterWindow::~FlutterWindow() {}
 
@@ -68,6 +70,45 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
+
+  startup_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(), "tabame/startup",
+          &flutter::StandardMethodCodec::GetInstance());
+  startup_channel_->SetMethodCallHandler(
+      [](const flutter::MethodCall<flutter::EncodableValue>& call,
+         std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+             result) {
+        startup_manager::Result native_result;
+        if (call.method_name() == "isPackaged") {
+          native_result = startup_manager::IsPackaged();
+          if (native_result.success) {
+            result->Success(flutter::EncodableValue(native_result.value ==
+                                                    "true"));
+          } else {
+            result->Error("startup_error", native_result.error);
+          }
+          return;
+        }
+
+        if (call.method_name() == "getStatus") {
+          native_result = startup_manager::GetStatus();
+        } else if (call.method_name() == "enable") {
+          native_result = startup_manager::Enable();
+        } else if (call.method_name() == "disable") {
+          native_result = startup_manager::Disable();
+        } else {
+          result->NotImplemented();
+          return;
+        }
+
+        if (native_result.success) {
+          result->Success(flutter::EncodableValue(native_result.value));
+        } else {
+          result->Error("startup_error", native_result.error);
+        }
+      });
+
   if (legacy_file_drop_enabled_) {
     // desktop_drop registers an OLE target on the Flutter child window. Lower
     // integrity Explorer processes cannot enter it, so remove it while the
@@ -108,7 +149,9 @@ bool FlutterWindow::OnCreate() {
           &flutter::StandardMethodCodec::GetInstance());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
+    if (!initially_hidden_) {
+      this->Show();
+    }
   });
 
   // Flutter can complete the first frame before the "show window" callback is
@@ -121,6 +164,7 @@ bool FlutterWindow::OnCreate() {
 
 void FlutterWindow::OnDestroy() {
   glass_backdrop_.reset();
+  startup_channel_.reset();
   native_window_channel_.reset();
   if (legacy_file_drop_enabled_) {
     ::DragAcceptFiles(GetHandle(), FALSE);

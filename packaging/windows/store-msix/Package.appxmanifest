@@ -2,28 +2,31 @@
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
-  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
-  IgnorableNamespaces="uap uap5">
+  xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  IgnorableNamespaces="uap uap10 desktop">
   <!--
-    Phase 3 source template. The packaging phase must merge the exact identity,
-    publisher, version, executable, visual assets, and capabilities into this
-    manifest before producing an MSIX. This file is not wired into the current
-    ZIP workflow.
+    Source template for manual MSIX packaging. The Flutter msix package
+    generates its production manifest from pubspec.yaml; keep this declaration
+    aligned with msix_config.startup_task.
   -->
   <Applications>
     <Application
       Id="Tabame"
       Executable="tabame.exe"
       EntryPoint="Windows.FullTrustApplication">
-      <uap5:Extension
-        Category="windows.startupTask"
-        Executable="tabame.exe"
-        EntryPoint="Windows.FullTrustApplication">
-        <uap5:StartupTask
-          TaskId="TabameStartupTask"
-          Enabled="false"
-          DisplayName="Tabame" />
-      </uap5:Extension>
+      <Extensions>
+        <desktop:Extension
+          Category="windows.startupTask"
+          Executable="tabame.exe"
+          EntryPoint="Windows.FullTrustApplication"
+          uap10:Parameters="--startup">
+          <desktop:StartupTask
+            TaskId="TabameStartup"
+            Enabled="false"
+            DisplayName="Tabame" />
+        </desktop:Extension>
+      </Extensions>
     </Application>
   </Applications>
 </Package>

@@ -87,9 +87,10 @@ class AppStartup {
     Debug.add("Registered All");
   }
 
-  static Future<bool> checkAdminAndRestart() async {
+  static Future<bool> checkAdminAndRestart({bool launchedAtStartup = false}) async {
     if (Globals.isStandaloneLauncher) return false;
     if (kReleaseMode &&
+        !launchedAtStartup &&
         user.runAsAdministrator &&
         !WinUtils.isAdministrator() &&
         !user.args.join(' ').contains('-tryadmin')) {
@@ -123,7 +124,7 @@ class AppStartup {
     }
   }
 
-  static Future<void> setupWindow(List<String> arguments) async {
+  static Future<void> setupWindow(List<String> arguments, {bool initiallyHidden = false}) async {
     late WindowOptions windowOptions;
     if (Globals.isStandaloneLauncher) {
       windowOptions = WindowOptions(
@@ -169,8 +170,12 @@ class AppStartup {
     Debug.add("Setting windowOptions");
     windowManager.setMinimizable(false);
     windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
+      if (initiallyHidden) {
+        await windowManager.hide();
+      } else {
+        await windowManager.show();
+        await windowManager.focus();
+      }
       await windowManager.setAsFrameless();
       await windowManager.setHasShadow(false);
       await Win32.fetchMainWindowHandle();

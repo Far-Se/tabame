@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../../platform/windows/tabamewin32_api.dart';
+import '../../platform/windows/startup_manager.dart';
 import '../../platform/windows/win32_api.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -316,7 +317,7 @@ class WinUtils {
   static Future<void> performUninstall() async {
     if (!kReleaseMode) return;
 
-    await setStartUpShortcut(false);
+    await StartupManager.disable();
 
     final WizardlyContextMenu wizardlyContextMenu = WizardlyContextMenu();
     if (wizardlyContextMenu.isWizardlyInstalledInContextMenu()) {
@@ -388,99 +389,7 @@ class WinUtils {
     exit(0);
   }
 
-  // Startup, desktop, and taskbar helpers
-  static Future<void> setStartUpShortcut(bool enabled, {String args = "", String? exePath, int showCmd = 1}) async {
-    if (kDebugMode) return;
-    exePath ??= Platform.resolvedExecutable;
-    setStartOnSystemStartup(enabled, args: args, exePath: exePath, showCmd: showCmd);
-  }
-
-  static void startOnStartup({
-    String? exeFilePath,
-    String? arguments,
-  }) {
-    final int hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-
-    // S_OK or S_FALSE mean COM is initialized
-    final bool initialized = hr >= 0;
-
-    final Pointer<Pointer<COMObject>> shellLinkPtr = calloc<Pointer<COMObject>>();
-
-    try {
-      exeFilePath ??= Platform.resolvedExecutable;
-      final String workingDirectory = Directory(exeFilePath).parent.path;
-
-      final IShellLink shellLink = IShellLink(shellLinkPtr.cast());
-
-      final Pointer<Utf16> exePtr = exeFilePath.toNativeUtf16();
-      final Pointer<Utf16> workingDirPtr = workingDirectory.toNativeUtf16();
-      final Pointer<Utf16>? argsPtr = arguments?.toNativeUtf16();
-
-      try {
-        shellLink.setPath(exePtr);
-        shellLink.setWorkingDirectory(workingDirPtr);
-        shellLink.setShowCmd(SW_SHOWNORMAL);
-
-        if (argsPtr != null) {
-          shellLink.setArguments(argsPtr);
-        }
-
-        final IPersistFile persistFile = IPersistFile(shellLink.toInterface(IID_IPersistFile));
-
-        try {
-          final String startupFolderPath = getKnownFolderCLSID(CSIDL_STARTUP);
-          final String shortcutName = File(exeFilePath).uri.pathSegments.last.replaceFirst('.exe', '.lnk');
-
-          final Pointer<Utf16> shortcutPath = '$startupFolderPath\\$shortcutName'.toNativeUtf16();
-
-          try {
-            persistFile.save(shortcutPath, TRUE);
-          } finally {
-            calloc.free(shortcutPath);
-          }
-        } finally {
-          persistFile.release();
-        }
-      } finally {
-        calloc.free(exePtr);
-        calloc.free(workingDirPtr);
-
-        if (argsPtr != null) {
-          calloc.free(argsPtr);
-        }
-
-        shellLink.release();
-      }
-    } finally {
-      calloc.free(shellLinkPtr);
-
-      if (initialized) {
-        CoUninitialize();
-      }
-    }
-  }
-
-  static String getStartupShortcut() {
-    final LPWSTR startupProgramsPathBuffer = wsalloc(MAX_PATH);
-    final int result = SHGetFolderPath(NULL, CSIDL_PROGRAMS, NULL, 0, startupProgramsPathBuffer);
-    if (result != S_OK) {
-      free(startupProgramsPathBuffer);
-      return "";
-    }
-    final String startupProgramsPath = startupProgramsPathBuffer.toDartString();
-    free(startupProgramsPathBuffer);
-    return "$startupProgramsPath\\Startup\\tabame.lnk";
-  }
-
-  static bool checkIfRegisterAsStartup() {
-    final String startupShortcutPath = getStartupShortcut();
-    if (startupShortcutPath == "") {
-      return false;
-    }
-    final File shortcutFile = File(startupShortcutPath);
-    return shortcutFile.existsSync();
-  }
-
+  // Desktop and taskbar helpers
   static Future<List<String>> getTaskbarPinnedApps() async {
     List<String> pinnedAppPaths = <String>[];
     String pinnedFolderPath = getKnownFolder(FOLDERID_UserPinned);
@@ -1882,7 +1791,8 @@ class WinUtils {
 
     await Future<void>.delayed(delay);
     final Size value = await windowManager.getSize();
-    await windowManager.setSize(Size(value.width + 1, value.height + 1));
+    await windowManager.setSize(Size(value.width, value.height + 1));
+    // await windowManager.setSize(Size(value.width + 1, value.height + 1));
     await Future<void>.delayed(const Duration(milliseconds: 10));
     await windowManager.setSize(Size(value.width, value.height));
   }

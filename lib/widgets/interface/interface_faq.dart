@@ -50,11 +50,11 @@ Go to Settings → Configuration and enable "Launch at Startup". Tabame will reg
   _FaqItem(
       question: "Where are my settings stored?",
       answer:
-          "All settings are saved in settings.json inside %LocalAppData%\\Tabame\\. You can open that folder directly from Settings → Data & Tools. To back up or migrate, simply copy that file."),
+          "All settings are saved in settings.json inside Tabame's application support folder. Open Settings → Integration & Maintenance to open the data folder. Existing settings from %LocalAppData%\\Tabame are copied there automatically when Tabame starts."),
   _FaqItem(
       question: "How do I update Tabame?",
       answer:
-          """Enable Auto Update in Settings → System Status. Tabame downloads stable releases in the background and applies them at the next app launch, without a weekly update prompt. With Auto Update off, use "Check for Updates" to prepare a release manually. Updates wait until other Tabame windows are closed. You can also download releases from GitHub."""),
+          """Microsoft Store installations are updated by Windows. For other installations, enable Auto Update in Settings → System Status to download stable releases in the background. With Auto Update off, use "Check for Updates" to prepare a release manually. Updates wait until other Tabame windows are closed. You can also download releases from GitHub."""),
   _FaqItem(
       question: "How to use Claude in Launcher without API?",
       answer:

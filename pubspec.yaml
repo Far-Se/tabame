@@ -3,7 +3,7 @@ description: Tabame is a quick menu app.
 
 publish_to: "none"
 
-version: 2.1.0
+version: 2.1.1
 
 environment:
   sdk: ">=3.4.3 <4.0.0"
@@ -120,6 +120,10 @@ msix_config:
   capabilities: internetClient
   store: true
   publisher: CN=AFABAF16-E985-4690-B2D6-19C8C95AADB4
+  startup_task:
+    task_id: TabameStartup
+    enabled: false
+    parameters: --startup
 
 fonts:
   - family: Jura

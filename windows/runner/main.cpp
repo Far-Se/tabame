@@ -2,6 +2,9 @@
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
 
+#include <algorithm>
+#include <winrt/base.h>
+
 #include "flutter_window.h"
 #include "utils.h"
 
@@ -13,18 +16,20 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     CreateAndAttachConsole();
   }
 
-  // Initialize COM, so that it is available for use in the library and/or
-  // plugins.
-  ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+  // Initialize COM and the Windows Runtime for the runner and native bridges.
+  winrt::init_apartment(winrt::apartment_type::single_threaded);
 
   flutter::DartProject project(L"data");
   project.set_impeller_switch(flutter::ImpellerSwitch::Disabled);
 
   std::vector<std::string> command_line_arguments = GetCommandLineArguments();
+  const bool launched_at_startup =
+      std::find(command_line_arguments.begin(), command_line_arguments.end(),
+                "--startup") != command_line_arguments.end();
 
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
-  FlutterWindow window(project);
+  FlutterWindow window(project, launched_at_startup);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
   if (!window.Create(L"Tabame", origin, size)) {
@@ -38,6 +43,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     ::DispatchMessage(&msg);
   }
 
-  ::CoUninitialize();
+  winrt::uninit_apartment();
   return EXIT_SUCCESS;
 }

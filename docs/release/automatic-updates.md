@@ -55,7 +55,7 @@ publication remains a maintainer action; this change does not schedule releases.
 ## State and recovery
 
 State is isolated by installation path under
-`%LOCALAPPDATA%\Tabame\updates\<installation-id>`:
+Tabame's application support directory under `updates\<installation-id>`:
 
 | File                          | Purpose                                      |
 | ----------------------------- | -------------------------------------------- |

@@ -31,6 +31,7 @@ import 'pages/run.dart';
 import 'test.dart';
 
 Future<void> main(List<String> arguments) async {
+  final bool launchedAtStartup = arguments.contains('--startup');
   WidgetsFlutterBinding.ensureInitialized();
   await AppPaths.initialize();
   await AppUpdateService.initialize();
@@ -61,10 +62,10 @@ Future<void> main(List<String> arguments) async {
       WidgetsFlutterBinding.ensureInitialized();
       SaveSettings.suppressWrites = !AppPaths.hasSettingsFile;
       await AppStartup.registerServices();
-      if (await AppStartup.checkAdminAndRestart()) return;
+      if (await AppStartup.checkAdminAndRestart(launchedAtStartup: launchedAtStartup)) return;
       await AppUpdateService.applyOnLaunch(arguments);
       AppStartup.registerHooks();
-      await AppStartup.setupWindow(arguments);
+      await AppStartup.setupWindow(arguments, initiallyHidden: launchedAtStartup);
       await AppStartup.finalizeStartup();
       PaintingBinding.instance.imageCache.maximumSizeBytes = 1024 * 1024 * 10;
       await AppStartup.initialize();
