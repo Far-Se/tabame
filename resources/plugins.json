@@ -1421,6 +1421,41 @@
         "render.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/fx-atlas/render.py",
         "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/fx-atlas/README.md"
       }
+    },
+    {
+      "id": "pdf-tools",
+      "name": "PDF Tools",
+      "category": "Productivity",
+      "keyword": "pdf",
+      "recommended": true,
+      "description": "Merge, split, extract, reorder, rotate, compress, protect and check PDFs locally with qpdf. Includes a Windows install button.",
+      "icon": "document",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/pdf-tools",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/pdf-tools/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/pdf-tools/main.js",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/pdf-tools/README.md"
+      }
+    },
+    {
+      "id": "env-manager",
+      "name": "Environment Variables",
+      "category": "System Tools",
+      "keyword": "env",
+      "description": "Manage user and system environment variables and PATH entries on Windows",
+      "icon": "settings",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/env-manager",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/env-manager/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/env-manager/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/env-manager/README.md"
+      }
     }
   ]
 }

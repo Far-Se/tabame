@@ -107,6 +107,23 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.volume_up,
     widget: () => const AudioButton(),
   ),
+
+  "PluginManagerButton": QuickAction(
+    icon: Icons.extension_outlined,
+    widget: () => const PluginManagerButton(),
+  ),
+  "QuickActionsMenuButton": QuickAction(
+    icon: Icons.grid_view,
+    widget: () => const QuickActionsMenuButton(),
+  ),
+  "QuickMenuDesignButton": QuickAction(
+    icon: Icons.palette_rounded,
+    widget: () => const QuickMenuDesignButton(),
+  ),
+  "QuickMenuSettingsButton": QuickAction(
+    icon: Icons.tune_rounded,
+    widget: () => const QuickMenuSettingsButton(),
+  ),
   "AdbButton": QuickAction(
     icon: Icons.android,
     widget: () => const AdbButton(),
@@ -456,21 +473,5 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "YtDlpButton": QuickAction(
     icon: Icons.download_for_offline_outlined,
     widget: () => const YtDlpButton(),
-  ),
-  "PluginManagerButton": QuickAction(
-    icon: Icons.extension_outlined,
-    widget: () => const PluginManagerButton(),
-  ),
-  "QuickActionsMenuButton": QuickAction(
-    icon: Icons.grid_view,
-    widget: () => const QuickActionsMenuButton(),
-  ),
-  "QuickMenuDesignButton": QuickAction(
-    icon: Icons.palette_rounded,
-    widget: () => const QuickMenuDesignButton(),
-  ),
-  "QuickMenuSettingsButton": QuickAction(
-    icon: Icons.tune_rounded,
-    widget: () => const QuickMenuSettingsButton(),
   ),
 };

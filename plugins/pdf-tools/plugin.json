@@ -1,0 +1,11 @@
+{
+  "id": "pdf-tools",
+  "name": "PDF Tools",
+  "category": "Productivity",
+  "keyword": "pdf",
+  "runtime": "node",
+  "entry": "main.js",
+  "version": "1.0.0",
+  "description": "Merge, split, extract, reorder, rotate, compress, protect and check PDFs locally with qpdf. Includes a Windows install button.",
+  "icon": "document"
+}

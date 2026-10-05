@@ -168,7 +168,7 @@ class Settings {
   bool dragPopupsByIconOnly = true;
   bool keepPopupOpenOnDemand = false;
   QuickMenuBarLayout quickMenuBarLayout = QuickMenuBarLayout.defaultLayout;
-  GlassEffect glassEffect = GlassEffect.none;
+  GlassEffect glassEffect = GlassEffect.blur;
   Map<GlassEffect, GlassEffectOptions> glassEffectOptions = <GlassEffect, GlassEffectOptions>{};
   GlassEffectOptions get activeGlassOptions => glassEffectOptions[glassEffect] ?? const GlassEffectOptions();
   int quickMenuDesign = Random().nextInt(QuickMenuDesigns.values.length);

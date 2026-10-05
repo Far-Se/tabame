@@ -17,9 +17,9 @@ enum GlassEffect {
 /// Appearance preferences are kept separately for each backdrop mode.
 class GlassEffectOptions {
   const GlassEffectOptions({
-    this.panelOpacity = 0.62,
+    this.panelOpacity = 0.76,
     this.customAcrylicTint = false,
-    this.acrylicTintOpacity = 0.6,
+    this.acrylicTintOpacity = 0.76,
     this.micaAlt = false,
   });
 

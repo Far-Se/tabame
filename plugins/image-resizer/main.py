@@ -274,6 +274,11 @@ def handle_submit(values):
                 "view": "detail",
                 "detail": {"markdown": "\n".join(lines)},
                 "actions": actions,
+                "floatingAction": {
+                    "id": "again",
+                    "title": "Resize more",
+                    "icon": "refresh",
+                },
             }
         )
 

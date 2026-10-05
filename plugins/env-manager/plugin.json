@@ -1,0 +1,11 @@
+{
+  "id": "env-manager",
+  "name": "Environment Variables",
+  "keyword": "env",
+  "category": "System Tools",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py",
+  "icon": "settings",
+  "description": "Manage user and system environment variables and PATH entries on Windows"
+}

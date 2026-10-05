@@ -74,6 +74,8 @@ class Caches {
 
   static List<int> audioMixer = <int>[];
   static List<String> audioMixerExes = <String>[];
+  // Keep metadata and artwork available when hiding the menu disposes its widgets.
+  static List<PlatformMediaSession> mediaCarouselSessions = <PlatformMediaSession>[];
 }
 
 class TaskBar extends StatefulWidget {
@@ -1118,8 +1120,7 @@ class TaskBarMediaCarousel extends StatefulWidget {
 class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickMenuTriggers {
   late PageController _pageController;
   int _currentPage = 0;
-
-  List<PlatformMediaSession> _lastMediaSessions = <PlatformMediaSession>[];
+  List<PlatformMediaSession> _lastMediaSessions = Caches.mediaCarouselSessions;
 
   // Perceptual (average) hash of each session's last-seen thumbnail, keyed by
   // session id. SMTC re-encodes the artwork stream on every read, so raw bytes
@@ -1170,13 +1171,16 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickM
 
   void _startMediaPolling() {
     timer?.cancel();
-    _pollMediaSession();
+    _pollMediaSession(forced: true);
     timer = Timer.periodic(kTimerInterval, (_) => _pollMediaSession());
   }
 
   void _emitSessions(List<PlatformMediaSession> sessions) {
     if (!mounted) return;
-    setState(() => _lastMediaSessions = sessions);
+    setState(() {
+      _lastMediaSessions = List<PlatformMediaSession>.unmodifiable(sessions);
+      Caches.mediaCarouselSessions = _lastMediaSessions;
+    });
   }
 
   void _pollMediaSession({bool forced = false}) async {
@@ -1218,11 +1222,7 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickM
         _emitSessions(sessions);
       }
     } catch (_) {
-      // SMTC unavailable – emit empty list so the UI hides the carousel.
-      _lastThumbHash.clear();
-      if (_lastMediaSessions.isNotEmpty) {
-        _emitSessions(<PlatformMediaSession>[]);
-      }
+      // Keep the cached content until a successful query refreshes it.
     }
   }
 
@@ -1345,6 +1345,7 @@ class _TaskBarMediaCarouselState extends State<TaskBarMediaCarousel> with QuickM
   Widget build(BuildContext context) {
     return StreamBuilder<SequenceState?>(
       stream: MusicServerManager.player.sequenceStateStream,
+      initialData: MusicServerManager.player.sequenceState,
       builder: (BuildContext context, AsyncSnapshot<SequenceState?> seqSnapshot) {
         final SequenceState? sequenceState = seqSnapshot.data;
         final MusicItem? musicItem =
