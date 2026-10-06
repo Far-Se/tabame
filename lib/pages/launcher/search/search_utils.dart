@@ -57,6 +57,7 @@ List<QuickActionMenuEntry> _allQuickActionEntries(BuildContext context) {
 List<LauncherSearchResultItem> composeResults({
   required List<QuickActionMenuEntry> quickActionMatches,
   required List<PlatformWindow> windowMatches,
+  required List<LauncherSearchResultItem> appMatches,
   required List<LauncherSearchResultItem> fileMatches,
   required List<BookmarkSearchResult> bookmarkMatches,
 }) {
@@ -64,6 +65,7 @@ List<LauncherSearchResultItem> composeResults({
 
   results.addAll(quickActionMatches.map(LauncherSearchResultItem.quickAction));
   results.addAll(windowMatches.map(LauncherSearchResultItem.window));
+  results.addAll(appMatches);
   results.addAll(fileMatches);
   results.addAll(bookmarkMatches.map(LauncherSearchResultItem.bookmark));
 

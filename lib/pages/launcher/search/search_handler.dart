@@ -86,8 +86,25 @@ class MixedSearchHandler {
     final List<BookmarkSearchResult> bookmarkMatches =
         searchMode == LauncherSearchMode.filesOnly ? <BookmarkSearchResult>[] : findBookmarkMatches(context.lowerQuery);
 
+    // Installed applications live in the same index as files, but they are
+    // cheap to search on their own. Keep them available for two-character
+    // mixed queries while filesystem search waits for a longer query, and keep
+    // them ahead of generic file matches when both kinds match.
+    final List<LauncherSearchResultItem> appMatches =
+        searchMode == LauncherSearchMode.mixed && context.normalizedQuery.length >= 2
+            ? deserializeSearchMatches(FileIndexDb.instance.search(
+                context.lowerQuery,
+                limit: maxLauncherMatches,
+                entryTypes: const <SearchResultEntryType>{SearchResultEntryType.app},
+              ))
+            : <LauncherSearchResultItem>[];
+
     final List<SearchResultNode> dbMatches = shouldRunFilesystem
-        ? FileIndexDb.instance.search(context.lowerQuery, limit: maxLauncherMatches)
+        ? FileIndexDb.instance.search(
+            context.lowerQuery,
+            limit: maxLauncherMatches,
+            entryTypes: const <SearchResultEntryType>{SearchResultEntryType.file},
+          )
         : <SearchResultNode>[];
 
     final List<LauncherSearchResultItem> initialFileResults = deserializeSearchMatches(dbMatches);
@@ -99,6 +116,7 @@ class MixedSearchHandler {
             ...composeResults(
               quickActionMatches: quickActionMatches,
               windowMatches: windowMatches,
+              appMatches: appMatches,
               fileMatches: initialFileResults,
               bookmarkMatches: bookmarkMatches,
             ),
@@ -189,6 +207,7 @@ class MixedSearchHandler {
               ...composeResults(
                 quickActionMatches: quickActionMatches,
                 windowMatches: phase2WindowMatches,
+                appMatches: appMatches,
                 fileMatches: combinedFileResults,
                 bookmarkMatches: phase2BookmarkMatches,
               ),

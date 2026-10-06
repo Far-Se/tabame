@@ -758,7 +758,19 @@ class FileIndexDb {
         ORDER BY times_opened DESC
         LIMIT ?
       ''', args);
-      return _materializeSearchResults(rows);
+      final List<SearchResultNode> matches = _materializeSearchResults(rows);
+      final Map<int, int> originalOrder = <int, int>{
+        for (int index = 0; index < matches.length; index++) matches[index].id: index,
+      };
+      final String lowerQuery = query.toLowerCase();
+      matches.sort((SearchResultNode a, SearchResultNode b) {
+        final double scoreA = _fuzzyScore(a.name.toLowerCase(), lowerQuery, 0);
+        final double scoreB = _fuzzyScore(b.name.toLowerCase(), lowerQuery, 0);
+        final int byRelevance = scoreB.compareTo(scoreA);
+        if (byRelevance != 0) return byRelevance;
+        return originalOrder[a.id]!.compareTo(originalOrder[b.id]!);
+      });
+      return matches;
     } catch (_) {
       return <SearchResultNode>[];
     }
