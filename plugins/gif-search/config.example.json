@@ -1,0 +1,5 @@
+{
+  "giphyEndpoint": "https://gif-search.raycast.com/api/giphy",
+  "klipyEndpoint": "https://gif-search.raycast.com/api/klipy",
+  "finerEndpoint": "https://api.thefinergifs.club/search"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "gif-search",
+  "name": "GIF Search",
+  "keyword": "gif",
+  "category": "Media & Design",
+  "description": "Search GIPHY, Klipy and Finer Gifs Club; copy GIFs, save favorites and browse recents.",
+  "icon": "image",
+  "runtime": "node",
+  "entry": "main.js",
+  "version": "1.0.0"
+}

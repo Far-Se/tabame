@@ -33,6 +33,7 @@ class _TaskbarStatsState extends State<TaskbarStats> with QuickMenuTriggers {
     super.initState();
     QuickMenuFunctions.addListener(this);
     _stats = _buildStatsLabel(WindowWatcher.taskManagerStats);
+    if (QuickMenuFunctions.isQuickMenuVisible) startTimer();
   }
 
   @override
@@ -43,6 +44,7 @@ class _TaskbarStatsState extends State<TaskbarStats> with QuickMenuTriggers {
   }
 
   void startTimer() {
+    _statsTimer?.cancel();
     _statsTimer = Timer.periodic(_kRefreshInterval, (_) {
       if (!mounted || !QuickMenuFunctions.isQuickMenuVisible) return;
       final String nextStats = _buildStatsLabel(WindowWatcher.taskManagerStats);
@@ -53,15 +55,12 @@ class _TaskbarStatsState extends State<TaskbarStats> with QuickMenuTriggers {
 
   @override
   Future<void> onQuickMenuToggled(bool visible, QuickMenuPage type) async {
-    if (visible) {
-      _statsTimer?.cancel();
-      final String nextStats = _buildStatsLabel(WindowWatcher.taskManagerStats);
-      if (nextStats == _stats) return;
-      setState(() => _stats = nextStats);
-      startTimer();
-    } else {
-      _statsTimer?.cancel();
-    }
+    _statsTimer?.cancel();
+    if (!visible) return;
+
+    final String nextStats = _buildStatsLabel(WindowWatcher.taskManagerStats);
+    if (nextStats != _stats) setState(() => _stats = nextStats);
+    startTimer();
   }
 
   String _buildStatsLabel(String rawStats) {

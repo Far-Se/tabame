@@ -477,7 +477,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       try {
         if (mounted) setState(() {});
       } catch (_) {}
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      // await Future<void>.delayed(const Duration(milliseconds: 10));
       SetProcessWorkingSetSize(GetCurrentProcess(), -1, -1);
       // EmptyWorkingSet(GetCurrentProcess());
     }
@@ -485,10 +485,11 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
 
   Timer? _clearRam;
   void clearRAM() {
-    _clearRam?.cancel();
-    _clearRam = Timer(const Duration(seconds: 10), () {
-      if (!QuickMenuFunctions.isQuickMenuVisible) EmptyWorkingSet(GetCurrentProcess());
-    });
+    EmptyWorkingSet(GetCurrentProcess());
+    // _clearRam?.cancel();
+    // _clearRam = Timer(const Duration(seconds: 10), () {
+    //   if (!QuickMenuFunctions.isQuickMenuVisible) EmptyWorkingSet(GetCurrentProcess());
+    // });
   }
 
   Future<void> _onQuickMenuSwitchedPage(QuickMenuPage newType, QuickMenuPage oldType, bool visible) async {

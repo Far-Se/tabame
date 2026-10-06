@@ -1457,6 +1457,24 @@
         "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/env-manager/main.py",
         "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/env-manager/README.md"
       }
+    },
+    {
+      "id": "gif-search",
+      "name": "GIF Search",
+      "category": "Media & Design",
+      "keyword": "gif",
+      "description": "Search GIPHY, Klipy and Finer Gifs Club; copy GIFs, save favorites and browse recents.",
+      "icon": "image",
+      "runtime": "node",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/gif-search",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/gif-search/plugin.json",
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/gif-search/main.js",
+        "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/gif-search/config.example.json",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/gif-search/README.md"
+      }
     }
   ]
 }
