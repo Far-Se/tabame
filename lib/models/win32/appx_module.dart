@@ -457,7 +457,7 @@ typedef _ActivateApplicationDart = int Function(
 /// Launches an AppX app by its AUMID.
 ///
 /// Returns the PID of the launched process, or throws on failure.
-int launchAppxByAumid(String aumid) {
+int launchAppxByAumid(String aumid, {String? arguments}) {
   final ppv = calloc<Pointer>();
   final int hr = CoCreateInstance(
     _CLSID_ApplicationActivationManager,
@@ -481,19 +481,56 @@ int launchAppxByAumid(String aumid) {
       vtbl[3].cast<NativeFunction<_ActivateApplicationNative>>().asFunction<_ActivateApplicationDart>();
 
   final Pointer<Utf16> pAumid = aumid.toNativeUtf16();
+  final Pointer<Utf16> pArguments = arguments?.toNativeUtf16() ?? nullptr;
   final Pointer<Uint32> pPid = calloc<Uint32>();
 
   try {
-    final int activateHr = activateFn(pObj, pAumid, nullptr, 0 /* AO_NONE */, pPid);
+    final int activateHr = activateFn(pObj, pAumid, pArguments, 0 /* AO_NONE */, pPid);
     if (FAILED(activateHr)) throw WindowsException(activateHr);
     return pPid.value;
   } finally {
     calloc.free(pAumid);
+    if (pArguments != nullptr) calloc.free(pArguments);
     calloc.free(pPid);
     // Release the COM object
     final int Function(Pointer<NativeType>) releaseFn =
         vtbl[2].cast<NativeFunction<Int32 Function(Pointer)>>().asFunction<int Function(Pointer)>();
     releaseFn(pObj);
+  }
+}
+
+/// Relaunches this Store app through package activation, preserving its identity
+/// and package dependencies instead of shell-opening the executable directly.
+void launchCurrentPackagedApp({String? arguments}) {
+  if (!Platform.isWindows) {
+    //TODO: Implement multiplatform
+    throw UnsupportedError('Package activation is only implemented on Windows.');
+  }
+  final getAppId = DynamicLibrary.open('kernel32.dll')
+      .lookupFunction<Int32 Function(Pointer<Uint32>, Pointer<Utf16>), int Function(Pointer<Uint32>, Pointer<Utf16>)>(
+          'GetCurrentApplicationUserModelId');
+  final length = calloc<Uint32>();
+  Pointer<Utf16> appId = nullptr;
+  try {
+    final int sizeResult = getAppId(length, nullptr);
+    if (sizeResult != ERROR_INSUFFICIENT_BUFFER) {
+      throw StateError('Cannot read package application identity (Windows error $sizeResult).');
+    }
+    appId = calloc<Uint16>(length.value).cast<Utf16>();
+    final int idResult = getAppId(length, appId);
+    if (idResult != ERROR_SUCCESS) {
+      throw StateError('Cannot read package application identity (Windows error $idResult).');
+    }
+    final int comResult = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    if (FAILED(comResult) && comResult != RPC_E_CHANGED_MODE) throw WindowsException(comResult);
+    try {
+      launchAppxByAumid(appId.toDartString(), arguments: arguments);
+    } finally {
+      if (SUCCEEDED(comResult)) CoUninitialize();
+    }
+  } finally {
+    if (appId != nullptr) calloc.free(appId);
+    calloc.free(length);
   }
 }
 

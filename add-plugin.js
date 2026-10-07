@@ -105,6 +105,12 @@ function buildPluginRegistration(pluginFolder) {
   const pluginId = manifest.id || pluginFolder;
   const githubPath = `https://github.com/Far-Se/tabame/tree/${branch}/plugins/${pluginFolder}`;
   const rawPath = `https://raw.githubusercontent.com/Far-Se/tabame/${branch}/plugins/${pluginFolder}`;
+  const today = new Date();
+  const addedDate = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
 
   // Plain JS objects preserve insertion order for string keys.
   const files = {
@@ -152,6 +158,7 @@ function buildPluginRegistration(pluginFolder) {
     registration: {
       id: pluginId,
       name: manifest.name,
+      addedDate,
       category: manifest.category.trim(),
       keyword: manifest.keyword,
       description: manifest.description,

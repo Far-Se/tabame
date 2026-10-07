@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../models/classes/boxes.dart';
 import '../../../models/settings.dart';
@@ -44,6 +45,8 @@ const String _galleryKnownIdsKey = 'pluginGalleryKnownIds';
 
 enum _PanelMode { installed, gallery, makeYourOwn }
 
+enum _GallerySort { title, addedDate }
+
 PluginManifest? _findInstalledPlugin(String id) {
   final String lowerId = id.toLowerCase();
   for (final PluginManifest manifest in PluginRegistry.manifests) {
@@ -78,6 +81,9 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   final TextEditingController _gallerySearchController = TextEditingController();
   final TextEditingController _pluginShortcutController = TextEditingController();
   String _galleryCategory = '';
+  _GallerySort _gallerySort = _GallerySort.title;
+  // Undated legacy entries sort behind dated entries without changing the index.
+  static final DateTime _defaultAddedDate = DateTime.utc(1970);
   bool _pluginDirectoryBusy = false;
   String _pluginDirectoryStatus = '';
   bool _pluginDirectoryStatusError = false;
@@ -224,12 +230,6 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
       final List<PluginGalleryEntry> entries = await PluginGallery.fetchIndex(force: force);
       final Set<String> refreshedIds = entries.map((PluginGalleryEntry entry) => entry.id.toLowerCase()).toSet();
       final Set<String> newIds = knownIds == null ? <String>{} : refreshedIds.difference(knownIds);
-      entries.sort((PluginGalleryEntry a, PluginGalleryEntry b) {
-        final bool aIsNew = newIds.contains(a.id.toLowerCase());
-        final bool bIsNew = newIds.contains(b.id.toLowerCase());
-        if (aIsNew != bIsNew) return aIsNew ? -1 : 1;
-        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-      });
       await Boxes.pref.setStringList(_galleryKnownIdsKey, refreshedIds.toList());
       if (!mounted) return;
       setState(() {
@@ -747,6 +747,8 @@ Build a plugin with your favorite AI coding assistant:
     final Color accent = Design.accent;
     final Color text = Design.text;
     final Color statusColor = _pluginDirectoryStatusError ? Colors.red.shade400 : accent;
+    final bool needsStoreFolderChange =
+        AppPaths.isPackagedInstall && p.windows.equals(AppPaths.pluginsDirectory, AppPaths.currentPath('plugins'));
 
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
@@ -780,6 +782,19 @@ Build a plugin with your favorite AI coding assistant:
                   ),
                 ),
                 const SizedBox(height: 3),
+                if (needsStoreFolderChange) ...<Widget>[
+                  Text(
+                    'You are running Tabame from Microsoft Store. Before installing plugins that require '
+                    'packages, use Change to select a plugin installation folder outside the default '
+                    'Store app folder. These plugins do not work in the default folder.',
+                    style: TextStyle(
+                      fontSize: Design.baseFontSize + 0.5,
+                      height: 1.35,
+                      color: text.withAlpha(220),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                ],
                 Text(
                   AppPaths.pluginsDirectory,
                   maxLines: 2,
@@ -1044,7 +1059,15 @@ Build a plugin with your favorite AI coding assistant:
             entry.runtime,
           ]),
         )
-        .toList(growable: false);
+        .toList(growable: false)
+      ..sort((PluginGalleryEntry a, PluginGalleryEntry b) {
+        if (_gallerySort == _GallerySort.addedDate) {
+          final int dateOrder = (b.addedDate ?? _defaultAddedDate).compareTo(a.addedDate ?? _defaultAddedDate);
+          if (dateOrder != 0) return dateOrder;
+        }
+        final int titleOrder = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        return titleOrder != 0 ? titleOrder : a.id.compareTo(b.id);
+      });
 
     return WindowsScrollView(
       child: Padding(
@@ -1052,6 +1075,10 @@ Build a plugin with your favorite AI coding assistant:
         child: Column(
           crossAxisAlignment: C.start,
           children: <Widget>[
+            if (AppPaths.isPackagedInstall) ...<Widget>[
+              _buildPluginDirectoryCard(),
+              const SizedBox(height: 8),
+            ],
             if (_installStatus.isNotEmpty) ...<Widget>[
               _buildStatusStrip(
                 _installStatus,
@@ -1098,6 +1125,33 @@ Build a plugin with your favorite AI coding assistant:
                         ModernDropdownItem<String>(value: category, label: category),
                     ],
                     onChanged: (String? category) => setState(() => _galleryCategory = category ?? ''),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: <Widget>[
+                Text('Sort by:', style: TextStyle(fontSize: Design.baseFontSize, color: Design.text)),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 170,
+                  child: ModernDropdown<_GallerySort>(
+                    value: _gallerySort,
+                    height: 32,
+                    itemHeight: 36,
+                    prefixIcon: Icon(Icons.sort_rounded, size: 16, color: Design.accent),
+                    decoration: BoxDecoration(
+                      color: Design.accent.withAlpha(12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    items: const <ModernDropdownItem<_GallerySort>>[
+                      ModernDropdownItem<_GallerySort>(value: _GallerySort.title, label: 'Title'),
+                      ModernDropdownItem<_GallerySort>(value: _GallerySort.addedDate, label: 'Added Date'),
+                    ],
+                    onChanged: (_GallerySort? sort) {
+                      if (sort != null) setState(() => _gallerySort = sort);
+                    },
                   ),
                 ),
               ],

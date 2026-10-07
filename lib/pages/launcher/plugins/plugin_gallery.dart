@@ -31,6 +31,7 @@ class PluginGalleryEntry {
     required this.homepage,
     required this.zip,
     required this.files,
+    this.addedDate,
   });
 
   final String id;
@@ -46,6 +47,7 @@ class PluginGalleryEntry {
   final String homepage;
   final String zip;
   final Map<String, String> files;
+  final DateTime? addedDate;
 
   bool get installable => files.isNotEmpty || zip.isNotEmpty;
 
@@ -87,6 +89,7 @@ class PluginGalleryEntry {
       homepage: str('homepage'),
       zip: str('zip'),
       files: files,
+      addedDate: DateTime.tryParse(str('addedDate')),
     );
   }
 }

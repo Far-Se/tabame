@@ -22,6 +22,7 @@ import '../settings.dart';
 import '../util/scripts.dart';
 import '../../platform/app_paths.dart';
 import 'imports.dart';
+import 'appx_module.dart';
 import 'keys.dart';
 import 'mixed.dart';
 import 'registry.dart';
@@ -703,9 +704,13 @@ class WinUtils {
 
   static void startTabame({bool closeCurrent = false, String? arguments, bool? admin}) {
     admin ??= WinUtils.isAdministrator();
-    WinUtils.isAdministrator()
-        ? WinUtils.runAsAdmin(Platform.resolvedExecutable, arguments: arguments)
-        : WinUtils.open(Platform.resolvedExecutable, arguments: arguments);
+    if (AppPaths.isPackagedInstall) {
+      launchCurrentPackagedApp(arguments: arguments);
+    } else {
+      WinUtils.isAdministrator()
+          ? WinUtils.runAsAdmin(Platform.resolvedExecutable, arguments: arguments)
+          : WinUtils.open(Platform.resolvedExecutable, arguments: arguments);
+    }
     if (closeCurrent) {
       Future<void>.delayed(const Duration(milliseconds: 400), () => exit(0));
     }

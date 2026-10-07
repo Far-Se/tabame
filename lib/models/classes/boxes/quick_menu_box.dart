@@ -213,7 +213,8 @@ class QuickMenuFunctions {
       }
     } else {
       // QuickMenuState clears retained content after five minutes hidden.
-      if (!user.keepPopupsOpen) Globals.quickMenuPage = QuickMenuPage.empty;
+      Globals.quickMenuPage = QuickMenuPage.quickMenu;
+      // if (!user.keepPopupsOpen) Globals.quickMenuPage = QuickMenuPage.empty;
       await WindowManager.instance.setSize(Size(Boxes.quickMenuWidth, Globals.quickMenuSize.height));
       if (kDebugMode && !Globals.debugHotkeys) return;
       Win32.setPosition(const Offset(-99999, -99999));

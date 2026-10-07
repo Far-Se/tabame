@@ -421,15 +421,17 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
     _hiddenContentClearTimer = null;
     if (visible) {
       Globals.quickMenuPage = type;
-    } else if (user.keepPopupsOpen && mounted && Navigator.of(context).canPop()) {
-      // Only retain the widget tree when an open sheet or dialog needs its state.
-      _hiddenContentClearTimer = Timer(_hiddenContentRetention, () {
-        _hiddenContentClearTimer = null;
-        if (!mounted || QuickMenuFunctions.isQuickMenuVisible) return;
-        setState(() => Globals.quickMenuPage = QuickMenuPage.empty);
-      });
+      // } else if (user.keepPopupsOpen && mounted && Navigator.of(context).canPop()) {
+      //   // Only retain the widget tree when an open sheet or dialog needs its state.
+      //   _hiddenContentClearTimer = Timer(_hiddenContentRetention, () {
+      //     _hiddenContentClearTimer = null;
+      //     if (!mounted || QuickMenuFunctions.isQuickMenuVisible) return;
+      //     setState(() => Globals.quickMenuPage = QuickMenuPage.empty);
+      //   });
+      // }
     } else {
-      Globals.quickMenuPage = QuickMenuPage.empty;
+      Globals.quickMenuPage = QuickMenuPage.quickMenu;
+      // Globals.quickMenuPage = QuickMenuPage.empty;
     }
     QuickMenuFunctions.resetKeyboardSelection();
 
@@ -753,7 +755,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
   }
 
   Widget _mainWidget(BuildContext context) {
-    if (Globals.quickMenuPage == QuickMenuPage.empty) return Container();
+    // if (Globals.quickMenuPage == QuickMenuPage.empty) return Container();
 
     switch (Globals.quickMenuPage) {
       case QuickMenuPage.quickMenu:

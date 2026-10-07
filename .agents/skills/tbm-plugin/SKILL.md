@@ -109,4 +109,10 @@ The plugin is an ordinary process: HTTP (`requests`/`urllib`, or global `fetch` 
 
 ## Deliverables
 
+When registering a new plugin in `resources/plugins.json`, include `addedDate`
+with the current local calendar day in `YYYY-MM-DD` format. Running
+`node add-plugin.js <PluginFolder>` (or `node add-plugin.js missing`) adds it
+automatically. Preserve the original date on updates; leave existing undated
+entries unchanged. The plugin manager uses a fallback date for those entries.
+
 When done, hand the user both `plugin.json` and the script, the exact install path (`%localappdata%\Tabame\plugins\<id>\`), and the reminder to reopen the launcher to load it.

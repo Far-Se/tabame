@@ -1445,7 +1445,16 @@ class FirstRunState extends State<FirstRun> {
     SaveSettings.suppressWrites = false;
     await Boxes.pref.save();
     if (kReleaseMode) {
-      WinUtils.reloadTabameQuickMenu();
+      try {
+        WinUtils.reloadTabameQuickMenu();
+      } catch (error, stackTrace) {
+        FlutterError.reportError(FlutterErrorDetails(exception: error, stack: stackTrace));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Your settings were saved, but Tabame could not restart. Please reopen Tabame manually.'),
+        ));
+        return;
+      }
       Future<void>.delayed(const Duration(milliseconds: 200), () => exit(0));
     } else {
       Globals.changingPages = true;

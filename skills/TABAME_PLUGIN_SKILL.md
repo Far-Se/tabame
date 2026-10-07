@@ -185,6 +185,13 @@ Each plugin lives in its own folder under:
 
 ### Required discovery category
 
+When adding a new entry to `resources/plugins.json`, set `addedDate` to the
+current local calendar day in `YYYY-MM-DD` format. This is gallery metadata,
+not a required `plugin.json` field. `node add-plugin.js <PluginFolder>` and
+`node add-plugin.js missing` record it automatically. Preserve it on updates
+and leave existing undated entries unchanged; the plugin manager supplies a
+fallback date when sorting them.
+
 Every `plugin.json` **must** include `category`. Choose exactly one value from
 the current vocabulary in `resources/plugins.json`, using the spelling and
 capitalization shown here. Select the category that best describes the
