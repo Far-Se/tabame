@@ -78,6 +78,10 @@ class SatinLauncherFrame extends StatelessWidget {
                     ]),
                   ),
                 ),
+                DateTimeWidget(
+                  padding: const EdgeInsets.only(left: 10),
+                  style: SatinTokens.font(size: 10, color: SatinTokens.dim),
+                ),
               ]),
             ),
           ]),

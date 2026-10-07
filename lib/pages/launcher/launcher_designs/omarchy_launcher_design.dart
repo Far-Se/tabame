@@ -105,6 +105,7 @@ class OmarchyLauncherFrame extends StatelessWidget {
           decoration: BoxDecoration(border: Border(top: BorderSide(color: OmarchyTokens.border))),
           child: LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
             return Wrap(
+              alignment: WrapAlignment.spaceBetween,
               spacing: 16,
               runSpacing: 6,
               crossAxisAlignment: WrapCrossAlignment.center,
@@ -118,6 +119,10 @@ class OmarchyLauncherFrame extends StatelessWidget {
                 Text('↵ open', style: label),
                 Text('ctrl+k actions', style: label),
                 Text('esc close', style: label),
+                DateTimeWidget(
+                  padding: const EdgeInsets.only(left: 10),
+                  style: OmarchyTokens.mono(fontSize: Design.baseFontSize - 1, color: OmarchyTokens.dim),
+                ),
               ],
             );
           }),

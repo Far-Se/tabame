@@ -8,11 +8,13 @@ import 'windows_scroll.dart';
 class BarWithButtons extends StatefulWidget {
   final List<Widget> children;
   final bool withScroll;
+  final bool shrinkWrap;
   final double height;
   const BarWithButtons({
     super.key,
     required this.children,
     this.withScroll = true,
+    this.shrinkWrap = false,
     this.height = 30,
   });
 
@@ -52,42 +54,47 @@ class _BarWithButtonsState extends State<BarWithButtons> with QuickMenuTriggers 
       return SizedBox(height: widget.height, child: content);
     }
 
-    return SizedBox(
-      height: widget.height,
-      width: double.infinity,
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          return ShaderMask(
-            shaderCallback: (Rect rect) {
-              return const LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
-                stops: <double>[0.0, middleOffset, 1.0],
-              ).createShader(rect);
-            },
-            blendMode: BlendMode.dstOut,
-            child: ScrollConfiguration(
-              behavior: const WindowsScrollBehavior(),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                controller: _buttonBarScrollController,
-                physics: const ClampingScrollPhysics(),
-                child: Listener(
-                  onPointerSignal: _handlePointerSignal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: content,
-                    ),
-                  ),
+    Widget buildScroll(double minWidth) {
+      return ShaderMask(
+        shaderCallback: (Rect rect) => const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
+          stops: <double>[0.0, middleOffset, 1.0],
+        ).createShader(rect),
+        blendMode: BlendMode.dstOut,
+        child: ScrollConfiguration(
+          behavior: const WindowsScrollBehavior(),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            controller: _buttonBarScrollController,
+            physics: const ClampingScrollPhysics(),
+            child: Listener(
+              onPointerSignal: _handlePointerSignal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: minWidth),
+                child: Align(
+                  alignment: Alignment.center,
+                  widthFactor: 1,
+                  child: content,
                 ),
               ),
             ),
-          );
-        },
-      ),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: widget.height,
+      width: widget.shrinkWrap ? null : double.infinity,
+      // A LayoutBuilder fills the available width. Bypass it when the viewport
+      // should shrink to its contents, up to the category's width cap.
+      child: widget.shrinkWrap
+          ? buildScroll(0)
+          : LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) => buildScroll(constraints.maxWidth),
+            ),
     );
   }
 

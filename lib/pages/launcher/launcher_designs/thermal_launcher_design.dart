@@ -80,6 +80,10 @@ class ThermalLauncherFrame extends StatelessWidget {
                   style: ThermalTokens.font(size: 11, color: ThermalTokens.dim)),
               const SizedBox(width: 12),
               Text('THERMAL', style: ThermalTokens.label()),
+              DateTimeWidget(
+                padding: const EdgeInsets.only(left: 10),
+                style: ThermalTokens.font(size: 10, color: ThermalTokens.dim),
+              ),
             ]),
           ),
         ]),

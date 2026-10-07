@@ -113,7 +113,7 @@ class TrayBarState extends State<TrayBar> with QuickMenuTriggers {
   @override
   Widget build(BuildContext context) {
     final List<TrayBarButton> customButtons = Boxes.trayBarButtons;
-    if ((tray.isEmpty && customButtons.isEmpty) || !user.showTrayBar) return Container();
+    if ((tray.isEmpty && customButtons.isEmpty) || !user.showTrayBar) return const SizedBox.shrink();
     Theme.of(context);
     final Widget row = Row(
       mainAxisSize: MainAxisSize.min,

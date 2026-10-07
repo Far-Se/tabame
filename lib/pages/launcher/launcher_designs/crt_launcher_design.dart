@@ -89,6 +89,10 @@ class CrtLauncherFrame extends StatelessWidget {
                                       style: CrtTokens.font(size: 11, color: CrtTokens.dim)))),
                           const SizedBox(width: 12),
                           Text('$resultCount results', style: CrtTokens.font(size: 11, color: CrtTokens.accent)),
+                          DateTimeWidget(
+                            padding: const EdgeInsets.only(left: 10),
+                            style: CrtTokens.font(size: 10, color: CrtTokens.dim),
+                          ),
                         ])),
                   ]),
                 )),

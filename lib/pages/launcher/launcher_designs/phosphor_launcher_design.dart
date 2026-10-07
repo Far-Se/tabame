@@ -68,6 +68,10 @@ class PhosphorLauncherFrame extends StatelessWidget {
                         const SizedBox(width: 12),
                         Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount results',
                             style: PhosphorTokens.font(size: 12, color: PhosphorTokens.accent)),
+                        DateTimeWidget(
+                          padding: const EdgeInsets.only(left: 10),
+                          style: PhosphorTokens.font(size: 10, color: PhosphorTokens.dim),
+                        ),
                       ]))),
         ]));
   }

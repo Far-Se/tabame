@@ -130,14 +130,29 @@ class TuiLauncherFrame extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
               Text(Globals.isLauncherPluginActive ? "    PLUGIN" : '    $resultCount item(s)', style: TuiTokens.mono()),
               const SizedBox(height: 8),
-              Wrap(spacing: 16, runSpacing: 4, children: <Widget>[
-                for (final String hint in <String>[
-                  '[Up/Down] Select',
-                  '[Enter] Open',
-                  '[Ctrl+K] Actions',
-                  '[Esc] Close'
-                ])
-                  Text(hint, style: TuiTokens.mono(fontSize: Design.baseFontSize + 3, color: TuiTokens.dim)),
+              Row(children: <Widget>[
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(children: <Widget>[
+                      for (final String hint in <String>[
+                        '[Up/Down] Select',
+                        '[Enter] Open',
+                        '[Ctrl+K] Actions',
+                        '[Esc] Close',
+                      ])
+                        Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: Text(hint,
+                              style: TuiTokens.mono(fontSize: Design.baseFontSize + 3, color: TuiTokens.dim)),
+                        ),
+                    ]),
+                  ),
+                ),
+                DateTimeWidget(
+                  padding: const EdgeInsets.only(left: 10),
+                  style: TuiTokens.mono(fontSize: Design.baseFontSize + 1, color: TuiTokens.dim),
+                ),
               ]),
             ]),
           ),

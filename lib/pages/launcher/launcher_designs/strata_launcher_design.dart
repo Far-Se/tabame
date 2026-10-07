@@ -77,6 +77,10 @@ class StrataLauncherFrame extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount results',
                           style: StrataTokens.font(size: 11, color: StrataTokens.dim)),
+                      DateTimeWidget(
+                        padding: const EdgeInsets.only(left: 10),
+                        style: StrataTokens.font(size: 10, color: StrataTokens.dim),
+                      ),
                     ]))),
       ]),
     );

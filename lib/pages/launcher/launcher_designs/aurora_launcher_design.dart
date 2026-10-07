@@ -110,6 +110,10 @@ class AuroraLauncherFrame extends StatelessWidget {
                 Text('$resultCount results', style: AuroraTokens.font(size: 11, color: AuroraTokens.dim)),
                 const Spacer(),
                 Text('Ctrl K  Actions     Esc  Close', style: AuroraTokens.font(size: 11, color: AuroraTokens.dim)),
+                DateTimeWidget(
+                  padding: const EdgeInsets.only(left: 12),
+                  style: AuroraTokens.font(size: 10, color: AuroraTokens.dim),
+                ),
               ])),
         ]),
       ]),

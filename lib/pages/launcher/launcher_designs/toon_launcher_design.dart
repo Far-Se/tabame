@@ -143,6 +143,10 @@ class ToonLauncherFrame extends StatelessWidget {
                       '${resultCount.toString().padLeft(2, '0')} INKED',
                       style: ToonTokens.font(size: 10, color: ToonTokens.dim, spacing: 1.1),
                     ),
+                    DateTimeWidget(
+                      padding: const EdgeInsets.only(left: 10),
+                      style: ToonTokens.font(size: 9, color: ToonTokens.dim, spacing: 0.5),
+                    ),
                   ],
                 ),
               ),

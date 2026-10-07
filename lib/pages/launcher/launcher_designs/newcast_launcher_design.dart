@@ -189,6 +189,15 @@ class _RaycastFooter extends StatelessWidget {
                     ),
                   ),
                 ),
+                DateTimeWidget(
+                  padding: const EdgeInsets.only(left: 12),
+                  style: RaycastTokens.ui(
+                    fontSize: 10,
+                    color: RaycastTokens.dim(isDark),
+                    fontWeight: FontWeight.w500,
+                    height: 1.0,
+                  ),
+                ),
               ],
             ),
           ),

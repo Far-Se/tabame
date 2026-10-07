@@ -86,6 +86,10 @@ class IvoryGroveLauncherFrame extends StatelessWidget {
                     const SizedBox(width: 16),
                   ],
                   if (available > 230) _hint(null, 'Close', keyLabel: 'esc'),
+                  DateTimeWidget(
+                    padding: const EdgeInsets.only(left: 10),
+                    style: IvoryGroveTokens.font(size: Design.baseFontSize, color: IvoryGroveTokens.dim),
+                  ),
                 ]);
               }),
             ),

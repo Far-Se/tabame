@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
@@ -8,10 +9,9 @@ import '../itzy/quickmenu/list_pinned_apps.dart';
 import '../itzy/quickmenu/button_changelog.dart';
 import '../itzy/quickmenu/button_logo_drag.dart';
 import '../itzy/quickmenu/button_open_settings.dart';
-import '../widgets/bar_with_buttons.dart';
 import 'quick_actions_bar.dart';
 import 'tray_bar.dart';
-import '../widgets/windows_scroll.dart';
+import '../widgets/bar_with_buttons.dart';
 
 class QuickMenuBarContents extends StatefulWidget {
   const QuickMenuBarContents({
@@ -65,13 +65,22 @@ class _QuickMenuBarContentsState extends State<QuickMenuBarContents> with QuickM
       return _buildAllMergedGroup(groups.single);
     }
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final List<QuickMenuBarItem> items = groups.expand((QuickMenuBarGroup group) => group.items).toList();
+    return _AdaptiveBarRow(
+      textDirection: Directionality.of(context),
+      devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
       children: <Widget>[
-        for (final QuickMenuBarGroup group in groups)
-          Expanded(
-            flex: group.items.length * 4,
-            child: _buildGroup(group),
+        for (final QuickMenuBarItem item in items)
+          KeyedSubtree(
+            key: ValueKey<QuickMenuBarItem>(item),
+            child: switch (item) {
+              QuickMenuBarItem.quickActions => QuickActionsBar(
+                  isTop: widget.position == QuickMenuBarPosition.top,
+                  shrinkWrap: true,
+                ),
+              QuickMenuBarItem.pinnedApps => const PinnedApps(),
+              QuickMenuBarItem.trayIcons => const TrayBar(),
+            },
           ),
       ],
     );
@@ -90,12 +99,23 @@ class _QuickMenuBarContentsState extends State<QuickMenuBarContents> with QuickM
           if (isTop) const LogoDragButton(),
           if (isTop) const SizedBox(width: 4),
           Expanded(
-            child: BarWithButtons(
-              height: user.expandedTaskbar ? 32 : 27,
+            child: _AdaptiveBarRow(
+              textDirection: Directionality.of(context),
+              devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
               children: <Widget>[
-                if (group.contains(QuickMenuBarItem.quickActions)) QuickActionsBar(isTop: isTop, allMerged: true),
-                if (group.contains(QuickMenuBarItem.pinnedApps)) const PinnedApps(wrapScroll: false),
-                if (group.contains(QuickMenuBarItem.trayIcons)) const TrayBar(wrapScroll: false),
+                for (final QuickMenuBarItem item in group.items)
+                  KeyedSubtree(
+                    key: ValueKey<QuickMenuBarItem>(item),
+                    child: switch (item) {
+                      QuickMenuBarItem.quickActions => BarWithButtons(
+                          shrinkWrap: true,
+                          height: user.expandedTaskbar ? 32 : 27,
+                          children: <Widget>[QuickActionsBar(isTop: isTop, allMerged: true)],
+                        ),
+                      QuickMenuBarItem.pinnedApps => const PinnedApps(),
+                      QuickMenuBarItem.trayIcons => const TrayBar(),
+                    },
+                  ),
               ],
             ),
           ),
@@ -106,82 +126,101 @@ class _QuickMenuBarContentsState extends State<QuickMenuBarContents> with QuickM
       ),
     );
   }
+}
 
-  Widget _buildGroup(QuickMenuBarGroup group) {
-    final bool hasQuickActions = group.contains(QuickMenuBarItem.quickActions);
-    final bool hasPinnedApps = group.contains(QuickMenuBarItem.pinnedApps);
-    final bool hasTrayIcons = group.contains(QuickMenuBarItem.trayIcons);
+/// Fits small categories to their contents and shares the remaining width
+/// equally between categories that still need more room.
+class _AdaptiveBarRow extends MultiChildRenderObjectWidget {
+  const _AdaptiveBarRow({required this.textDirection, required this.devicePixelRatio, required super.children});
 
-    if (hasQuickActions && (hasPinnedApps || hasTrayIcons)) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: <Widget>[
-          Expanded(
-            flex: 6,
-            child: QuickActionsBar(isTop: widget.position == QuickMenuBarPosition.top),
-          ),
-          Expanded(
-            flex: 4,
-            child: _buildPinnedAndTray(hasPinnedApps: hasPinnedApps, hasTrayIcons: hasTrayIcons, merged: true),
-          ),
-        ],
-      );
-    }
+  final TextDirection textDirection;
+  final double devicePixelRatio;
 
-    if (hasQuickActions) return QuickActionsBar(isTop: widget.position == QuickMenuBarPosition.top);
-    return _buildPinnedAndTray(
-      hasPinnedApps: hasPinnedApps,
-      hasTrayIcons: hasTrayIcons,
-      merged: hasPinnedApps && hasTrayIcons,
-    );
-  }
+  @override
+  _RenderAdaptiveBarRow createRenderObject(BuildContext context) =>
+      _RenderAdaptiveBarRow(textDirection, devicePixelRatio);
 
-  Widget _buildPinnedAndTray({required bool hasPinnedApps, required bool hasTrayIcons, required bool merged}) {
-    if (hasPinnedApps && hasTrayIcons && merged) {
-      return const ClipRRect(child: _MergedPinnedTray());
-    }
-    if (hasPinnedApps && hasTrayIcons) {
-      return const Row(
-        children: <Widget>[
-          Expanded(child: PinnedApps()),
-          Expanded(child: TrayBar()),
-        ],
-      );
-    }
-    if (hasPinnedApps) return const PinnedApps();
-    if (hasTrayIcons) return const TrayBar();
-    return const SizedBox.shrink();
+  @override
+  void updateRenderObject(BuildContext context, _RenderAdaptiveBarRow renderObject) {
+    renderObject.textDirection = textDirection;
+    renderObject.devicePixelRatio = devicePixelRatio;
   }
 }
 
-class _MergedPinnedTray extends StatelessWidget {
-  const _MergedPinnedTray();
+class _BarParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderAdaptiveBarRow extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _BarParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _BarParentData> {
+  _RenderAdaptiveBarRow(this._textDirection, this._devicePixelRatio);
+
+  TextDirection _textDirection;
+  double _devicePixelRatio;
+
+  set devicePixelRatio(double value) {
+    if (_devicePixelRatio == value) return;
+    _devicePixelRatio = value;
+    markNeedsLayout();
+  }
+
+  set textDirection(TextDirection value) {
+    if (_textDirection == value) return;
+    _textDirection = value;
+    markNeedsLayout();
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: ShaderMask(
-        shaderCallback: (Rect rect) => const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: <Color>[Colors.transparent, Colors.transparent, Color.fromARGB(255, 0, 0, 0)],
-          stops: <double>[0.0, 0.93, 1.0],
-        ).createShader(rect),
-        blendMode: BlendMode.dstOut,
-        child: WindowsScrollView(
-          scrollDirection: Axis.horizontal,
-          showScrollbar: false,
-          draggable: true,
-          clipBehavior: Clip.hardEdge,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const PinnedApps(wrapScroll: false),
-              if (user.showTrayBar) const TrayBar(wrapScroll: false),
-            ],
-          ),
-        ),
-      ),
-    );
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _BarParentData) {
+      child.parentData = _BarParentData();
+    }
   }
+
+  @override
+  void performLayout() {
+    size = constraints.biggest;
+    final BoxConstraints measuringConstraints = BoxConstraints(
+      maxWidth: size.width,
+      minHeight: size.height,
+      maxHeight: size.height,
+    );
+    final List<RenderBox> children = getChildrenAsList();
+    // Dry measurement must not resize live scroll viewports: a temporary wider
+    // viewport can clamp their scroll offsets and trigger visible corrections.
+    final Map<RenderBox, double> naturalWidths = <RenderBox, double>{
+      for (final RenderBox child in children)
+        child: (child.getDryLayout(measuringConstraints).width * _devicePixelRatio).ceil() / _devicePixelRatio,
+    };
+    final List<RenderBox> byWidth = List<RenderBox>.of(children)
+      ..sort((RenderBox a, RenderBox b) => naturalWidths[a]!.compareTo(naturalWidths[b]!));
+    final Map<RenderBox, double> widths = <RenderBox, double>{};
+    double remainingWidth = (size.width * _devicePixelRatio).floor() / _devicePixelRatio;
+    int remainingCount = byWidth.length;
+    for (final RenderBox child in byWidth) {
+      final double share = (remainingWidth * _devicePixelRatio / remainingCount).floor() / _devicePixelRatio;
+      final double width = naturalWidths[child]!.clamp(0.0, share);
+      widths[child] = width;
+      remainingWidth = (remainingWidth - width).clamp(0.0, size.width);
+      remainingCount--;
+    }
+
+    double offset =
+        _textDirection == TextDirection.ltr ? 0 : (size.width * _devicePixelRatio).floor() / _devicePixelRatio;
+    for (final RenderBox child in children) {
+      final double width = widths[child]!;
+      child.layout(measuringConstraints.copyWith(maxWidth: width), parentUsesSize: true);
+      if (_textDirection == TextDirection.rtl) offset -= width;
+      final _BarParentData parentData = child.parentData! as _BarParentData;
+      parentData.offset = Offset(offset, 0);
+      if (_textDirection == TextDirection.ltr) offset += width;
+    }
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) => defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
 }

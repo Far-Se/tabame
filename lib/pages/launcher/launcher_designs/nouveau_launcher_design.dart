@@ -160,6 +160,10 @@ class _NouveauLauncherFrameState extends State<NouveauLauncherFrame>
                         ]),
                       ),
                     ),
+                    DateTimeWidget(
+                      padding: const EdgeInsets.only(left: 10),
+                      style: NouveauTokens.font(size: 10, color: NouveauTokens.dim),
+                    ),
                   ]),
                 ]),
               ),

@@ -134,6 +134,10 @@ class LiquidGlassLauncherFrame extends StatelessWidget {
               const SizedBox(width: 18),
               _hint('Ctrl K', 'Actions'),
             ],
+            DateTimeWidget(
+              padding: const EdgeInsets.only(left: 10),
+              style: LiquidGlassTokens.font(size: 10, color: LiquidGlassTokens.dim),
+            ),
           ]);
         }),
       );

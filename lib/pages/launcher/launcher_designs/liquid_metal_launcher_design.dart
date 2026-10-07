@@ -101,6 +101,10 @@ class LiquidMetalLauncherFrame extends StatelessWidget {
                     )),
                     const SizedBox(width: 12),
                     Text('$resultCount results', style: LiquidMetalTokens.font(size: 11, color: LiquidMetalTokens.dim)),
+                    DateTimeWidget(
+                      padding: const EdgeInsets.only(left: 10),
+                      style: LiquidMetalTokens.font(size: 10, color: LiquidMetalTokens.dim),
+                    ),
                   ]),
                 ),
               ),

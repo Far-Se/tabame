@@ -14,10 +14,11 @@ import '../itzy/quickmenu/button_testing.dart';
 import '../widgets/bar_with_buttons.dart';
 
 class QuickActionsBar extends StatefulWidget {
-  const QuickActionsBar({super.key, required this.isTop, this.allMerged = false});
+  const QuickActionsBar({super.key, required this.isTop, this.allMerged = false, this.shrinkWrap = false});
 
   final bool isTop;
   final bool allMerged;
+  final bool shrinkWrap;
 
   @override
   State<QuickActionsBar> createState() => _QuickActionsBarState();
@@ -105,7 +106,7 @@ class _QuickActionsBarState extends State<QuickActionsBar> with QuickMenuTrigger
             .copyWith(decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface), preferBelow: false),
       ),
       child: Row(
-        mainAxisSize: widget.allMerged ? MainAxisSize.min : MainAxisSize.max,
+        mainAxisSize: widget.allMerged || widget.shrinkWrap ? MainAxisSize.min : MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: widget.allMerged
             ? <Widget>[
@@ -117,9 +118,11 @@ class _QuickActionsBarState extends State<QuickActionsBar> with QuickMenuTrigger
             : <Widget>[
                 if (widget.isTop) const LogoDragButton(),
                 if (widget.isTop) const SizedBox(width: 4),
-                Expanded(
+                Flexible(
+                  fit: widget.shrinkWrap ? FlexFit.loose : FlexFit.tight,
                   child: hasActions
                       ? BarWithButtons(
+                          shrinkWrap: widget.shrinkWrap,
                           height: widget.isTop ? 25 : 25.1,
                           children: <Widget>[
                             if (showBuyMeACoffee) const BuyMeACoffeeButton(),

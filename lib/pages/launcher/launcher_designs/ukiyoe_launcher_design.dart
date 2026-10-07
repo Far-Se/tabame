@@ -83,6 +83,10 @@ class UkiyoeLauncherFrame extends StatelessWidget {
                     ]),
                   ),
                 ),
+                DateTimeWidget(
+                  padding: const EdgeInsets.only(left: 10),
+                  style: UkiyoeTokens.font(size: 10, color: UkiyoeTokens.dim),
+                ),
               ]),
             ),
           ]),

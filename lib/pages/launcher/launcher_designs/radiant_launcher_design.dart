@@ -80,6 +80,10 @@ class RadiantLauncherFrame extends StatelessWidget {
                     ]),
                   ),
                 ),
+                DateTimeWidget(
+                  padding: const EdgeInsets.only(left: 10),
+                  style: RadiantTokens.font(size: 10, color: RadiantTokens.dim),
+                ),
               ]),
             ),
           ]),

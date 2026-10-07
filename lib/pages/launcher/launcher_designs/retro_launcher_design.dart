@@ -164,6 +164,10 @@ class RetroLauncherFrame extends StatelessWidget {
                               '${resultCount.toString().padLeft(2, '0')} ITEMS',
                               style: RetroTokens.label(size: 7, color: RetroTokens.yellow),
                             ),
+                            DateTimeWidget(
+                              padding: const EdgeInsets.only(left: 10),
+                              style: RetroTokens.label(size: 8, color: RetroTokens.dim),
+                            ),
                           ],
                         ),
                       ),

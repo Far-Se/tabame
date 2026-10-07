@@ -88,6 +88,10 @@ class CapillaryLauncherFrame extends StatelessWidget {
                           ? "PLUGIN"
                           : '$resultCount ${resultCount == 1 ? 'result' : 'results'}',
                       style: capillary.font(size: 11, color: capillary.dim)),
+                  DateTimeWidget(
+                    padding: const EdgeInsets.only(left: 10),
+                    style: capillary.font(size: 10, color: capillary.dim),
+                  ),
                 ]),
               ),
             ]),

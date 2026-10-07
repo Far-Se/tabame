@@ -106,6 +106,10 @@ class OpticalGlassLauncherFrame extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(Globals.isLauncherPluginActive ? "PLUGIN" : '$resultCount results',
                           style: OpticalGlassTokens.font(size: 11, color: OpticalGlassTokens.dim)),
+                      DateTimeWidget(
+                        padding: const EdgeInsets.only(left: 10),
+                        style: OpticalGlassTokens.font(size: 10, color: OpticalGlassTokens.dim),
+                      ),
                     ]),
                   ),
                 ),

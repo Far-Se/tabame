@@ -229,6 +229,10 @@ class _SwitchboardFooter extends StatelessWidget {
             Globals.isLauncherPluginActive ? "PLUGIN" : (resultCount == 1 ? '1 route' : '$resultCount routes'),
             style: SwitchboardTokens.body(fontSize: Design.baseFontSize - 1, color: dim),
           ),
+          DateTimeWidget(
+            padding: const EdgeInsets.only(left: 10),
+            style: SwitchboardTokens.body(fontSize: Design.baseFontSize - 2, color: dim),
+          ),
         ],
       ),
     );
