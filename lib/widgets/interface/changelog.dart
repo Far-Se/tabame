@@ -42,12 +42,12 @@ class _ChangelogState extends State<Changelog> {
   @override
   Widget build(BuildContext context) {
     const Map<String, _ChangelogRelease> changelog = <String, _ChangelogRelease>{
-      '2.1.2': _ChangelogRelease(date: '1 Oct 2026', content: """
+      '2.1.2': _ChangelogRelease(date: '7 Oct 2026', content: """
 ## Fixes
 - Fixed Microsoft Store Initial Configuration.
 ## Plugins
-- Added
-- Expanded Symbols Plugin
+- Added GIF Search
+- Added PDF Tools
 """),
       '2.1.0': _ChangelogRelease(date: '1 Oct 2026', content: """
 ## UI

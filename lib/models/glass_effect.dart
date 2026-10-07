@@ -11,7 +11,7 @@ enum GlassEffect {
   final String label;
 
   static GlassEffect fromSetting(String? value) =>
-      GlassEffect.values.where((GlassEffect effect) => effect.name == value).firstOrNull ?? GlassEffect.none;
+      GlassEffect.values.where((GlassEffect effect) => effect.name == value).firstOrNull ?? GlassEffect.blur;
 }
 
 /// Appearance preferences are kept separately for each backdrop mode.

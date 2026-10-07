@@ -289,7 +289,6 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
     }
     AllowSetForegroundWindow(GetCurrentProcessId());
     _initializeWindowSize();
-    _clickThroughTimer = Timer.periodic(const Duration(milliseconds: 50), (Timer _) => _clickThroughTick());
     Debug.add("QuickMenu: init");
   }
 
@@ -370,6 +369,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       }
       if (!mounted) return;
       await windowManager.setAsFrameless();
+      WinUtils.fixDrawBug(delay: const Duration(milliseconds: 200));
     });
   }
 
@@ -421,6 +421,8 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
     _hiddenContentClearTimer = null;
     if (visible) {
       Globals.quickMenuPage = type;
+      _clickThroughTimer?.cancel();
+      _clickThroughTimer = Timer.periodic(const Duration(milliseconds: 50), (Timer _) => _clickThroughTick());
       // } else if (user.keepPopupsOpen && mounted && Navigator.of(context).canPop()) {
       //   // Only retain the widget tree when an open sheet or dialog needs its state.
       //   _hiddenContentClearTimer = Timer(_hiddenContentRetention, () {
