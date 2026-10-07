@@ -1307,7 +1307,7 @@ class HwndPath {
   static HwndInfo getWindowExePath(int hWnd) {
     final int processID = _getWindowProcessId(hWnd);
     String result = getProcessExePath(processID);
-    bool isAppx = false;
+    bool isAppx = result.toLowerCase().contains(r'\windowsapps\');
 
     if (_usesChildWindowProcessLookup(result)) {
       isAppx = true;
@@ -1366,7 +1366,11 @@ class HwndPath {
       path: exePath,
     );
 
-    _hwndPathCache[hWnd] = resolved;
+    // A newly created Store window may not expose its app process/package yet.
+    // Caching that failed lookup would prevent recovery for the HWND's lifetime.
+    if (resolved.path.isNotEmpty) {
+      _hwndPathCache[hWnd] = resolved;
+    }
 
     return HwndInfo(
       isAppx: resolved.isAppx,

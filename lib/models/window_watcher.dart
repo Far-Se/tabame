@@ -26,6 +26,7 @@ class WindowWatcher {
   static List<Window> list = <Window>[];
   static Map<int, ExtractedIcon> icons = <int, ExtractedIcon>{};
   static Map<int, int> iconsHandles = <int, int>{};
+  static final Map<int, String> _appxIconPaths = <int, String>{};
   static Map<String, String> taskBarRewrites = Boxes.taskBarRewrites;
   static int _activeWinHandle = 0;
   static String taskManagerStats = "";
@@ -152,26 +153,37 @@ class WindowWatcher {
     // – which leaves the counts equal – can't leave stale icon bytes behind.
     icons.removeWhere((int key, ExtractedIcon value) => !list.any((Window w) => w.hWnd == key));
     iconsHandles.removeWhere((int key, int value) => !list.any((Window w) => w.hWnd == key));
+    _appxIconPaths.removeWhere((int key, String value) => !list.any((Window w) => w.hWnd == key));
 
     for (Window win in list) {
       //?APPX
-      if (icons.containsKey(win.hWnd) && win.isAppx) continue;
       if (win.isAppx) {
+        // Only a successfully loaded manifest logo is final. A startup HICON
+        // (or a null icon cached before package detection) must remain retryable.
+        if (icons[win.hWnd] != null && _appxIconPaths[win.hWnd] == win.appxIcon) continue;
+        _appxIconPaths.remove(win.hWnd);
         if (win.appxIcon != "" && File(win.appxIcon).existsSync()) {
-          icons[win.hWnd] = File(win.appxIcon).readAsBytesSync();
-        } else {
-          // Manifest logo couldn't be resolved (common for ApplicationFrameHost-
-          // hosted apps) – fall back to the window's own HICON, the same icon
-          // Windows shows in the title bar and the real taskbar, instead of the
-          // blank placeholder. Left uncached on failure so a later cycle retries.
-          final ExtractedIcon winIcon = WinUtils.windowIcon(win.hWnd);
-          if (winIcon != null) icons[win.hWnd] = winIcon;
+          try {
+            final List<int> bytes = File(win.appxIcon).readAsBytesSync();
+            if (bytes.isNotEmpty) {
+              icons[win.hWnd] = bytes;
+              _appxIconPaths[win.hWnd] = win.appxIcon;
+              continue;
+            }
+          } on FileSystemException {
+            // Package files can change during an update. Retry next refresh.
+          }
         }
+        // Keep a window HICON as a temporary fallback while the manifest logo
+        // is unavailable. A later refresh must still attempt the manifest.
+        final ExtractedIcon winIcon = WinUtils.windowIcon(win.hWnd);
+        if (winIcon != null) icons[win.hWnd] = winIcon;
         continue;
       }
       //?EXE
+      _appxIconPaths.remove(win.hWnd);
       bool fetchingIcon = false;
-      if (!iconsHandles.containsKey(win.hWnd)) {
+      if (icons[win.hWnd] == null || !iconsHandles.containsKey(win.hWnd)) {
         fetchingIcon = true;
       } else if (iconsHandles[win.hWnd] != win.process.iconHandle) {
         fetchingIcon = true;
