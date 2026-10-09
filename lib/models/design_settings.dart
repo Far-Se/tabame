@@ -1444,9 +1444,9 @@ class DesignSettings {
       ),
       QuickMenuDesigns.cyber.name: QMDesignThemeSet(
         lightTheme: defaultThemeColors(
-          background: const Color(0xffF3E8FF), // Soft lavender blush
-          textColor: const Color(0xff3B0764), // Deep violet
-          accentColor: const Color(0xffD946EF), // Fuchsia neon
+          background: const Color(0xffE7F8FC), // Cool, icy blue
+          textColor: const Color(0xff12313A), // Deep blue-green
+          accentColor: const Color(0xff007F9E), // Electric cyan
           gradientAlpha: 65,
           uiFontFamily: 'Segoe UI',
           uiFontWeight: 500,
@@ -1456,9 +1456,9 @@ class DesignSettings {
           baseFontSize: 11,
         ),
         darkTheme: defaultThemeColors(
-          background: const Color(0xff050217), // Near-black with blue tint
-          textColor: const Color(0xffE2E8F0), // Slate-100
-          accentColor: const Color(0xff22D3EE), // Cyan neon
+          background: const Color(0xff07131D), // Deep blue-black
+          textColor: const Color(0xffDDECF2), // Cool white
+          accentColor: const Color(0xff22D3EE), // Neon cyan
           gradientAlpha: 90,
           uiFontFamily: 'Segoe UI',
           uiFontWeight: 500,

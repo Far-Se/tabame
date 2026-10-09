@@ -20,7 +20,9 @@
 ![Storage](https://img.shields.io/badge/storage-~60%20MB-650ECE?style=flat-square)
 
 </p>
-
+<a href="https://get.microsoft.com/installer/download/9pd3c6hzf5lj?referrer=appbadge" target="_self" >
+	<img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/>
+</a>
 <!--# PSA: You can grab the [nightly build](https://github.com/Far-Se/tabame/releases/tag/nightly)-->
 
 ## 🤔 What is this?
@@ -61,6 +63,16 @@ You will need to use the mouse, so either setup the QuickMenu hotkey with a "mov
 
 # 📥 How to install
 
+## Microsoft Store
+
+Easiest fastest and safest way with auto updates: Download it from [Microsoft Store](https://apps.microsoft.com/detail/9pd3c6hzf5lj):
+
+<a href="https://get.microsoft.com/installer/download/9pd3c6hzf5lj?referrer=appbadge" target="_self" >
+	<img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/>
+</a>
+
+## Manual Way:
+
 Download the ZIP Archive from [Releases](https://github.com/Far-Se/tabame/releases/) then extract it wherever you want then open `tabame.exe`
 
 I didn't make a `.msi` installer because it's another app that needs to pass that annoying Windows popup.
@@ -73,7 +85,7 @@ Settings, plugins, and other user data are stored in Tabame's application suppor
 
 ### 📤 How to uninstall:
 
-For an EXE install, use **Settings → Apps → Installed apps → Tabame → Uninstall**. For the ZIP, close Tabame and delete the extracted folder. Back up the application support folder first if you want to keep your settings and data.
+Either **Settings → Apps → Installed apps → Tabame → Uninstall**. Or Open Tabame -> Settings -> Config -> Scroll down and press Uninstall.
 
 ## 🐛 Found a bug?
 

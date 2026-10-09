@@ -42,6 +42,13 @@ class _ChangelogState extends State<Changelog> {
   @override
   Widget build(BuildContext context) {
     const Map<String, _ChangelogRelease> changelog = <String, _ChangelogRelease>{
+      '2.1.3': _ChangelogRelease(date: '9 Oct 2026', content: """
+## Fixes
+- Now when you drag a Quick Action from QuickSettings Button it auto scrolls.
+- Added DateTime to the rest of Launcher Designs.
+- Default Glass Backdrop is now `Blur`.
+- QuickMenu Design `Cyber` colors have been fixed.
+"""),
       '2.1.2': _ChangelogRelease(date: '7 Oct 2026', content: """
 ## Fixes
 - Fixed Microsoft Store Initial Configuration.

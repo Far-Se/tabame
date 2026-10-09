@@ -188,7 +188,10 @@ jobs:
           Commit: ${{ github.sha }}
           Build date: ${{ steps.meta.outputs.date_stamp }}
 
-          Best way: Download `${{ steps.meta.outputs.asset_name }}`, extract it, and run `tabame.exe`.
+          The Microsoft Store is the fastest, safest way to install Tabame, and it keeps future updates automatic:
+          <a href="https://get.microsoft.com/installer/download/9pd3c6hzf5lj?referrer=appbadge" target="_self"><img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/></a>
+
+          Prefer a portable install? Download `${{ steps.meta.outputs.asset_name }}`, extract it, and run `tabame.exe`.
 
 
           Settings, plugins, and other user data remain in `%LOCALAPPDATA%\Tabame`.

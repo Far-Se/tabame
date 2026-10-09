@@ -1267,6 +1267,7 @@ class _QuickActionsTabState extends State<_QuickActionsTab> {
   final GlobalKey _contentKey = GlobalKey();
   EdgeDraggingAutoScroller? _autoScroller;
   bool _dragging = false;
+  bool _pointerRouteAdded = false;
 
   @override
   void initState() {
@@ -1293,28 +1294,42 @@ class _QuickActionsTabState extends State<_QuickActionsTab> {
 
   @override
   void dispose() {
+    _removePointerRoute();
+    _autoScroller?.stopAutoScroll();
     _scrollController.dispose();
     super.dispose();
   }
 
   void _onReorderStart(int _) {
-    _dragging = true;
+    setState(() => _dragging = true);
     final BuildContext? ctx = _contentKey.currentContext;
     if (ctx == null) return;
     final ScrollableState scrollable = Scrollable.of(ctx);
     if (_autoScroller?.scrollable != scrollable) {
+      _autoScroller?.stopAutoScroll();
       _autoScroller = EdgeDraggingAutoScroller(scrollable, velocityScalar: 50);
+    }
+    if (!_pointerRouteAdded) {
+      GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointerEvent);
+      _pointerRouteAdded = true;
     }
   }
 
   void _onReorderEnd(int _) {
-    _dragging = false;
     _autoScroller?.stopAutoScroll();
+    _removePointerRoute();
+    if (mounted) setState(() => _dragging = false);
   }
 
-  void _onPointerMove(PointerMoveEvent event) {
-    if (!_dragging) return;
-    _autoScroller?.startAutoScrollIfNecessary(Rect.fromCenter(center: event.position, width: 1, height: 1));
+  void _onPointerEvent(PointerEvent event) {
+    if (!_dragging || event is! PointerMoveEvent) return;
+    _autoScroller?.startAutoScrollIfNecessary(Rect.fromCenter(center: event.position, width: 1, height: 40));
+  }
+
+  void _removePointerRoute() {
+    if (!_pointerRouteAdded) return;
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_onPointerEvent);
+    _pointerRouteAdded = false;
   }
 
   void _saveOnly() {
@@ -1379,75 +1394,73 @@ class _QuickActionsTabState extends State<_QuickActionsTab> {
   Widget build(BuildContext context) {
     return WindowsScrollView(
       controller: _scrollController,
-      child: Listener(
-        onPointerMove: _onPointerMove,
-        child: Padding(
-          key: _contentKey,
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              _buildSectionHeader(context, "ENABLED", Icons.check_circle_outline_rounded, active: true),
-              const SizedBox(height: 4),
-              ReorderableListView.builder(
-                shrinkWrap: true,
-                buildDefaultDragHandles: false,
-                physics: const NeverScrollableScrollPhysics(),
-                dragStartBehavior: DragStartBehavior.down,
-                itemCount: _active.length,
-                onReorderItem: _reorderActive,
-                onReorderStart: _onReorderStart,
-                onReorderEnd: _onReorderEnd,
-                itemBuilder: (BuildContext context, int index) {
-                  final String item = _active[index];
-                  return _buildRow(
-                    key: ValueKey<String>(item),
-                    context: context,
-                    index: index,
-                    item: item,
-                    active: true,
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              _buildSectionHeader(
-                context,
-                "DISABLED",
-                Icons.block_rounded,
-                active: false,
-                trailing: TextButton(
-                  onPressed: _sortDisabledByName,
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(0, 28),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  child: const Text("Reorder"),
+      draggable: _dragging,
+      child: Padding(
+        key: _contentKey,
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            _buildSectionHeader(context, "ENABLED", Icons.check_circle_outline_rounded, active: true),
+            const SizedBox(height: 4),
+            ReorderableListView.builder(
+              shrinkWrap: true,
+              buildDefaultDragHandles: false,
+              physics: const NeverScrollableScrollPhysics(),
+              dragStartBehavior: DragStartBehavior.down,
+              itemCount: _active.length,
+              onReorderItem: _reorderActive,
+              onReorderStart: _onReorderStart,
+              onReorderEnd: _onReorderEnd,
+              itemBuilder: (BuildContext context, int index) {
+                final String item = _active[index];
+                return _buildRow(
+                  key: ValueKey<String>(item),
+                  context: context,
+                  index: index,
+                  item: item,
+                  active: true,
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildSectionHeader(
+              context,
+              "DISABLED",
+              Icons.block_rounded,
+              active: false,
+              trailing: TextButton(
+                onPressed: _sortDisabledByName,
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(0, 28),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  visualDensity: VisualDensity.compact,
                 ),
+                child: const Text("Reorder"),
               ),
-              const SizedBox(height: 4),
-              ReorderableListView.builder(
-                shrinkWrap: true,
-                buildDefaultDragHandles: false,
-                physics: const NeverScrollableScrollPhysics(),
-                dragStartBehavior: DragStartBehavior.down,
-                itemCount: _disabled.length,
-                onReorderItem: _reorderDisabled,
-                onReorderStart: _onReorderStart,
-                onReorderEnd: _onReorderEnd,
-                itemBuilder: (BuildContext context, int index) {
-                  final String item = _disabled[index];
-                  return _buildRow(
-                    key: ValueKey<String>(item),
-                    context: context,
-                    index: index,
-                    item: item,
-                    active: false,
-                  );
-                },
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 4),
+            ReorderableListView.builder(
+              shrinkWrap: true,
+              buildDefaultDragHandles: false,
+              physics: const NeverScrollableScrollPhysics(),
+              dragStartBehavior: DragStartBehavior.down,
+              itemCount: _disabled.length,
+              onReorderItem: _reorderDisabled,
+              onReorderStart: _onReorderStart,
+              onReorderEnd: _onReorderEnd,
+              itemBuilder: (BuildContext context, int index) {
+                final String item = _disabled[index];
+                return _buildRow(
+                  key: ValueKey<String>(item),
+                  context: context,
+                  index: index,
+                  item: item,
+                  active: false,
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
