@@ -3,7 +3,7 @@ description: Tabame is a quick menu app.
 
 publish_to: "none"
 
-version: 2.1.3
+version: 2.1.4
 
 environment:
   sdk: ">=3.4.3 <4.0.0"
@@ -89,6 +89,7 @@ flutter:
     - resources/shaders/ukiyoe.frag
 
   assets:
+    - CHANGELOG.md
     - pubspec.yaml
     - resources/updater/apply-update.ps1
     # - resources/logo.png

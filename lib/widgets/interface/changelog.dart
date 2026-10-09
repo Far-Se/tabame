@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../models/classes/boxes.dart';
@@ -22,14 +23,36 @@ class Changelog extends StatefulWidget {
 }
 
 class _ChangelogState extends State<Changelog> {
-  @override
-  void reassemble() {
-    super.reassemble();
+  late Future<Map<String, _ChangelogRelease>> _changelog;
+
+  Future<Map<String, _ChangelogRelease>> _loadChangelog() async {
+    final String markdown = await rootBundle.loadString('CHANGELOG.md');
+    // Each release starts with "# v<version> - <date>"; the date is optional.
+    final List<RegExpMatch> headings = RegExp(
+      r'^# v(\d+(?:\.\d+)*)(?: - ([^\r\n]+))?\r?$',
+      multiLine: true,
+    ).allMatches(markdown).toList();
+    if (headings.isEmpty) {
+      throw const FormatException('No releases found in CHANGELOG.md');
+    }
+    return <String, _ChangelogRelease>{
+      for (int i = 0; i < headings.length; i++)
+        headings[i].group(1)!: _ChangelogRelease(
+          date: headings[i].group(2)?.trim(),
+          content: markdown
+              .substring(
+                headings[i].end,
+                i + 1 < headings.length ? headings[i + 1].start : markdown.length,
+              )
+              .trim(),
+        ),
+    };
   }
 
   @override
   void initState() {
     super.initState();
+    _changelog = _loadChangelog();
     if (user.lastChangelog != Globals.version) {
       user.lastChangelog = Globals.version;
       Boxes.updateSettings("lastChangelog", user.lastChangelog);
@@ -41,122 +64,15 @@ class _ChangelogState extends State<Changelog> {
 
   @override
   Widget build(BuildContext context) {
-    const Map<String, _ChangelogRelease> changelog = <String, _ChangelogRelease>{
-      '2.1.4': _ChangelogRelease(date: '9 Oct 2026', content: """
-## Fixes
-- Mouse Gestures now uses way less CPU.
-"""),
-      '2.1.3': _ChangelogRelease(date: '9 Oct 2026', content: """
-## Fixes
-- Now when you drag a Quick Action from QuickSettings Button it auto scrolls.
-- Added DateTime to the rest of Launcher Designs.
-- Default Glass Backdrop is now `Blur`.
-- QuickMenu Design `Cyber` colors have been fixed.
-"""),
-      '2.1.2': _ChangelogRelease(date: '7 Oct 2026', content: """
-## Fixes
-- Fixed Microsoft Store Initial Configuration.
-## Plugins
-- Added GIF Search
-- Added PDF Tools
-"""),
-      '2.1.0': _ChangelogRelease(date: '1 Oct 2026', content: """
-## UI
-- Added Blur/Acrylic Background
-- Fixed Issues with QuickMenu Focus
-- Added Multiple Launcher/QuickMenu Designs
-- Added QuickLinks to Launcher
-- Added Squircles and Bezel QuickMenu/Launcher corners
-## Plugins
-- Added Pomodoro Timer
-- Expanded Symbols Plugin
-"""),
-      '2.0': _ChangelogRelease(date: '29 Sept 2026', content: """
-## UI
-Refactor the whole UI, added more QuickMenu Designs.
-## Launcher
-Added Launcher, that can be trigger by typing in QuickMenu. Plus plugins and a lot of new designs.
-## QuickMenu
-Redone the whole QuickMenu
-## QuickActions
-Adapted the modals, added multiple Quick Actions Buttons.
-## Interface Settings
-New Settings panel. Re-aranged and modernized all pages.
-## Other features
-QuickClick, Fancyshot capture/record, Screen Tools, and all the other features.
+    return FutureBuilder<Map<String, _ChangelogRelease>>(
+      future: _changelog,
+      builder: (BuildContext context, AsyncSnapshot<Map<String, _ChangelogRelease>> snapshot) {
+        return _buildChangelog(context, snapshot);
+      },
+    );
+  }
 
-"""),
-      '1.3': _ChangelogRelease(date: '9 Nov 2022', content: """
-## Reminders change
- - Persistent Reminders: You will see a warning sign on QuickMenu when a persistent reminder triggers, its good for meds reminder.
- - Periodic Reminders: It will trigger each  X days. For example if you set each other 5 days since Monday, it will trigger on Saturday (+5 days) Thursday (+5 days) Tuesday, etc.
-## QuickActions Improvement
- All QuickActions Buttons are now listed in QuickActions Menu, easier rather than scrolling the TopBar on QuickMenu
-
-### Added new QuickActions:
- - CharMap: You can save custom characters or browse between currency, math characters or language accents.
- - Shut Down Scheduler: You can schedule a shutdown.
- - Memos: Save your memos.
-
-## Wizardly Hosts Editor
-Now you can edit Hosts file directly in Wizardly, you neeed to run Tabame with Admin Privilieges to save the file.
-
-### Other:
-Now timers save after restart
-"""),
-      '1.2': _ChangelogRelease(date: '25 Oct 2022', content: """
-## **Added Fancyshot**
-With Fancyshot you can make screenshots that are social media friendly. You can set custom background, round corners and padding, a company logo or a watermark and blur regions.
-You can create Profiles so you only need to set it once.
-
-## **Added QuickActions Menu**
-You can add quick actions in a separate menu so it's easier to access. You can run commands, trigger special actions, manage volume and audio devices.
-
-### **Added Predefined Sizes**
-You can set a specific size to a window. Create a list of sizes from Settings -> Views then right click a window in QuickMenu and select the new size.
-
-### **New Quick Actions Buttons:**
-
- - Fancyshot - Screen Capture with editor.
- - Bookmarks - See your saved Bookmarks.
- - Countdown - A countdown for quick access.
- - Timers - Create Quick Timers.
- - QuickActionsMenu - A dedicated menu with Quick Actions.
- - Close on Focus Loss - If you want to keep QuickMenu on screen, toggle this.
-
-Added Persistent Reminders, good for pill reminders
-
-
-"""),
-      '1.1': _ChangelogRelease(date: '29 Aug 2022', content: '''
-## **Added Views**
-With Views you can place and resize a window on the screen based on a grid. It is like PowerToys FancyZone, but you can control everything with your mouse.
-
-### **Added Hooks**
-You can hook windows togheter, so when you focus the main one, other will appear on foreground as well. You can access this by right clicking a window in QuickMenu.
-
----
-
-## **Added Audio Tab**
-All Audio Settings were spread over all tabs so I've moved them on their own tab.
-
-Now you can set which type is changed when you change default Audio device (Multimedia, Console, Communications)
-
-Now you can set default Volume for apps, for example if you open a game, and usually you keep your volume at 25, you can set that automatically.
-
-### Other Features:
-- You can load GitHub and GitLab repositories directly from Project Overview.
-- Change Hide Desktop Files: left click to toggle, right to hide, middle to show desktop files.
-- Way faster Project Overview and Scan Folder because now it uses Queue.
-
-### Fixes:
-- Fixed Wizardly ContextMenu. For some people it crashed because the Registry Path was missing.
-
-'''),
-      '1.0': _ChangelogRelease(date: '15 Aug 2022', content: '''
-### Public release with all main features implemented.
-'''),
-    };
+  Widget _buildChangelog(BuildContext context, AsyncSnapshot<Map<String, _ChangelogRelease>> snapshot) {
     return Padding(
       padding: const EdgeInsets.all(10.0),
       child: Column(
@@ -167,78 +83,83 @@ Now you can set default Volume for apps, for example if you open a game, and usu
             Text("Changelog", style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 15),
           ],
-          ...changelog.entries.map((MapEntry<String, _ChangelogRelease> entry) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 24),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.03),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
+          if (snapshot.hasError)
+            const Text('Unable to load the changelog.')
+          else if (!snapshot.hasData)
+            const Center(child: CircularProgressIndicator())
+          else
+            ...snapshot.data!.entries.map((MapEntry<String, _ChangelogRelease> entry) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 24),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            "v${entry.key}",
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                          ),
                         ),
-                        child: Text(
-                          "v${entry.key}",
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
-                        ),
-                      ),
-                      if (entry.value.date != null) ...<Widget>[
-                        const SizedBox(width: 8),
-                        Text(
-                          entry.value.date!,
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
-                              ),
+                        if (entry.value.date != null) ...<Widget>[
+                          const SizedBox(width: 8),
+                          Text(
+                            entry.value.date!,
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                                ),
+                          ),
+                        ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            height: 1,
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          ),
                         ),
                       ],
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Container(
-                          height: 1,
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  MarkdownBody(
-                    shrinkWrap: true,
-                    data: entry.value.content,
-                    styleSheet: MarkdownStyleSheet(
-                      h2: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                      h3: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.secondary,
-                          ),
-                      listBullet: TextStyle(color: Theme.of(context).colorScheme.primary),
-                      p: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
-                      strong: const TextStyle(fontWeight: FontWeight.bold),
-                      blockSpacing: 12,
-                      listIndent: 20,
                     ),
-                  ),
-                ],
-              ),
-            );
-          }),
+                    const SizedBox(height: 12),
+                    MarkdownBody(
+                      shrinkWrap: true,
+                      data: entry.value.content,
+                      styleSheet: MarkdownStyleSheet(
+                        h2: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                        h3: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
+                        listBullet: TextStyle(color: Theme.of(context).colorScheme.primary),
+                        p: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
+                        strong: const TextStyle(fontWeight: FontWeight.bold),
+                        blockSpacing: 12,
+                        listIndent: 20,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
         ],
       ),
     );
