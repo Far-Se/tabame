@@ -10,6 +10,11 @@ import '../../models/classes/boxes.dart';
 import '../../models/classes/hotkeys.dart';
 import '../../models/classes/save_settings.dart';
 import '../../models/globals.dart';
+import '../../models/design_settings.dart';
+import '../../models/theme.dart';
+import '../../pages/launcher.dart';
+import '../../pages/quickmenu_designs/designs.dart';
+import '../widgets/design_preview.dart';
 import '../../platform/app_paths.dart';
 import '../../platform/windows/startup_manager.dart';
 import '../../models/settings.dart';
@@ -52,6 +57,10 @@ class FirstRunState extends State<FirstRun> {
   /// hotkey list changes so deletions/reorders from [HotKeySettings] can't
   /// leave us pointing at the wrong entry.
   final Map<_Feature, int> _featureIndex = <_Feature, int>{};
+
+  final QuickMenuPage _previousQuickMenuPage = Globals.quickMenuPage;
+  bool _changingDesign = false;
+  static const int _lastStep = 5;
 
   int currentStep = AppPaths.isPackagedInstall ? 1 : 0;
 
@@ -114,6 +123,7 @@ class FirstRunState extends State<FirstRun> {
 
   @override
   void dispose() {
+    Globals.quickMenuPage = _previousQuickMenuPage;
     pageController.dispose();
     super.dispose();
   }
@@ -382,11 +392,20 @@ class FirstRunState extends State<FirstRun> {
                     controller: pageController,
                     allowImplicitScrolling: false,
                     physics: const NeverScrollableScrollPhysics(),
-                    onPageChanged: (int index) => setState(() => currentStep = index + _firstVisibleStep),
+                    onPageChanged: (int index) => setState(() {
+                      currentStep = index + _firstVisibleStep;
+                      Globals.quickMenuPage = switch (currentStep) {
+                        3 => QuickMenuPage.quickMenu,
+                        4 => QuickMenuPage.launcher,
+                        _ => _previousQuickMenuPage,
+                      };
+                    }),
                     children: <Widget>[
                       if (!AppPaths.isPackagedInstall) _buildInstallLocationPage(theme, accent),
                       _buildHotkeysPage(theme, accent),
                       _buildSetupPage(theme, accent),
+                      _buildQuickMenuDesignPage(theme, accent),
+                      _buildLauncherDesignPage(theme, accent),
                       _buildSettingsOutroPage(theme, accent),
                     ],
                   ),
@@ -412,7 +431,9 @@ class FirstRunState extends State<FirstRun> {
       if (!AppPaths.isPackagedInstall) const _StepMeta(0, "Location"),
       const _StepMeta(1, "Hotkeys"),
       const _StepMeta(2, "Preferences"),
-      const _StepMeta(3, "Settings"),
+      const _StepMeta(3, "QuickMenu"),
+      const _StepMeta(4, "Launcher"),
+      const _StepMeta(_lastStep, "Settings"),
     ];
 
     return Container(
@@ -468,6 +489,10 @@ class FirstRunState extends State<FirstRun> {
       case 2:
         return "A few helpful defaults";
       case 3:
+        return "Choose your QuickMenu design";
+      case 4:
+        return "Choose your Launcher design";
+      case _lastStep:
         return "One more thing";
       default:
         return "Welcome to Tabame";
@@ -483,6 +508,10 @@ class FirstRunState extends State<FirstRun> {
       case 2:
         return "These settings cover startup behavior, admin access, updates, privacy-sensitive tracking, and extra tools.";
       case 3:
+        return "Pick a design for your everyday controls and open windows.";
+      case 4:
+        return "Pick a design for searching apps, files, and commands.";
+      case _lastStep:
         return "Settings is where the real power lives – every feature has its own dedicated page.";
       default:
         return "";
@@ -1107,7 +1136,7 @@ class FirstRunState extends State<FirstRun> {
                 Text("Almost there!", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 Text(
-                  "One last page to go – it covers Settings, where you can fully customize every feature.",
+                  "Next, choose your QuickMenu and Launcher designs, then explore Settings to customize every feature.",
                   style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4),
                 ),
               ],
@@ -1118,7 +1147,170 @@ class FirstRunState extends State<FirstRun> {
     );
   }
 
-  // ─────────────────────── PAGE 2: SETTINGS OUTRO ─────────────────────────
+  // ─────────────────────── DESIGN SELECTION ─────────────────────────
+
+  Widget _buildQuickMenuDesignPage(ThemeData theme, Color accent) {
+    return _buildDesignPage(
+      theme,
+      title: "QuickMenu design",
+      selectedName: user.currentQuickMenuDesign.displayName,
+      onCycle: (int direction) => _selectDesign(() => Boxes.switchQuickMenuDesign(
+            QuickMenuDesigns.values[(user.currentQuickMenuDesign.index + direction) % QuickMenuDesigns.values.length],
+          )),
+      choices: <Widget>[
+        for (final QuickMenuDesigns design in QuickMenuDesigns.values)
+          _designChoice(
+            label: design.displayName,
+            selected: user.currentQuickMenuDesign == design,
+            onSelected: () => _selectDesign(() => Boxes.switchQuickMenuDesign(design)),
+          ),
+      ],
+      preview: currentStep == 3
+          ? LoadQuickMenuDesign(key: ValueKey<QuickMenuDesigns>(user.currentQuickMenuDesign))
+          : const SizedBox.shrink(),
+      previewWidth: 500,
+    );
+  }
+
+  Widget _buildLauncherDesignPage(ThemeData theme, Color accent) {
+    return _buildDesignPage(
+      theme,
+      title: "Launcher design",
+      selectedName: user.launcherDesign.displayName,
+      onCycle: (int direction) => _selectDesign(() => Boxes.switchLauncherDesign(
+            LauncherDesign.values[(user.launcherDesign.index + direction) % LauncherDesign.values.length],
+          )),
+      choices: <Widget>[
+        for (final LauncherDesign design in LauncherDesign.values)
+          _designChoice(
+            label: design.displayName,
+            selected: user.launcherDesign == design,
+            onSelected: () => _selectDesign(() => Boxes.switchLauncherDesign(design)),
+          ),
+      ],
+      preview:
+          currentStep == 4 ? Launcher(key: ValueKey<LauncherDesign>(user.launcherDesign)) : const SizedBox.shrink(),
+      previewWidth: 680,
+    );
+  }
+
+  Widget _designChoice({required String label, required bool selected, required VoidCallback onSelected}) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8, bottom: 12),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: _changingDesign
+            ? null
+            : (bool value) {
+                if (value) onSelected();
+              },
+      ),
+    );
+  }
+
+  Future<void> _selectDesign(Future<void> Function() save) async {
+    if (_changingDesign) return;
+    setState(() => _changingDesign = true);
+    try {
+      await save();
+    } catch (error, stackTrace) {
+      FlutterError.reportError(FlutterErrorDetails(exception: error, stack: stackTrace));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Could not save this design. Please try again.")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _changingDesign = false);
+    }
+  }
+
+  Widget _buildDesignPage(
+    ThemeData theme, {
+    required String title,
+    required String selectedName,
+    required ValueChanged<int> onCycle,
+    required List<Widget> choices,
+    required Widget preview,
+    required double previewWidth,
+  }) {
+    return WindowsScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(title, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          Text(
+            "You can change this design any time using the Design QuickAction button in QuickMenu.",
+            style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, height: 1.4),
+          ),
+          const SizedBox(height: 18),
+          WindowsScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: choices),
+          ),
+          const SizedBox(height: 18),
+          Text("$selectedName · Preview", style: theme.textTheme.titleMedium),
+          const SizedBox(height: 6),
+          Text("Preview only. Controls are disabled.",
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor)),
+          const SizedBox(height: 14),
+          _card(
+            theme,
+            child: Row(
+              children: <Widget>[
+                _designCarouselArrow(previous: true, onPressed: () => onCycle(-1)),
+                const SizedBox(width: 12),
+                Expanded(child: LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints constraints) {
+                    final double width = constraints.maxWidth.clamp(0.0, previewWidth).toDouble();
+                    return Align(
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        width: width,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.topCenter,
+                          child: SizedBox(
+                            width: previewWidth,
+                            child: MediaQuery(
+                              data: MediaQuery.of(context).copyWith(size: Size(previewWidth, 700)),
+                              child: Theme(
+                                data: AppTheme.getThemeData(context,
+                                    isDark: user.themeTypeMode == ThemeType.dark, colors: user.themeColors),
+                                child: DesignPreview(child: preview),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                )),
+                const SizedBox(width: 12),
+                _designCarouselArrow(previous: false, onPressed: () => onCycle(1)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _designCarouselArrow({required bool previous, required VoidCallback onPressed}) {
+    return IconButton.filledTonal(
+      tooltip: previous ? "Previous design" : "Next design",
+      onPressed: _changingDesign ? null : onPressed,
+      iconSize: 40,
+      padding: const EdgeInsets.all(8),
+      constraints: const BoxConstraints.tightFor(width: 56, height: 72),
+      icon: Icon(previous ? Icons.chevron_left_rounded : Icons.chevron_right_rounded),
+    );
+  }
+
+  // ─────────────────────── SETTINGS OUTRO ─────────────────────────
 
   Widget _buildSettingsOutroPage(ThemeData theme, Color accent) {
     return WindowsScrollView(
@@ -1230,7 +1422,7 @@ class FirstRunState extends State<FirstRun> {
     final bool isInstallStep = currentStep == 0;
     final bool isFirstStep = currentStep == _firstVisibleStep;
     final bool isHotkeysStep = currentStep == 1;
-    final bool isLastStep = currentStep == 3;
+    final bool isLastStep = currentStep == _lastStep;
     final bool runningFromTempFolder = _isRunningFromTempFolder;
     final Hotkeys quickMenu = _hotkeyFor(_Feature.quickMenu);
     final bool quickMenuSet = quickMenu.key.isNotEmpty;
@@ -1292,7 +1484,7 @@ class FirstRunState extends State<FirstRun> {
                       : const SizedBox.shrink(),
             ),
             FilledButton.icon(
-              onPressed: onContinue,
+              onPressed: _changingDesign ? null : onContinue,
               style: FilledButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: Theme.of(context).colorScheme.surface,
@@ -1421,7 +1613,8 @@ class FirstRunState extends State<FirstRun> {
   // ─────────────────────── NAVIGATION ─────────────────────────
 
   Future<void> _goToStep(int step) async {
-    if (step < _firstVisibleStep || step > 3) return;
+    if (_changingDesign) return;
+    if (step < _firstVisibleStep || step > _lastStep) return;
     if (!AppPaths.isPackagedInstall && _isRunningFromTempFolder && step > 0) return;
     if (step > 1 && _hotkeyFor(_Feature.quickMenu).key.isEmpty) return;
     if (step == currentStep) return;

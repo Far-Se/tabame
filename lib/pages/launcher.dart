@@ -15,6 +15,7 @@ import 'package:markdown_widget/markdown_widget.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart' hide Row;
 import '../models/design_settings.dart';
+import '../widgets/widgets/design_preview.dart';
 import '../models/glass_effect.dart';
 import '../platform/windows/tabamewin32_api.dart' show BrowserTab, BrowserTabs;
 import '../platform/audio_system_service.dart';
@@ -142,6 +143,8 @@ class LauncherState extends State<Launcher>
   static const double _previewResizeHandleWidth = 8;
   static const String _filePreviewVisiblePreferenceKey = 'launcherFilePreviewVisible';
   static const String _previewWidthPercentPreferenceKey = 'launcherPreviewWidthPercent';
+
+  bool _previewOnly = false;
 
   final LauncherSearchToken _searchToken = LauncherSearchToken();
 
@@ -481,6 +484,13 @@ class LauncherState extends State<Launcher>
   @override
   void initState() {
     super.initState();
+    _previewOnly = DesignPreview.isActive(context);
+    if (_previewOnly) {
+      _design = user.launcherDesign;
+      _results = _launcherShortcuts.take(5).toList();
+      _isFilePreviewVisible = false;
+      return;
+    }
     QuicklinkStore.changes.addListener(_reloadQuicklinks);
     _pluginWindowTransitionController = AnimationController(vsync: this);
     _scrollController.addListener(_updateResultsSectionHeader);
@@ -573,6 +583,19 @@ class LauncherState extends State<Launcher>
 
   @override
   void dispose() {
+    if (_previewOnly) {
+      _searchToken.dispose();
+      _pluginDetailScroll.dispose();
+      _controller.dispose();
+      _searchFocusNode.dispose();
+      _resultsFocusNode.dispose();
+      _scrollController.dispose();
+      _activeIndexNotifier.dispose();
+      _isRepeatingKey.dispose();
+      _windowPreviewCacheVersion.dispose();
+      super.dispose();
+      return;
+    }
     QuicklinkStore.changes.removeListener(_reloadQuicklinks);
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     WindowManager.instance.removeListener(this);
@@ -889,9 +912,9 @@ class LauncherState extends State<Launcher>
       trailingBadge: _buildTrailingBadge(accent, onSurface),
       isSearching: _isSearching,
     );
-    final ({int height, int width}) size = Win32.getSize();
+    final double availableHeight = _previewOnly ? MediaQuery.sizeOf(context).height : Win32.getSize().height.toDouble();
     final double resultsHeight =
-        math.max(0, math.min(_resultsMaxHeight - _resultsHeightInset, size.height.toDouble() - _resultsHeightInset));
+        math.max(0, math.min(_resultsMaxHeight - _resultsHeightInset, availableHeight - _resultsHeightInset));
     final Widget resultsContent = Focus(
       focusNode: _resultsFocusNode,
       skipTraversal: true,

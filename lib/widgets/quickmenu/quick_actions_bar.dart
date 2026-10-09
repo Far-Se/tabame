@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../widgets/design_preview.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/globals.dart';
@@ -56,6 +57,7 @@ class _QuickActionsBarState extends State<QuickActionsBar> with QuickMenuTrigger
   }
 
   void _syncLogoDragOverlay() {
+    if (DesignPreview.isActive(context)) return;
     if (_logoDragOverlayEntry != null) {
       _logoDragOverlayEntry!.markNeedsBuild();
       return;

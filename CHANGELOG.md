@@ -1,3 +1,9 @@
+# v2.1.4 - 10 Oct 2026
+
+## Fixes
+
+- Added Design Preview in First Configuration Menu.
+
 # v2.1.4 - 9 Oct 2026
 
 ## Fixes

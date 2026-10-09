@@ -1,4 +1,5 @@
 import '../../models/design_settings.dart';
+import '../../widgets/widgets/design_preview.dart';
 import 'design_arcade.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:window_manager/window_manager.dart';
@@ -56,6 +57,7 @@ class LoadQuickMenuDesign extends StatefulWidget {
 
 class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMenuTriggers {
   int _refreshCounter = 0;
+  bool _previewOnly = false;
 
   @override
   void onQuickActionExecute(String actionName) {
@@ -77,6 +79,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
   }
 
   Future<void> _handleWindowSize() async {
+    if (_previewOnly) return;
     final QuickMenuDesigns design = QuickMenuDesigns.values[user.quickMenuDesign];
     if (design == QuickMenuDesigns.matrix) {
       final Size size = await windowManager.getSize();
@@ -100,9 +103,12 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
 
   @override
   void initState() {
-    QuickMenuFunctions.addListener(this);
-    _handleWindowSize();
     super.initState();
+    _previewOnly = DesignPreview.isActive(context);
+    if (!_previewOnly) {
+      QuickMenuFunctions.addListener(this);
+      _handleWindowSize();
+    }
   }
 
   @override

@@ -28,6 +28,7 @@ import '../../models/win32/window.dart';
 import '../../models/window_watcher.dart';
 import '../itzy/quickmenu/button_music_player.dart';
 import '../widgets/custom_tooltip.dart';
+import '../widgets/design_preview.dart';
 import '../widgets/extracted_icon.dart';
 import '../widgets/zoomed_button.dart';
 import 'context_menu.dart';
@@ -96,6 +97,7 @@ class TaskBar extends StatefulWidget {
 
 class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener {
   List<Window> _windows = <Window>[];
+  bool _previewOnly = false;
   bool _fetching = false;
   bool _keepFetching = true;
   Timer? _mainTimer;
@@ -113,6 +115,12 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   @override
   void initState() {
     super.initState();
+    _previewOnly = DesignPreview.isActive(context);
+    if (_previewOnly) {
+      _scrollController.addListener(_updateBottomFade);
+      _fetchWindows();
+      return;
+    }
     Debug.add("QuickMenu: Taskbar-Init");
 
     WinUtils.fixDrawBug();
@@ -375,7 +383,7 @@ class TaskBarState extends State<TaskBar> with QuickMenuTriggers, TabameListener
   int skipFewBuilds = 5;
   @override
   Widget build(BuildContext context) {
-    if (skipFewBuilds > 0) {
+    if (_previewOnly || skipFewBuilds > 0) {
       skipFewBuilds--;
     } else {
       skipFewBuilds = 5;
