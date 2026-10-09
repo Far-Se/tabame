@@ -432,6 +432,9 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
       //   });
       // }
     } else {
+      _clickThroughTimer?.cancel();
+      _clickThroughTimer = null;
+      _clickThroughTick();
       Globals.quickMenuPage = QuickMenuPage.quickMenu;
       // Globals.quickMenuPage = QuickMenuPage.empty;
     }

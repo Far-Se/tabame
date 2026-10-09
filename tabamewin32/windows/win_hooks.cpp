@@ -5,7 +5,6 @@
 #include <cstdlib>
 #include <string>
 #include <type_traits>
-#include <vector>
 
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
@@ -23,7 +22,6 @@ extern std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel;
 // ---------------------------------------------------------------------------
 HWINEVENTHOOK gEventHook = nullptr;
 HHOOK gMouseHook = nullptr;
-HHOOK gMouseGestureHook = nullptr;
 int mouseWatchButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 int mouseControlButtons[7] = {0, 0, 0, 0, 0, 0, 0};
 
@@ -31,33 +29,33 @@ bool mouseGestureRightEnabled = false;
 bool mouseGestureMiddleEnabled = false;
 std::string mouseGestureButton;
 DWORD mouseGestureStartTime = 0;
-std::vector<POINT> mouseGesturePoints;
+POINT mouseGestureAnchor = {};
+std::string mouseGesturePattern;
+bool mouseGestureInvalid = false;
 
 // ---------------------------------------------------------------------------
 // Forward declarations
 // ---------------------------------------------------------------------------
 void CALLBACK mHandleWinEvent(HWINEVENTHOOK, DWORD, HWND, LONG, LONG, DWORD, DWORD);
 LRESULT CALLBACK mHandleMouseHook(int, WPARAM, LPARAM);
-LRESULT CALLBACK mHandleMouseGestureHook(int, WPARAM, LPARAM);
+void UpdateMouseHook();
+
+bool MouseGesturesEnabled()
+{
+    return mouseGestureRightEnabled || mouseGestureMiddleEnabled;
+}
 
 void ConfigureMouseGestureHook(bool rightEnabled, bool middleEnabled)
 {
+    if (mouseGestureRightEnabled != rightEnabled || mouseGestureMiddleEnabled != middleEnabled)
+    {
+        mouseGestureButton.clear();
+        mouseGesturePattern.clear();
+        mouseGestureInvalid = false;
+    }
     mouseGestureRightEnabled = rightEnabled;
     mouseGestureMiddleEnabled = middleEnabled;
-
-    if (!rightEnabled && !middleEnabled)
-    {
-        if (gMouseGestureHook)
-            UnhookWindowsHookEx(gMouseGestureHook);
-        gMouseGestureHook = nullptr;
-        mouseGestureButton.clear();
-        mouseGesturePoints.clear();
-        return;
-    }
-
-    if (!gMouseGestureHook)
-        gMouseGestureHook = SetWindowsHookEx(WH_MOUSE_LL, mHandleMouseGestureHook,
-                                             GetModuleHandle(nullptr), 0);
+    UpdateMouseHook();
 }
 
 void ShutdownMouseGestureHook()
@@ -65,43 +63,38 @@ void ShutdownMouseGestureHook()
     ConfigureMouseGestureHook(false, false);
 }
 
-std::string ClassifyMouseGesture()
+void AppendMouseGesturePoint(const POINT &point)
 {
     constexpr int kStrokeThresholdPx = 50;
-    if (mouseGesturePoints.size() < 2)
-        return "";
+    if (mouseGestureInvalid)
+        return;
 
-    std::string tokens;
-    char currentDirection = '\0';
-    int accumulatedX = 0;
-    int accumulatedY = 0;
-    for (size_t i = 1; i < mouseGesturePoints.size(); ++i)
+    // Equivalent to summing successive deltas until the stroke threshold,
+    // without retaining an unbounded vector at the device's polling rate.
+    const int accumulatedX = point.x - mouseGestureAnchor.x;
+    const int accumulatedY = point.y - mouseGestureAnchor.y;
+    if (std::abs(accumulatedX) < kStrokeThresholdPx && std::abs(accumulatedY) < kStrokeThresholdPx)
+        return;
+
+    const char direction = std::abs(accumulatedX) >= std::abs(accumulatedY)
+                               ? (accumulatedX > 0 ? 'R' : 'L')
+                               : (accumulatedY > 0 ? 'D' : 'U');
+    if (mouseGesturePattern.empty() || direction != mouseGesturePattern.back())
     {
-        accumulatedX += mouseGesturePoints[i].x - mouseGesturePoints[i - 1].x;
-        accumulatedY += mouseGesturePoints[i].y - mouseGesturePoints[i - 1].y;
-        if (std::abs(accumulatedX) < kStrokeThresholdPx && std::abs(accumulatedY) < kStrokeThresholdPx)
-            continue;
-
-        const char direction = std::abs(accumulatedX) >= std::abs(accumulatedY)
-                                   ? (accumulatedX > 0 ? 'R' : 'L')
-                                   : (accumulatedY > 0 ? 'D' : 'U');
-        if (direction != currentDirection)
-        {
-            tokens += direction;
-            currentDirection = direction;
-        }
-        accumulatedX = 0;
-        accumulatedY = 0;
+        if (mouseGesturePattern.size() == 4)
+            mouseGestureInvalid = true;
+        else
+            mouseGesturePattern += direction;
     }
-    return tokens.length() <= 4 ? tokens : "";
+    mouseGestureAnchor = point;
 }
 
-LRESULT CALLBACK mHandleMouseGestureHook(int nCode, WPARAM wParam, LPARAM lParam)
+void TrackMouseGesture(WPARAM wParam, const MSLLHOOKSTRUCT &info)
 {
-    if (nCode != HC_ACTION)
-        return CallNextHookEx(gMouseGestureHook, nCode, wParam, lParam);
+    // Ordinary movement does no gesture work, even when bindings are enabled.
+    if (!MouseGesturesEnabled() || (wParam == WM_MOUSEMOVE && mouseGestureButton.empty()))
+        return;
 
-    const auto *info = reinterpret_cast<MSLLHOOKSTRUCT *>(lParam);
     const bool rightDown = wParam == WM_RBUTTONDOWN;
     const bool middleDown = wParam == WM_MBUTTONDOWN;
     const bool rightUp = wParam == WM_RBUTTONUP;
@@ -111,25 +104,29 @@ LRESULT CALLBACK mHandleMouseGestureHook(int nCode, WPARAM wParam, LPARAM lParam
         ((rightDown && mouseGestureRightEnabled) || (middleDown && mouseGestureMiddleEnabled)))
     {
         mouseGestureButton = rightDown ? "right" : "middle";
-        mouseGestureStartTime = GetTickCount();
-        mouseGesturePoints.assign(1, info->pt);
+        mouseGestureStartTime = info.time;
+        mouseGestureAnchor = info.pt;
+        mouseGesturePattern.clear();
+        mouseGestureInvalid = false;
     }
     else if (!mouseGestureButton.empty() && wParam == WM_MOUSEMOVE)
     {
-        mouseGesturePoints.push_back(info->pt);
+        if (info.time - mouseGestureStartTime > 15000)
+            mouseGestureInvalid = true;
+        AppendMouseGesturePoint(info.pt);
     }
     else if (!mouseGestureButton.empty() &&
              ((mouseGestureButton == "right" && rightUp) ||
               (mouseGestureButton == "middle" && middleUp)))
     {
-        mouseGesturePoints.push_back(info->pt);
+        AppendMouseGesturePoint(info.pt);
         const std::string button = mouseGestureButton;
-        const DWORD durationMs = GetTickCount() - mouseGestureStartTime;
-        const std::string pattern = durationMs <= 15000
-                                        ? ClassifyMouseGesture()
+        const DWORD durationMs = info.time - mouseGestureStartTime;
+        const std::string pattern = durationMs <= 15000 && !mouseGestureInvalid
+                                        ? mouseGesturePattern
                                         : "";
         mouseGestureButton.clear();
-        mouseGesturePoints.clear();
+        mouseGesturePattern.clear();
 
         if (!pattern.empty())
         {
@@ -140,8 +137,6 @@ LRESULT CALLBACK mHandleMouseGestureHook(int nCode, WPARAM wParam, LPARAM lParam
             channel->InvokeMethod("onMouseGesture", std::make_unique<flutter::EncodableValue>(args));
         }
     }
-
-    return CallNextHookEx(gMouseGestureHook, nCode, wParam, lParam);
 }
 
 // ---------------------------------------------------------------------------

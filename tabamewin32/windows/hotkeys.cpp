@@ -57,6 +57,8 @@ public:
 LRESULT CALLBACK HandleKeyboardHook(int, WPARAM, LPARAM);
 LRESULT CALLBACK HandleMouseHook(int, WPARAM, LPARAM);
 VOID CALLBACK EventHook(HWINEVENTHOOK, DWORD, HWND, LONG, LONG, DWORD, DWORD);
+bool MouseGesturesEnabled();
+void TrackMouseGesture(WPARAM, const MSLLHOOKSTRUCT &);
 
 // ---------------------------------------------------------------------------
 // Global state
@@ -111,6 +113,22 @@ static DWORD doubleAltActiveVk = 0;
 // Hook handles for this subsystem
 HHOOK g_KeyboardHook = nullptr;
 HHOOK g_MouseHook = nullptr;
+bool mouseHotkeyHookRequested = false;
+
+// Gestures, hotkeys and the click visualizer share one low-level hook. Every
+// installed WH_MOUSE_LL hook wakes its owning thread on every mouse report,
+// including ordinary movement while the Flutter window is hidden.
+void UpdateMouseHook() {
+  const bool needed = mouseHotkeyHookRequested || isKeystrokeVizEnabled ||
+                      MouseGesturesEnabled();
+  if (needed && !g_MouseHook)
+    g_MouseHook = SetWindowsHookEx(WH_MOUSE_LL, HandleMouseHook,
+                                  GetModuleHandle(nullptr), 0);
+  else if (!needed && g_MouseHook) {
+    UnhookWindowsHookEx(g_MouseHook);
+    g_MouseHook = nullptr;
+  }
+}
 // Win event hooks – one entry per registered event range (see InstallEventHooks).
 std::vector<HWINEVENTHOOK> g_EventHooks;
 
@@ -1166,18 +1184,20 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam) {
     return CallNextHookEx(nullptr, nCode, wParam, lParam);
 
   MSLLHOOKSTRUCT *info = reinterpret_cast<MSLLHOOKSTRUCT *>(lParam);
+  TrackMouseGesture(wParam, *info);
+  if (!mouseHotkeyHookRequested && !isKeystrokeVizEnabled)
+    return CallNextHookEx(nullptr, nCode, wParam, lParam);
   if (wParam == WM_MOUSEMOVE) RecordSnippetMouse(wParam, *info);
 
   // ---- Mouse movement ----
   if (wParam == WM_MOUSEMOVE) {
-    if (hotkeyPressed) {
-      if (GetActiveHotkey() == nullptr) {
-        ResetActiveHotkeyState();
-        return CallNextHookEx(nullptr, nCode, wParam, lParam);
-      }
-
-      POINT lpPoint;
-      GetCursorPos(&lpPoint);
+    const Hotkey *activeHotkey = GetActiveHotkey();
+    if (hotkeyPressed && activeHotkey == nullptr) {
+      ResetActiveHotkeyState();
+      return CallNextHookEx(nullptr, nCode, wParam, lParam);
+    }
+    if (hotkeyPressed && activeHotkey->listenToMovement) {
+      const POINT &lpPoint = info->pt;
       if (!hasHotkeyMouseBaseline) {
         htMousePosX = lpPoint.x;
         htMousePosY = lpPoint.y;
@@ -1188,11 +1208,7 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam) {
       int diffY = lpPoint.y - htMousePosY;
 
       if (abs(diffX) > 10 || abs(diffY) > 10) {
-        const Hotkey *activeHotkey = GetActiveHotkey();
-        if (activeHotkey != nullptr)
-          HotKeyEvent(activeHotkey->name, "moved");
-        else
-          ResetActiveHotkeyState();
+        HotKeyEvent(activeHotkey->name, "moved");
         htMousePosX = 0;
         htMousePosY = 0;
         hasHotkeyMouseBaseline = false;
@@ -1214,6 +1230,8 @@ LRESULT CALLBACK HandleMouseHook(int nCode, WPARAM wParam, LPARAM lParam) {
         TrktivityEvent("Movement", "mouse");
       }
     }
+    // Movement cannot trigger any of the button-only handlers below.
+    return CallNextHookEx(nullptr, nCode, wParam, lParam);
   }
 
   // ---- Button classification ----

@@ -42,6 +42,10 @@ class _ChangelogState extends State<Changelog> {
   @override
   Widget build(BuildContext context) {
     const Map<String, _ChangelogRelease> changelog = <String, _ChangelogRelease>{
+      '2.1.4': _ChangelogRelease(date: '9 Oct 2026', content: """
+## Fixes
+- Mouse Gestures now uses way less CPU.
+"""),
       '2.1.3': _ChangelogRelease(date: '9 Oct 2026', content: """
 ## Fixes
 - Now when you drag a Quick Action from QuickSettings Button it auto scrolls.

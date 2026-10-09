@@ -15,16 +15,15 @@ import '../models/win32/mixed.dart';
 import '../models/win32/win_utils.dart';
 import '../pages/color_picker/win32_helper.dart';
 
-/// Hot corners + right/middle-button mouse gestures, driven by a lightweight cursor
-/// poller in the QuickMenu process (no extra native hooks – the generic
-/// `WinHooks` channel handler would clobber the main tabamewin32 listener).
+/// Hot corners use a lightweight cursor poller in the QuickMenu process.
+/// Right/middle-button gestures share the native hotkey mouse hook.
 ///
 /// Hot corners: the cursor dwelling in a corner of the primary display for
 /// [MouseControlConfig.cornerDwellMs] fires that corner's action, re-armed only
 /// after the cursor leaves the corner.
 ///
-/// Gestures: while the right or middle mouse button is held, the pointer path is sampled
-/// at 20 ms and tokenized into cardinal strokes (L/R/U/D, e.g. "RD" = right
+/// Gestures: while the right or middle mouse button is held, native movement
+/// events are tokenized into cardinal strokes (L/R/U/D, e.g. "RD" = right
 /// then down). On release the matching binding fires. The button is only
 /// observed – never swallowed – so ordinary right-clicks are untouched; if a
 /// context menu popped on release, it is dismissed with an Escape keypress.

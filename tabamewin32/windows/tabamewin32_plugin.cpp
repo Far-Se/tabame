@@ -949,20 +949,19 @@ void HotkeyResetH(Tabamewin32Plugin *, const MethodCall &,
 void HotkeyUnHookH(Tabamewin32Plugin *, const MethodCall &,
                    MethodResult result) {
   UninstallEventHooks();
-  if (g_MouseHook)
-    UnhookWindowsHookEx(g_MouseHook);
+  mouseHotkeyHookRequested = false;
+  UpdateMouseHook();
   if (g_KeyboardHook)
     UnhookWindowsHookEx(g_KeyboardHook);
-  g_MouseHook = nullptr;
   g_KeyboardHook = nullptr;
+  ResetActiveHotkeyState();
   ResetDoubleAltGestureState();
   OK(result, true);
 }
 
 void HotkeyHookH(Tabamewin32Plugin *, const MethodCall &, MethodResult result) {
-  if (!g_MouseHook)
-    g_MouseHook = SetWindowsHookEx(WH_MOUSE_LL, HandleMouseHook,
-                                   GetModuleHandle(nullptr), 0);
+  mouseHotkeyHookRequested = true;
+  UpdateMouseHook();
   if (!g_KeyboardHook)
     g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, HandleKeyboardHook,
                                       GetModuleHandle(nullptr), 0);
@@ -1003,10 +1002,8 @@ void TrcktivityH(Tabamewin32Plugin *, const MethodCall &call,
 void KeystrokeVizH(Tabamewin32Plugin *, const MethodCall &call,
                    MethodResult result) {
   isKeystrokeVizEnabled = Args::Bool(Args::Map(call), "enabled");
+  UpdateMouseHook();
   if (isKeystrokeVizEnabled) {
-    if (!g_MouseHook)
-      g_MouseHook = SetWindowsHookEx(WH_MOUSE_LL, HandleMouseHook,
-                                     GetModuleHandle(nullptr), 0);
     if (!g_KeyboardHook)
       g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, HandleKeyboardHook,
                                         GetModuleHandle(nullptr), 0);
@@ -2080,6 +2077,8 @@ Tabamewin32Plugin::~Tabamewin32Plugin() {
     UnhookWinEvent(gEventHook);
   if (gMouseHook)
     UnhookWindowsHookEx(gMouseHook);
+  mouseHotkeyHookRequested = false;
+  isKeystrokeVizEnabled = false;
   ShutdownMouseGestureHook();
   UninstallEventHooks();
   if (g_MouseHook)
