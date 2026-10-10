@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:path/path.dart' as p;
 
 import '../platform/app_paths.dart';
@@ -223,7 +224,9 @@ class ClipboardHistoryStore {
   /// Maximum number of recent entries kept in memory for duplicate detection.
   static const int _recentCacheSize = 10;
 
-  static Future<void> _recordQueue = Future<void>.value();
+  // Captures and read/modify/write operations must share one queue, including
+  // payload cleanup, so pruning cannot overwrite or delete an in-flight capture.
+  static Future<void> _mutationQueue = Future<void>.value();
   static Future<void>? _migrationFuture;
 
   /// In-memory ring of content hashes of the newest entries.
@@ -395,22 +398,27 @@ class ClipboardHistoryStore {
   }
 
   /// Prune entries older than [cacheDays] and delete orphaned payload files.
-  static Future<void> clearCache() async {
-    await _ensureStorageMigrated();
-    try {
-      final List<ClipboardHistoryEntry> all = await _loadAllFull();
-      final DateTime cutoff = DateTime.now().subtract(Duration(days: cacheDays));
-      final List<ClipboardHistoryEntry> keptHistory =
-          all.where((ClipboardHistoryEntry e) => e.createdAt.isAfter(cutoff)).toList();
-      final List<ClipboardHistoryEntry> pinned = await _loadPinnedFull();
+  /// Automatic pruning must not apply debug preferences to shared release data,
+  /// or a fallback retention period when the saved settings cannot be read.
+  static Future<void> clearCache({bool automatic = false}) => _enqueueMutation(() async {
+        if (automatic && (kDebugMode || !enabled)) return;
+        final int? savedDays = _readPersistedInt(cacheDaysKey);
+        if (automatic && savedDays == null) return;
+        await _ensureStorageMigrated();
+        try {
+          final List<ClipboardHistoryEntry> all = await _loadAllFull();
+          final DateTime cutoff = DateTime.now().subtract(Duration(days: (savedDays ?? cacheDays).clamp(1, 365)));
+          final List<ClipboardHistoryEntry> keptHistory =
+              all.where((ClipboardHistoryEntry e) => e.createdAt.isAfter(cutoff)).toList();
+          final List<ClipboardHistoryEntry> pinned = await _loadPinnedFull();
 
-      await _rewriteFile(keptHistory, historyFilePath);
-      _prunePayloads(<ClipboardHistoryEntry>[...keptHistory, ...pinned]);
-      _rebuildRecentCache(<ClipboardHistoryEntry>[...keptHistory, ...pinned]);
-    } catch (error) {
-      _log('ClipboardHistory: clearCache failed $error');
-    }
-  }
+          if (keptHistory.length != all.length) await _rewriteFile(keptHistory, historyFilePath);
+          _prunePayloads(<ClipboardHistoryEntry>[...keptHistory, ...pinned]);
+          _rebuildRecentCache(<ClipboardHistoryEntry>[...keptHistory, ...pinned]);
+        } catch (error) {
+          _log('ClipboardHistory: clearCache failed $error');
+        }
+      });
 
   /// Copy a clipboard entry back to the system clipboard.
   static Future<bool> copyEntry(ClipboardHistoryEntry entry) => _copyEntry(entry);
@@ -450,70 +458,81 @@ class ClipboardHistoryStore {
 
   /// Remove a single entry from metadata and delete payloads no longer used by
   /// either the history or pinned log.
-  static Future<void> remove(ClipboardHistoryEntry entry) async {
-    await _ensureStorageMigrated();
-    final List<ClipboardHistoryEntry> all = await _loadAllFull();
-    final List<ClipboardHistoryEntry> pinned = await _loadPinnedFull();
-    final ClipboardHistoryEntry? stored = _firstById(<ClipboardHistoryEntry>[...all, ...pinned], entry.id);
-    final List<ClipboardHistoryEntry> nextHistory =
-        all.where((ClipboardHistoryEntry item) => item.id != entry.id).toList();
-    final List<ClipboardHistoryEntry> nextPinned =
-        pinned.where((ClipboardHistoryEntry item) => item.id != entry.id).toList();
+  static Future<void> remove(ClipboardHistoryEntry entry) => _enqueueMutation(() async {
+        await _ensureStorageMigrated();
+        final List<ClipboardHistoryEntry> all = await _loadAllFull();
+        final List<ClipboardHistoryEntry> pinned = await _loadPinnedFull();
+        final ClipboardHistoryEntry? stored = _firstById(<ClipboardHistoryEntry>[...all, ...pinned], entry.id);
+        final List<ClipboardHistoryEntry> nextHistory =
+            all.where((ClipboardHistoryEntry item) => item.id != entry.id).toList();
+        final List<ClipboardHistoryEntry> nextPinned =
+            pinned.where((ClipboardHistoryEntry item) => item.id != entry.id).toList();
 
-    await _rewriteFile(nextHistory, historyFilePath);
-    await _rewriteFile(nextPinned, pinnedFilePath);
-    if (stored != null) {
-      await _deletePayloadsIfUnreferenced(stored, <ClipboardHistoryEntry>[...nextHistory, ...nextPinned]);
-    }
-    _recentCache.removeWhere((String hash) => hash == _contentHash(stored ?? entry));
-  }
+        await _rewriteFile(nextHistory, historyFilePath);
+        await _rewriteFile(nextPinned, pinnedFilePath);
+        if (stored != null) {
+          await _deletePayloadsIfUnreferenced(stored, <ClipboardHistoryEntry>[...nextHistory, ...nextPinned]);
+        }
+        _recentCache.removeWhere((String hash) => hash == _contentHash(stored ?? entry));
+      });
 
   /// Toggle the pinned state of an entry without loading its payload.
-  static Future<void> setPinned(ClipboardHistoryEntry entry, bool pinned) async {
-    await _ensureStorageMigrated();
-    final List<ClipboardHistoryEntry> allPinned = await _loadPinnedFull();
-    final List<ClipboardHistoryEntry> allHistory = await _loadAllFull();
-    final ClipboardHistoryEntry? stored = _firstById(<ClipboardHistoryEntry>[...allPinned, ...allHistory], entry.id);
-    if (stored == null) return;
+  static Future<void> setPinned(ClipboardHistoryEntry entry, bool pinned) => _enqueueMutation(() async {
+        await _ensureStorageMigrated();
+        final List<ClipboardHistoryEntry> allPinned = await _loadPinnedFull();
+        final List<ClipboardHistoryEntry> allHistory = await _loadAllFull();
+        final ClipboardHistoryEntry? stored =
+            _firstById(<ClipboardHistoryEntry>[...allPinned, ...allHistory], entry.id);
+        if (stored == null) return;
 
-    final List<ClipboardHistoryEntry> nextPinned =
-        allPinned.where((ClipboardHistoryEntry item) => item.id != entry.id).toList();
-    final List<ClipboardHistoryEntry> nextHistory =
-        allHistory.where((ClipboardHistoryEntry item) => item.id != entry.id).toList();
-    final ClipboardHistoryEntry updated = stored.copyWith(pinned: pinned);
-    (pinned ? nextPinned : nextHistory).add(updated);
-    nextPinned.sort(_sortAscending);
-    nextHistory.sort(_sortAscending);
+        final List<ClipboardHistoryEntry> nextPinned =
+            allPinned.where((ClipboardHistoryEntry item) => item.id != entry.id).toList();
+        final List<ClipboardHistoryEntry> nextHistory =
+            allHistory.where((ClipboardHistoryEntry item) => item.id != entry.id).toList();
+        final ClipboardHistoryEntry updated = stored.copyWith(pinned: pinned);
+        (pinned ? nextPinned : nextHistory).add(updated);
+        nextPinned.sort(_sortAscending);
+        nextHistory.sort(_sortAscending);
 
-    await _rewriteFile(nextHistory, historyFilePath);
-    await _rewriteFile(nextPinned, pinnedFilePath);
-    _rebuildRecentCache(<ClipboardHistoryEntry>[...nextHistory, ...nextPinned]);
-  }
+        // Commit the destination first so an interrupted move cannot lose the entry.
+        if (pinned) {
+          await _rewriteFile(nextPinned, pinnedFilePath);
+          await _rewriteFile(nextHistory, historyFilePath);
+        } else {
+          await _rewriteFile(nextHistory, historyFilePath);
+          await _rewriteFile(nextPinned, pinnedFilePath);
+        }
+        _rebuildRecentCache(<ClipboardHistoryEntry>[...nextHistory, ...nextPinned]);
+      });
 
   /// Delete all metadata, payloads, and images.
-  static Future<void> clear() async {
-    await _ensureStorageMigrated();
-    await _rewriteFile(<ClipboardHistoryEntry>[], historyFilePath);
-    await _rewriteFile(<ClipboardHistoryEntry>[], pinnedFilePath);
-    _recentCache.clear();
-    _recentCacheLoaded = true;
+  static Future<void> clear() => _enqueueMutation(() async {
+        await _ensureStorageMigrated();
+        await _rewriteFile(<ClipboardHistoryEntry>[], historyFilePath);
+        await _rewriteFile(<ClipboardHistoryEntry>[], pinnedFilePath);
+        _recentCache.clear();
+        _recentCacheLoaded = true;
 
-    await _deleteFile(_legacyHistoryFilePath);
-    await _deleteFile(_legacyPinnedFilePath);
-    await _deleteDirectoryFiles(payloadDirectoryPath);
-    await _deleteDirectoryFiles(imageDirectoryPath);
-  }
+        await _deleteFile(_legacyHistoryFilePath);
+        await _deleteFile(_legacyPinnedFilePath);
+        await _deleteDirectoryFiles(payloadDirectoryPath);
+        await _deleteDirectoryFiles(imageDirectoryPath);
+      });
 
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
 
   static Future<void> _recordEntry(Future<ClipboardHistoryEntry?> Function() readEntry) {
-    final Future<void> operation = _recordQueue.then<void>((_) => _recordEntryNow(readEntry));
-    _recordQueue = operation.then<void>(
+    return _enqueueMutation(() => _recordEntryNow(readEntry));
+  }
+
+  static Future<void> _enqueueMutation(Future<void> Function() action) {
+    final Future<void> operation = _mutationQueue.then<void>((_) => action());
+    _mutationQueue = operation.then<void>(
       (_) {},
       onError: (Object error, StackTrace stack) {
-        _log('ClipboardHistory: queued record failed $error');
+        _log('ClipboardHistory: queued mutation failed $error');
       },
     );
     return operation;
@@ -757,12 +776,19 @@ class ClipboardHistoryStore {
         : requestedPath == pinnedFilePath
             ? _writablePinnedFilePath
             : requestedPath;
-    final File file = File(targetPath);
     final StringBuffer buffer = StringBuffer();
     for (final ClipboardHistoryEntry entry in entries) {
       buffer.writeln(jsonEncode(entry.toMap()));
     }
-    await file.writeAsString(buffer.toString(), flush: true);
+    // Write beside the destination and replace it only after the complete log
+    // is flushed. A crash or failed write leaves the previous log intact.
+    final File temporary = File('$targetPath.${DateTime.now().microsecondsSinceEpoch}.part');
+    try {
+      await temporary.writeAsString(buffer.toString(), flush: true);
+      await temporary.rename(targetPath);
+    } finally {
+      await _deleteFile(temporary.path);
+    }
   }
 
   static void _prunePayloads(List<ClipboardHistoryEntry> kept) {
@@ -936,7 +962,7 @@ class ClipboardHistoryStore {
   }
 
   static void resetForTesting() {
-    _recordQueue = Future<void>.value();
+    _mutationQueue = Future<void>.value();
     _migrationFuture = null;
     _recentCache.clear();
     _recentCacheLoaded = false;

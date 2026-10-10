@@ -261,7 +261,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
     unawaited(WinHotkeys.update());
     TextSnippetsManager.pushToNative();
     _startSettingsWatcher();
-    ClipboardHistoryStore.clearCache();
+    unawaited(ClipboardHistoryStore.clearCache(automatic: true));
     if (user.trktivityEnabled) enableTrcktivity(user.trktivityEnabled);
     Globals.changingPages = false;
     if (user.trktivityEnabled) trk.startTimer();

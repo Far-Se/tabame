@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -88,6 +89,84 @@ void main() {
     expect(entries.where((ClipboardHistoryEntry entry) => entry.text == 'first'), hasLength(2));
   });
 
+  test('debug startup does not prune shared history using its shorter retention', () async {
+    final File settings = File(AppPaths.settingsPath('settings.json', forWrite: true));
+    await settings.parent.create(recursive: true);
+    await settings.writeAsString(jsonEncode(<String, Object>{
+      'flutter.clipboardHistoryEnabled': true,
+      'flutter.clipboardHistoryCacheDays': 1,
+    }));
+    final ClipboardHistoryEntry older = ClipboardHistoryEntry(
+      id: 'older',
+      type: ClipboardHistoryType.text,
+      createdAt: DateTime.now().subtract(const Duration(days: 10)),
+      text: 'still within the release retention period',
+    );
+    final File history = File(ClipboardHistoryStore.historyFilePath);
+    await history.parent.create(recursive: true);
+    final String original = '${jsonEncode(older.toMap())}\n';
+    await history.writeAsString(original);
+
+    await ClipboardHistoryStore.clearCache(automatic: true);
+
+    expect(await history.readAsString(), original);
+    // Explicit pruning still applies the selected retention period.
+    await ClipboardHistoryStore.clearCache();
+    expect(await ClipboardHistoryStore.loadPaged(), isEmpty);
+  });
+
+  test('manual pruning keeps the full retention period and pinned entries', () async {
+    final File settings = File(AppPaths.settingsPath('settings.json', forWrite: true));
+    await settings.parent.create(recursive: true);
+    await settings.writeAsString(jsonEncode(<String, Object>{
+      'flutter.clipboardHistoryCacheDays': 30,
+    }));
+    final File history = File(ClipboardHistoryStore.historyFilePath);
+    await history.parent.create(recursive: true);
+    final List<ClipboardHistoryEntry> entries = <ClipboardHistoryEntry>[
+      for (final int age in <int>[40, 31, 20, 1])
+        ClipboardHistoryEntry(
+          id: 'age-$age',
+          type: ClipboardHistoryType.text,
+          createdAt: DateTime.now().subtract(Duration(days: age)),
+          text: 'copied $age days ago',
+        ),
+    ];
+    await history
+        .writeAsString('${entries.map((ClipboardHistoryEntry entry) => jsonEncode(entry.toMap())).join('\n')}\n');
+    await ClipboardHistoryStore.setPinned(entries.first, true);
+
+    await ClipboardHistoryStore.clearCache();
+
+    expect((await ClipboardHistoryStore.loadPaged()).map((ClipboardHistoryEntry entry) => entry.id),
+        <String>['age-1', 'age-20']);
+    expect((await ClipboardHistoryStore.loadPinned()).single.id, 'age-40');
+  });
+
+  test('clear waits for an in-flight capture before deleting its metadata and payload', () async {
+    final Completer<void> started = Completer<void>();
+    final Completer<void> release = Completer<void>();
+    service.content = const PlatformClipboardContent(text: 'captured before clear');
+    service.readStarted = started;
+    service.readGate = release.future;
+    final Future<void> capture = ClipboardHistoryStore.recordCurrentClipboard();
+    await started.future;
+
+    bool cleared = false;
+    final Future<void> clearing = ClipboardHistoryStore.clear().then((_) => cleared = true);
+    try {
+      // Give an incorrectly unqueued clear time to run while capture is held.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(cleared, isFalse);
+    } finally {
+      release.complete();
+      await Future.wait<void>(<Future<void>>[capture, clearing]);
+    }
+
+    expect(await ClipboardHistoryStore.loadPaged(), isEmpty);
+    expect(Directory(ClipboardHistoryStore.payloadDirectoryPath).listSync(), isEmpty);
+  });
+
   test('coordinator subscribes once and records target adapter events', () async {
     expect(await ClipboardHistoryCoordinator.instance.start(), isTrue);
     expect(await ClipboardHistoryCoordinator.instance.start(), isTrue);
@@ -140,6 +219,8 @@ class _FakeClipboardService extends ClipboardService {
   final StreamController<PlatformClipboardText> _changes;
   PlatformClipboardContent? content;
   PlatformClipboardContent? lastWrite;
+  Completer<void>? readStarted;
+  Future<void>? readGate;
   int startCalls = 0;
   bool started = false;
 
@@ -168,7 +249,11 @@ class _FakeClipboardService extends ClipboardService {
   }
 
   @override
-  Future<PlatformClipboardContent?> readContent() async => content;
+  Future<PlatformClipboardContent?> readContent() async {
+    readStarted?.complete();
+    await readGate;
+    return content;
+  }
 
   @override
   Future<bool> writeContent(PlatformClipboardContent content) async {

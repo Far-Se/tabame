@@ -3,6 +3,7 @@
 ## Fixes
 
 - Added Design Preview in First Configuration Menu.
+- Fixed Clipboard History Entries.
 
 # v2.1.4 - 9 Oct 2026
 
