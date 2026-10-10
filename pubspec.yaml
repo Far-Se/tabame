@@ -1,9 +1,9 @@
 name: tabame
-description: Tabame is a quick menu app.
+description: Tabame is a Multi tool App including QuickMenu, Launcher, QuickSnap, QuickClick, Fancyshot.
 
 publish_to: "none"
 
-version: 2.1.4
+version: 2.1.5
 
 environment:
   sdk: ">=3.4.3 <4.0.0"

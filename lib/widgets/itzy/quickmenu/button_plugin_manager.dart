@@ -15,6 +15,7 @@ import '../../../pages/launcher/plugins/plugin_registry.dart';
 import '../../../platform/app_paths.dart';
 import '../../../platform/file_picker_service.dart';
 import '../../../services/browser_bridge_service.dart';
+import '../../widgets/mini_switch.dart';
 import '../../widgets/modal_button.dart';
 import '../../widgets/modern_dropdown.dart';
 import '../../widgets/panel_header.dart';
@@ -43,7 +44,7 @@ const String _chromeConnectorUrl =
 const String _firefoxConnectorUrl = 'https://addons.mozilla.org/en-US/firefox/addon/tabame-connector-for-firefox/';
 const String _galleryKnownIdsKey = 'pluginGalleryKnownIds';
 
-enum _PanelMode { installed, gallery, makeYourOwn }
+enum _PanelMode { settings, installed, gallery, makeYourOwn }
 
 enum _GallerySort { title, addedDate }
 
@@ -55,8 +56,7 @@ PluginManifest? _findInstalledPlugin(String id) {
   return null;
 }
 
-/// Three-mode panel for installed plugins, the community gallery, and authoring
-/// guidance for local plugins.
+/// Settings, installed plugins, the community gallery, and authoring guidance.
 class PluginManagerPanel extends StatefulWidget {
   const PluginManagerPanel({super.key});
 
@@ -65,7 +65,7 @@ class PluginManagerPanel extends StatefulWidget {
 }
 
 class _PluginManagerPanelState extends State<PluginManagerPanel> {
-  _PanelMode _mode = _PanelMode.installed;
+  _PanelMode _mode = _PanelMode.settings;
   bool _reloading = false;
   String? _busyId;
   String _keywordError = '';
@@ -91,6 +91,8 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   String _autoUpdateError = '';
   bool _pluginShortcutBusy = false;
   String _pluginShortcutError = '';
+  Future<void> _pluginShortcutSave = Future<void>.value();
+  int _pluginShortcutRevision = 0;
 
   @override
   void dispose() {
@@ -164,32 +166,31 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
     setState(() => _autoUpdateBusy = false);
   }
 
-  Future<void> _savePluginShortcut() async {
-    if (_pluginShortcutBusy) return;
+  void _savePluginShortcut() {
     final String shortcut = _pluginShortcutController.text.trim();
-    final String? validationError = PluginRegistry.validateShortcut(shortcut);
-    if (validationError != null) {
-      setState(() => _pluginShortcutError = validationError);
-      return;
-    }
-
+    final int revision = ++_pluginShortcutRevision;
+    final String? error = PluginRegistry.validateShortcut(shortcut);
     setState(() {
-      _pluginShortcutBusy = true;
-      _pluginShortcutError = '';
+      _pluginShortcutError = error ?? '';
+      _pluginShortcutBusy = error == null;
     });
-    try {
-      await Boxes.updateSettings(PluginRegistry.shortcutSettingKey, shortcut);
-      user.pluginShortcut = shortcut;
-    } catch (_) {
-      if (!mounted) return;
+    if (error != null) return;
+
+    // Capture each edit and serialize writes, including when the panel closes.
+    _pluginShortcutSave = _pluginShortcutSave.then((_) async {
+      String saveError = '';
+      try {
+        await Boxes.updateSettings(PluginRegistry.shortcutSettingKey, shortcut);
+        user.pluginShortcut = shortcut;
+      } catch (_) {
+        saveError = 'Could not save the plugin shortcut. Edit it to retry.';
+      }
+      if (!mounted || revision != _pluginShortcutRevision) return;
       setState(() {
         _pluginShortcutBusy = false;
-        _pluginShortcutError = 'Could not save the plugin shortcut.';
+        _pluginShortcutError = saveError;
       });
-      return;
-    }
-    if (!mounted) return;
-    setState(() => _pluginShortcutBusy = false);
+    });
   }
 
   Future<void> _editKeyword(PluginManifest manifest) async {
@@ -370,6 +371,7 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final bool settings = _mode == _PanelMode.settings;
     final bool gallery = _mode == _PanelMode.gallery;
     final bool makeYourOwn = _mode == _PanelMode.makeYourOwn;
 
@@ -378,14 +380,21 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
       crossAxisAlignment: C.start,
       children: <Widget>[
         PanelHeader(
-          title: makeYourOwn ? "Make Your Own Plugin" : (gallery ? "Plugin Gallery" : "Launcher Plugins"),
-          icon:
-              makeYourOwn ? Icons.construction_rounded : (gallery ? Icons.storefront_rounded : Icons.extension_rounded),
-          buttonIcon: makeYourOwn
+          title: settings
+              ? "Plugin Settings"
+              : makeYourOwn
+                  ? "Make Your Own Plugin"
+                  : (gallery ? "Plugin Gallery" : "Launcher Plugins"),
+          icon: settings
+              ? Icons.tune_rounded
+              : makeYourOwn
+                  ? Icons.construction_rounded
+                  : (gallery ? Icons.storefront_rounded : Icons.extension_rounded),
+          buttonIcon: settings || makeYourOwn
               ? null
               : ((gallery ? _galleryLoading : _reloading) ? Icons.hourglass_bottom_rounded : Icons.refresh_rounded),
-          buttonTooltip: makeYourOwn ? null : (gallery ? "Refresh gallery" : "Reload plugins"),
-          buttonPressed: makeYourOwn
+          buttonTooltip: settings || makeYourOwn ? null : (gallery ? "Refresh gallery" : "Reload plugins"),
+          buttonPressed: settings || makeYourOwn
               ? null
               : (gallery ? (_galleryLoading ? null : () => _loadGallery(force: true)) : (_reloading ? null : _reload)),
         ),
@@ -396,7 +405,11 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
         Flexible(
           child: Material(
             type: MaterialType.transparency,
-            child: makeYourOwn ? _buildMakeYourOwn() : (gallery ? _buildGallery() : _buildInstalled()),
+            child: settings
+                ? _buildSettings()
+                : makeYourOwn
+                    ? _buildMakeYourOwn()
+                    : (gallery ? _buildGallery() : _buildInstalled()),
           ),
         ),
       ],
@@ -406,8 +419,11 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
   Widget _buildModeRail() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      // showScrollbar: false,
       child: Row(
         children: <Widget>[
+          _modeChip(label: 'Settings', icon: Icons.tune_rounded, mode: _PanelMode.settings),
+          const SizedBox(width: 6),
           _modeChip(
             label: 'Installed',
             icon: Icons.extension_rounded,
@@ -490,7 +506,7 @@ Build a plugin with your favorite AI coding assistant:
 1. Copy [TABAME_PLUGIN_SKILL.md](https://github.com/Far-Se/tabame/blob/main/skills/TABAME_PLUGIN_SKILL.md) or [TABAME_PLUGIN_SKILL.min.md](https://github.com/Far-Se/tabame/blob/main/skills/TABAME_PLUGIN_SKILL.min.md) (the 'skills' folder has multiple separate skills).
 2. Open your favorite AI coding site or app and paste the file.
 3. Tell the AI what plugin you need, with detailed instructions for how it should work.
-4. Create a new folder inside the plugin installation folder shown on the Installed tab.
+4. Create a new folder inside the plugin installation folder shown on the Settings tab.
 5. Paste in your `plugin.json` and script files.
 6. Open the launcher and type the plugin keyword shown on the Installed tab (including its optional prefix).
 7. If you want to share it with the community, make an issue [HERE](https://github.com/Far-Se/tabame/issues/new?template=plugin_submission.md) with the code, either paste it or zip/gist/rep.
@@ -541,38 +557,6 @@ Build a plugin with your favorite AI coding assistant:
         child: Column(
           crossAxisAlignment: C.start,
           children: <Widget>[
-            _buildSectionLabel(
-              label: "Launcher shortcut",
-              countText: _pluginShortcutController.text.trim().isEmpty ? "OFF" : _pluginShortcutController.text.trim(),
-              icon: Icons.keyboard_alt_rounded,
-            ),
-            const SizedBox(height: 8),
-            _buildPluginShortcutCard(),
-            const SizedBox(height: 16),
-            _buildSectionLabel(
-              label: "Plugin folder",
-              countText: "CONFIG",
-              icon: Icons.folder_rounded,
-            ),
-            const SizedBox(height: 8),
-            _buildPluginDirectoryCard(),
-            const SizedBox(height: 16),
-            _buildSectionLabel(
-              label: "Updates",
-              countText: user.pluginAutoUpdate ? "ON" : "OFF",
-              icon: Icons.system_update_alt_rounded,
-            ),
-            const SizedBox(height: 8),
-            _buildAutoUpdateCard(),
-            const SizedBox(height: 16),
-            _buildSectionLabel(
-              label: "Browser integration",
-              countText: "Optional",
-              icon: Icons.language_rounded,
-            ),
-            const SizedBox(height: 8),
-            const _BrowserBridgeCard(),
-            const SizedBox(height: 16),
             _buildSectionLabel(
               label: "Installed",
               countText: "$enabledCount/${plugins.length}",
@@ -628,350 +612,135 @@ Build a plugin with your favorite AI coding assistant:
     );
   }
 
-  Widget _buildPluginShortcutCard() {
-    final Color accent = Design.accent;
-    final Color text = Design.text;
-    final bool configured = _pluginShortcutController.text.trim().isNotEmpty;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
-      decoration: BoxDecoration(
-        color: configured ? accent.withAlpha(10) : text.withAlpha(7),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: configured ? accent.withAlpha(30) : text.withAlpha(16)),
-      ),
-      child: Row(
+  Widget _buildSettings() {
+    return WindowsScrollView(
+      key: const ValueKey<String>('plugin-settings'),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+      child: Column(
         crossAxisAlignment: C.start,
         children: <Widget>[
-          Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              color: (configured ? accent : text).withAlpha(configured ? 24 : 12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              Icons.keyboard_alt_rounded,
-              size: 16,
-              color: configured ? accent : text.withAlpha(130),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: C.start,
-              children: <Widget>[
-                Text(
-                  'Prefix plugin keywords',
-                  style: TextStyle(
-                    fontSize: Design.baseFontSize + 1.5,
-                    fontWeight: FontWeight.w700,
-                    color: text.withAlpha(235),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  configured
-                      ? 'Plugins launch as ${_pluginShortcutController.text.trim()}weather. Bare keywords stay available to Quick Actions.'
-                      : 'Leave empty for the legacy behavior, or set a symbol such as ; to type ;weather.',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: Design.baseFontSize - 0.5,
-                    height: 1.25,
-                    color: text.withAlpha(140),
-                  ),
-                ),
-                if (_pluginShortcutError.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 4),
-                  Text(
-                    _pluginShortcutError,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: Design.baseFontSize - 1,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.red.shade400,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 58,
-            child: TextField(
-              controller: _pluginShortcutController,
-              maxLength: 1,
-              textAlign: TextAlign.center,
-              textInputAction: TextInputAction.done,
-              style: TextStyle(
-                fontSize: Design.baseFontSize + 2,
-                fontWeight: FontWeight.w700,
-                color: accent,
-              ),
-              decoration: InputDecoration(
-                // hintText: ';',
-                // hintStyle: TextStyle(color: text.withAlpha(90)),
-                counterText: '',
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                filled: true,
-                fillColor: accent.withAlpha(12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: text.withAlpha(18)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: text.withAlpha(18)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: accent.withAlpha(85)),
-                ),
-              ),
-              onChanged: (_) {
-                if (_pluginShortcutError.isNotEmpty) setState(() => _pluginShortcutError = '');
-                setState(() {});
-              },
-              onSubmitted: (_) => _savePluginShortcut(),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Tooltip(
-            message: 'Save plugin shortcut',
-            waitDuration: const Duration(milliseconds: 400),
-            child: InkWell(
-              onTap: _pluginShortcutBusy ? null : _savePluginShortcut,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                decoration: BoxDecoration(
-                  color: accent.withAlpha(20),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: accent.withAlpha(60)),
-                ),
-                child: _pluginShortcutBusy
-                    ? SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: accent),
-                      )
-                    : Icon(Icons.save_rounded, size: 14, color: accent),
-              ),
-            ),
-          ),
+          _buildPluginShortcutCard(),
+          const SizedBox(height: 8),
+          _buildPluginDirectoryCard(),
+          const SizedBox(height: 8),
+          _buildAutoUpdateCard(),
+          const SizedBox(height: 8),
+          const _BrowserBridgeCard(),
         ],
       ),
     );
   }
 
-  Widget _buildPluginDirectoryCard() {
-    final Color accent = Design.accent;
-    final Color text = Design.text;
-    final Color statusColor = _pluginDirectoryStatusError ? Colors.red.shade400 : accent;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
-      decoration: BoxDecoration(
-        color: text.withAlpha(7),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: text.withAlpha(16)),
+  Widget _buildPluginShortcutCard() {
+    final String shortcut = _pluginShortcutController.text.trim();
+    return _PluginSettingCard(
+      icon: Icons.keyboard_alt_rounded,
+      title: 'Keyword prefix',
+      description: 'Use a symbol before plugin keywords. Leave empty to use keywords directly.',
+      trailing: SizedBox(
+        width: 58,
+        child: TextField(
+          controller: _pluginShortcutController,
+          maxLength: 1,
+          textAlign: TextAlign.center,
+          textInputAction: TextInputAction.done,
+          style: TextStyle(fontSize: Design.baseFontSize + 3, fontWeight: FontWeight.w700, color: Design.accent),
+          decoration: InputDecoration(
+            counterText: '',
+            isDense: true,
+            hintText: ';',
+            hintStyle: TextStyle(color: Design.text.withAlpha(90)),
+            labelText: 'Prefix',
+            labelStyle: TextStyle(fontSize: Design.baseFontSize, color: Design.text.withAlpha(90)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            filled: true,
+            fillColor: Design.accent.withAlpha(12),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Design.text.withAlpha(24))),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Design.accent.withAlpha(90))),
+          ),
+          onChanged: (_) => _savePluginShortcut(),
+        ),
       ),
-      child: Row(
+      child: _pluginShortcutError.isNotEmpty
+          ? _buildStatusStrip(_pluginShortcutError, error: true)
+          : Row(
+              children: <Widget>[
+                _GalleryCard.pill('${shortcut}weather', Design.accent.withAlpha(18), Design.accent,
+                    icon: Icons.terminal_rounded),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: Text(_pluginShortcutBusy ? 'Saving...' : 'Saves automatically',
+                        style: TextStyle(fontSize: Design.baseFontSize - 1, color: Design.text.withAlpha(140)))),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildPluginDirectoryCard() {
+    return _PluginSettingCard(
+      icon: Icons.folder_outlined,
+      title: 'Installation folder',
+      description: 'Choose where your launcher plugins are stored.',
+      trailing: TextButton(
+        onPressed: _pluginDirectoryBusy ? null : _changePluginDirectory,
+        style: TextButton.styleFrom(
+          foregroundColor: Design.accent,
+          backgroundColor: Design.accent.withAlpha(12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8), side: BorderSide(color: Design.accent.withAlpha(35))),
+        ),
+        child: _pluginDirectoryBusy
+            ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Design.accent))
+            : Text(
+                'Change',
+                style: TextStyle(fontSize: Design.baseFontSize + 1.5),
+              ),
+      ),
+      child: Column(
         crossAxisAlignment: C.start,
         children: <Widget>[
           Container(
-            padding: const EdgeInsets.all(7),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              color: accent.withAlpha(20),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.folder_rounded, size: 16, color: accent),
+                color: Design.text.withAlpha(5),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Design.text.withAlpha(14))),
+            child: SelectableText(AppPaths.pluginsDirectory,
+                style: TextStyle(fontSize: Design.baseFontSize, height: 1.4, color: Design.text.withAlpha(190))),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: C.start,
-              children: <Widget>[
-                Text(
-                  'Installation folder',
-                  style: TextStyle(
-                    fontSize: Design.baseFontSize + 1.5,
-                    fontWeight: FontWeight.w700,
-                    color: text.withAlpha(235),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                if (_needsStoreFolderChange) ...<Widget>[
-                  Text(
-                    'You are running Tabame from Microsoft Store. Before installing plugins that require '
-                    'packages, use Change to select a plugin installation folder outside the default '
-                    'Store app folder. These plugins do not work in the default folder.',
-                    style: TextStyle(
-                      fontSize: Design.baseFontSize + 0.5,
-                      height: 1.35,
-                      color: text.withAlpha(220),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                ],
-                Text(
-                  AppPaths.pluginsDirectory,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: Design.baseFontSize - 0.5,
-                    height: 1.25,
-                    color: text.withAlpha(140),
-                  ),
-                ),
-                if (_pluginDirectoryStatus.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 5),
-                  Text(
-                    _pluginDirectoryStatus,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: Design.baseFontSize - 1,
-                      fontWeight: FontWeight.w600,
-                      color: statusColor,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Tooltip(
-            message: 'Change installation folder',
-            waitDuration: const Duration(milliseconds: 400),
-            child: InkWell(
-              onTap: _pluginDirectoryBusy ? null : _changePluginDirectory,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-                decoration: BoxDecoration(
-                  color: accent.withAlpha(20),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: accent.withAlpha(60)),
-                ),
-                child: _pluginDirectoryBusy
-                    ? SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: accent),
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Icon(Icons.edit_location_alt_rounded, size: 14, color: accent),
-                          const SizedBox(width: 5),
-                          Text(
-                            'CHANGE',
-                            style: TextStyle(
-                              fontSize: Design.baseFontSize - 1,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.4,
-                              color: accent,
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-            ),
-          ),
+          if (_needsStoreFolderChange) ...<Widget>[
+            const SizedBox(height: 8),
+            _buildStatusStrip(
+                'Microsoft Store installation: choose a folder outside the Store app folder before installing plugins that require packages.',
+                error: true),
+          ],
+          if (_pluginDirectoryStatus.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 8),
+            _buildStatusStrip(_pluginDirectoryStatus, error: _pluginDirectoryStatusError),
+          ],
         ],
       ),
     );
   }
 
   Widget _buildAutoUpdateCard() {
-    final Color accent = Design.accent;
-    final Color text = Design.text;
-    final bool enabled = user.pluginAutoUpdate;
-
-    return InkWell(
-      onTap: _autoUpdateBusy ? null : () => _setAutoUpdate(!enabled),
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
-        decoration: BoxDecoration(
-          color: enabled ? accent.withAlpha(10) : text.withAlpha(7),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: enabled ? accent.withAlpha(30) : text.withAlpha(16)),
-        ),
-        child: Row(
-          children: <Widget>[
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                color: (enabled ? accent : text).withAlpha(enabled ? 24 : 12),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.update_rounded, size: 16, color: enabled ? accent : text.withAlpha(130)),
+    return _PluginSettingCard(
+      icon: Icons.update_rounded,
+      title: 'Automatic updates',
+      description: 'Install newer versions of your gallery plugins when Tabame starts.',
+      trailing: _autoUpdateBusy
+          ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Design.accent))
+          : MiniToggleSwitch(
+              value: user.pluginAutoUpdate,
+              activeThumbColor: Design.accent,
+              onChanged: _setAutoUpdate,
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: C.start,
-                children: <Widget>[
-                  Text(
-                    'Update plugins at startup',
-                    style: TextStyle(
-                      fontSize: Design.baseFontSize + 1.5,
-                      fontWeight: FontWeight.w700,
-                      color: text.withAlpha(235),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Checks plugins.json and installs newer versions of your gallery plugins.',
-                    style: TextStyle(
-                      fontSize: Design.baseFontSize - 0.5,
-                      height: 1.25,
-                      color: text.withAlpha(140),
-                    ),
-                  ),
-                  if (_autoUpdateError.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 4),
-                    Text(
-                      _autoUpdateError,
-                      style: TextStyle(
-                        fontSize: Design.baseFontSize - 1,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.red.shade400,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 40,
-              height: 30,
-              child: Center(
-                child: _autoUpdateBusy
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: accent),
-                      )
-                    : Transform.scale(
-                        scale: 0.7,
-                        child: Switch(
-                          value: enabled,
-                          activeThumbColor: accent,
-                          onChanged: _setAutoUpdate,
-                        ),
-                      ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: _autoUpdateError.isEmpty ? null : _buildStatusStrip(_autoUpdateError, error: true),
     );
   }
 
@@ -1116,21 +885,18 @@ Build a plugin with your favorite AI coding assistant:
               icon: Icons.storefront_rounded,
             ),
             const SizedBox(height: 8),
+            _buildSearchField(
+              controller: _gallerySearchController,
+              hintText: "Search gallery...",
+            ),
+            const SizedBox(height: 8),
             Row(
-              crossAxisAlignment: C.start,
               children: <Widget>[
                 Expanded(
-                  child: _buildSearchField(
-                    controller: _gallerySearchController,
-                    hintText: "Search gallery...",
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 190,
+                  flex: 3,
                   child: ModernDropdown<String>(
                     value: selectedCategory,
-                    height: 40,
+                    height: 32,
                     itemHeight: 36,
                     prefixIcon: Icon(Icons.category_outlined, size: 16, color: Design.accent),
                     decoration: BoxDecoration(
@@ -1149,15 +915,11 @@ Build a plugin with your favorite AI coding assistant:
                     onChanged: (String? category) => setState(() => _galleryCategory = category ?? ''),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                Text('Sort by:', style: TextStyle(fontSize: Design.baseFontSize, color: Design.text)),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 170,
+                const SizedBox(width: 12),
+                // Text('Sort by:', style: TextStyle(fontSize: Design.baseFontSize, color: Design.text)),
+                // const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
                   child: ModernDropdown<_GallerySort>(
                     value: _gallerySort,
                     height: 32,
@@ -1400,6 +1162,59 @@ Build a plugin with your favorite AI coding assistant:
   }
 }
 
+/// Shared compact layout for plugin preferences and their supporting details.
+class _PluginSettingCard extends StatelessWidget {
+  const _PluginSettingCard(
+      {required this.icon, required this.title, required this.description, required this.trailing, this.child});
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final Widget trailing;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Design.text.withAlpha(7),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Design.text.withAlpha(16)),
+      ),
+      child: Column(
+        crossAxisAlignment: C.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(color: Design.accent.withAlpha(12), borderRadius: BorderRadius.circular(7)),
+                child: Icon(icon, size: 16, color: Design.accent),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: Text(title,
+                      style: TextStyle(
+                          fontSize: Design.baseFontSize + 2.5, fontWeight: FontWeight.w600, color: Design.text))),
+              const SizedBox(width: 12),
+              trailing,
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(description,
+              style: TextStyle(fontSize: Design.baseFontSize + 1, height: 1.4, color: Design.text.withAlpha(160))),
+          if (child != null) ...<Widget>[
+            const SizedBox(height: 10),
+            child!,
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _BrowserBridgeCard extends StatelessWidget {
   const _BrowserBridgeCard();
 
@@ -1439,97 +1254,47 @@ class _BrowserBridgeCard extends StatelessWidget {
             ),
         };
 
-        return Container(
-          padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
-          decoration: BoxDecoration(
-            color: enabled ? accent.withAlpha(10) : text.withAlpha(7),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: enabled ? accent.withAlpha(30) : text.withAlpha(16)),
-          ),
-          child: Row(
+        return _PluginSettingCard(
+          icon: Icons.language_rounded,
+          title: 'Browser integration',
+          description:
+              'Keep browser plugins connected while Tabame runs. Install a connector, then run the browser plugin to pair it.',
+          trailing: status.phase == BrowserBridgePhase.starting
+              ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Design.accent))
+              : MiniToggleSwitch(
+                  value: enabled,
+                  activeThumbColor: Design.accent,
+                  onChanged: (bool value) => BrowserBridgeService.instance.setEnabled(value),
+                ),
+          child: Column(
             crossAxisAlignment: C.start,
             children: <Widget>[
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: (enabled ? accent : text).withAlpha(enabled ? 28 : 14),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.language_rounded, size: 16, color: enabled ? accent : text.withAlpha(130)),
+              Wrap(
+                spacing: 6,
+                runSpacing: 5,
+                children: <Widget>[
+                  _storeLink(label: 'Chrome Web Store', url: _chromeConnectorUrl, accent: accent),
+                  _storeLink(label: 'Firefox Add-ons', url: _firefoxConnectorUrl, accent: accent),
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: C.start,
-                  children: <Widget>[
-                    Text(
-                      'Persistent browser connector',
+              const SizedBox(height: 7),
+              Row(
+                children: <Widget>[
+                  Icon(state.$3, size: 12, color: state.$2),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      state.$1,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: Design.baseFontSize + 1.5,
-                        fontWeight: FontWeight.w700,
-                        color: text.withAlpha(enabled ? 235 : 150),
+                        fontSize: Design.baseFontSize - 1,
+                        fontWeight: FontWeight.w600,
+                        color: state.$2,
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'Keeps the extension paired while Tabame is running, so browser plugins open instantly. Install the connector below, then run the `browser` plugin to finish pairing.',
-                      style: TextStyle(
-                        fontSize: Design.baseFontSize - 0.5,
-                        height: 1.25,
-                        color: text.withAlpha(enabled ? 140 : 100),
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 5,
-                      children: <Widget>[
-                        _storeLink(label: 'Chrome Web Store', url: _chromeConnectorUrl, accent: accent),
-                        _storeLink(label: 'Firefox Add-ons', url: _firefoxConnectorUrl, accent: accent),
-                      ],
-                    ),
-                    const SizedBox(height: 7),
-                    Row(
-                      children: <Widget>[
-                        Icon(state.$3, size: 12, color: state.$2),
-                        const SizedBox(width: 5),
-                        Expanded(
-                          child: Text(
-                            state.$1,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: Design.baseFontSize - 1,
-                              fontWeight: FontWeight.w600,
-                              color: state.$2,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 40,
-                height: 30,
-                child: Center(
-                  child: status.phase == BrowserBridgePhase.starting
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: accent),
-                        )
-                      : Transform.scale(
-                          scale: 0.7,
-                          child: Switch(
-                            value: enabled,
-                            activeThumbColor: accent,
-                            onChanged: (bool value) => BrowserBridgeService.instance.setEnabled(value),
-                          ),
-                        ),
-                ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -1671,7 +1436,7 @@ class _PluginCardState extends State<_PluginCard> {
                     )
                   : Transform.scale(
                       scale: 0.7,
-                      child: Switch(
+                      child: MiniToggleSwitch(
                         value: enabled,
                         activeThumbColor: accent,
                         onChanged: widget.onToggle,

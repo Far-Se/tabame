@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
+// import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import '../../../platform/windows/tabamewin32_api.dart';
@@ -63,8 +63,10 @@ class Boxes {
     // First-run defaults
     if (pref.getString("language") == null) {
       await pref.setBool("DEBUGGING", false);
-      await pref.setInt("quickMenuDesign", Random().nextInt(QuickMenuDesigns.values.length));
-      await pref.setInt("launcherDesign", Random().nextInt(LauncherDesign.values.length));
+      await pref.setInt("quickMenuDesign", 0);
+      await pref.setInt("launcherDesign", 0);
+      // await pref.setInt("quickMenuDesign", Random().nextInt(QuickMenuDesigns.values.length));
+      // await pref.setInt("launcherDesign", Random().nextInt(LauncherDesign.values.length));
       await pref.setInt("taskBarAppsStyle", TaskBarAppsStyle.activeMonitorFirst.index);
       await pref.setInt("volumeOSDStyle", VolumeOSDStyle.normal.index);
       await pref.setInt("themeType", ThemeType.system.index);
