@@ -14,9 +14,10 @@ class _ChangelogRelease {
 }
 
 class Changelog extends StatefulWidget {
-  const Changelog({super.key, this.showTitle = true});
+  const Changelog({super.key, this.showTitle = true, this.maxVersions});
 
   final bool showTitle;
+  final int? maxVersions;
 
   @override
   State<Changelog> createState() => _ChangelogState();
@@ -35,18 +36,19 @@ class _ChangelogState extends State<Changelog> {
     if (headings.isEmpty) {
       throw const FormatException('No releases found in CHANGELOG.md');
     }
-    return <String, _ChangelogRelease>{
-      for (int i = 0; i < headings.length; i++)
-        headings[i].group(1)!: _ChangelogRelease(
-          date: headings[i].group(2)?.trim(),
-          content: markdown
-              .substring(
-                headings[i].end,
-                i + 1 < headings.length ? headings[i + 1].start : markdown.length,
-              )
-              .trim(),
+    final Map<String, _ChangelogRelease> releases = <String, _ChangelogRelease>{};
+    for (int i = 0; i < headings.length; i++) {
+      final RegExpMatch heading = headings[i];
+      releases.putIfAbsent(
+        heading.group(1)!,
+        () => _ChangelogRelease(
+          date: heading.group(2)?.trim(),
+          content:
+              markdown.substring(heading.end, i + 1 < headings.length ? headings[i + 1].start : markdown.length).trim(),
         ),
-    };
+      );
+    }
+    return releases;
   }
 
   @override
@@ -88,7 +90,9 @@ class _ChangelogState extends State<Changelog> {
           else if (!snapshot.hasData)
             const Center(child: CircularProgressIndicator())
           else
-            ...snapshot.data!.entries.map((MapEntry<String, _ChangelogRelease> entry) {
+            ...snapshot.data!.entries
+                .take(widget.maxVersions ?? snapshot.data!.length)
+                .map((MapEntry<String, _ChangelogRelease> entry) {
               return Container(
                 margin: const EdgeInsets.only(bottom: 24),
                 padding: const EdgeInsets.all(16),

@@ -4,6 +4,7 @@
 
 - Added Design Preview in First Configuration Menu.
 - Fixed Clipboard History Entries.
+- Fixed Plugins Installation for Microsoft Store Users.
 
 # v2.1.4 - 9 Oct 2026
 

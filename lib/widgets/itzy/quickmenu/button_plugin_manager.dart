@@ -246,8 +246,28 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
     }
   }
 
+  bool get _needsStoreFolderChange =>
+      AppPaths.isPackagedInstall && p.windows.equals(AppPaths.pluginsDirectory, AppPaths.currentPath('plugins'));
+
+  Future<void> _showPluginDirectoryWarning() async {
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Installation folder required'),
+        content: const Text('You need to change the Installation folder from "Installed" Tab.'),
+        actions: <Widget>[
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
+        ],
+      ),
+    );
+  }
+
   Future<void> _install(PluginGalleryEntry entry) async {
     if (_installingId != null) return;
+    if (_needsStoreFolderChange) {
+      await _showPluginDirectoryWarning();
+      return;
+    }
     setState(() {
       _installingId = entry.id;
       _installStatus = '';
@@ -264,6 +284,10 @@ class _PluginManagerPanelState extends State<PluginManagerPanel> {
 
   Future<void> _installAllRecommended() async {
     if (_installingId != null || _installingRecommended) return;
+    if (_needsStoreFolderChange) {
+      await _showPluginDirectoryWarning();
+      return;
+    }
     final List<PluginGalleryEntry> pending = (_galleryEntries ?? <PluginGalleryEntry>[])
         .where(
           (PluginGalleryEntry entry) =>
@@ -747,8 +771,6 @@ Build a plugin with your favorite AI coding assistant:
     final Color accent = Design.accent;
     final Color text = Design.text;
     final Color statusColor = _pluginDirectoryStatusError ? Colors.red.shade400 : accent;
-    final bool needsStoreFolderChange =
-        AppPaths.isPackagedInstall && p.windows.equals(AppPaths.pluginsDirectory, AppPaths.currentPath('plugins'));
 
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
@@ -782,7 +804,7 @@ Build a plugin with your favorite AI coding assistant:
                   ),
                 ),
                 const SizedBox(height: 3),
-                if (needsStoreFolderChange) ...<Widget>[
+                if (_needsStoreFolderChange) ...<Widget>[
                   Text(
                     'You are running Tabame from Microsoft Store. Before installing plugins that require '
                     'packages, use Change to select a plugin installation folder outside the default '
