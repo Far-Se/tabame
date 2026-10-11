@@ -27,23 +27,14 @@ class MixedSearchHandler {
       return;
     }
 
-    if (searchMode == LauncherSearchMode.filesOnly && Boxes.searchFolders.isEmpty) {
-      context.setResults(<LauncherSearchResultItem>[
-        const LauncherSearchResultItem.info(LauncherInfoResult(
-          id: 'noSearchFoldersInfo',
-          title: 'No Search Folders Configured',
-          subtitle: 'Add folders in Settings -> Quickmenu -> Launcher to start searching files.',
-          icon: Icons.folder_off_rounded,
-        )),
-      ], isSearching: false);
-      return;
-    }
+    final bool noSearchFolders = searchMode == LauncherSearchMode.filesOnly && Boxes.searchFolders.isEmpty;
 
-    final bool shouldRunFilesystem = shouldRunFilesystemSearch(
-      searchMode: searchMode,
-      normalizedQuery: context.normalizedQuery,
-      rawQuery: context.query,
-    );
+    final bool shouldRunFilesystem = !noSearchFolders &&
+        shouldRunFilesystemSearch(
+          searchMode: searchMode,
+          normalizedQuery: context.normalizedQuery,
+          rawQuery: context.query,
+        );
 
     // Snapshot the BuildContext immediately on the main isolate before any
     // async gap so we never use it after the widget may have been disposed.
@@ -64,8 +55,9 @@ class MixedSearchHandler {
       return;
     }
 
-    final bool showAllHistory = (searchMode == LauncherSearchMode.filesOnly && context.normalizedQuery.isEmpty) ||
-        (searchMode == LauncherSearchMode.mixed && context.query == ' ');
+    final bool showAllHistory =
+        (searchMode == LauncherSearchMode.filesOnly && context.normalizedQuery.isEmpty && !noSearchFolders) ||
+            (searchMode == LauncherSearchMode.mixed && context.query == ' ');
 
     if (showAllHistory) {
       final List<SearchResultNode> topNodes = FileIndexDb.instance.getTopOpened(limit: 20);
@@ -88,10 +80,11 @@ class MixedSearchHandler {
 
     // Installed applications live in the same index as files, but they are
     // cheap to search on their own. Keep them available for two-character
-    // mixed queries while filesystem search waits for a longer query, and keep
-    // them ahead of generic file matches when both kinds match.
+    // mixed queries while filesystem search waits for a longer query, and
+    // include them in files-only searches too.
     final List<LauncherSearchResultItem> appMatches =
-        searchMode == LauncherSearchMode.mixed && context.normalizedQuery.length >= 2
+        (searchMode == LauncherSearchMode.filesOnly && context.normalizedQuery.isNotEmpty) ||
+                (searchMode == LauncherSearchMode.mixed && context.normalizedQuery.length >= 2)
             ? deserializeSearchMatches(FileIndexDb.instance.search(
                 context.lowerQuery,
                 limit: maxLauncherMatches,
@@ -110,7 +103,17 @@ class MixedSearchHandler {
     final List<LauncherSearchResultItem> initialFileResults = deserializeSearchMatches(dbMatches);
 
     final List<LauncherSearchResultItem> results = searchMode == LauncherSearchMode.filesOnly
-        ? initialFileResults
+        ? <LauncherSearchResultItem>[
+            ...appMatches,
+            ...initialFileResults,
+            if (noSearchFolders)
+              const LauncherSearchResultItem.info(LauncherInfoResult(
+                id: 'noSearchFoldersInfo',
+                title: 'No Search Folders Configured',
+                subtitle: 'Add folders in Settings -> Quickmenu -> Launcher to start searching files.',
+                icon: Icons.folder_off_rounded,
+              )),
+          ]
         : <LauncherSearchResultItem>[
             ...QuicklinkSearch.results(context.normalizedQuery),
             ...composeResults(
@@ -201,7 +204,10 @@ class MixedSearchHandler {
           : findBookmarkMatches(context.lowerQuery);
 
       final List<LauncherSearchResultItem> finalResults = searchMode == LauncherSearchMode.filesOnly
-          ? combinedFileResults
+          ? <LauncherSearchResultItem>[
+              ...appMatches,
+              ...combinedFileResults,
+            ]
           : <LauncherSearchResultItem>[
               ...QuicklinkSearch.results(context.normalizedQuery),
               ...composeResults(

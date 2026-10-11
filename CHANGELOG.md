@@ -1,3 +1,7 @@
+# v2.1.6 - 11 Oct 2026
+
+- Added App results in File Search.
+
 # v2.1.5 - 10 Oct 2026
 
 ## Fixes
