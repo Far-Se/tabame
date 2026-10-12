@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +18,41 @@ class QuickMenuFunctions {
   static int hiddenTime = 0;
   static int shownTime = 0;
   static int _visibilityRequest = 0;
+  static Offset? _suspendedLauncherPosition;
+
+  /// Remains true after resuming until a normal show/hide starts a new session.
+  /// Native focus events must not reset focus or notify plugins in this session.
+  static bool get isLauncherStatePreserved =>
+      _suspendedLauncherPosition != null && Globals.quickMenuPage == QuickMenuPage.launcher;
+
+  static bool get isLauncherSuspended => isLauncherStatePreserved && !isQuickMenuVisible;
+
+  static void clearPreservedLauncherState() => _suspendedLauncherPosition = null;
+
+  /// Parks the existing widget tree, including modal routes and plugin processes.
+  static void suspendLauncher() {
+    if (!Platform.isWindows) {
+      //TODO: Implement multiplatform
+      return;
+    }
+    if (!isQuickMenuVisible || Globals.quickMenuPage != QuickMenuPage.launcher || Globals.isStandaloneLauncher) return;
+
+    _suspendedLauncherPosition = Win32.getPosition();
+    ++_visibilityRequest;
+    isQuickMenuVisible = false;
+    hiddenTime = DateTime.now().millisecondsSinceEpoch;
+    Win32.setPosition(const Offset(-99999, -99999));
+    Win32.activateWindow(Globals.lastFocusedWinHWND);
+  }
+
+  static void _resumeLauncher() {
+    ++_visibilityRequest;
+    isQuickMenuVisible = true;
+    shownTime = DateTime.now().millisecondsSinceEpoch;
+    Win32.setPosition(_suspendedLauncherPosition!);
+    WinUtils.setWindowFullyOpaque(Win32.hWnd);
+    Win32.activateWindow(Win32.hWnd);
+  }
 
   static int taskBarSelectedIdx = -1;
 
@@ -116,8 +152,13 @@ class QuickMenuFunctions {
       bool forcePop = false}) async {
     final bool show = visible ?? !isQuickMenuVisible;
     if (!show && keepOpen) return;
+    if (show && type == QuickMenuPage.launcher && !forcePop && isLauncherSuspended) {
+      _resumeLauncher();
+      return;
+    }
     // Reject rapid reopens before listeners or opacity change anything.
     if (show && DateTime.now().millisecondsSinceEpoch - hiddenTime <= 150) return;
+    clearPreservedLauncherState();
     final int request = ++_visibilityRequest;
     void restoreOpacity() {
       if (request == _visibilityRequest && isQuickMenuVisible) {

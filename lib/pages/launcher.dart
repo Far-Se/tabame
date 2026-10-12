@@ -398,7 +398,6 @@ class LauncherState extends State<Launcher>
       prefix: 'd ',
       icon: Icons.desktop_windows_rounded,
     )),
-
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: 'ql ',
       caption: 'Quicklinks',
@@ -465,17 +464,11 @@ class LauncherState extends State<Launcher>
       prefix: r'$',
       icon: Icons.functions_rounded,
     )),
-    // const LauncherSearchResultItem.info(LauncherInfoResult(
-    //   id: 'ctrlKInfo',
-    //   title: 'Ctrl+K',
-    //   subtitle: 'Opens Actions Menu for a specific result',
-    //   icon: Icons.menu_rounded,
-    // )),
-    const LauncherSearchResultItem.info(LauncherInfoResult(
-      id: 'ctrlCInfo',
-      title: 'Ctrl+C',
-      subtitle: 'Ctrl+K: Opens Actions Menu for a specific result Ctrl+C: Copy file/folder. Only for File Search',
-      icon: Icons.menu_rounded,
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: '*hk',
+      caption: 'Hotkey Info',
+      prefix: '*hk',
+      icon: Icons.keyboard_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: '!',
@@ -540,6 +533,7 @@ class LauncherState extends State<Launcher>
     _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
     Globals.quickMenuSearchInputVersion.addListener(_consumePendingQuickMenuSearchInput);
     FocusManager.instance.addListener(_onFocusManagerChanged);
+    FocusManager.instance.addEarlyKeyEventHandler(_onLauncherSuspendKey);
     _searchFocusNode.onKeyEvent = _onKeyEvent;
     _resultsFocusNode.onKeyEvent = _onKeyEvent;
 
@@ -561,7 +555,7 @@ class LauncherState extends State<Launcher>
     // Re-request focus after the window activation delay settles (the OS
     // Win32.activateWindow call in onQuickMenuShown fires ~100 ms after show).
     Future<void>.delayed(const Duration(milliseconds: 200), () {
-      if (mounted) {
+      if (_canFocusLauncher) {
         windowManager.focus();
         _focusSearch();
       }
@@ -595,6 +589,28 @@ class LauncherState extends State<Launcher>
     if (!visible) _deactivatePlugin();
   }
 
+  KeyEventResult _onLauncherSuspendKey(KeyEvent event) {
+    if (!Platform.isWindows ||
+        !mounted ||
+        Globals.isStandaloneLauncher ||
+        Globals.quickMenuPage != QuickMenuPage.launcher ||
+        !QuickMenuFunctions.isQuickMenuVisible) return KeyEventResult.ignored;
+    final HardwareKeyboard keyboard = HardwareKeyboard.instance;
+    if (event.logicalKey != LogicalKeyboardKey.keyV ||
+        !keyboard.isAltPressed ||
+        keyboard.isControlPressed ||
+        keyboard.isShiftPressed ||
+        keyboard.isMetaPressed) return KeyEventResult.ignored;
+    if (event is KeyDownEvent) {
+      _keyRepeatTimer?.cancel();
+      _lastPressedKey = null;
+      _isRepeatingKey.value = false;
+      _launcherFocusRetryTimer?.cancel();
+      QuickMenuFunctions.suspendLauncher();
+    }
+    return KeyEventResult.handled;
+  }
+
   @override
   void dispose() {
     if (_previewOnly) {
@@ -611,6 +627,7 @@ class LauncherState extends State<Launcher>
       return;
     }
     QuicklinkStore.changes.removeListener(_reloadQuicklinks);
+    QuickMenuFunctions.clearPreservedLauncherState();
     Globals.quickMenuPage = QuickMenuPage.quickMenu;
     WindowManager.instance.removeListener(this);
     QuickMenuFunctions.removeListener(this);
@@ -638,6 +655,7 @@ class LauncherState extends State<Launcher>
     user.launcherSearchText = '';
     Globals.quickMenuSearchInputVersion.removeListener(_consumePendingQuickMenuSearchInput);
     FocusManager.instance.removeListener(_onFocusManagerChanged);
+    FocusManager.instance.removeEarlyKeyEventHandler(_onLauncherSuspendKey);
     _isRepeatingKey.dispose();
 
     if (!FileIndexer.instance.isIndexing) {

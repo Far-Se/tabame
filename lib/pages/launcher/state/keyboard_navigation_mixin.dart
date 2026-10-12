@@ -502,14 +502,17 @@ mixin _KeyboardNavigationMixin on _LauncherStateMembersMixin {
   void _startWindowRefreshLoop() {
     _windowRefreshTimer?.cancel();
     _windowRefreshTimer = Timer.periodic(const Duration(milliseconds: 900), (Timer timer) async {
-      if (!mounted || Globals.quickMenuPage != QuickMenuPage.launcher) return;
+      if (!mounted || !QuickMenuFunctions.isQuickMenuVisible || Globals.quickMenuPage != QuickMenuPage.launcher) return;
 
       final WindowWatcherService watcher = WindowWatcherService.instance;
       final bool updated = await watcher.refresh();
       if (watcher.containsExecutable('taskmgr.exe')) {
         await TrayWatcher.fetchTray();
       }
-      if (!mounted || !updated || Globals.quickMenuPage != QuickMenuPage.launcher) return;
+      if (!mounted ||
+          !updated ||
+          !QuickMenuFunctions.isQuickMenuVisible ||
+          Globals.quickMenuPage != QuickMenuPage.launcher) return;
 
       _refreshVisibleWindowResults();
     });

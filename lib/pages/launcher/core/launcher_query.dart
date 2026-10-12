@@ -19,6 +19,7 @@ enum LauncherSearchMode {
   workspacesOnly,
   timerCommand,
   functionCommand,
+  hotkeysOnly,
   mediaCommand,
   spotifyCommand,
 }
@@ -48,12 +49,14 @@ class LauncherQuery {
 
   static final RegExp _mediaCommandPrefixPattern = RegExp(r'^m[1-5]? ');
   static final RegExp _dollarAmountPrefixPattern = RegExp(r'^\$\s*\d');
+  static final RegExp _hotkeyPrefixPattern = RegExp(r'^\*hk(?:\s|$)', caseSensitive: false);
 
   static LauncherSearchMode _modeFor(String query) {
     if (query.startsWith('/')) return LauncherSearchMode.actionsOnly;
     if (query.startsWith('!')) return LauncherSearchMode.pluginsOnly;
     if (query == 'sp' || query.startsWith('sp ')) return LauncherSearchMode.spotifyCommand;
     if (_mediaCommandPrefixPattern.hasMatch(query)) return LauncherSearchMode.mediaCommand;
+    if (_hotkeyPrefixPattern.hasMatch(query)) return LauncherSearchMode.hotkeysOnly;
     if (query.startsWith(r'$') && !_dollarAmountPrefixPattern.hasMatch(query)) {
       return LauncherSearchMode.functionCommand;
     }
@@ -79,6 +82,8 @@ class LauncherQuery {
   }
 
   static String _normalizedFor(String query) {
+    final Match? hotkeyMatch = _hotkeyPrefixPattern.matchAsPrefix(query);
+    if (hotkeyMatch != null) return query.substring(hotkeyMatch.end).trimLeft();
     if (query.startsWith('!')) return query.substring(1).trimLeft();
     if (query == 'sp') return '';
     if (query.startsWith('sp ')) return query.substring(3).trimLeft();

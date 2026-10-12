@@ -772,7 +772,7 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
 
   Future<void> _setPluginWindowWidth(double width, {bool finalize = false}) async {
     await WindowManager.instance.setSize(Size(width, Globals.launcherSize.height));
-    if (!mounted) return;
+    if (!mounted || !QuickMenuFunctions.isQuickMenuVisible) return;
     Win32.setCenter(useMouse: true);
     if (!finalize) return;
     WinUtils.fixDrawBug();

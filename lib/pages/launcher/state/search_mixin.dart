@@ -209,6 +209,9 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
       case LauncherSearchMode.functionCommand:
         _handleFunctionCommand(context);
         break;
+      case LauncherSearchMode.hotkeysOnly:
+        _handleHotkeyInfoSearch(context);
+        break;
       case LauncherSearchMode.pluginsOnly:
         _handlePluginListSearch(context);
         break;
@@ -234,6 +237,55 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
         MixedSearchHandler.handle(context, searchMode);
         break;
     }
+  }
+
+  void _handleHotkeyInfoSearch(LauncherSearchContext context) {
+    const List<LauncherInfoResult> hotkeys = <LauncherInfoResult>[
+      LauncherInfoResult(
+        id: 'hotkey-ctrl-k',
+        title: 'Ctrl + K',
+        subtitle: 'Opens the Actions Menu for the selected result',
+        icon: Icons.keyboard_rounded,
+      ),
+      LauncherInfoResult(
+        id: 'hotkey-ctrl-c',
+        title: 'Ctrl + C',
+        subtitle: 'Copies files/folders in File Search',
+        icon: Icons.keyboard_rounded,
+      ),
+      LauncherInfoResult(
+        id: 'hotkey-ctrl-enter',
+        title: 'Ctrl + Enter',
+        subtitle: 'Opens the selected folder',
+        icon: Icons.keyboard_rounded,
+      ),
+      LauncherInfoResult(
+        id: 'hotkey-alt-v',
+        title: 'Alt + V',
+        subtitle: 'Hides the Launcher while keeping its state',
+        icon: Icons.keyboard_rounded,
+      ),
+    ];
+    final String filter = context.normalizedQuery.trim().toLowerCase();
+    final List<LauncherSearchResultItem> matches = hotkeys
+        .where((LauncherInfoResult hotkey) =>
+            filter.isEmpty || '${hotkey.title} ${hotkey.subtitle}'.toLowerCase().contains(filter))
+        .map((LauncherInfoResult hotkey) => LauncherSearchResultItem.info(hotkey))
+        .toList(growable: false);
+
+    context.setResults(
+      matches.isEmpty
+          ? <LauncherSearchResultItem>[
+              LauncherSearchResultItem.info(LauncherInfoResult(
+                id: 'hotkey-no-match:$filter',
+                title: 'No matching hotkeys',
+                subtitle: 'Try *hk to see all launcher hotkeys',
+                icon: Icons.keyboard_rounded,
+              )),
+            ]
+          : matches,
+      isSearching: false,
+    );
   }
 
   /// Lists enabled plugins for the `!` launcher shortcut. The configured

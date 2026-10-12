@@ -547,6 +547,8 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
   }
 
   void _onWindowFocus() {
+    // Suspending/resuming keeps the existing Flutter focus and plugin UI.
+    if (QuickMenuFunctions.isLauncherStatePreserved) return;
     if (kReleaseMode) QuickMenuFunctions.isQuickMenuVisible = true;
     // Do not steal focus from the Launcher's TextField when it is active.
     if (Globals.quickMenuPage == QuickMenuPage.launcher) {
@@ -559,6 +561,11 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
 
   void _onWindowMoved() {
     final Offset position = Win32.getPosition();
+    if (QuickMenuFunctions.isLauncherStatePreserved) {
+      // A restored launcher can be on a monitor to the left of the primary one.
+      QuickMenuFunctions.isQuickMenuVisible = position != const Offset(-99999, -99999);
+      return;
+    }
     if (position.dx < -99) {
       QuickMenuFunctions.isQuickMenuVisible = false;
     } else {
