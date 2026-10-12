@@ -59,6 +59,7 @@ import 'launcher/result/result_item_file.dart';
 import 'launcher/result/result_item_window.dart';
 import 'launcher/result/result_row.dart';
 import 'launcher/search/bookmarks_search_handler.dart';
+import 'launcher/search/authenticator_search_handler.dart';
 import 'launcher/search/browser_tabs_search_handler.dart';
 import 'launcher/search/desktop_search_handler.dart';
 import 'launcher/search/launcher_search_context.dart';
@@ -368,12 +369,6 @@ class LauncherState extends State<Launcher>
       icon: Icons.bookmark_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
-      label: 'ql ',
-      caption: 'Quicklinks',
-      prefix: 'ql ',
-      icon: Icons.link_rounded,
-    )),
-    const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: 'b ',
       caption: 'Bookmarks  ·  "b add <url>" to save',
       prefix: 'b ',
@@ -392,10 +387,29 @@ class LauncherState extends State<Launcher>
       icon: Icons.apps_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'auth ',
+      caption: 'Authenticator',
+      prefix: 'auth ',
+      icon: Icons.password_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: 'd ',
       caption: 'Desktop Files',
       prefix: 'd ',
       icon: Icons.desktop_windows_rounded,
+    )),
+
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'ql ',
+      caption: 'Quicklinks',
+      prefix: 'ql ',
+      icon: Icons.link_rounded,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'clb',
+      caption: 'Clipboard History',
+      prefix: 'clb ',
+      icon: Icons.content_paste_rounded,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: 'n ',

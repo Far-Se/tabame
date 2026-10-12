@@ -525,7 +525,7 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
         onSurface: theme.colorScheme.onSurface,
         onTap: () => _runQuickAction(quickAction),
         onHover: () => _selectResultFromMouse(index),
-        icon: Icon(Icons.bolt_rounded, size: 15, color: accent),
+        icon: quickAction.iconBuilder?.call(context) ?? Icon(Icons.bolt_rounded, size: 15, color: accent),
         title: quickAction.title,
       );
 

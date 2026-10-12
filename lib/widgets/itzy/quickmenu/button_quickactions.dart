@@ -48,6 +48,7 @@ class QuickActionMenuEntry {
     required this.title,
     required this.searchTerms,
     required this.builder,
+    this.iconBuilder,
     this.onExecute,
     this.allowRenderedFallbackExecute = true,
   });
@@ -56,6 +57,7 @@ class QuickActionMenuEntry {
   final String title;
   final List<String> searchTerms;
   final WidgetBuilder builder;
+  final WidgetBuilder? iconBuilder;
   final VoidCallback? onExecute;
   final bool allowRenderedFallbackExecute;
 

@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import '../../../logic/error_handler.dart';
 import '../../../models/settings.dart';
 import '../../../platform/app_paths.dart';
+import 'clipboard_history_plugin.dart';
 import 'plugin_manifest.dart';
 
 /// Scans the plugins folder and answers keyword lookups for the launcher.
@@ -43,7 +44,8 @@ abstract final class PluginRegistry {
   }
 
   /// Returns the text users type to activate [manifest].
-  static String launchKeyword(PluginManifest manifest) => launchKeywordFor(manifest.keyword);
+  static String launchKeyword(PluginManifest manifest) =>
+      identical(manifest, ClipboardHistoryPlugin.manifest) ? manifest.keyword : launchKeywordFor(manifest.keyword);
 
   /// Returns the text users type to activate a plugin with [keyword].
   static String launchKeywordFor(String keyword) => '$shortcut${keyword.trim()}';
@@ -55,6 +57,7 @@ abstract final class PluginRegistry {
   /// Title aliases stay prefixed so a plugin name does not claim ordinary
   /// launcher searches when no plugin shortcut is configured.
   static String launchTitle(PluginManifest manifest) {
+    if (identical(manifest, ClipboardHistoryPlugin.manifest)) return '';
     final String title = manifest.name.trim();
     return shortcut.isEmpty || title.isEmpty ? '' : '$shortcut$title';
   }
@@ -215,6 +218,10 @@ abstract final class PluginRegistry {
   /// null. When a global shortcut is configured, it is included before either
   /// alias (so `;weather` and `;Weather` match when the shortcut is `;`).
   static PluginManifest? matchKeyword(String query) {
+    // Built-in launcher commands work even before installed plugins are scanned.
+    if (_matchedLaunchAlias(query, ClipboardHistoryPlugin.manifest) != null) {
+      return ClipboardHistoryPlugin.manifest;
+    }
     if (_byKeyword.isEmpty) return null;
     PluginManifest? matchedPlugin;
     int matchedAliasLength = -1;

@@ -9,6 +9,7 @@ enum LauncherSearchMode {
   bookmarkOnly,
   cliOnly,
   appsOnly,
+  authenticatorOnly,
   desktopOnly,
   notionOnly,
   obsidianOnly,
@@ -68,6 +69,7 @@ class LauncherQuery {
     if (query.startsWith('ws ')) return LauncherSearchMode.workspacesOnly;
     if (query.startsWith('cli ')) return LauncherSearchMode.cliOnly;
     if (query.startsWith('app ')) return LauncherSearchMode.appsOnly;
+    if (query.startsWith('auth ')) return LauncherSearchMode.authenticatorOnly;
     if (query.startsWith('b ')) return LauncherSearchMode.bookmarkOnly;
     if (query.startsWith('>') || query.startsWith('?') || query.startsWith(' ')) {
       return LauncherSearchMode.filesOnly;
@@ -86,6 +88,7 @@ class LauncherQuery {
     if (query.startsWith('d ')) return query.substring(2).trimLeft();
     if (query.startsWith('cli ')) return query.substring(4).trimLeft();
     if (query.startsWith('app ')) return query.substring(4).trimLeft();
+    if (query.startsWith('auth ')) return query.substring(5).trimLeft();
     if (query.startsWith('n ')) return query.substring(2).trimLeft();
     if (query.startsWith('o ')) return query.substring(2).trimLeft();
     if (query.startsWith('r ')) return query.substring(2).trimLeft();

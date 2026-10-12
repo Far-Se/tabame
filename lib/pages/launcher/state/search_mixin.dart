@@ -161,6 +161,9 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
     );
 
     switch (searchMode) {
+      case LauncherSearchMode.authenticatorOnly:
+        AuthenticatorSearchHandler.handle(context);
+        break;
       case LauncherSearchMode.windowsOnly:
         WindowsSearchHandler.handle(context);
         break;

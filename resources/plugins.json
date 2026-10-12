@@ -830,7 +830,8 @@
       "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/kaomoji",
       "files": {
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/plugin.json",
-        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/main.js"
+        "main.js": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/main.js",
+        "lib.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/kaomoji/lib.json"
       }
     },
     {
@@ -1003,7 +1004,9 @@
       "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/fancy-text",
       "files": {
         "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/fancy-text/plugin.json",
-        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/fancy-text/main.py"
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/fancy-text/main.py",
+        "categories.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/fancy-text/categories.json",
+        "fonts.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/fancy-text/fonts.json"
       }
     },
     {

@@ -12,6 +12,7 @@ import '../../../models/settings.dart';
 import '../../../models/win32/win_utils.dart';
 import '../../../services/browser_bridge_service.dart';
 import '../../../services/notification_coordinator.dart';
+import 'clipboard_history_plugin.dart';
 import 'plugin_debug.dart';
 import 'plugin_manifest.dart';
 import 'plugin_protocol.dart';
@@ -60,6 +61,7 @@ class LauncherPluginHost {
   final PluginDebugLog debugLog = PluginDebugLog();
 
   Process? _process;
+  ClipboardHistoryPlugin? _clipboardHistory;
   PluginManifest? _active;
   StreamSubscription<String>? _stdoutSub;
   StreamSubscription<String>? _stderrSub;
@@ -107,13 +109,13 @@ class LauncherPluginHost {
   Future<void> _deactivationChain = Future<void>.value();
 
   PluginManifest? get activeManifest => _active;
-  bool get isActive => _process != null && _active != null;
+  bool get isActive => (_process != null || _clipboardHistory != null) && _active != null;
 
   /// Ensures the process for [manifest] is running, restarting only when a
   /// *different* plugin was previously active. Returns immediately if the same
   /// plugin is already live.
   Future<void> activate(PluginManifest manifest, {required String initialQuery}) async {
-    if (_active?.id == manifest.id && _process != null) {
+    if (_active?.id == manifest.id && isActive) {
       // Already live (e.g. re-entering after a dev reload raced an exit) –
       // just bring the plugin up to date with the current query.
       sendQuery(initialQuery);
@@ -126,6 +128,12 @@ class LauncherPluginHost {
     _lastQuery = initialQuery;
     _backgroundGrace = null;
     _rev = 0;
+
+    if (identical(manifest, ClipboardHistoryPlugin.manifest)) {
+      _clipboardHistory = ClipboardHistoryPlugin(onFrame: onFrame, onCommand: onCommand);
+      sendQuery(initialQuery);
+      return;
+    }
 
     final _RetainedPluginProcess? retained = _retained.remove(manifest.id);
     if (retained != null) {
@@ -1131,8 +1139,13 @@ class LauncherPluginHost {
   }
 
   void _send(Map<String, Object?> message) {
+    if (_closing) return;
+    if (_clipboardHistory != null) {
+      _clipboardHistory!.handle(message);
+      return;
+    }
     final Process? process = _process;
-    if (process == null || _closing) return;
+    if (process == null) return;
     unawaited(_sendToProcess(process, message, requireLive: true));
   }
 
@@ -1164,6 +1177,8 @@ class LauncherPluginHost {
   }
 
   Future<void> _deactivateActive() async {
+    _clipboardHistory?.dispose();
+    _clipboardHistory = null;
     for (final HttpServer server in _oauthServers.toList()) {
       await server.close(force: true);
     }
