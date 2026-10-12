@@ -2,6 +2,7 @@
 
 - Added App results in File Search.
 - Made Clipboard Plugin be Launcher native.
+- Fixed MStore Roaming Folder.
 
 # v2.1.5 - 10 Oct 2026
 

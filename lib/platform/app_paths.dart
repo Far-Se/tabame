@@ -89,6 +89,24 @@ class AppPaths {
     return value == null || value.isEmpty ? null : value;
   }
 
+  /// Resolves a Store-virtualized file/directory before handing it to another
+  /// process. This also handles older paths saved in settings or history.
+  static String externalPath(String path) {
+    if (!Platform.isWindows) {
+      //TODO: Implement multiplatform
+      return path;
+    }
+    if (!isPackagedInstall || !p.isAbsolute(path)) return path;
+    try {
+      // dart:io uses GetFinalPathNameByHandle on Windows, for both files and
+      // directories. It discovers the package location without hardcoding its ID.
+      return File(path).resolveSymbolicLinksSync();
+    } on FileSystemException {
+      // Missing/inaccessible targets must retain the shell's normal behavior.
+      return path;
+    }
+  }
+
   /// Clears the service for focused tests. Production code should initialize
   /// once from [main] and never call this.
   static void resetForTesting() {

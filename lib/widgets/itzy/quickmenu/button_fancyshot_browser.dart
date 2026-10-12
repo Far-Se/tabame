@@ -744,7 +744,7 @@ class _MediaTileState extends State<_MediaTile> {
 
   void _openFile() {
     // Open with default OS handler
-    Process.run('explorer', <String>[widget.file.path]);
+    WinUtils.open(widget.file.path, parseParamaters: false);
   }
 
   @override

@@ -113,18 +113,31 @@ flutter:
     - resources/images/checkerboard.png
 
 msix_config:
-  display_name: Tabame
+  display_name: Tabame Local
   publisher_display_name: Far Se
-  identity_name: FarSe.Tabame
+  identity_name: FarSe.Tabame.Local
   msix_version: 2.0.0.0
   logo_path: resources/logo_light.png
   capabilities: internetClient
-  store: true
-  publisher: CN=AFABAF16-E985-4690-B2D6-19C8C95AADB4
+  store: false
+  # publisher: CN=AFABAF16-E985-4690-B2D6-19C8C95AADB4
   startup_task:
     task_id: TabameStartup
     enabled: false
     parameters: --startup
+# msix_config:
+#   display_name: Tabame
+#   publisher_display_name: Far Se
+#   identity_name: FarSe.Tabame
+#   msix_version: 2.0.0.0
+#   logo_path: resources/logo_light.png
+#   capabilities: internetClient
+#   store: true
+#   publisher: CN=AFABAF16-E985-4690-B2D6-19C8C95AADB4
+#   startup_task:
+#     task_id: TabameStartup
+#     enabled: false
+#     parameters: --startup
 
 fonts:
   - family: Jura
