@@ -11,6 +11,7 @@ import '../../widgets/itzy/quickmenu/button_authenticator.dart';
 import '../../widgets/itzy/quickmenu/button_bluetooth.dart';
 import '../../widgets/itzy/quickmenu/button_bookmarks.dart';
 import '../../widgets/itzy/quickmenu/button_brightness.dart';
+import '../../widgets/itzy/quickmenu/button_browser_media.dart';
 // import '../../widgets/itzy/quickmenu/button_buy_me_a_coffee.dart';
 import '../../widgets/itzy/quickmenu/button_calculator.dart';
 import '../../widgets/itzy/quickmenu/button_change_theme.dart';
@@ -186,6 +187,11 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   //   widget: () => const BuyMeACoffeeButton(),
   //   visibleWhen: shouldShowBuyMeACoffeeButton,
   // ),
+  "BrowserMediaButton": QuickAction(
+    name: 'Browser Media',
+    icon: Icons.video_library_outlined,
+    widget: () => const BrowserMediaButton(),
+  ),
   "CalculatorButton": QuickAction(
     icon: Icons.calculate_outlined,
     widget: () => const CalculatorButton(),

@@ -170,6 +170,9 @@ mixin _SearchMixin on _LauncherStateMembersMixin {
       case LauncherSearchMode.browserTabsOnly:
         BrowserTabsSearchHandler.handle(context);
         break;
+      case LauncherSearchMode.browserMediaOnly:
+        BrowserMediaSearchHandler.handle(context);
+        break;
       case LauncherSearchMode.bookmarksOnly:
         BookmarksSearchHandler.handle(context);
         break;

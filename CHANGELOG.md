@@ -6,6 +6,7 @@
 - Added Launcher Shortcut Info.
 - Added Launcher Alt+V to hide while preserving its state.
 - Fixed Project Overview
+- Added `Browser Media` QuickAction Button.
 
 # v2.1.5 - 10 Oct 2026
 

@@ -15,6 +15,7 @@ import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
 import '../platform/app_paths.dart';
 import '../services/browser_bridge_service.dart';
+import '../services/browser_media_service.dart';
 import '../services/clipboard_history_coordinator.dart';
 import 'error_handler.dart';
 
@@ -73,12 +74,14 @@ class AppStartup {
     if (Globals.isStandaloneLauncher) {
       await Boxes.registerBoxes(justLoad: true);
       await BrowserBridgeService.instance.initialize(asLauncherClient: true);
+      BrowserMediaService.instance.initialize();
       Debug.add("Registered: Standalone launcher settings");
       return;
     }
     await registerAll();
     if (user.page == TPage.quickmenu) {
       await BrowserBridgeService.instance.initialize();
+      BrowserMediaService.instance.initialize();
       Debug.add("Registered: Browser bridge");
     }
     if (File(AppPaths.resolvePath('enable_debug.txt')).existsSync()) {

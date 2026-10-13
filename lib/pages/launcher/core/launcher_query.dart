@@ -5,6 +5,7 @@ enum LauncherSearchMode {
   filesOnly,
   windowsOnly,
   browserTabsOnly,
+  browserMediaOnly,
   bookmarksOnly,
   bookmarkOnly,
   cliOnly,
@@ -55,6 +56,7 @@ class LauncherQuery {
     if (query.startsWith('/')) return LauncherSearchMode.actionsOnly;
     if (query.startsWith('!')) return LauncherSearchMode.pluginsOnly;
     if (query == 'sp' || query.startsWith('sp ')) return LauncherSearchMode.spotifyCommand;
+    if (query == 'bm' || query.startsWith('bm ')) return LauncherSearchMode.browserMediaOnly;
     if (_mediaCommandPrefixPattern.hasMatch(query)) return LauncherSearchMode.mediaCommand;
     if (_hotkeyPrefixPattern.hasMatch(query)) return LauncherSearchMode.hotkeysOnly;
     if (query.startsWith(r'$') && !_dollarAmountPrefixPattern.hasMatch(query)) {
@@ -87,6 +89,8 @@ class LauncherQuery {
     if (query.startsWith('!')) return query.substring(1).trimLeft();
     if (query == 'sp') return '';
     if (query.startsWith('sp ')) return query.substring(3).trimLeft();
+    if (query == 'bm') return '';
+    if (query.startsWith('bm ')) return query.substring(3).trimLeft();
     final RegExpMatch? mediaMatch = _mediaCommandPrefixPattern.firstMatch(query);
     if (mediaMatch != null) return query.substring(mediaMatch.end).trimLeft();
     if (query.startsWith('timer ')) return query.substring(6).trimLeft();

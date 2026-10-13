@@ -61,6 +61,7 @@ import 'launcher/result/result_row.dart';
 import 'launcher/search/bookmarks_search_handler.dart';
 import 'launcher/search/authenticator_search_handler.dart';
 import 'launcher/search/browser_tabs_search_handler.dart';
+import 'launcher/search/browser_media_search_handler.dart';
 import 'launcher/search/desktop_search_handler.dart';
 import 'launcher/search/launcher_search_context.dart';
 import 'launcher/search/recent_search_handler.dart';
@@ -445,6 +446,12 @@ class LauncherState extends State<Launcher>
       caption: 'Media Control',
       prefix: 'm ',
       icon: Icons.music_note,
+    )),
+    const LauncherSearchResultItem.shortcut(LauncherShortcut(
+      label: 'bm ',
+      caption: 'Browser Media',
+      prefix: 'bm ',
+      icon: Icons.video_library_outlined,
     )),
     const LauncherSearchResultItem.shortcut(LauncherShortcut(
       label: 'sp ',
