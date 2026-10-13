@@ -711,6 +711,18 @@ class LauncherState extends State<Launcher>
     if (_activePlugin != null) _pluginHost.sendFocus();
   }
 
+  @override
+  void onLauncherResumed(FocusNode? previousFocusNode) {
+    unawaited(windowManager.focus());
+
+    final FocusNode? focusNode = previousFocusNode;
+    if (focusNode != null && focusNode.context != null && focusNode.canRequestFocus) {
+      focusNode.requestFocus();
+    } else if (_canFocusLauncher) {
+      _focusSearch();
+    }
+  }
+
   bool get _pluginOwnsFormFocus {
     final PluginRenderFrame? frame = _pluginFrame;
     if (_activePlugin == null || frame == null) return false;

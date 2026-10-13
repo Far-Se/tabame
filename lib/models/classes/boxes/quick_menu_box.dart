@@ -19,6 +19,7 @@ class QuickMenuFunctions {
   static int shownTime = 0;
   static int _visibilityRequest = 0;
   static Offset? _suspendedLauncherPosition;
+  static FocusNode? _suspendedLauncherFocusNode;
 
   /// Remains true after resuming until a normal show/hide starts a new session.
   /// Native focus events must not reset focus or notify plugins in this session.
@@ -27,7 +28,10 @@ class QuickMenuFunctions {
 
   static bool get isLauncherSuspended => isLauncherStatePreserved && !isQuickMenuVisible;
 
-  static void clearPreservedLauncherState() => _suspendedLauncherPosition = null;
+  static void clearPreservedLauncherState() {
+    _suspendedLauncherPosition = null;
+    _suspendedLauncherFocusNode = null;
+  }
 
   /// Parks the existing widget tree, including modal routes and plugin processes.
   static void suspendLauncher() {
@@ -38,6 +42,7 @@ class QuickMenuFunctions {
     if (!isQuickMenuVisible || Globals.quickMenuPage != QuickMenuPage.launcher || Globals.isStandaloneLauncher) return;
 
     _suspendedLauncherPosition = Win32.getPosition();
+    _suspendedLauncherFocusNode = FocusManager.instance.primaryFocus;
     ++_visibilityRequest;
     isQuickMenuVisible = false;
     hiddenTime = DateTime.now().millisecondsSinceEpoch;
@@ -52,6 +57,16 @@ class QuickMenuFunctions {
     Win32.setPosition(_suspendedLauncherPosition!);
     WinUtils.setWindowFullyOpaque(Win32.hWnd);
     Win32.activateWindow(Win32.hWnd);
+
+    void restoreLauncherFocus() {
+      if (!isLauncherStatePreserved || !isQuickMenuVisible) return;
+      for (final QuickMenuTriggers listener in listeners) {
+        if (!_listeners.contains(listener)) continue;
+        listener.onLauncherResumed(_suspendedLauncherFocusNode);
+      }
+    }
+
+    Future<void>.delayed(const Duration(milliseconds: 120), restoreLauncherFocus);
   }
 
   static int taskBarSelectedIdx = -1;
@@ -285,4 +300,5 @@ mixin class QuickMenuTriggers {
   void onVerticalArrow(bool up) {}
   Future<void> refreshQuickMenu() async {}
   void requestQuickMenuFocus() {}
+  void onLauncherResumed(FocusNode? previousFocusNode) {}
 }

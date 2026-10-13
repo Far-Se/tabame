@@ -22,6 +22,7 @@ import '../../models/window_watcher.dart';
 import '../../widgets/widgets/extracted_icon.dart';
 import '../quick_snap_service.dart';
 import 'windows_quick_snap_service.dart';
+import 'windows_quicksnap_standalone_config.dart';
 
 Future<void> startQuickSnap() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,12 +43,14 @@ Future<void> startQuickSnap() async {
     title: 'Tabame QuickSnap',
   );
 
-  await windowManager.waitUntilReadyToShow(windowOptions, () async {
-    await windowManager.setAsFrameless();
-    await windowManager.setHasShadow(false);
-    await windowManager.show();
-    Win32Window.setHwnd(GetAncestor(GetActiveWindow(), 2));
-  });
+  await windowManager.waitUntilReadyToShow(windowOptions);
+  await windowManager.setAsFrameless();
+  await windowManager.setHasShadow(false);
+  await windowManager.show();
+  // GetActiveWindow is thread-local; resolve the Flutter HWND on the native
+  // platform thread before the overlay starts changing its window styles.
+  await Win32.fetchMainWindowHandle();
+  Win32Window.setHwnd(Win32.hWnd);
 
   // Standalone processes don't go through registerAll(), so the native "views"
   // hook that emits moveStart/moveEnd is off by default – enable it here or the
@@ -98,6 +101,8 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
   /// monitor id -> active preset index. Each monitor keeps its own grid so the
   /// user can run a different layout per screen.
   final Map<int, int> _activeGridIndex = <int, int>{};
+  final WindowsQuickSnapStandaloneConfig _config = WindowsQuickSnapStandaloneConfig();
+  final Map<int, String> _monitorKeys = <int, String>{};
 
   /// hwnd -> canonical slot index, remembered across grid switches so a
   /// smaller grid can collapse extra windows into its last zone and a larger
@@ -122,8 +127,10 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
 
   /// zoneIndex within [_zones] (or -1) currently under the cursor.
   int _hoveredZone = -1;
-  bool _clickThroughEnabled = true;
-  bool _dragging = false;
+  bool? _clickThroughEnabled;
+  bool _overlayPointerDown = false;
+  int? _draggedHwnd;
+  bool get _dragging => _draggedHwnd != null;
 
   /// Zone index (within [_zones]) the dragged window is currently over –
   /// distinct from [_hoveredZone], which only tracks the taskbar strip.
@@ -197,16 +204,23 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
       GetSystemMetrics(SM_YVIRTUALSCREEN).toDouble(),
     );
 
+    _config.load();
+    for (final int monitorId in Monitor.list) {
+      final String? key = WindowsQuickSnapStandaloneConfig.monitorKey(monitorId);
+      if (key != null) _monitorKeys[monitorId] = key;
+      if (_presets.isEmpty) continue;
+      final String? savedPreset = _config.monitorPresets[key];
+      final int savedIndex = _presets.indexWhere((QuickGrid preset) => preset.id == savedPreset);
+      _activeGridIndex[monitorId] = savedIndex >= 0 ? savedIndex : 0;
+    }
     if (_presets.isNotEmpty) {
-      for (final int monitorId in Monitor.list) {
-        _activeGridIndex[monitorId] = 0;
-      }
       _rebuildZones();
     }
+    _saveMonitorPresets();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Win32Window.setupOverlay(toolWindow: true);
-      Win32Window.enableClickThrough();
+      _setClickThrough(true);
       _kickRenderSurface();
     });
 
@@ -247,6 +261,15 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
     setState(() => _activeGridIndex[monitorId] = index);
     _rebuildZones();
     _reflowForMonitor(monitorId);
+    _saveMonitorPresets();
+  }
+
+  void _saveMonitorPresets() {
+    for (final MapEntry<int, String> entry in _monitorKeys.entries) {
+      final QuickGrid? grid = _gridFor(entry.key);
+      if (grid != null) _config.monitorPresets[entry.value] = grid.id;
+    }
+    _config.save();
   }
 
   void _rebuildZones() {
@@ -403,14 +426,17 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
     // (left edge for the leftmost monitor, right edge otherwise), then keep it
     // revealed (hysteresis) until the cursor moves past the wider hide band.
     int switcherMonitor = -1;
-    if (_presets.isNotEmpty) {
+    if (Monitor.list.isNotEmpty) {
       if (_switcherMonitor != -1) {
         final Square? m = Monitor.monitorSizes[_switcherMonitor];
         if (m != null && my >= m.y && my < m.y + m.height) {
           final bool withinBand = _dockLeft(_switcherMonitor)
               ? (mx >= m.x && mx < m.x + _switcherHideBand)
               : (mx >= m.x + m.width - _switcherHideBand && mx < m.x + m.width);
-          if (withinBand) switcherMonitor = _switcherMonitor;
+          final GlobalKey? key = _switcherKeys[_switcherMonitor];
+          if (withinBand || (key != null && _isPointOverKey(key, mx, my))) {
+            switcherMonitor = _switcherMonitor;
+          }
         }
       }
       if (switcherMonitor == -1) {
@@ -435,15 +461,31 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
       final GlobalKey? key = _switcherKeys[switcherMonitor];
       overSwitcher = key != null && _isPointOverKey(key, mx, my);
     }
-    final bool shouldBeInteractive = hovered != -1 || overSwitcher;
-    if (shouldBeInteractive == _clickThroughEnabled) {
-      _clickThroughEnabled = !shouldBeInteractive;
-      if (shouldBeInteractive) {
-        Win32Window.disableClickThrough();
-      } else {
-        Win32Window.enableClickThrough();
-      }
+    if (_dragging) {
+      _setClickThrough(true);
+    } else if (!_overlayPointerDown && (GetAsyncKeyState(VK_LBUTTON) & 0x8000) == 0) {
+      // Keep the current mouse target throughout a press, including one that
+      // started in the underlying application before entering an overlay strip.
+      _setClickThrough(hovered == -1 && !overSwitcher);
     }
+  }
+
+  void _setClickThrough(bool enabled) {
+    if (_clickThroughEnabled == enabled) return;
+    final int hwnd = Win32Window.getHwnd();
+    if (hwnd == 0) return;
+    final int exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+    // Flutter renders into a child surface. Leaving the parent layered can
+    // still pass clicks through its transparent pixels even after clearing
+    // WS_EX_TRANSPARENT. DWM/window_manager supplies the visual transparency
+    // while interactive, so remove both flags (as setIgnoreMouseEvents does).
+    final int nextStyle = enabled
+        ? exStyle | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE
+        : (exStyle & ~(WS_EX_LAYERED | WS_EX_TRANSPARENT)) | WS_EX_NOACTIVATE;
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, nextStyle);
+    if (enabled) SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
+    SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    _clickThroughEnabled = enabled;
   }
 
   /// Whether absolute (physical, virtual-screen) point [mx],[my] falls inside
@@ -466,12 +508,14 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
 
   @override
   void onViewsEvent(ViewsAction action, int hWnd) {
+    if (!mounted || hWnd == 0 || hWnd == Win32Window.getHwnd()) return;
     switch (action) {
       case ViewsAction.moveStart:
         setState(() {
-          _dragging = true;
+          _draggedHwnd = hWnd;
           _dragHoverZone = -1;
         });
+        _setClickThrough(true);
       case ViewsAction.moveEnd:
         _handleMoveEnd(hWnd);
       default:
@@ -480,27 +524,26 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
   }
 
   void _handleMoveEnd(int hWnd) {
+    if (_draggedHwnd != hWnd) return;
     final Pointer<POINT> lpPoint = calloc<POINT>();
     GetCursorPos(lpPoint);
     final double mx = lpPoint.ref.x.toDouble();
     final double my = lpPoint.ref.y.toDouble();
     free(lpPoint);
 
-    // Prefer the zone the poll already determined the cursor is over (same
-    // one that's visually highlighted); fall back to a fresh hit-test in case
-    // the drop lands between two poll ticks.
-    _ZoneInstance? target = (_dragHoverZone >= 0 && _dragHoverZone < _zones.length) ? _zones[_dragHoverZone] : null;
-    target ??= _zones.cast<_ZoneInstance?>().firstWhere(
+    // Resolve the actual drop position: the last highlight can be one poll
+    // behind when crossing a zone or monitor boundary just before release.
+    final _ZoneInstance? target = _zones.cast<_ZoneInstance?>().firstWhere(
           (_ZoneInstance? z) => z != null && z.rect.contains(Offset(mx, my)),
           orElse: () => null,
         );
 
     setState(() {
-      _dragging = false;
+      _draggedHwnd = null;
       _dragHoverZone = -1;
     });
 
-    if (target == null) return;
+    if (target == null || IsWindow(hWnd) == 0) return;
     final QuickGrid? grid = _gridFor(target.monitorId);
     if (grid == null) return;
 
@@ -558,37 +601,40 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
     Offset toLocal(Offset absolutePhysical) => (absolutePhysical - _virtualOrigin) / dpr;
     Size toLocalSize(Size physical) => physical / dpr;
 
-    return Material(
-      type: MaterialType.transparency,
-      child: Stack(
-        children: <Widget>[
-          for (int i = 0; i < _zones.length; i++)
-            Builder(
-              builder: (BuildContext context) {
-                final List<Window> windows = _windowsInZone(_zones[i]);
-                return Positioned(
-                  left: toLocal(_zones[i].rect.topLeft).dx,
-                  top: toLocal(_zones[i].rect.topLeft).dy,
-                  width: toLocalSize(_zones[i].rect.size).width,
-                  height: toLocalSize(_zones[i].rect.size).height,
-                  child: _ZoneRegion(
-                    index: i + 1,
-                    accent: accent,
-                    emphasized: _dragging,
-                    dragTarget: _dragging && _dragHoverZone == i,
-                    stripHeight: stripHeight / dpr,
-                    hovered: _hoveredZone == i,
-                    windows: windows,
-                    visibleHwnd: _visibleHwnd(windows),
-                    onFocusWindow: _focusWindow,
-                  ),
-                );
-              },
-            ),
-          // Per-monitor grid switcher, docked to the right edge, hidden by
-          // default and slid in from the right when the cursor enters that
-          // monitor's right band.
-          if (_presets.isNotEmpty)
+    return Listener(
+      onPointerDown: (_) => _overlayPointerDown = true,
+      onPointerUp: (_) => _overlayPointerDown = false,
+      onPointerCancel: (_) => _overlayPointerDown = false,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Stack(
+          children: <Widget>[
+            for (int i = 0; i < _zones.length; i++)
+              Builder(
+                builder: (BuildContext context) {
+                  final List<Window> windows = _windowsInZone(_zones[i]);
+                  return Positioned(
+                    left: toLocal(_zones[i].rect.topLeft).dx,
+                    top: toLocal(_zones[i].rect.topLeft).dy,
+                    width: toLocalSize(_zones[i].rect.size).width,
+                    height: toLocalSize(_zones[i].rect.size).height,
+                    child: _ZoneRegion(
+                      index: i + 1,
+                      accent: accent,
+                      emphasized: _dragging,
+                      dragTarget: _dragging && _dragHoverZone == i,
+                      stripHeight: stripHeight / dpr,
+                      hovered: _hoveredZone == i,
+                      windows: windows,
+                      visibleHwnd: _visibleHwnd(windows),
+                      onFocusWindow: _focusWindow,
+                    ),
+                  );
+                },
+              ),
+            // Per-monitor grid switcher, docked to the right edge, hidden by
+            // default and slid in from the right when the cursor enters that
+            // monitor's right band.
             for (final int monitorId in Monitor.list)
               if (Monitor.monitorSizes[monitorId] != null)
                 Builder(
@@ -621,6 +667,7 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
                                 activeIndex: _gridIndexFor(monitorId),
                                 accent: accent,
                                 onSelected: (int index) => _activateGrid(monitorId, index),
+                                onClose: () => unawaited(windowManager.close()),
                               ),
                             ),
                           ),
@@ -629,7 +676,8 @@ class _QuickSnapStandaloneShellState extends State<QuickSnapStandaloneShell> wit
                     );
                   },
                 ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -838,12 +886,14 @@ class _GridSwitcher extends StatelessWidget {
     required this.activeIndex,
     required this.accent,
     required this.onSelected,
+    required this.onClose,
   });
 
   final List<QuickGrid> presets;
   final int activeIndex;
   final Color accent;
   final void Function(int index) onSelected;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -864,6 +914,14 @@ class _GridSwitcher extends StatelessWidget {
               isActive: activeIndex == i,
               onTap: () => onSelected(i),
             ),
+          if (presets.isNotEmpty) const SizedBox(width: 46, child: Divider(height: 12, color: Colors.white12)),
+          IconButton(
+            tooltip: 'Close QuickSnap',
+            onPressed: onClose,
+            icon: const Icon(Icons.close, size: 18),
+            color: Colors.white70,
+            visualDensity: VisualDensity.compact,
+          ),
         ],
       ),
     );

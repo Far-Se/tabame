@@ -7,6 +7,7 @@ import '../../../models/settings.dart';
 import '../../../models/util/quickmenu_modal.dart';
 import '../../../services/browser_bridge_service.dart';
 import '../../../services/browser_media_service.dart';
+import '../../widgets/custom_tooltip.dart';
 import '../../widgets/panel_header.dart';
 import '../../widgets/quick_actions_item.dart';
 
@@ -16,7 +17,7 @@ class BrowserMediaButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return QuickActionItem(
-      message: 'Browser Media\nLeft click: show tabs\nRight click: play / pause last controlled tab',
+      message: 'Browser Media',
       icon: const Icon(Icons.video_library_outlined),
       onTap: () => _openPanel(context),
       onSecondaryTap: () async {
@@ -88,6 +89,15 @@ class _BrowserMediaPanelState extends State<BrowserMediaPanel> {
               buttonIcon: Icons.refresh_rounded,
               buttonTooltip: 'Refresh media tabs',
               buttonPressed: _service.status.connected ? () => unawaited(_service.refresh()) : null,
+              extraActions: <Widget>[
+                CustomTooltip(
+                  message: "Left click: show tabs\nRight click: play / pause last controlled tab",
+                  child: IconButton(
+                    icon: const Icon(Icons.info),
+                    onPressed: () {},
+                  ),
+                )
+              ],
             ),
             if (_service.loading && tabs.isEmpty)
               LinearProgressIndicator(minHeight: 2, color: Design.accent, backgroundColor: Design.accent.withAlpha(12)),

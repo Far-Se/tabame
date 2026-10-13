@@ -5,8 +5,9 @@
 - Fixed MStore Roaming Folder.
 - Added Launcher Shortcut Info.
 - Added Launcher Alt+V to hide while preserving its state.
-- Fixed Project Overview
+- Fixed Project Overview.
 - Added `Browser Media` QuickAction Button.
+- Fixed QuickSnap Standalone.
 
 # v2.1.5 - 10 Oct 2026
 

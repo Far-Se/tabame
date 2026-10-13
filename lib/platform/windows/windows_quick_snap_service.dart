@@ -268,6 +268,7 @@ class WindowsQuickSnapService extends QuickSnapService {
   }
 
   final WindowsQuickSnapBridge bridge;
+  bool _standaloneEnabled = false;
   late final StreamSubscription<WindowsQuickSnapEvent> _bridgeEvents;
   final StreamController<PlatformQuickSnapEvent> _events = StreamController<PlatformQuickSnapEvent>.broadcast();
 
@@ -290,13 +291,22 @@ class WindowsQuickSnapService extends QuickSnapService {
   Stream<PlatformQuickSnapEvent> get events => _events.stream;
 
   @override
-  Future<void> enable({bool rightClickToTrigger = true}) => bridge.enable(rightClickToTrigger: rightClickToTrigger);
+  Future<void> enable({bool rightClickToTrigger = true}) {
+    _standaloneEnabled = false;
+    return bridge.enable(rightClickToTrigger: rightClickToTrigger);
+  }
 
   @override
-  Future<void> enableStandalone() => bridge.enableStandalone();
+  Future<void> enableStandalone() {
+    _standaloneEnabled = true;
+    return bridge.enableStandalone();
+  }
 
   @override
-  Future<void> disable() => bridge.disable();
+  Future<void> disable() {
+    _standaloneEnabled = false;
+    return bridge.disable();
+  }
 
   @override
   Future<bool> snap({
@@ -324,7 +334,10 @@ class WindowsQuickSnapService extends QuickSnapService {
     final PlatformQuickSnapEventType? type = _eventType(event.action);
     if (type == null) return;
     final PlatformWindow? window = await bridge.resolveWindow(event.handle);
-    if (type == PlatformQuickSnapEventType.moveStart && window != null) {
+    // Standalone snaps on moveEnd. Restoring here cancels the native move loop
+    // and emits a synthetic moveEnd, which would immediately snap the window
+    // back while the user is still holding its title bar.
+    if (!_standaloneEnabled && type == PlatformQuickSnapEventType.moveStart && window != null) {
       await bridge.restoreForDrag(window);
     }
     if (!_events.isClosed) _events.add(PlatformQuickSnapEvent(type: type, window: window));
