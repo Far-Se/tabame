@@ -327,7 +327,7 @@ mixin _KeyboardNavigationMixin on _LauncherStateMembersMixin {
   void _handleKeyStep(LogicalKeyboardKey key, {bool initial = false}) {
     if (_results.isEmpty) return;
     if (key == LogicalKeyboardKey.arrowDown) {
-      _activeIndexNotifier.value = (_activeIndexNotifier.value + 1).clamp(0, _results.length - 1);
+      _activeIndexNotifier.value = (_activeIndexNotifier.value + 1) % _results.length;
     } else if (key == LogicalKeyboardKey.arrowUp) {
       if (_activeIndexNotifier.value == 0) {
         _rememberKeyboardResultSelection();

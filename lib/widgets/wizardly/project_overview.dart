@@ -17,7 +17,6 @@ import '../../platform/app_paths.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win_utils.dart';
 import '../widgets/checkbox_widget.dart';
-import '../widgets/custom_text_field.dart';
 import '../widgets/custom_tooltip.dart';
 import '../widgets/popup_dialog.dart';
 
@@ -165,12 +164,171 @@ String _normalizeProjectPath(String folder, String path) {
 }
 
 List<String> _splitProjectSetting(String setting) {
-  final List<String> caca = setting
-      .split(RegExp(r'[;,]+'))
-      .map((String value) => value.trim())
-      .where((String value) => value.isNotEmpty)
-      .toList();
+  final List<String> caca =
+      setting.split(';').map((String value) => value.trim()).where((String value) => value.isNotEmpty).toList();
   return caca;
+}
+
+class _DelimitedChipInput extends StatefulWidget {
+  final String label;
+  final String value;
+  final String hintText;
+  final ValueChanged<String> onChanged;
+
+  const _DelimitedChipInput({
+    required this.label,
+    required this.value,
+    required this.hintText,
+    required this.onChanged,
+  });
+
+  @override
+  State<_DelimitedChipInput> createState() => _DelimitedChipInputState();
+}
+
+class _DelimitedChipInputState extends State<_DelimitedChipInput> {
+  late final TextEditingController _entryController;
+  late final FocusNode _entryFocusNode;
+  late List<String> _items;
+
+  @override
+  void initState() {
+    super.initState();
+    _items = _splitProjectSetting(widget.value);
+    _entryController = TextEditingController();
+    _entryFocusNode = FocusNode()..addListener(_onFocusChanged);
+  }
+
+  @override
+  void didUpdateWidget(_DelimitedChipInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != oldWidget.value && widget.value != _currentValue) {
+      _items = _splitProjectSetting(widget.value);
+      _entryController.clear();
+    }
+  }
+
+  String get _currentValue => <String>{..._items, ..._splitProjectSetting(_entryController.text)}.join(';');
+
+  void _onFocusChanged() {
+    setState(() {});
+  }
+
+  void _onEntryChanged(String value) {
+    if (value.contains(';')) {
+      _entryController.clear();
+      _addItems(_splitProjectSetting(value));
+      return;
+    }
+
+    widget.onChanged(_currentValue);
+  }
+
+  void _commitEntry(String value) {
+    _entryController.clear();
+    _addItems(_splitProjectSetting(value));
+    _entryFocusNode.requestFocus();
+  }
+
+  void _addItems(Iterable<String> values) {
+    bool changed = false;
+    for (final String value in values) {
+      final String item = value.trim();
+      if (item.isNotEmpty && !_items.contains(item)) {
+        _items.add(item);
+        changed = true;
+      }
+    }
+    if (changed) setState(() {});
+    widget.onChanged(_currentValue);
+  }
+
+  void _removeItem(String item) {
+    setState(() => _items.remove(item));
+    widget.onChanged(_currentValue);
+  }
+
+  @override
+  void dispose() {
+    _entryFocusNode.removeListener(_onFocusChanged);
+    _entryFocusNode.dispose();
+    _entryController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    final BorderRadius borderRadius = BorderRadius.circular(10);
+
+    return InputDecorator(
+      isFocused: _entryFocusNode.hasFocus,
+      isEmpty: _currentValue.isEmpty,
+      decoration: InputDecoration(
+        isDense: true,
+        labelText: widget.label,
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        labelStyle: TextStyle(fontSize: Design.baseFontSize + 2, color: Design.text.withAlpha(110)),
+        filled: true,
+        fillColor: Design.accent.withAlpha(10),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        border: OutlineInputBorder(borderRadius: borderRadius, borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: borderRadius,
+          borderSide: BorderSide(color: Design.text.withAlpha(16)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: borderRadius,
+          borderSide: BorderSide(color: Design.accent.withAlpha(90)),
+        ),
+      ),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: _entryFocusNode.requestFocus,
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: <Widget>[
+            for (final String item in _items)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 240),
+                child: InputChip(
+                  label: Tooltip(
+                    message: item,
+                    child: Text(item, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                  onDeleted: () => _removeItem(item),
+                  deleteIcon: const Icon(Icons.close_rounded, size: 16),
+                  backgroundColor: Design.accent.withAlpha(12),
+                  side: BorderSide(color: Design.accent.withAlpha(32)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            SizedBox(
+              width: 150,
+              child: TextField(
+                controller: _entryController,
+                focusNode: _entryFocusNode,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration.collapsed(
+                  hintText: widget.hintText,
+                  hintStyle: TextStyle(color: onSurface.withValues(alpha: 0.45)),
+                ),
+                onChanged: _onEntryChanged,
+                onSubmitted: _commitEntry,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 bool _isSimpleClocDirExclude(String pattern) {
@@ -703,7 +861,12 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
   }
 
   void _pickFolder() async {
-    final DirectoryPicker dirPicker = DirectoryPicker()..title = 'Select project folder';
+    final String currentFolder = _folderController.text;
+    final bool hasCurrentFolder = currentFolder.isNotEmpty && Directory(currentFolder).existsSync();
+    final DirectoryPicker dirPicker = DirectoryPicker()
+      ..title = 'Select project folder'
+      ..initialDirectory = hasCurrentFolder ? currentFolder : null
+      ..alwaysShowInitialDirectory = hasCurrentFolder;
     final Directory? dir = dirPicker.getDirectory();
     if (dir == null) return;
     _folderController.text = dir.path;
@@ -820,15 +983,6 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             _buildHeader(accent, background, onSurface),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 300),
-              child: Column(
-                children: <Widget>[
-                  if (showGit) _buildGitSection(accent, onSurface),
-                  if (showFilters) _buildFilterBar(accent, onSurface),
-                ],
-              ),
-            ),
             const Divider(height: 1),
             Expanded(
               child: _buildResultsView(accent, onSurface),
@@ -972,20 +1126,27 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
         child: Column(
           children: <Widget>[
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Expanded(
                   child: _buildFilterInput("Include Extensions", includeFiles, (String string) {
                     includeFiles = string;
-                    // setState(() {});
-                  }, "dart;js;css"),
+                  }, "Add extension"),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                     child: _buildFilterInput("Exclude Patterns", excludeFiles, (String string) {
                   excludeFiles = string;
-                  // setState(() {});
-                }, "node_modules;build")),
+                }, "Add pattern")),
               ],
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "Press Enter or semicolon to add an item. Click × to remove it.",
+                style: TextStyle(fontSize: 11, color: onSurface.withValues(alpha: 0.55)),
+              ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -1007,12 +1168,12 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
     );
   }
 
-  Widget _buildFilterInput(String label, String value, Function(String val) onChanged, String hintText) {
-    return CustomTextField(
-      labelText: label,
+  Widget _buildFilterInput(String label, String value, ValueChanged<String> onChanged, String hintText) {
+    return _DelimitedChipInput(
+      label: label,
+      value: value,
       onChanged: onChanged,
       hintText: hintText,
-      value: value,
     );
   }
 
@@ -1038,33 +1199,60 @@ class ProjectOverviewWidgetState extends State<ProjectOverviewWidget> {
   }
 
   Widget _buildResultsView(Color accent, Color onSurface) {
-    if (!projectAnalyzed || result == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(Icons.insert_chart_outlined_rounded, size: 64, color: onSurface.withValues(alpha: 0.1)),
-            const SizedBox(height: 16),
-            Text("Select a folder to analyze your project", style: TextStyle(color: onSurface.withValues(alpha: 0.4))),
-          ],
+    return CustomScrollView(
+      slivers: <Widget>[
+        SliverToBoxAdapter(
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            child: Column(
+              children: <Widget>[
+                if (showGit) _buildGitSection(accent, onSurface),
+                if (showFilters) _buildFilterBar(accent, onSurface),
+              ],
+            ),
+          ),
         ),
-      );
-    }
-
-    if (result!.files.isEmpty) {
-      return const Center(child: Text("No files found that match your criteria."));
-    }
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: <Widget>[
-        _buildStatsDashboard(accent, onSurface),
-        const SizedBox(height: 12),
-        _buildOverviewSummary(onSurface),
-        const SizedBox(height: 24),
-        _buildVisualSection(accent, onSurface),
-        const SizedBox(height: 24),
-        _buildFilesSection(accent, onSurface),
+        if (!projectAnalyzed || result == null)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Icon(Icons.insert_chart_outlined_rounded, size: 64, color: onSurface.withValues(alpha: 0.1)),
+                    const SizedBox(height: 16),
+                    Text("Select a folder to analyze your project",
+                        style: TextStyle(color: onSurface.withValues(alpha: 0.4))),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else if (result!.files.isEmpty)
+          const SliverFillRemaining(
+            hasScrollBody: false,
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: Text("No files found that match your criteria.")),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate(<Widget>[
+                _buildStatsDashboard(accent, onSurface),
+                const SizedBox(height: 12),
+                _buildOverviewSummary(onSurface),
+                const SizedBox(height: 24),
+                _buildVisualSection(accent, onSurface),
+                const SizedBox(height: 24),
+                _buildFilesSection(accent, onSurface),
+              ]),
+            ),
+          ),
       ],
     );
   }

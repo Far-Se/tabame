@@ -3,6 +3,9 @@
 - Added App results in File Search.
 - Made Clipboard Plugin be Launcher native.
 - Fixed MStore Roaming Folder.
+- Added Launcher Shortcut Info.
+- Added Launcher Alt+V to hide while preserving its state.
+- Fixed Project Overview
 
 # v2.1.5 - 10 Oct 2026
 
