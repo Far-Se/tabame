@@ -67,7 +67,7 @@ You will need to use the mouse, so either setup the QuickMenu hotkey with a "mov
 
 Easiest fastest and safest way with auto updates: Download it from [Microsoft Store](https://apps.microsoft.com/detail/9pd3c6hzf5lj):
 
-<a href="https://get.microsoft.com/installer/download/9pd3c6hzf5lj?referrer=appbadge" target="_self" >
+<a href="https://apps.microsoft.com/detail/9pd3c6hzf5lj?referrer=githubReadme" target="_self" >
 	<img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/>
 </a>
 
