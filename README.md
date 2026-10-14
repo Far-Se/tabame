@@ -20,7 +20,7 @@
 ![Storage](https://img.shields.io/badge/storage-~60%20MB-650ECE?style=flat-square)
 
 </p>
-<a href="https://get.microsoft.com/installer/download/9pd3c6hzf5lj?referrer=appbadge" target="_self" >
+<a href="https://apps.microsoft.com/detail/9pd3c6hzf5lj?referrer=githubReadme" target="_self" >
 	<img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/>
 </a>
 <!--# PSA: You can grab the [nightly build](https://github.com/Far-Se/tabame/releases/tag/nightly)-->

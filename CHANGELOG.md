@@ -1,13 +1,17 @@
+# v2.1.7 - 13 Oct 2026
+
+- Added Launcher Alt+V to hide while preserving its state.
+- Fixed Project Overview.
+- Added `Browser Media` QuickAction Button.
+- Fixed QuickSnap Standalone.
+- Added Hotkeys Export.
+
 # v2.1.6 - 11 Oct 2026
 
 - Added App results in File Search.
 - Made Clipboard Plugin be Launcher native.
 - Fixed MStore Roaming Folder.
 - Added Launcher Shortcut Info.
-- Added Launcher Alt+V to hide while preserving its state.
-- Fixed Project Overview.
-- Added `Browser Media` QuickAction Button.
-- Fixed QuickSnap Standalone.
 
 # v2.1.5 - 10 Oct 2026
 

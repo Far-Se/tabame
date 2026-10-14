@@ -3,7 +3,7 @@ description: Tabame is a Multi tool App including QuickMenu, Launcher, QuickSnap
 
 publish_to: "none"
 
-version: 2.1.6
+version: 2.1.7
 
 environment:
   sdk: ">=3.4.3 <4.0.0"

@@ -1,8 +1,10 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../platform/file_picker_service.dart';
 import '../../platform/platform_capabilities.dart';
 import '../../platform/windows/tabamewin32_api.dart';
 
@@ -127,26 +129,42 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
       child: Row(
         children: <Widget>[
-          TextButton.icon(
-            onPressed: _importHotkey,
-            icon: const Icon(Icons.file_upload_outlined, size: 16),
-            label: const Text("IMPORT HOTKEY"),
-            style: TextButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-              foregroundColor: colors.secondary,
+          Expanded(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: <Widget>[
+                TextButton.icon(
+                  onPressed: _importHotkey,
+                  icon: const Icon(Icons.file_upload_outlined, size: 16),
+                  label: const Text("IMPORT HOTKEY"),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: colors.secondary,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: remap.isEmpty ? null : _exportAllHotkeys,
+                  icon: const Icon(Icons.file_download_outlined, size: 16),
+                  label: const Text("EXPORT ALL HOTKEYS"),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: colors.secondary,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _restoreDefaultHotkey,
+                  icon: const Icon(Icons.history, size: 16),
+                  label: const Text("RESTORE DEFAULT"),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: colors.secondary,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 8),
-          TextButton.icon(
-            onPressed: _restoreDefaultHotkey,
-            icon: const Icon(Icons.history, size: 16),
-            label: const Text("RESTORE DEFAULT"),
-            style: TextButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-              foregroundColor: colors.secondary,
-            ),
-          ),
-          const Spacer(),
           FilledButton.icon(
             onPressed: _addNewHotkey,
             icon: const Icon(Icons.add, size: 20),
@@ -547,6 +565,26 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
     setState(() {});
   }
 
+  Future<void> _exportAllHotkeys() async {
+    try {
+      final String json =
+          const JsonEncoder.withIndent('  ').convert(remap.map((Hotkeys hotkey) => hotkey.toMap()).toList());
+      final SaveFilePicker picker = SaveFilePicker()
+        ..title = 'Export All Hotkeys'
+        ..defaultExtension = 'json'
+        ..filterSpecification = <String, String>{'JSON Files': '*.json'}
+        ..fileName = 'tabame_hotkeys.json';
+      final File? file = await picker.getFileAsync();
+      if (file == null) return;
+      await file.writeAsString(json, flush: true);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hotkeys exported.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not export hotkeys: $error')));
+    }
+  }
+
   void _importHotkey() {
     String pastedJson = "";
     String? error;
@@ -564,10 +602,35 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text("Paste the hotkey JSON (from Export) below."),
+                    const Text("Paste JSON or open a JSON file containing one hotkey or a list of hotkeys. "
+                        "Imported hotkeys will be added to your existing hotkeys."),
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: () async {
+                        try {
+                          final OpenFilePicker picker = OpenFilePicker()
+                            ..title = 'Import Hotkeys'
+                            ..filterSpecification = <String, String>{'JSON Files': '*.json'};
+                          final File? file = await picker.getFileAsync();
+                          if (file == null) return;
+                          final String content = await file.readAsString();
+                          if (!context.mounted) return;
+                          setDialogState(() {
+                            pastedJson = content;
+                            error = null;
+                          });
+                        } catch (fileError) {
+                          if (!context.mounted) return;
+                          setDialogState(() => error = 'Could not read JSON file: $fileError');
+                        }
+                      },
+                      icon: const Icon(Icons.folder_open_outlined, size: 16),
+                      label: const Text("OPEN JSON FILE"),
+                    ),
                     const SizedBox(height: 12),
                     CustomTextInput(
                       labelText: "",
+                      value: pastedJson,
                       hintText: "Paste hotkey JSON here...",
                       multiline: true,
                       maxLines: 10,
@@ -589,12 +652,24 @@ class HotkeysInterfaceState extends State<HotkeysInterface> {
                 FilledButton(
                   onPressed: () {
                     try {
-                      final Hotkeys imported = Hotkeys.fromJson(pastedJson.trim());
-                      setState(() => remap.add(imported));
+                      final dynamic decoded = jsonDecode(pastedJson.trim());
+                      final List<dynamic> entries = decoded is List<dynamic> ? decoded : <dynamic>[decoded];
+                      if (entries.isEmpty) {
+                        setDialogState(() => error = "The JSON list contains no hotkeys.");
+                        return;
+                      }
+                      final List<Hotkeys> imported = entries.map((dynamic entry) {
+                        if (entry is! Map<String, dynamic>) {
+                          throw const FormatException('Expected a hotkey object.');
+                        }
+                        return Hotkeys.fromMap(entry);
+                      }).toList();
+                      setState(() => remap.addAll(imported));
                       Boxes.updateSettings("remap", jsonEncode(remap));
                       Navigator.of(dialogContext).pop();
                     } catch (_) {
-                      setDialogState(() => error = "Invalid hotkey JSON.");
+                      setDialogState(
+                          () => error = "Invalid hotkey JSON. Expected one hotkey object or a list of hotkey objects.");
                     }
                   },
                   child: const Text("IMPORT"),
