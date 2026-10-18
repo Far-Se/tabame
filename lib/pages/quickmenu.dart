@@ -38,6 +38,7 @@ import '../services/wallpaper_service.dart';
 import 'emoji_page.dart';
 // import '../widgets/itzy/quickmenu/button_quickactions.dart';
 import 'launcher.dart';
+import 'launcher/launcher_warmup.dart';
 import 'quickclick.dart';
 import 'quickmenu_designs/designs.dart';
 import '../platform/windows/windows_quicksnap_overlay.dart';
@@ -150,7 +151,7 @@ class QuickMenuState extends State<QuickMenu> with WindowListener, QuickMenuTrig
 
   @override
   Widget build(BuildContext context) {
-    return _build(context);
+    return LauncherWarmup(child: _build(context));
   }
 
   // --------------------------------------------------------------------------
