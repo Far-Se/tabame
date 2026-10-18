@@ -77,6 +77,7 @@ import '../../widgets/itzy/quickmenu/button_translator.dart';
 import '../../widgets/itzy/quickmenu/button_trktivity_today.dart';
 import '../../widgets/itzy/quickmenu/button_universal_converter.dart';
 import '../../widgets/itzy/quickmenu/button_vault.dart';
+import '../../widgets/itzy/quickmenu/button_video_converter.dart';
 import '../../widgets/itzy/quickmenu/button_virtual_desktop.dart';
 import '../../widgets/itzy/quickmenu/button_wallpapers.dart';
 import '../../widgets/itzy/quickmenu/button_weather.dart';
@@ -459,6 +460,11 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
   "VirtualDesktopButton": QuickAction(
     icon: Icons.display_settings_outlined,
     widget: () => const VirtualDesktopButton(),
+  ),
+  "VideoConverterButton": QuickAction(
+    name: 'FFmpeg Video Converter',
+    icon: Icons.video_settings_rounded,
+    widget: () => const VideoConverterButton(),
   ),
   "WallpapersButton": QuickAction(
     icon: Icons.photo_library_outlined,
