@@ -52,6 +52,7 @@ import '../../widgets/itzy/quickmenu/button_ocr.dart';
 import '../../widgets/itzy/quickmenu/button_pin_window.dart';
 import '../../widgets/itzy/quickmenu/button_plugin_manager.dart';
 import '../../widgets/itzy/quickmenu/button_qr_scanner.dart';
+import '../../widgets/itzy/quickmenu/button_quick_launch.dart';
 import '../../widgets/itzy/quickmenu/button_quickactions.dart';
 import '../../widgets/itzy/quickmenu/button_quickmenu_settings.dart';
 import '../../widgets/itzy/quickmenu/button_keystrokes.dart';
@@ -105,6 +106,12 @@ class QuickAction {
 }
 
 final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
+  for (int index = 0; index < 8; index++)
+    'QuickLaunch${index + 1}Button': QuickAction(
+      name: 'QuickLaunch ${index + 1}',
+      icon: Icons.rocket_launch_outlined,
+      widget: () => QuickLaunchButton(index: index),
+    ),
   "AudioButton": QuickAction(
     icon: Icons.volume_up,
     widget: () => const AudioButton(),

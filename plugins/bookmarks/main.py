@@ -2,6 +2,7 @@
 """Tabame 'Bookmarks' plugin – links, files, and parameterized commands under categories."""
 import sys, json, os, re, uuid, threading, subprocess, hashlib
 from datetime import datetime
+from glob import escape as glob_escape, glob
 from urllib.parse import urlparse
 
 PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -104,12 +105,26 @@ def _tabame_settings_candidates():
     local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
     if not local_app_data:
         local_app_data = os.path.join(os.path.expanduser("~"), "AppData", "Local")
-    tabame_root = os.path.join(local_app_data, "Tabame")
-    candidates.extend([
-        os.path.join(tabame_root, "settings", "settings.json"),
-        os.path.join(tabame_root, "settings", "debug", "settings.json"),
-        os.path.join(tabame_root, "settings.json"),
-    ])
+    roaming_app_data = os.environ.get("APPDATA", "").strip()
+    if not roaming_app_data:
+        roaming_app_data = os.path.join(os.path.expanduser("~"), "AppData", "Roaming")
+
+    # AppPaths uses path_provider's application-support directory, whose
+    # Windows suffix is CompanyName/ProductName (Tabame/Tabame).
+    roots = [os.path.join(roaming_app_data, "Tabame", "Tabame")]
+    packages_dir = os.path.join(local_app_data, "Packages")
+    for package_pattern in ("FarSe.Tabame_*", "FarSe.Tabame.Local_*"):
+        for package_dir in sorted(glob(os.path.join(glob_escape(packages_dir), package_pattern))):
+            roots.append(os.path.join(package_dir, "LocalCache", "Roaming", "Tabame", "Tabame"))
+
+    # Keep pre-migration settings discoverable as well.
+    roots.append(os.path.join(local_app_data, "Tabame"))
+    for tabame_root in roots:
+        candidates.extend([
+            os.path.join(tabame_root, "settings", "settings.json"),
+            os.path.join(tabame_root, "settings", "debug", "settings.json"),
+            os.path.join(tabame_root, "settings.json"),
+        ])
 
     unique = []
     seen = set()

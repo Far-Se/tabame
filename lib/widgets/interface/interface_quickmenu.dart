@@ -15,6 +15,7 @@ import 'quickmenu/bookmarks_settings.dart';
 import 'quickmenu/custom_quickactions_settings.dart';
 import 'quickmenu/launcher_settings.dart';
 import 'quickmenu/quick_snap_settings.dart';
+import 'quickmenu/quick_launch_settings.dart';
 import 'quickmenu/quickactions_settings.dart';
 import 'quickmenu/quickmenu_settings.dart';
 import 'quickmenu/quickmenu_taskbar.dart';
@@ -129,6 +130,13 @@ class QMSettingsState extends State<QMSettings> {
       icon: Icons.bookmarks_rounded,
       builder: () => const InterfaceQMBookmarksSettings(),
       stats: () => "${Boxes().bookmarks.length} Groups",
+    ),
+    _SettingsPage(
+      title: 'QuickLaunch',
+      subtitle: 'Apps, Links & Commands',
+      icon: Icons.rocket_launch_outlined,
+      builder: () => const QuickLaunchSettings(),
+      stats: () => '8 Groups',
     ),
     _SettingsPage(
       title: "Reminders",

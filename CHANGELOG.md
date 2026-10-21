@@ -1,52 +1,34 @@
-# v2.1.7 - 13 Oct 2026
+# v2.2.0 - 21 Oct 2026
 
-- Added Launcher Alt+V to hide while preserving its state.
-- Fixed Project Overview.
-- Added `Browser Media` QuickAction Button.
-- Fixed QuickSnap Standalone.
+## New Features
+
+- Added QuickLaunch buttons.
+- Added `Browser Media` QuickAction button.
 - Added Hotkeys Export.
-
-# v2.1.6 - 11 Oct 2026
-
-- Added App results in File Search.
-- Made Clipboard Plugin be Launcher native.
-- Fixed MStore Roaming Folder.
+- Added App results to File Search.
 - Added Launcher Shortcut Info.
+- Added Design Preview to the First Configuration Menu.
+- Added GIF Search and PDF Tools plugins.
 
-# v2.1.5 - 10 Oct 2026
+## Improvements
 
-## Fixes
-
-- Added Design Preview in First Configuration Menu.
-- Fixed Clipboard History Entries.
-- Fixed Plugins Installation for Microsoft Store Users.
-
-# v2.1.4 - 9 Oct 2026
-
-## Fixes
-
-- Mouse Gestures now uses way less CPU.
-- Centralized Changelog.
-
-# v2.1.3 - 8 Oct 2026
+- Added `Alt+V` to hide the Launcher while preserving its state.
+- Integrated Clipboard History natively into the Launcher.
+- Improved Mouse Gestures to use significantly less CPU.
+- Added auto-scrolling when dragging Quick Actions from QuickSettings.
+- Added DateTime support to all Launcher designs.
+- Changed the default Glass backdrop to `Blur`.
+- Centralized the Changelog.
 
 ## Fixes
 
-- Now when you drag a Quick Action from QuickSettings Button it auto scrolls.
-- Added DateTime to the rest of Launcher Designs.
-- Default Glass Backdrop is now `Blur`.
-- QuickMenu Design `Cyber` colors have been fixed.
-
-# v2.1.2 - 7 Oct 2026
-
-## Fixes
-
-- Fixed Microsoft Store Initial Configuration.
-
-## Plugins
-
-- Added GIF Search
-- Added PDF Tools
+- Fixed Project Overview.
+- Fixed QuickSnap Standalone.
+- Fixed Microsoft Store roaming folder handling.
+- Fixed Clipboard History entries.
+- Fixed plugin installation for Microsoft Store users.
+- Fixed Microsoft Store initial configuration.
+- Fixed colors in the `Cyber` QuickMenu design.
 
 # v2.1.0 - 1 Oct 2026
 
