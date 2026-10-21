@@ -213,6 +213,8 @@ jobs:
           Commit: ${{ github.sha }}
           Build date: ${{ steps.meta.outputs.date_stamp }}
 
+          ### [Changelog](https://github.com/Far-Se/tabame/blob/main/CHANGELOG.md)
+
           The Microsoft Store is the fastest, safest way to install Tabame, and it keeps future updates automatic:
           <a href="https://get.microsoft.com/installer/download/9pd3c6hzf5lj?referrer=appbadge" target="_self"><img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/></a>
 
@@ -220,7 +222,7 @@ jobs:
 
           Prefer an installer? `${{ steps.meta.outputs.exe_asset_name }}` is a per-user setup without an elevation prompt.
 
-          Settings, plugins, and other user data remain in `%LOCALAPPDATA%\Tabame` when the installer is upgraded or removed.
+          Settings, plugins, and other user data remain in `%APPDATA%\Tabame` when the installer is upgraded or removed.
           '@
 
           $notes | Set-Content -Path release-notes.md
