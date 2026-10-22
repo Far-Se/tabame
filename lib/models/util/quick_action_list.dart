@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
 
+import '../quick_launch.dart';
 import '../../widgets/itzy/quickmenu/button_adb.dart';
 import '../../widgets/itzy/quickmenu/button_ai_coding_usage.dart';
 import '../../widgets/itzy/quickmenu/button_always_awake.dart';
@@ -106,12 +107,6 @@ class QuickAction {
 }
 
 final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
-  for (int index = 0; index < 8; index++)
-    'QuickLaunch${index + 1}Button': QuickAction(
-      name: 'QuickLaunch ${index + 1}',
-      icon: Icons.rocket_launch_outlined,
-      widget: () => QuickLaunchButton(index: index),
-    ),
   "AudioButton": QuickAction(
     icon: Icons.volume_up,
     widget: () => const AudioButton(),
@@ -493,4 +488,12 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.download_for_offline_outlined,
     widget: () => const YtDlpButton(),
   ),
+
+  for (int index = 0; index < 8; index++)
+    'QuickLaunch${index + 1}Button': QuickAction(
+      name: 'QuickLaunch ${index + 1}',
+      icon: Icons.rocket_launch_outlined,
+      widget: () => QuickLaunchButton(index: index),
+      visibleWhen: () => QuickLaunchStore.read()[index].items.isNotEmpty,
+    ),
 };

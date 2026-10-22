@@ -1358,7 +1358,6 @@ class _QuickActionsTabState extends State<_QuickActionsTab> {
   }
 
   void _reorderActive(int oldIndex, int newIndex) {
-    if (oldIndex < newIndex) newIndex -= 1;
     final String item = _active.removeAt(oldIndex);
     _active.insert(newIndex, item);
     setState(() {});
@@ -1366,7 +1365,6 @@ class _QuickActionsTabState extends State<_QuickActionsTab> {
   }
 
   void _reorderDisabled(int oldIndex, int newIndex) {
-    if (oldIndex < newIndex) newIndex -= 1;
     final String item = _disabled.removeAt(oldIndex);
     _disabled.insert(newIndex, item);
     setState(() {});

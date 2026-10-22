@@ -19,12 +19,14 @@ import '../models/classes/boxes/quick_menu_box.dart';
 import '../models/globals.dart';
 import '../models/classes/saved_maps.dart';
 import '../models/settings.dart';
+import '../models/quick_launch.dart';
 import '../models/win32/win32.dart';
 import '../models/win32/win_utils.dart';
 
 import '../widgets/itzy/quickmenu/button_notion.dart';
 import '../widgets/itzy/quickmenu/button_obsidian.dart';
 import '../widgets/itzy/quickmenu/button_quickactions.dart';
+import '../widgets/itzy/quickmenu/button_quick_launch.dart';
 import '../widgets/itzy/quickmenu/button_steam.dart';
 import 'launcher/launcher_design.dart';
 import 'launcher/launcher_design_builder.dart';
@@ -120,13 +122,53 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
   }
 
   Future<void> _loadActions() async {
-    final List<LauncherAction> actions = widget.actions ?? await LauncherActionsBuilder.build(context, widget.item);
+    final List<LauncherAction> actions = List<LauncherAction>.of(
+      widget.actions ?? await LauncherActionsBuilder.build(context, widget.item),
+    );
+    final QuickLaunchEntry? quickLaunchEntry = _quickLaunchEntryFor(widget.item);
+    if (quickLaunchEntry != null) {
+      actions.addAll(<LauncherAction>[
+        const LauncherAction.separator(label: 'QuickLaunch'),
+        LauncherAction(
+          label: 'Add in QuickLaunch',
+          icon: Icons.rocket_launch_outlined,
+          subtitle: 'Choose one of your QuickLaunch buttons',
+          keepPanelOpen: true,
+          onExecute: (BuildContext context) => showDialog<void>(
+            context: context,
+            barrierColor: Colors.transparent,
+            builder: (_) => _QuickLaunchGroupsDialog(entry: quickLaunchEntry),
+          ),
+        ),
+      ]);
+    }
     if (!mounted) return;
     setState(() {
       _actions = actions;
       _filteredActions = List<LauncherAction>.from(actions);
       _loading = false;
     });
+  }
+
+  QuickLaunchEntry? _quickLaunchEntryFor(LauncherSearchResultItem item) {
+    if (item.isFile) {
+      final String path = item.entity!.path;
+      final String basename = p.basename(path);
+      return QuickLaunchEntry(
+        name: basename.isEmpty ? path : basename,
+        target: path,
+        kind: QuickLaunchKind.file,
+        iconPath: path,
+      );
+    }
+    if (item.isApp && item.appResult!.launchTarget.isNotEmpty) {
+      return QuickLaunchEntry(
+        name: item.appResult!.name,
+        target: item.appResult!.launchTarget,
+        kind: QuickLaunchKind.app,
+      );
+    }
+    return null;
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
@@ -150,7 +192,9 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
 
     if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
       setState(() {
-        if (_activeIndex > 0) _activeIndex--;
+        if (_filteredActions.isNotEmpty) {
+          _activeIndex = _activeIndex > 0 ? _activeIndex - 1 : _filteredActions.length - 1;
+        }
       });
       _scrollToActive();
       return KeyEventResult.handled;
@@ -272,8 +316,8 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
 
                             if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
                               setState(() {
-                                if (_activeIndex > 0) {
-                                  _activeIndex--;
+                                if (_filteredActions.isNotEmpty) {
+                                  _activeIndex = _activeIndex > 0 ? _activeIndex - 1 : _filteredActions.length - 1;
                                 }
                               });
 
@@ -386,6 +430,174 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
   Widget _wrapThermalQuery(Widget textField) => user.launcherDesign == LauncherDesign.thermal
       ? ThermalQueryHeat(controller: _searchController, child: textField)
       : textField;
+}
+
+class _QuickLaunchGroupsDialog extends StatefulWidget {
+  const _QuickLaunchGroupsDialog({required this.entry});
+
+  final QuickLaunchEntry entry;
+
+  @override
+  State<_QuickLaunchGroupsDialog> createState() => _QuickLaunchGroupsDialogState();
+}
+
+class _QuickLaunchGroupsDialogState extends State<_QuickLaunchGroupsDialog> {
+  final List<QuickLaunchGroup> _groups = QuickLaunchStore.read();
+  bool _saving = false;
+  String? _error;
+
+  bool _contains(QuickLaunchGroup group) =>
+      group.items.any((QuickLaunchEntry entry) => _sameEntry(entry, widget.entry));
+
+  bool _sameEntry(QuickLaunchEntry first, QuickLaunchEntry second) =>
+      first.kind == second.kind && _normalizeTarget(first.target) == _normalizeTarget(second.target);
+
+  String _normalizeTarget(String target) => target.trim().replaceAll(RegExp(r'[\\/]+$'), '').toLowerCase();
+
+  Future<void> _toggleGroup(int index) async {
+    if (_saving) return;
+
+    final QuickLaunchGroup group = _groups[index];
+    final List<QuickLaunchEntry> previousItems = List<QuickLaunchEntry>.of(group.items);
+    final bool wasPresent = _contains(group);
+    setState(() {
+      if (wasPresent) {
+        group.items.removeWhere((QuickLaunchEntry entry) => _sameEntry(entry, widget.entry));
+      } else {
+        group.items.add(widget.entry);
+      }
+      _saving = true;
+      _error = null;
+    });
+
+    try {
+      await QuickLaunchStore.save(_groups);
+    } catch (error) {
+      group.items
+        ..clear()
+        ..addAll(previousItems);
+      if (mounted) setState(() => _error = 'Could not update QuickLaunch: $error');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final LauncherModalTokens tokens = LauncherModalTokens.of(context);
+    final Widget entryIcon = SizedBox.square(dimension: 22, child: QuickLaunchItemIcon(entry: widget.entry));
+
+    return Material(
+      type: MaterialType.transparency,
+      child: Center(
+        child: LauncherModalFrame(
+          tokens: tokens,
+          width: 440,
+          maxHeight: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              LauncherModalHeader(
+                tokens: tokens,
+                icon: entryIcon,
+                title: 'QuickLaunch',
+                subtitle: widget.entry.name,
+                badgeLabel: 'Add',
+              ),
+              Divider(height: 1, thickness: 1, color: tokens.onSurface.withAlpha(20)),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _error!,
+                      style: tokens.text(fontSize: Design.baseFontSize, color: Colors.redAccent),
+                    ),
+                  ),
+                ),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  itemCount: _groups.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 4),
+                  itemBuilder: (BuildContext context, int index) {
+                    final QuickLaunchGroup group = _groups[index];
+                    final bool containsEntry = _contains(group);
+                    final Color actionColor = containsEntry ? Colors.redAccent : tokens.accent;
+                    final String actionLabel =
+                        containsEntry ? 'Remove from QuickLaunch ${index + 1}' : 'Add to QuickLaunch ${index + 1}';
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: tokens.onSurface.withAlpha(7),
+                        borderRadius: BorderRadius.circular(tokens.controlRadius),
+                        border: Border.all(color: tokens.onSurface.withAlpha(18)),
+                      ),
+                      padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+                      child: Row(
+                        children: <Widget>[
+                          Icon(group.iconData, size: 19, color: tokens.accent),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  group.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: tokens.text(
+                                    fontSize: Design.baseFontSize + 1,
+                                    fontWeight: FontWeight.w600,
+                                    color: tokens.onSurface,
+                                  ),
+                                ),
+                                Text(
+                                  'QuickLaunch ${index + 1} · ${group.items.length} items',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: tokens.text(fontSize: Design.baseFontSize - 0.5, color: tokens.dim),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Tooltip(
+                            message: actionLabel,
+                            child: Material(
+                              color: actionColor.withAlpha(containsEntry ? 18 : 16),
+                              borderRadius: BorderRadius.circular(tokens.controlRadius),
+                              child: InkWell(
+                                onTap: _saving ? null : () => _toggleGroup(index),
+                                borderRadius: BorderRadius.circular(tokens.controlRadius),
+                                child: SizedBox.square(
+                                  dimension: 36,
+                                  child: Icon(
+                                    containsEntry ? Icons.close_rounded : Icons.add_rounded,
+                                    size: 19,
+                                    color: actionColor.withAlpha(220),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              LauncherModalFooter(
+                tokens: tokens,
+                hints: const <(String, String)>[('Esc', 'close')],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // =============================================================================
