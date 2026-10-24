@@ -139,7 +139,7 @@ class _QuickLaunchButtonState extends State<QuickLaunchButton> with QuickMenuTri
               button: true,
               child: QuickActionItem(
                   message: '',
-                  icon: Icon(group.iconData),
+                  icon: Icon(group.iconData, color: Design.accent),
                   onTap: () => _tooltipKey.currentState?.ensureTooltipVisible()),
             ),
           );

@@ -9,6 +9,7 @@ import glob
 import json
 import math
 import os
+import ssl
 import sys
 import threading
 import time
@@ -16,6 +17,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 
+import certifi
 from PIL import Image, ImageDraw, ImageFont
 
 # --------------------------------------------------------------------------
@@ -43,6 +45,7 @@ PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 CACHE_DIR = os.path.join(PLUGIN_DIR, "cache")
 CONFIG_PATH = os.path.join(PLUGIN_DIR, "config.json")
 os.makedirs(CACHE_DIR, exist_ok=True)
+SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 
 def load_config():
@@ -465,7 +468,7 @@ def http_json(url):
     req = urllib.request.Request(
         url, headers={"User-Agent": "tabame-weather-plugin/1.0"}
     )
-    with urllib.request.urlopen(req, timeout=12) as resp:
+    with urllib.request.urlopen(req, timeout=12, context=SSL_CONTEXT) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 

@@ -3,10 +3,10 @@
   "id": "weather-widget",
   "keyword": "wr",
   "runtime": "python",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "entry": "main.py",
   "icon": "weather",
   "description": "Wide weather + 7-day forecast image, background shifts with the hour",
-  "pip": ["pillow"],
+  "pip": ["pillow", "certifi"],
   "dev": false
 }

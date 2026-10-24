@@ -3,10 +3,10 @@
   "id": "weatherImage",
   "keyword": "wt",
   "runtime": "python",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "entry": "main.py",
   "description": "wt [city] [weekly|w] [f] – forecast image; add f for Fahrenheit",
   "icon": "weather",
-  "pip": ["pillow>=10"],
+  "pip": ["pillow>=10", "certifi"],
   "dev": false
 }

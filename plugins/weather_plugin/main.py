@@ -15,11 +15,14 @@ import http.server
 import json
 import os
 import socket
+import ssl
 import sys
 import threading
 import time
 import urllib.parse
 import urllib.request
+
+import certifi
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -31,6 +34,7 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 MONTHS = [
@@ -138,7 +142,7 @@ def http_json(url, params):
     req = urllib.request.Request(
         f"{url}?{q}", headers={"User-Agent": "tabame-weather-plugin"}
     )
-    with urllib.request.urlopen(req, timeout=10) as resp:
+    with urllib.request.urlopen(req, timeout=10, context=SSL_CONTEXT) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 
