@@ -1,0 +1,12 @@
+{
+  "id": "weather-board",
+  "name": "Weather Board",
+  "category": "Weather",
+  "keyword": "wboard",
+  "description": "An illustrated 24-hour and seven-day forecast that remembers your city and Celsius or Freedom Unit preference.",
+  "icon": "weather",
+  "runtime": "python",
+  "entry": "main.py",
+  "version": "1.0.1",
+  "pip": ["Pillow>=10.0", "tzdata>=2024.1", "certifi>=2026.7.22"]
+}

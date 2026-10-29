@@ -1,0 +1,12 @@
+{
+  "id": "weather-forecast",
+  "name": "Weather Forecast",
+  "category": "Weather",
+  "keyword": "forecast",
+  "description": "A detailed weather image: 24 hourly forecasts, seven days, and a remembered city and units.",
+  "runtime": "python",
+  "entry": "main.py",
+  "version": "1.0.1",
+  "icon": "weather",
+  "pip": ["Pillow>=10.4,<13", "tzdata>=2024.1", "certifi"]
+}

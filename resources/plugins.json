@@ -1479,6 +1479,67 @@
         "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/gif-search/config.example.json",
         "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/gif-search/README.md"
       }
+    },
+    {
+      "id": "weather-forecast",
+      "name": "Weather Forecast",
+      "addedDate": "2026-10-29",
+      "category": "Weather",
+      "keyword": "forecast",
+      "description": "A detailed weather image: 24 hourly forecasts, seven days, and a remembered city and units.",
+      "icon": "weather",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.1",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/weather-forecast",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather-forecast/plugin.json",
+        "forecast_image.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather-forecast/forecast_image.py",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather-forecast/main.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather-forecast/README.md"
+      }
+    },
+    {
+      "id": "weather-board",
+      "name": "Weather Board",
+      "addedDate": "2026-10-29",
+      "category": "Weather",
+      "keyword": "wboard",
+      "description": "An illustrated 24-hour and seven-day forecast that remembers your city and Celsius or Freedom Unit preference.",
+      "icon": "weather",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.1",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/weather-board",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather-board/plugin.json",
+        "forecast.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather-board/forecast.py",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather-board/main.py",
+        "render.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather-board/render.py",
+        "sample.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather-board/sample.py",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/weather-board/README.md"
+      }
+    },
+    {
+      "id": "reminder",
+      "name": "Reminders",
+      "addedDate": "2026-10-29",
+      "category": "Productivity",
+      "keyword": "reminder",
+      "description": "Set reminders in natural time formats, preview when they will fire, and browse active reminders and history.",
+      "icon": "bell",
+      "runtime": "python",
+      "author": "Far-Se",
+      "version": "1.0.0",
+      "homepage": "https://github.com/Far-Se/tabame/tree/main/plugins/reminder",
+      "files": {
+        "plugin.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/reminder/plugin.json",
+        "main.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/reminder/main.py",
+        "scheduler.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/reminder/scheduler.py",
+        "time_parser.py": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/reminder/time_parser.py",
+        "config.example.json": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/reminder/config.example.json",
+        "README.md": "https://raw.githubusercontent.com/Far-Se/tabame/main/plugins/reminder/README.md"
+      }
     }
   ]
 }

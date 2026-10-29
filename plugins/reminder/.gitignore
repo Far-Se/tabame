@@ -1,0 +1,3 @@
+config.json
+reminders.sqlite3*
+__pycache__/

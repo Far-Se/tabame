@@ -1,0 +1,11 @@
+{
+  "id": "reminder",
+  "name": "Reminders",
+  "category": "Productivity",
+  "keyword": "reminder",
+  "description": "Set reminders in natural time formats, preview when they will fire, and browse active reminders and history.",
+  "icon": "bell",
+  "runtime": "python",
+  "version": "1.0.0",
+  "entry": "main.py"
+}
