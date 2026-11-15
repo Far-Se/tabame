@@ -1328,15 +1328,25 @@ mixin _PluginHostMixin on _LauncherStateMembersMixin {
     final String lowerQuery = query.toLowerCase();
     if (!lowerQuery.startsWith(shortcut.toLowerCase())) return null;
 
+    final String needle = lowerQuery.substring(shortcut.length);
+    final String lowerShortcut = shortcut.toLowerCase();
+    bool matchesAt(PluginManifest plugin, bool Function(String text) test) {
+      final String keyword = PluginRegistry.launchKeyword(plugin).toLowerCase();
+      final String title = plugin.name.trim().toLowerCase();
+      return test(keyword.startsWith(lowerShortcut) ? keyword.substring(lowerShortcut.length) : keyword) ||
+          test(title);
+    }
+
     final List<PluginManifest> matches = PluginRegistry.manifests
         .where(
           (PluginManifest plugin) =>
-              plugin.enabled &&
-              (PluginRegistry.launchKeyword(plugin).toLowerCase().startsWith(lowerQuery) ||
-                  PluginRegistry.launchTitle(plugin).toLowerCase().startsWith(lowerQuery)),
+              plugin.enabled && matchesAt(plugin, (String text) => text.contains(needle)),
         )
         .toList()
       ..sort((PluginManifest a, PluginManifest b) {
+        final bool aStarts = matchesAt(a, (String text) => text.startsWith(needle));
+        final bool bStarts = matchesAt(b, (String text) => text.startsWith(needle));
+        if (aStarts != bStarts) return aStarts ? -1 : 1;
         final int byKeyword =
             PluginRegistry.launchKeyword(a).toLowerCase().compareTo(PluginRegistry.launchKeyword(b).toLowerCase());
         if (byKeyword != 0) return byKeyword;
