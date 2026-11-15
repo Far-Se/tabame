@@ -218,6 +218,26 @@ final Map<String, QuickAction> quickActionsMap = <String, QuickAction>{
     icon: Icons.code_rounded,
     widget: () => const CodexUsageButton(),
   ),
+  "AntigravityUsageButton": QuickAction(
+    name: 'Antigravity Usage',
+    icon: Icons.rocket_launch_outlined,
+    widget: () => const AntigravityUsageButton(),
+  ),
+  "CursorUsageButton": QuickAction(
+    name: 'Cursor Usage',
+    icon: Icons.ads_click_rounded,
+    widget: () => const CursorUsageButton(),
+  ),
+  "GrokUsageButton": QuickAction(
+    name: 'Grok Usage',
+    icon: Icons.bolt_rounded,
+    widget: () => const GrokUsageButton(),
+  ),
+  "OpenCodeUsageButton": QuickAction(
+    name: 'OpenCode Go Usage',
+    icon: Icons.terminal_rounded,
+    widget: () => const OpenCodeUsageButton(),
+  ),
   "CliBookButton": QuickAction(
     icon: Icons.note_alt_outlined,
     widget: () => const CliBookButton(),

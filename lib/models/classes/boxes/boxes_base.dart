@@ -801,6 +801,10 @@ class Boxes {
     const Map<String, String> usageButtons = <String, String>{
       'CodexUsageButton': 'codex',
       'ClaudeUsageButton': 'claude',
+      'AntigravityUsageButton': 'antigravity',
+      'CursorUsageButton': 'cursor',
+      'GrokUsageButton': 'grok',
+      'OpenCodeUsageButton': 'opencode',
     };
     final List<String> defaultWidgets = <String>[
       ...quickActionsMap.keys.where((String name) => !usageButtons.containsKey(name)),

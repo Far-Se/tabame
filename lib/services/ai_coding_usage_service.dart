@@ -9,6 +9,7 @@ import '../models/globals.dart';
 import '../models/win32/win_utils.dart';
 import 'claude_usage_service.dart';
 import 'codex_usage_service.dart';
+import 'provider_usage_service.dart';
 
 /// Keeps selected providers subscribed even while the menu is hidden or its
 /// buttons have scrolled out of view. Provider services own polling and throttles.
@@ -16,18 +17,41 @@ class AiCodingUsageService extends ChangeNotifier with QuickMenuTriggers {
   AiCodingUsageService._();
 
   static final AiCodingUsageService instance = AiCodingUsageService._();
+
+  /// QuickMenu top-bar button name -> agent id.
+  static const Map<String, String> usageButtons = <String, String>{
+    'CodexUsageButton': 'codex',
+    'ClaudeUsageButton': 'claude',
+    'AntigravityUsageButton': 'antigravity',
+    'CursorUsageButton': 'cursor',
+    'GrokUsageButton': 'grok',
+    'OpenCodeUsageButton': 'opencode',
+  };
+  static List<String> get agentIds => usageButtons.values.toList();
+
+  static String agentName(String agent) => switch (agent) {
+        'codex' => 'Codex',
+        'claude' => 'Claude',
+        _ => ProviderUsageService.all[agent]?.name ?? agent,
+      };
+
   Set<String> _agents = <String>{};
   List<String> _selectedAgents = <String>[];
   final Map<String, _ResetAlert> _alerts = <String, _ResetAlert>{};
+  final Map<String, bool> _loading = <String, bool>{};
+  final Map<String, void Function(ProviderUsageRecord?)> _providerListeners =
+      <String, void Function(ProviderUsageRecord?)>{};
   Future<void> _pendingSave = Future<void>.value();
-  bool codexLoading = false;
-  bool claudeLoading = false;
+
+  bool isLoading(String agent) => _loading[agent] ?? false;
+  bool get codexLoading => isLoading('codex');
+  bool get claudeLoading => isLoading('claude');
 
   void configureTopBar(List<String> widgets) {
     final Set<String> active = widgets.takeWhile((String name) => name != 'Deactivated:').toSet();
     configure(<String>[
-      if (active.contains('CodexUsageButton')) 'codex',
-      if (active.contains('ClaudeUsageButton')) 'claude',
+      for (final MapEntry<String, String> button in usageButtons.entries)
+        if (active.contains(button.key)) button.value,
     ]);
   }
 
@@ -35,34 +59,56 @@ class AiCodingUsageService extends ChangeNotifier with QuickMenuTriggers {
     _restoreAlerts();
     _selectedAgents = List<String>.of(agents);
     final Set<String> selected = <String>{
-      ...agents.where((String agent) => agent == 'codex' || agent == 'claude'),
+      ...agents.where(agentIds.contains),
       for (final MapEntry<String, _ResetAlert> entry in _alerts.entries)
         if (entry.value.enabled) entry.key,
     };
     if (setEquals(selected, _agents)) return;
     if (_agents.isEmpty && selected.isNotEmpty) QuickMenuFunctions.addListener(this);
     if (_agents.isNotEmpty && selected.isEmpty) QuickMenuFunctions.removeListener(this);
-    if (_agents.contains('codex') && !selected.contains('codex')) {
-      CodexUsageService.instance.removeListener(_onCodex);
-    }
-    if (_agents.contains('claude') && !selected.contains('claude')) {
-      ClaudeUsageService.instance.removeListener(_onClaude);
+    for (final String agent in _agents.difference(selected)) {
+      _unsubscribe(agent);
     }
     final Set<String> added = selected.difference(_agents);
     _agents = selected;
-    if (added.contains('codex')) {
-      codexLoading = CodexUsageService.instance.latest == null;
-      CodexUsageService.instance.addListener(_onCodex);
-    }
-    if (added.contains('claude')) {
-      claudeLoading = ClaudeUsageService.instance.latest == null;
-      ClaudeUsageService.instance.addListener(_onClaude);
+    for (final String agent in added) {
+      _subscribe(agent);
     }
     notifyListeners();
   }
 
+  void _subscribe(String agent) {
+    switch (agent) {
+      case 'codex':
+        _loading[agent] = CodexUsageService.instance.latest == null;
+        CodexUsageService.instance.addListener(_onCodex);
+      case 'claude':
+        _loading[agent] = ClaudeUsageService.instance.latest == null;
+        ClaudeUsageService.instance.addListener(_onClaude);
+      default:
+        final ProviderUsageService? service = ProviderUsageService.all[agent];
+        if (service == null) return;
+        _loading[agent] = service.latest == null;
+        final void Function(ProviderUsageRecord?) listener =
+            _providerListeners[agent] ??= (ProviderUsageRecord? record) => _onProvider(agent, record);
+        service.addListener(listener);
+    }
+  }
+
+  void _unsubscribe(String agent) {
+    switch (agent) {
+      case 'codex':
+        CodexUsageService.instance.removeListener(_onCodex);
+      case 'claude':
+        ClaudeUsageService.instance.removeListener(_onClaude);
+      default:
+        final void Function(ProviderUsageRecord?)? listener = _providerListeners[agent];
+        if (listener != null) ProviderUsageService.all[agent]?.removeListener(listener);
+    }
+  }
+
   void _onCodex(CodexUsageRecord? record) {
-    codexLoading = false;
+    _loading['codex'] = false;
     if (record != null) {
       _syncAlert('codex', record.fiveHourResetDateTime, record.fiveHourRemaining, record.fetchedAt);
     }
@@ -70,29 +116,41 @@ class AiCodingUsageService extends ChangeNotifier with QuickMenuTriggers {
   }
 
   void _onClaude(ClaudeUsageRecord? record) {
-    claudeLoading = false;
+    _loading['claude'] = false;
     if (record != null) {
       _syncAlert('claude', DateTime.tryParse(record.fiveResetAt ?? ''), 100 - record.fiveHour, record.fetchedAt);
     }
     notifyListeners();
   }
 
-  bool resetAlertEnabled(bool codex) => _alerts[codex ? 'codex' : 'claude']?.enabled ?? false;
+  void _onProvider(String agent, ProviderUsageRecord? record) {
+    _loading[agent] = false;
+    final ProviderUsageWindow? primary = record?.primary;
+    if (record != null && primary != null) {
+      _syncAlert(agent, primary.resetAt, primary.remainingPercent, record.fetchedAt);
+    }
+    notifyListeners();
+  }
 
-  void toggleResetAlert(bool codex) {
+  bool resetAlertEnabled(String agent) => _alerts[agent]?.enabled ?? false;
+
+  void toggleResetAlert(String agent) {
     _restoreAlerts();
-    final String agent = codex ? 'codex' : 'claude';
-    final _ResetAlert alert = _alerts[agent]!;
+    final _ResetAlert? alert = _alerts[agent];
+    if (alert == null) return;
     alert.enabled = !alert.enabled;
     alert.timer?.cancel();
     alert.target = null;
     alert.observedAt = null;
     _saveAlerts();
     configure(_selectedAgents);
-    if (codex) {
-      _onCodex(CodexUsageService.instance.latest);
-    } else {
-      _onClaude(ClaudeUsageService.instance.latest);
+    switch (agent) {
+      case 'codex':
+        _onCodex(CodexUsageService.instance.latest);
+      case 'claude':
+        _onClaude(ClaudeUsageService.instance.latest);
+      default:
+        _onProvider(agent, ProviderUsageService.all[agent]?.latest);
     }
   }
 
@@ -100,7 +158,7 @@ class AiCodingUsageService extends ChangeNotifier with QuickMenuTriggers {
     if (_alerts.isNotEmpty) return;
     final DateTime now = DateTime.now();
     bool discardedExpiredTarget = false;
-    for (final String agent in <String>['codex', 'claude']) {
+    for (final String agent in agentIds) {
       final _ResetAlert alert = _ResetAlert();
       try {
         final dynamic saved = jsonDecode(Boxes.pref.getString('aiResetAlert_$agent') ?? '{}');
@@ -191,7 +249,7 @@ class AiCodingUsageService extends ChangeNotifier with QuickMenuTriggers {
       return;
     }
     try {
-      await WinUtils.textToSpeech('${agent == 'codex' ? 'Codex' : 'Claude'} Usage Reseted');
+      await WinUtils.textToSpeech('${agentName(agent)} Usage Reseted');
     } on Object catch (error) {
       debugPrint('Could not speak usage reset alert: $error');
     }
@@ -202,8 +260,16 @@ class AiCodingUsageService extends ChangeNotifier with QuickMenuTriggers {
     if (!visible || type != QuickMenuPage.quickMenu) return;
     // QuickMenu awaits its listeners before revealing the window. Fetch in the
     // background so a CLI/network request never delays opening the menu.
-    if (_agents.contains('codex')) unawaited(CodexUsageService.instance.refresh(force: true));
-    if (_agents.contains('claude')) unawaited(ClaudeUsageService.instance.refresh());
+    for (final String agent in _agents) {
+      switch (agent) {
+        case 'codex':
+          unawaited(CodexUsageService.instance.refresh(force: true));
+        case 'claude':
+          unawaited(ClaudeUsageService.instance.refresh());
+        default:
+          unawaited(ProviderUsageService.all[agent]?.refresh());
+      }
+    }
   }
 }
 

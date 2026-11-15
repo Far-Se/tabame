@@ -1,12 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../../platform/audio_system_service.dart';
 import '../../platform/windows/tabamewin32_api.dart';
+import '../../platform/windows/win32_api.dart';
 
 import '../../models/classes/boxes.dart';
 import '../../models/settings.dart';
 import '../../models/win32/win32.dart';
 import '../../models/win32/window.dart';
 import '../../models/window_watcher.dart';
+import '../widgets/custom_tooltip.dart';
 import '../widgets/extracted_icon.dart';
 import '../widgets/panel_header.dart';
 
@@ -49,6 +53,29 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   _buildSectionHeader("Window Actions", onSurface),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: <Widget>[
+                      _WindowControlButton(
+                        tooltip: "Minimize",
+                        icon: Icons.minimize_rounded,
+                        accent: accent,
+                        onPressed: () => _showWindow(SW_MINIMIZE),
+                      ),
+                      _WindowControlButton(
+                        tooltip: "Maximize",
+                        icon: Icons.crop_square_rounded,
+                        accent: accent,
+                        onPressed: () => _showWindow(SW_MAXIMIZE),
+                      ),
+                      _WindowControlButton(
+                        tooltip: "Restore",
+                        icon: Icons.filter_none_rounded,
+                        accent: accent,
+                        onPressed: () => _showWindow(SW_RESTORE),
+                      ),
+                    ],
+                  ),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -140,6 +167,15 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
     );
   }
 
+  void _showWindow(int command) {
+    if (Platform.isWindows) {
+      ShowWindow(window.hWnd, command);
+    } else {
+      //TODO: Implement multiplatform
+    }
+    Navigator.pop(context);
+  }
+
   Widget _buildSectionHeader(String title, Color onSurface) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
@@ -187,6 +223,36 @@ class ContextMenuWidgetState extends State<ContextMenuWidget> {
             },
           ),
       ],
+    );
+  }
+}
+
+class _WindowControlButton extends StatelessWidget {
+  final String tooltip;
+  final IconData icon;
+  final Color accent;
+  final VoidCallback onPressed;
+
+  const _WindowControlButton({
+    required this.tooltip,
+    required this.icon,
+    required this.accent,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomTooltip(
+      message: tooltip,
+      child: IconButton(
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 40, minHeight: 36),
+        visualDensity: VisualDensity.compact,
+        iconSize: 18,
+        color: accent.withAlpha(220),
+        icon: Icon(icon),
+      ),
     );
   }
 }

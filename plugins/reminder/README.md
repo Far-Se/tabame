@@ -50,10 +50,11 @@ Each saved reminder registers a per-user Windows scheduled task named
 helper, which launches:
 
 ```text
-Tabame.exe -msgbox -title Reminder -message "go wash clothes"
+Tabame.exe -msgbox -title Reminder -message "go wash clothes" -speak "go wash clothes"
 ```
 
-Messages are passed as a single process argument, never evaluated by a shell.
+The reminder message appears in the Tabame message box and is spoken aloud.
+Messages are passed as single process arguments, never evaluated by a shell.
 Closing the launcher or exiting Tabame does not cancel scheduled reminders.
 The task runs in your interactive Windows session without storing a password.
 It also checks at sign-in so overdue reminders can be delivered after reboot.

@@ -169,7 +169,7 @@ def fire(reminder_id):
                 if message.startswith("-"):
                     message = "\u200b" + message
                 subprocess.Popen(
-                    [row["exe"], "-msgbox", "-title", "Reminder", "-message", message],
+                    [row["exe"], "-msgbox", "-title", "Reminder", "-message", message, "-speak", message],
                     cwd=str(Path(row["exe"]).parent), stdin=subprocess.DEVNULL,
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                     creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,

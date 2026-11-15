@@ -50,12 +50,14 @@ class CodexUsageService {
   static const Duration _cacheTtl = Duration(minutes: 4);
   static const Duration _pollInterval = Duration(minutes: 4);
   static const String _usageCommand = 'codex-cli-usage';
+  static const String _usageUrl = 'https://chatgpt.com/backend-api/wham/usage';
 
   CodexUsageRecord? _record;
   Timer? _timer;
   bool _fetching = false;
   DateTime? _lastAttempt;
   String? _appServerPlan;
+  DateTime? _lastCliRefresh;
   String? _lastError;
   final List<void Function(CodexUsageRecord?)> _listeners = <void Function(CodexUsageRecord?)>[];
 
@@ -120,6 +122,9 @@ class CodexUsageService {
   }
 
   Future<CodexUsageRecord?> _loadUsage() async {
+    final CodexUsageRecord? direct = await _loadUsageFromApi();
+    if (direct != null) return direct;
+
     for (final String command in _commandCandidates()) {
       try {
         final ProcessResult result = await Process.run(
@@ -206,6 +211,140 @@ class CodexUsageService {
       process?.kill();
     }
     return null;
+  }
+
+  // ── Direct API (same method as Claude-Code-Usage-Monitor) ──────────────
+  // Reads the Codex CLI OAuth token from `auth.json` and queries ChatGPT's
+  // usage endpoint, so neither Codex nor a helper tool needs to be running.
+
+  File? get _authFile {
+    final String? codexHome = Platform.environment['CODEX_HOME'];
+    if (codexHome != null && codexHome.isNotEmpty) return File('$codexHome\\auth.json');
+    final String home = _homeDirectory;
+    return home.isEmpty ? null : File('$home\\.codex\\auth.json');
+  }
+
+  _CodexToken? _readToken() {
+    try {
+      final File? file = _authFile;
+      if (file == null || !file.existsSync()) return null;
+      final dynamic auth = jsonDecode(file.readAsStringSync());
+      if (auth is! Map || auth['tokens'] is! Map) return null;
+      final Map<dynamic, dynamic> tokens = auth['tokens'] as Map<dynamic, dynamic>;
+      final String token = (tokens['access_token'] as String? ?? '').trim();
+      if (token.isEmpty) return null;
+      return _CodexToken(token, tokens['account_id'] as String?);
+    } on Object {
+      return null;
+    }
+  }
+
+  Future<CodexUsageRecord?> _loadUsageFromApi() async {
+    final _CodexToken? token = _readToken();
+    if (token == null) return null;
+
+    final ({int? status, CodexUsageRecord? record}) first = await _fetchUsageApi(token);
+    if (first.record != null) return first.record;
+    if (first.status != 401 && first.status != 403) return null;
+
+    // Expired token: let the Codex CLI refresh `auth.json`, then retry once.
+    await _refreshTokenViaCli();
+    final _CodexToken? refreshed = _readToken();
+    if (refreshed == null || refreshed.accessToken == token.accessToken) return null;
+    return (await _fetchUsageApi(refreshed)).record;
+  }
+
+  Future<({int? status, CodexUsageRecord? record})> _fetchUsageApi(_CodexToken token) async {
+    HttpClient? client;
+    try {
+      client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+      final HttpClientRequest request = await client.getUrl(Uri.parse(_usageUrl));
+      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer ${token.accessToken}');
+      request.headers.set(HttpHeaders.userAgentHeader, 'codex-cli');
+      final String? accountId = token.accountId;
+      if (accountId != null && accountId.isNotEmpty) request.headers.set('ChatGPT-Account-Id', accountId);
+
+      final HttpClientResponse response = await request.close().timeout(const Duration(seconds: 15));
+      final String body = await response.transform(utf8.decoder).join();
+      if (response.statusCode != 200) return (status: response.statusCode, record: null);
+      return (status: 200, record: _usageFromApiResponse(jsonDecode(body)));
+    } on Object {
+      return (status: null, record: null);
+    } finally {
+      client?.close(force: true);
+    }
+  }
+
+  /// Maps `wham/usage` onto the record. Windows are assigned by length, not
+  /// slot: Codex has shipped the weekly window in `primary_window` while the
+  /// five-hour window was switched off.
+  static CodexUsageRecord? _usageFromApiResponse(dynamic data) {
+    if (data is! Map) return null;
+    final dynamic rateLimit = data['rate_limit'];
+    if (rateLimit is! Map) return null;
+
+    _CodexWindow session = const _CodexWindow();
+    _CodexWindow weekly = const _CodexWindow();
+    for (final (String key, bool defaultWeekly) in <(String, bool)>[
+      ('primary_window', false),
+      ('secondary_window', true),
+    ]) {
+      final dynamic window = rateLimit[key];
+      if (window is! Map) continue;
+      final num? used = window['used_percent'] as num?;
+      if (used == null) continue;
+      final num? seconds = window['limit_window_seconds'] as num?;
+      final bool isWeekly = seconds == null ? defaultWeekly : seconds >= Duration.secondsPerDay;
+      final _CodexWindow parsed = _CodexWindow(
+        percent: _clampPercent(100 - used.toDouble()),
+        resetAt: _formatReset(window['reset_at']),
+        resetDateTime: _parseResetDate(window['reset_at']),
+      );
+      if (isWeekly) {
+        weekly = parsed;
+      } else {
+        session = parsed;
+      }
+    }
+    if (session.percent == null && weekly.percent == null) return null;
+
+    final dynamic plan = data['plan_type'];
+    return CodexUsageRecord(
+      fiveHourRemaining: session.percent,
+      weeklyRemaining: weekly.percent,
+      fiveHourResetAt: session.resetAt,
+      weeklyResetAt: weekly.resetAt,
+      fiveHourResetDateTime: session.resetDateTime,
+      weeklyResetDateTime: weekly.resetDateTime,
+      plan: plan is String && !_isUnknownPlan(plan) ? _titleCase(plan) : '',
+      fetchedAt: DateTime.now(),
+    );
+  }
+
+  Future<void> _refreshTokenViaCli() async {
+    final DateTime now = DateTime.now();
+    if (_lastCliRefresh != null && now.difference(_lastCliRefresh!) < const Duration(minutes: 10)) return;
+    _lastCliRefresh = now;
+
+    final File? auth = _authFile;
+    try {
+      final Process process = await Process.start(
+        'codex',
+        <String>['exec', '--skip-git-repo-check', '.'],
+        runInShell: true,
+        workingDirectory: Directory.systemTemp.path,
+        environment: <String, String>{if (auth != null) 'CODEX_HOME': auth.parent.path},
+      );
+      unawaited(process.stdout.drain<void>());
+      unawaited(process.stderr.drain<void>());
+      unawaited(process.stdin.close());
+      await process.exitCode.timeout(const Duration(seconds: 30), onTimeout: () {
+        process.kill();
+        return -1;
+      });
+    } on Object {
+      // Fall through to the CLI helper / cache fallbacks.
+    }
   }
 
   List<String> _commandCandidates() {
@@ -512,6 +651,13 @@ class CodexUsageService {
         .map((String word) => '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}')
         .join(' ');
   }
+}
+
+class _CodexToken {
+  const _CodexToken(this.accessToken, this.accountId);
+
+  final String accessToken;
+  final String? accountId;
 }
 
 class _CodexWindow {
