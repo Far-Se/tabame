@@ -106,6 +106,7 @@ mixin _LauncherLayoutMixin on _LauncherStateMembersMixin {
       LauncherDesign.nouveau => NouveauLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.satin => SatinLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.thermal => ThermalLauncherFrame(child: buildBody(), resultCount: resultCount),
+      LauncherDesign.groundGlass => GroundGlassLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.toon => ToonLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.transit => TransitLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.tui => TuiLauncherFrame(child: buildBody(), resultCount: resultCount),

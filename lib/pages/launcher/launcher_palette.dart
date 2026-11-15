@@ -84,6 +84,12 @@ class LauncherPalette {
           dim: ThermalTokens.dim,
           highlightColor: ThermalTokens.rust,
         ),
+      LauncherDesign.groundGlass => LauncherPalette._(
+          surface: GroundGlassTokens.background,
+          accent: GroundGlassTokens.accent,
+          onSurface: GroundGlassTokens.foreground,
+          dim: GroundGlassTokens.dim,
+        ),
       LauncherDesign.capillary => LauncherPalette._(
           surface: capillary.background,
           accent: capillary.accent,

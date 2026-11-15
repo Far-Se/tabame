@@ -110,10 +110,12 @@ enum LauncherDesign {
   radiant,
   ukiyoe,
   ivoryGrove,
-  liquidGlass;
+  liquidGlass,
+  groundGlass;
 
   String get displayName => switch (this) {
         LauncherDesign.liquidGlass => 'Liquid Glass',
+        LauncherDesign.groundGlass => 'Ground Glass',
         LauncherDesign.ivoryGrove => 'Ivory Grove',
         LauncherDesign.ukiyoe => 'Ukiyo-e',
         LauncherDesign.crt => 'CRT',
@@ -838,6 +840,32 @@ class DesignSettings {
           entryFontFamily: 'Segoe UI Variable Text',
           entryFontWeight: 600,
           borderRadius: 14,
+        ),
+      ),
+      LauncherDesign.groundGlass.displayName: LauncherDesignThemeSet(
+        lightTheme: defaultThemeColors(
+          background: const Color(0xFFE3E6E2),
+          textColor: const Color(0xFF1B1F1E),
+          accentColor: const Color(0xFF1F6A66),
+          gradientAlpha: 0,
+          uiFontFamily: 'Outfit',
+          uiFontWeight: 500,
+          entryFontFamily: 'Outfit',
+          entryFontWeight: 500,
+          borderRadius: 12,
+          baseFontSize: 13,
+        ),
+        darkTheme: defaultThemeColors(
+          background: const Color(0xFF10141A),
+          textColor: const Color(0xFFE4E7E2),
+          accentColor: const Color(0xFF8ED0C8),
+          gradientAlpha: 0,
+          uiFontFamily: 'Outfit',
+          uiFontWeight: 500,
+          entryFontFamily: 'Outfit',
+          entryFontWeight: 500,
+          borderRadius: 12,
+          baseFontSize: 13,
         ),
       ),
     };

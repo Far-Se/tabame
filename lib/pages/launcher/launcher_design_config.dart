@@ -95,6 +95,15 @@ class LauncherDesignConfig {
             controlRadius: 5.0,
             usesDesignFont: true,
           ),
+        LauncherDesign.groundGlass => const LauncherDesignConfig(
+            searchFontSize: 17,
+            searchFontWeight: FontWeight.w500,
+            searchHint: 'Search apps, files, and commands...',
+            frameRadius: 12,
+            controlRadius: 6,
+            resultsListPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            usesDesignFont: true,
+          ),
         LauncherDesign.capillary => const LauncherDesignConfig(
             searchFontSize: 18.0,
             searchFontWeight: FontWeight.w400,

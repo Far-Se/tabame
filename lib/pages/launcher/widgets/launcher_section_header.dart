@@ -71,6 +71,15 @@ class _LauncherSectionHeader extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
           child: Text(label, style: ThermalTokens.font(size: 11, color: ThermalTokens.dim)),
         );
+      case LauncherDesign.groundGlass:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+          child: Text(
+            label.toUpperCase(),
+            style:
+                GroundGlassTokens.font(size: 11, color: GroundGlassTokens.dim, spacing: 1.2, weight: FontWeight.w600),
+          ),
+        );
       case LauncherDesign.capillary:
         final CapillaryTokens capillary = CapillaryTokens.of(context);
         return Padding(

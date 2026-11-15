@@ -73,6 +73,7 @@ import 'launcher/launcher_corners.dart';
 import 'launcher/launcher_design.dart';
 import 'launcher/widgets/capillary_surface.dart';
 import 'launcher/widgets/thermal_surface.dart';
+import 'launcher/widgets/ground_glass_surface.dart';
 import 'launcher/widgets/liquid_metal_surface.dart';
 
 import 'launcher/launcher_design_builder.dart';
@@ -901,17 +902,19 @@ class LauncherState extends State<Launcher>
           ),
         ),
       ),
-      textField: _wrapThermalQuery(TextField(
+      textField: _wrapQueryMaterial(TextField(
         controller: _controller,
         focusNode: _searchFocusNode,
         selectAllOnFocus: false,
         cursorColor: _design == LauncherDesign.thermal
             ? ThermalTokens.accent
-            : isTui
-                ? onSurface
-                : usesBlockCursor
-                    ? accent
-                    : null,
+            : _design == LauncherDesign.groundGlass
+                ? GroundGlassTokens.accent
+                : isTui
+                    ? onSurface
+                    : usesBlockCursor
+                        ? accent
+                        : null,
         cursorWidth: isTui
             ? TuiTokens.fontSize * 0.55
             : usesBlockCursor
@@ -942,6 +945,7 @@ class LauncherState extends State<Launcher>
               LauncherDesign.nouveau => NouveauTokens.dim,
               LauncherDesign.satin => SatinTokens.dim,
               LauncherDesign.thermal => ThermalTokens.dim,
+              LauncherDesign.groundGlass => GroundGlassTokens.dim,
               LauncherDesign.capillary => CapillaryTokens.resolve(isDark).dim,
               LauncherDesign.omarchy => OmarchyTokens.dim,
               LauncherDesign.newCast => RaycastTokens.muted(isDark),
@@ -1268,8 +1272,11 @@ class LauncherState extends State<Launcher>
     );
   }
 
-  Widget _wrapThermalQuery(Widget textField) =>
-      _design == LauncherDesign.thermal ? ThermalQueryHeat(controller: _controller, child: textField) : textField;
+  Widget _wrapQueryMaterial(Widget textField) {
+    if (_design == LauncherDesign.thermal) return ThermalQueryHeat(controller: _controller, child: textField);
+    if (_design == LauncherDesign.groundGlass) return GroundGlassQueryRack(controller: _controller, child: textField);
+    return textField;
+  }
 
   Widget _buildLauncherAppearanceFrame(Widget frame) {
     final List<double> points = Design.panelOpacityPoints;

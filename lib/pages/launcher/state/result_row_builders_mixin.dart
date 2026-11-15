@@ -22,7 +22,8 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
         _design == LauncherDesign.nouveau ||
         _design == LauncherDesign.radiant ||
         _design == LauncherDesign.ukiyoe ||
-        _design == LauncherDesign.thermal) {
+        _design == LauncherDesign.thermal ||
+        _design == LauncherDesign.groundGlass) {
       return LauncherResultRow(
         isSelected: isSelected,
         isRepeating: isRepeatingKey,
@@ -152,7 +153,8 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
         _design == LauncherDesign.nouveau ||
         _design == LauncherDesign.radiant ||
         _design == LauncherDesign.ukiyoe ||
-        _design == LauncherDesign.thermal) {
+        _design == LauncherDesign.thermal ||
+        _design == LauncherDesign.groundGlass) {
       return LauncherResultRow(
         isSelected: isSelected,
         isRepeating: isRepeatingKey,
@@ -238,7 +240,8 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
         _design == LauncherDesign.nouveau ||
         _design == LauncherDesign.radiant ||
         _design == LauncherDesign.ukiyoe ||
-        _design == LauncherDesign.thermal) {
+        _design == LauncherDesign.thermal ||
+        _design == LauncherDesign.groundGlass) {
       return LauncherResultRow(
         isSelected: isSelected,
         isRepeating: isRepeatingKey,
@@ -320,7 +323,8 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
         _design == LauncherDesign.nouveau ||
         _design == LauncherDesign.radiant ||
         _design == LauncherDesign.ukiyoe ||
-        _design == LauncherDesign.thermal) {
+        _design == LauncherDesign.thermal ||
+        _design == LauncherDesign.groundGlass) {
       final Widget icon = result.coverPath != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(4),
@@ -435,7 +439,8 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
         _design == LauncherDesign.nouveau ||
         _design == LauncherDesign.radiant ||
         _design == LauncherDesign.ukiyoe ||
-        _design == LauncherDesign.thermal) {
+        _design == LauncherDesign.thermal ||
+        _design == LauncherDesign.groundGlass) {
       return LauncherResultRow(
         isSelected: isSelected,
         isRepeating: isRepeatingKey,
@@ -517,7 +522,8 @@ mixin _ResultRowBuildersMixin on _LauncherStateMembersMixin {
         _design == LauncherDesign.nouveau ||
         _design == LauncherDesign.radiant ||
         _design == LauncherDesign.ukiyoe ||
-        _design == LauncherDesign.thermal) {
+        _design == LauncherDesign.thermal ||
+        _design == LauncherDesign.groundGlass) {
       final Widget resultRow = LauncherResultRow(
         isSelected: isSelected,
         isRepeating: isRepeatingKey,

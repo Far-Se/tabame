@@ -180,6 +180,37 @@ abstract final class ThermalTokens {
       ));
 }
 
+/// Daylight ground glass and a coated-lens accent. User palette overrides apply.
+abstract final class GroundGlassTokens {
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: isDark ? 0.68 : 0.62), background);
+  static Color get border => Color.alphaBlend(foreground.withValues(alpha: isDark ? 0.16 : 0.14), background);
+
+  static TextStyle font({
+    double size = 14,
+    Color? color,
+    FontWeight weight = FontWeight.w500,
+    double spacing = 0,
+  }) =>
+      launcherTextStyle(GoogleFonts.outfit(
+        fontSize: size,
+        color: color ?? foreground,
+        fontWeight: weight,
+        letterSpacing: spacing,
+        height: 1.3,
+      ));
+
+  static TextStyle label() => launcherTextStyle(GoogleFonts.ibmPlexMono(
+        fontSize: 10,
+        color: dim,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 1.6,
+      ));
+}
+
 @immutable
 class CapillaryTokens {
   const CapillaryTokens._({
