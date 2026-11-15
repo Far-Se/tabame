@@ -8,7 +8,6 @@ extension _GroundGlassResultRow on LauncherResultRow {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
         child: GroundGlassRegion(
-          key: ValueKey<(String?, String?)>((title, subtitle)),
           selected: isSelected,
           child: Container(
             constraints: const BoxConstraints(minHeight: 48),

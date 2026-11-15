@@ -7,9 +7,9 @@ import 'package:window_manager/window_manager.dart';
 import '../launcher_corners.dart';
 import '../launcher_design.dart';
 
-/// Ground-glass focusing screen. The selected row is the sharp plane, a split
-/// prism eases toward the pointer, and typing racks focus for a short settle.
-/// Nothing samples the desktop, and the clock stops when the plate is still.
+/// Ground-glass focusing screen. The selected row is the sharp plane, and
+/// typing racks focus for a short settle. Nothing samples the desktop, and
+/// the clock stops when the plate is still.
 class GroundGlassSurface extends StatefulWidget {
   const GroundGlassSurface({super.key, required this.child, this.radius = 12});
 
@@ -21,23 +21,15 @@ class GroundGlassSurface extends StatefulWidget {
 }
 
 class _GroundGlassSurfaceState extends State<GroundGlassSurface>
-    with TickerProviderStateMixin, WidgetsBindingObserver, WindowListener {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver, WindowListener {
   static Future<ui.FragmentProgram>? _program;
   ui.FragmentShader? _shader;
   final GlobalKey _sheetKey = GlobalKey();
   late final _GroundGlassPlate _plate = _GroundGlassPlate(_sheetKey);
-  late final AnimationController _settle = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 180),
-  )..addListener(_movePrism);
   late final AnimationController _rack = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 760),
   )..addListener(_coolRack);
-  Offset _from = const Offset(-1, -1);
-  Offset _to = const Offset(-1, -1);
-  double _fromActive = 0;
-  double _toActive = 0;
   bool _motion = false;
   bool _focused = true;
   bool _resumed = true;
@@ -76,45 +68,17 @@ class _GroundGlassSurfaceState extends State<GroundGlassSurface>
   }
 
   void _rest({required bool notify}) {
-    _settle.stop();
     _rack.stop();
-    _from = _to = const Offset(-1, -1);
-    _fromActive = _toActive = 0;
     if (!notify) {
-      _plate
-        ..pointer = const Offset(-1, -1)
-        ..pointerActive = 0
-        ..rack = 0;
+      _plate.rack = 0;
       return;
     }
-    _plate
-      ..setPointer(const Offset(-1, -1), 0)
-      ..setRack(0);
-  }
-
-  void _movePrism() {
-    final double t = Curves.easeOutCubic.transform(_settle.value);
-    _plate.setPointer(Offset.lerp(_from, _to, t)!, ui.lerpDouble(_fromActive, _toActive, t)!);
+    _plate.setRack(0);
   }
 
   void _coolRack() {
     _plate.setRack(1 - Curves.easeInCubic.transform(_rack.value));
   }
-
-  void _aim(Offset target, double active) {
-    if (!_enabled) {
-      _plate.setPointer(active > 0 ? target : const Offset(-1, -1), active);
-      return;
-    }
-    if ((target - _to).distanceSquared < 0.25 && (active - _toActive).abs() < 0.001) return;
-    _from = _plate.pointer;
-    _fromActive = _plate.pointerActive;
-    _to = target;
-    _toActive = active;
-    _settle.forward(from: 0);
-  }
-
-  void _hover(PointerEvent event) => _aim(event.localPosition, 1);
 
   @override
   void onWindowFocus() {
@@ -146,7 +110,6 @@ class _GroundGlassSurfaceState extends State<GroundGlassSurface>
   void dispose() {
     windowManager.removeListener(this);
     WidgetsBinding.instance.removeObserver(this);
-    _settle.dispose();
     _rack.dispose();
     _plate.dispose();
     _shader?.dispose();
@@ -166,21 +129,17 @@ class _GroundGlassSurfaceState extends State<GroundGlassSurface>
             _plate.queueGeometry();
             return LauncherClip(
               borderRadius: BorderRadius.circular(widget.radius),
-              child: MouseRegion(
-                onHover: _hover,
-                onExit: (_) => _aim(_plate.pointer, 0),
-                child: CustomPaint(
-                  key: _sheetKey,
-                  painter: _GroundGlassPainter(
-                    shader: _shader,
-                    plate: _plate,
-                    background: GroundGlassTokens.background,
-                    foreground: GroundGlassTokens.foreground,
-                    accent: GroundGlassTokens.accent,
-                    highContrast: MediaQuery.highContrastOf(context),
-                  ),
-                  child: RepaintBoundary(child: widget.child),
+              child: CustomPaint(
+                key: _sheetKey,
+                painter: _GroundGlassPainter(
+                  shader: _shader,
+                  plate: _plate,
+                  background: GroundGlassTokens.background,
+                  foreground: GroundGlassTokens.foreground,
+                  accent: GroundGlassTokens.accent,
+                  highContrast: MediaQuery.highContrastOf(context),
                 ),
+                child: RepaintBoundary(child: widget.child),
               ),
             );
           }),
@@ -322,8 +281,6 @@ class _GroundGlassPlate extends ChangeNotifier {
 
   final GlobalKey sheetKey;
   final Set<_RenderGroundGlassRegion> _regions = <_RenderGroundGlassRegion>{};
-  Offset pointer = const Offset(-1, -1);
-  double pointerActive = 0;
   Rect? focus;
   double rack = 0;
   bool enabled = true;
@@ -382,13 +339,6 @@ class _GroundGlassPlate extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setPointer(Offset value, double active) {
-    if (_disposed || (value == pointer && active == pointerActive)) return;
-    pointer = value;
-    pointerActive = active;
-    notifyListeners();
-  }
-
   void setRack(double value) {
     if (_disposed || (value - rack).abs() < 0.001) return;
     rack = value;
@@ -440,15 +390,12 @@ class _GroundGlassPainter extends CustomPainter {
     effect
       ..setFloat(0, size.width)
       ..setFloat(1, size.height)
-      ..setFloat(2, plate.pointer.dx)
-      ..setFloat(3, plate.pointer.dy)
-      ..setFloat(4, plate.pointerActive)
-      ..setFloat(5, focus?.center.dx ?? 0)
-      ..setFloat(6, focus?.center.dy ?? 0)
-      ..setFloat(7, (focus?.width ?? 0) * 0.5)
-      ..setFloat(8, (focus?.height ?? 0) * 0.5)
-      ..setFloat(9, plate.rack);
-    int slot = 10;
+      ..setFloat(2, focus?.center.dx ?? 0)
+      ..setFloat(3, focus?.center.dy ?? 0)
+      ..setFloat(4, (focus?.width ?? 0) * 0.5)
+      ..setFloat(5, (focus?.height ?? 0) * 0.5)
+      ..setFloat(6, plate.rack);
+    int slot = 7;
     for (final Color color in <Color>[background, foreground, accent]) {
       effect
         ..setFloat(slot++, color.r)
