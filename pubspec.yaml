@@ -88,6 +88,7 @@ flutter:
     - resources/shaders/radiant.frag
     - resources/shaders/ukiyoe.frag
     - resources/shaders/ground_glass.frag
+    - resources/shaders/lamp.frag
 
   assets:
     - CHANGELOG.md

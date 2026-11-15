@@ -24,6 +24,7 @@ import 'design_gazette.dart';
 import 'design_launcher_ports.dart';
 // import 'design_impact.dart';
 import 'design_interface.dart';
+import 'design_lamp.dart';
 import 'design_ledger.dart';
 import 'design_manga.dart';
 import 'design_matrix.dart';
@@ -158,6 +159,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.commandDeck => MainMenuCommandDeckWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.switchboard => MainMenuSwitchboardWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.orbit => MainMenuOrbitWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.lamp => MainMenuLampWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.ivoryGrove ||
       QuickMenuDesigns.ukiyoe ||
       QuickMenuDesigns.radiant ||

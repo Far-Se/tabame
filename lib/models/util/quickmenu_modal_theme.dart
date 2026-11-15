@@ -4,6 +4,7 @@ import '../../pages/launcher/widgets/liquid_metal_surface.dart';
 import '../../pages/launcher/widgets/radiant_surface.dart';
 import '../../pages/launcher/widgets/satin_surface.dart';
 import '../../pages/launcher/widgets/ukiyoe_surface.dart';
+import '../../pages/quickmenu_designs/lamp_surface.dart';
 // ignore_for_file: unused_import, unused_element
 
 import 'dart:async';
@@ -1106,6 +1107,21 @@ class QuickMenuModalFrame extends StatelessWidget {
                 useLauncherCorners: false,
                 child: const SizedBox.expand(),
               ),
+            ),
+          ],
+        ),
+      QuickMenuDesigns.lamp => _FrameSpec(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(color: text.withValues(alpha: isDark ? 0.18 : 0.14)),
+          ),
+          underlays: <Widget>[
+            LampSurface(
+              pool: bg,
+              shadow: lampShadow(bg, dark: isDark),
+              lip: lampLip(bg, accent, dark: isDark),
+              dark: isDark,
+              child: const SizedBox.expand(),
             ),
           ],
         ),

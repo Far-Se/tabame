@@ -113,6 +113,23 @@ class MouseGesturesService with TabameListener {
     }
   }
 
+  /// True when a game / fullscreen app / presentation owns the screen
+  /// (SHQueryUserNotificationState). Corners and gestures must stay inert then.
+  bool _isScreenBusy() {
+    try {
+      switch (WinUtils.checkUserScreenState()) {
+        case ScreenState.busy:
+        case ScreenState.runningD3dFullScreen:
+        case ScreenState.presentationMode:
+          return true;
+        default:
+          return false;
+      }
+    } catch (_) {
+      return false;
+    }
+  }
+
   void _cornerTick() {
     final PointXY pos = _cursorPos();
     final int screenWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -144,6 +161,7 @@ class MouseGesturesService with TabameListener {
     if (_cornerFired) return;
     if (DateTime.now().millisecondsSinceEpoch - _cornerEnterMs >= _config.cornerDwellMs) {
       _cornerFired = true;
+      if (_isScreenBusy()) return;
       final GestureAction? action = _config.corners[corner];
       if (action != null && action.isSet) executeAction(action);
     }
@@ -156,6 +174,7 @@ class MouseGesturesService with TabameListener {
   @override
   void onMouseGesture(String button, String pattern, int durationMs) {
     if (durationMs > user.mouseGestureMaxDelay) return;
+    if (_isScreenBusy()) return;
 
     MouseGestureBinding? match;
     for (final MouseGestureBinding binding in _config.gestures) {

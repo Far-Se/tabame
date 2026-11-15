@@ -2,6 +2,7 @@
 
 ## New Features
 
+- Added the `Lamp` QuickMenu design.
 - Added QuickLaunch buttons.
 - Added `Browser Media` QuickAction button.
 - Added Hotkeys Export.

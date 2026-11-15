@@ -49,6 +49,7 @@ enum QuickMenuDesigns {
   satin,
   liquidMetal,
   opticalGlass,
+  lamp,
   ;
 
   String get displayName => switch (this) {
@@ -2018,6 +2019,32 @@ class DesignSettings {
           entryFontFamily: 'Mulish',
           entryFontWeight: 500,
           borderRadius: 24,
+        ),
+      ),
+      QuickMenuDesigns.lamp.displayName: QMDesignThemeSet(
+        lightTheme: defaultThemeColors(
+          background: const Color(0xFFF4EFE8),
+          textColor: const Color(0xFF2A2622),
+          accentColor: const Color(0xFF8D4E2A),
+          gradientAlpha: 0,
+          uiFontFamily: 'IBM Plex Sans',
+          uiFontWeight: 500,
+          entryFontFamily: 'IBM Plex Sans',
+          entryFontWeight: 600,
+          borderRadius: 16,
+          baseFontSize: 10,
+        ),
+        darkTheme: defaultThemeColors(
+          background: const Color(0xFF241F1A),
+          textColor: const Color(0xFFF3ECE3),
+          accentColor: const Color(0xFFE2B15C),
+          gradientAlpha: 0,
+          uiFontFamily: 'IBM Plex Sans',
+          uiFontWeight: 500,
+          entryFontFamily: 'IBM Plex Sans',
+          entryFontWeight: 600,
+          borderRadius: 16,
+          baseFontSize: 10,
         ),
       ),
     };
