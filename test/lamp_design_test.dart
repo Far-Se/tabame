@@ -9,8 +9,8 @@ import 'package:tabame/pages/quickmenu_designs/lamp_surface.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('appends Lamp so saved QuickMenu indexes stay put', () {
-    expect(QuickMenuDesigns.values.last, QuickMenuDesigns.lamp);
+  test('keeps Lamp at its saved QuickMenu index', () {
+    expect(QuickMenuDesigns.lamp.index, 45);
     expect(QuickMenuDesigns.lamp.displayName, 'Lamp');
   });
 

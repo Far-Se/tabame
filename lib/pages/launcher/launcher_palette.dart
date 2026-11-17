@@ -90,6 +90,13 @@ class LauncherPalette {
           onSurface: GroundGlassTokens.foreground,
           dim: GroundGlassTokens.dim,
         ),
+      LauncherDesign.lodestone => LauncherPalette._(
+          surface: LodestoneTokens.background,
+          accent: LodestoneTokens.accent,
+          onSurface: LodestoneTokens.foreground,
+          dim: LodestoneTokens.dim,
+          highlightColor: LodestoneTokens.selection,
+        ),
       LauncherDesign.capillary => LauncherPalette._(
           surface: capillary.background,
           accent: capillary.accent,

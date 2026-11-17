@@ -107,6 +107,11 @@ mixin _LauncherLayoutMixin on _LauncherStateMembersMixin {
       LauncherDesign.satin => SatinLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.thermal => ThermalLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.groundGlass => GroundGlassLauncherFrame(child: buildBody(), resultCount: resultCount),
+      LauncherDesign.lodestone => LodestoneLauncherFrame(
+          searchChild: searchContent,
+          child: Stack(children: <Widget>[resultsContent, resizeOverlay]),
+          resultCount: resultCount,
+        ),
       LauncherDesign.toon => ToonLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.transit => TransitLauncherFrame(child: buildBody(), resultCount: resultCount),
       LauncherDesign.tui => TuiLauncherFrame(child: buildBody(), resultCount: resultCount),

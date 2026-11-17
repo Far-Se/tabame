@@ -80,6 +80,18 @@ class _LauncherSectionHeader extends StatelessWidget {
                 GroundGlassTokens.font(size: 11, color: GroundGlassTokens.dim, spacing: 1.2, weight: FontWeight.w600),
           ),
         );
+      case LauncherDesign.lodestone:
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(18, 10, 16, 4),
+          child: Row(children: <Widget>[
+            // One needle at rest, in the pole color.
+            Container(width: 9, height: 1.5, color: accent),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(label.toUpperCase(), overflow: TextOverflow.ellipsis, style: LodestoneTokens.label()),
+            ),
+          ]),
+        );
       case LauncherDesign.capillary:
         final CapillaryTokens capillary = CapillaryTokens.of(context);
         return Padding(

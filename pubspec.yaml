@@ -89,6 +89,7 @@ flutter:
     - resources/shaders/ukiyoe.frag
     - resources/shaders/ground_glass.frag
     - resources/shaders/lamp.frag
+    - resources/shaders/lodestone.frag
 
   assets:
     - CHANGELOG.md

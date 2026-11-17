@@ -18,7 +18,7 @@ The complete, authoritative protocol spec lives in the repo. **Read it before wr
 
 - **Full spec:** [skills/TABAME_PLUGIN_SKILL.md](../../../skills/TABAME_PLUGIN_SKILL.md) – every message type, render-frame field, item field, view type, icon name, and pattern.
 - **Working examples** to copy from:
-  - `plugins/echo/` – Python demo exercising list/grid/detail/preview, actions (shortcuts/confirm), forms v2, streaming chat, pagination, storage, and background notify.
+  - `plugins/echo/` – Python demo exercising list/grid/detail/preview + actions.
   - `plugins/linear/` – Node.js plugin with an HTTP API and `config.json` secrets.
   - `plugins/caniuse/` – Node.js plugin with fetched data and detail views.
 
@@ -37,6 +37,7 @@ When a detail isn't covered below, consult the full spec rather than guessing.
 ```json
 {
   "keyword": "weather", // required – what the user types; short & unique
+  "category": "Weather", // required – one canonical discovery category
   "runtime": "python", // required – "python" | "node" | "bun" (on PATH)
   "entry": "main.py", // required – script filename in the plugin folder
   "id": "weather", // optional – defaults to folder name
@@ -44,14 +45,18 @@ When a detail isn't covered below, consult the full spec rather than guessing.
   "description": "", // optional
   "icon": "cloud", // optional – icon name (see spec §11)
   "args": [], // optional – CLI args inserted BEFORE entry
-  "enabled": true, // optional – defaults to true; set false (or toggle
+  "enabled": true // optional – defaults to true; set false (or toggle
   //   from the Launcher Plugins manager) to hide the
   //   plugin without deleting it
-  "dev": false // optional – true enables dev mode: hot-restart on file
-  //   save + a live debug console (stderr, dropped frames,
-  //   commands) under the plugin view. Turn off before sharing.
 }
 ```
+
+`category` is mandatory in every manifest. Choose exactly one current registry
+value: `AI Tools`, `Communication`, `Developer Tools`, `Entertainment`,
+`Finance`, `Fun & Casual`, `Language & Writing`, `Media & Design`,
+`Network Tools`, `Productivity`, `Shopping`, `System Tools`, `Utilities`, `Weather`, or
+`Web & Browser`. Match the plugin's primary user-facing purpose and preserve
+the exact spelling/capitalization; do not invent variants or multiple values.
 
 Launch is effectively `<runtime> <args...> <entry>`, started **without a shell**, with the **working directory set to the plugin folder** (so `config.json`/assets resolve relatively). Activation: the query **equals the keyword** or **starts with `keyword + " "`**; the keyword prefix is stripped before your script sees the text.
 
@@ -61,20 +66,13 @@ Launch is effectively `<runtime> <args...> <entry>`, started **without a shell**
 
 Messages you receive on **stdin**:
 
-| Message                 | When                                                                                            | Key fields                                                                              |
-| ----------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `init`                  | Once at startup                                                                                 | `query`, `protocol` (3), `theme` (`{accent,text,background,dark}` hex + flag), `locale` |
-| `query`                 | Every keystroke (not in `inputMode:"submit"`)                                                   | `text`, `rev` (generation counter)                                                      |
-| `submitQuery`           | Enter on an `inputMode:"submit"` frame – the whole line at once (chat)                          | `text`, `rev`                                                                           |
-| `select`                | Highlighted item changed                                                                        | `id`, `rev`                                                                             |
-| `action`                | **Enter** (`action:"default"`), a **Ctrl+K** pick, an action `shortcut`, or the empty-state CTA | `id` (`""` for frame-level/empty-state), `action` (no `rev`)                            |
-| `submit`                | User submits a `form` view                                                                      | `values` (`{fieldId: value}`), `button` (pressed `form.buttons` id)                     |
-| `change`                | A `watch: true` form field changed                                                              | `id`, `values`                                                                          |
-| `loadMore`              | Scrolled near the end of a `hasMore` frame                                                      | `rev` – answer with a longer full list                                                  |
-| `storage` / `clipboard` | Replies to `storage` get/keys and `clipboardRead` commands                                      | `requestId` (echoed), `value`/`keys`/`text`                                             |
-| `back`                  | Escape on a frame with `canGoBack: true`                                                        | `rev` – render the previous screen                                                      |
-| `tab`                   | Tab pressed                                                                                     | `id` of highlighted item, `rev` – answer with `setQuery`                                |
-| `close`                 | Shutting down                                                                                   | –                                                                                       |
+| Message  | When                                                | Key fields                         |
+| -------- | --------------------------------------------------- | ---------------------------------- |
+| `init`   | Once at startup                                     | `query` (initial text)             |
+| `query`  | Every keystroke                                     | `text`, `rev` (generation counter) |
+| `select` | Highlighted item changed                            | `id`, `rev`                        |
+| `action` | **Enter** (`action:"default"`) or a **Ctrl+K** pick | `id`, `action` (no `rev`)          |
+| `close`  | Shutting down                                       | –                                  |
 
 Minimal render frame you print to **stdout**:
 
@@ -89,43 +87,32 @@ Minimal render frame you print to **stdout**:
 }
 ```
 
-Full frame/item fields are documented in spec §6–§9: views `list`/`grid`/`detail`/`form`; frame `loading` (bool or `{progress}`), `emptyText`, `empty` (`{icon,title,hint,action}` – `action` is a clickable CTA), `placeholder`, `canGoBack`, `grid`, `detail` (`{markdown, metadata, wide, append}` – a markdown-only document view; `append` streams chunks onto the current document, `wide: true` widens the window; text is selectable, code blocks get a copy button, images open in a lightbox), `form`, `preview`, frame-level `actions` (Ctrl+K entries independent of the highlighted item), `selectId` (move the highlight), `hasMore` (pagination via `loadMore`), `inputMode: "submit"` (Enter delivers the whole query – chat-style); item `accessories` (tintable via `color`, own `icon`), `actions`, `preview` (`{markdown, metadata}`), `section` headers (lists **and** grids), `lines` (subtitle wrap), `progress` bar, grid `tileColor`, and `**bold**`/`` `code` `` spans in title/subtitle. Actions (item- or frame-level) support `shortcut` (`"ctrl+shift+c"` – must include ctrl/alt), `destructive` (danger tint), and `confirm` (host-shown are-you-sure gate). Forms (spec §8) support `text`/`password`/`textarea`/`dropdown`/`checkbox`/`number`(+`min`/`max`)/`date`/`filepicker`/`folderpicker`/`tags` fields with `required`, `description`, plugin-set `error`, `watch` (change events), and multi-`buttons` submits. `metadata` entries (spec §7.1) are aligned key-value rows supporting `color` dots, `icon`, clickable `url`, `sparkline` arrays, and `{"separator":true}` dividers. Icons accept a §11 name, a `#RRGGBB` color swatch, or a raster URL.
-
-You can also print **commands** – side effects the host executes for you (spec §5.2). No `rev`, fire-and-forget; combine by printing several lines (e.g. `copy` then `hide`):
-
-```json
-{"type":"command","command":"copy","text":"..."}   // clipboard + "Copied" toast
-{"type":"command","command":"paste","text":"..."}  // clipboard + hide + Ctrl+V into the previous window
-{"type":"command","command":"open","url":"..."}    // URL or file/folder path
-{"type":"command","command":"hide"}                 // hide the launcher (your process gets `close`)
-{"type":"command","command":"toast","text":"...","style":"success|error|info|progress","progress":0.5} // chip; progress pins until replaced
-{"type":"command","command":"setQuery","text":"..."} // rewrite post-keyword search text (autocomplete)
-{"type":"command","command":"clipboardRead","requestId":"r1"}  // replies {"type":"clipboard","requestId","text"}
-{"type":"command","command":"notify","title":"...","text":"..."} // native Windows notification (works detached)
-{"type":"command","command":"storage","op":"set|get|delete|keys","key":"k","value":...,"secret":true,"requestId":"r2"} // per-plugin store; secret -> Credential Manager; get/keys reply {"type":"storage"}
-{"type":"command","command":"background","timeout":60} // grace to finish work after hide (send BEFORE hide)
-```
+Full frame/item fields (views `list`/`grid`/`detail`, `loading`, `emptyText`, `grid`, `detail.markdown`, `preview`, item `accessories`/`actions`/`preview`) are documented in spec §6–§8.
 
 ## Non-negotiable rules (get these right)
 
-- **stdout is protocol messages only** (render frames and commands). Any other stdout line is treated as a diagnostic log. Send all debug output to **stderr**.
+- **stdout is render frames only.** Any other stdout line is treated as a diagnostic log. Send all debug output to **stderr**.
 - **Echo `rev`** on frames responding to a `query`/`select`; use **`rev: 0`** for unsolicited pushes (action results, async/background refreshes). Tabame **drops frames with a stale `rev`**, so a slow response to "rom" can't overwrite fresh results for "rome".
 - **Flush stdout** after every frame; **one JSON object per line**, no embedded newlines.
 - **Every item needs a stable, unique `id`** – it's echoed back in `select`/`action`.
 - **Exit on `close` and on stdin EOF.** After `close`, ~2s grace then the process is killed.
 - **Read stdin line by line**; never block for all input.
-- **Escape exits the whole plugin** unless the frame set `"canGoBack": true` – then you get `{"type":"back"}` and should render the previous screen. Keep your own `screen` state; leave `canGoBack` off the root screen (and never set it on a screen you can't leave, or Escape is trapped).
-- **Slow work:** emit a `loading:true` frame (echoing the rev) first, then the result frame. Streamed/long work belongs on a **worker thread** (`detail.append` frames use `rev: 0`).
-- **`loadMore` answers carry the full list** (all pages so far), not just the new page.
-- **Secrets** go through the `storage` command with `"secret": true` (Windows Credential Manager) – not a shipped `config.json`.
+- **Escape exits the whole plugin** (no built-in "back") – for multi-screen plugins keep your own `screen` state and add a "◀ Back" item or a Ctrl+K `back` action.
+- **Slow work:** emit a `loading:true` frame (echoing the rev) first, then the result frame.
 - **Never crash on bad input** – wrap handlers in try/except and render the error as a `detail` frame.
-- **Icons** must be a name from spec §11 (case-insensitive), a `#RRGGBB` color swatch, or a `file://`/`https://` **raster** (PNG/JPG, no SVG).
+- **Icons** must be a name from spec §11 (case-insensitive), a `data:image/...` URI (up to 2 MB), or a `file://`/`https://` raster or SVG image.
 - On Windows, Tabame sets `PYTHONIOENCODING=utf-8` / `PYTHONUTF8=1` for Python; Node/Bun are UTF-8 already.
 
 ## Doing real work
 
-The plugin is an ordinary process: HTTP (`requests`/`urllib`, or global `fetch` in Node 18+/Bun), filesystem, spawning tools. Read secrets from a `config.json` in the plugin folder (the CWD) or env vars – see `plugins/linear/config.example.json`. To open a URL, copy/paste text, hide the launcher, or show a toast, print a **command** (see above) – don't shell out to `cmd /c start`/`clip`. Markdown links in `detail`/`preview` are clickable and open in the default browser; metadata entries can carry a `url` for the same effect.
+The plugin is an ordinary process: HTTP (`requests`/`urllib`, or global `fetch` in Node 18+/Bun), filesystem, spawning tools. Read secrets from a `config.json` in the plugin folder (the CWD) or env vars – see `plugins/linear/config.example.json`. To open a URL or copy to the clipboard on Windows, shell out via `cmd /c start`/`cmd /c clip` (recipes in spec §12). Markdown links in `detail` render but are **not clickable** – expose URLs as item **actions** and open them yourself.
 
 ## Deliverables
+
+When registering a new plugin in `resources/plugins.json`, include `addedDate`
+with the current local calendar day in `YYYY-MM-DD` format. Running
+`node add-plugin.js <PluginFolder>` (or `node add-plugin.js missing`) adds it
+automatically. Preserve the original date on updates; leave existing undated
+entries unchanged. The plugin manager uses a fallback date for those entries.
 
 When done, hand the user both `plugin.json` and the script, the exact install path (`%localappdata%\Tabame\plugins\<id>\`), and the reminder to reopen the launcher to load it.

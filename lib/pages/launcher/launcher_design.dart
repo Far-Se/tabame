@@ -211,6 +211,43 @@ abstract final class GroundGlassTokens {
       ));
 }
 
+/// A graphite plate, iron filings, and one compass-red pole. User palette
+/// overrides apply.
+abstract final class LodestoneTokens {
+  static Color get background => user.launcherThemeColors.background;
+  static Color get foreground => user.launcherThemeColors.text;
+  static Color get accent => user.launcherThemeColors.accent;
+  static bool get isDark => ThemeData.estimateBrightnessForColor(background) == Brightness.dark;
+  static Color get dim => Color.alphaBlend(foreground.withValues(alpha: isDark ? 0.64 : 0.66), background);
+
+  // These sit over the frame fill and stay translucent, so they keep working
+  // when the user turns the launcher surface to glass.
+  static Color get border => foreground.withValues(alpha: isDark ? 0.13 : 0.16);
+  static Color get plate => foreground.withValues(alpha: isDark ? 0.035 : 0.045);
+  static Color get selection => accent.withValues(alpha: isDark ? 0.13 : 0.10);
+
+  static TextStyle font({
+    double size = 14,
+    Color? color,
+    FontWeight weight = FontWeight.w500,
+    double spacing = 0,
+  }) =>
+      launcherTextStyle(GoogleFonts.instrumentSans(
+        fontSize: size,
+        color: color ?? foreground,
+        fontWeight: weight,
+        letterSpacing: spacing,
+        height: 1.3,
+      ));
+
+  static TextStyle label({Color? color}) => launcherTextStyle(GoogleFonts.dmMono(
+        fontSize: 10,
+        color: color ?? dim,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 1.3,
+      ));
+}
+
 @immutable
 class CapillaryTokens {
   const CapillaryTokens._({

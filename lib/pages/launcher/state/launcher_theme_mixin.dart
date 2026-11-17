@@ -14,6 +14,7 @@ mixin _LauncherThemeMixin on _LauncherStateMembersMixin {
       LauncherDesign.satin => GoogleFonts.barlowTextTheme(baseTheme.textTheme),
       LauncherDesign.thermal => GoogleFonts.hankenGroteskTextTheme(baseTheme.textTheme),
       LauncherDesign.groundGlass => GoogleFonts.outfitTextTheme(baseTheme.textTheme),
+      LauncherDesign.lodestone => GoogleFonts.instrumentSansTextTheme(baseTheme.textTheme),
       LauncherDesign.capillary => GoogleFonts.commissionerTextTheme(baseTheme.textTheme),
       LauncherDesign.opticalGlass => GoogleFonts.mulishTextTheme(baseTheme.textTheme),
       LauncherDesign.liquidMetal => GoogleFonts.barlowTextTheme(baseTheme.textTheme),

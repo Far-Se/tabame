@@ -104,6 +104,17 @@ class LauncherDesignConfig {
             resultsListPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             usesDesignFont: true,
           ),
+        LauncherDesign.lodestone => const LauncherDesignConfig(
+            searchIcon: Icons.explore_outlined,
+            searchIconSize: 19,
+            searchFontSize: 18,
+            searchFontWeight: FontWeight.w500,
+            searchHint: 'Search apps, files, and commands...',
+            frameRadius: 10,
+            controlRadius: 5,
+            resultsListPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            usesDesignFont: true,
+          ),
         LauncherDesign.capillary => const LauncherDesignConfig(
             searchFontSize: 18.0,
             searchFontWeight: FontWeight.w400,

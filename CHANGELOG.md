@@ -2,6 +2,7 @@
 
 ## New Features
 
+- Added the `Void` QuickMenu design.
 - Added the `Lamp` QuickMenu design.
 - Added QuickLaunch buttons.
 - Added `Browser Media` QuickAction button.

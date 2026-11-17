@@ -613,7 +613,37 @@ class LauncherActionsBuilder {
         subtitle: entry.title,
         onExecute: (_) => Clipboard.setData(ClipboardData(text: entry.title)),
       ),
+      if (_isDisabledQuickActionButton(entry))
+        LauncherAction(
+          label: 'Add to Quick Actions',
+          icon: Icons.add_circle_outline_rounded,
+          onExecute: (_) => _enableQuickActionButton(entry.id.substring('standard-'.length)),
+        ),
     ];
+  }
+
+  /// True for a quickActionsMap button that sits in the "Deactivated:" part of `topBarWidgets`.
+  static bool _isDisabledQuickActionButton(QuickActionMenuEntry entry) {
+    if (!entry.id.startsWith('standard-')) return false;
+    final String key = entry.id.substring('standard-'.length);
+    final List<String> saved = Boxes().topBarWidgets;
+    final int marker = saved.indexOf('Deactivated:');
+    final int index = saved.indexOf(key);
+    return index >= 0 && marker >= 0 && index > marker;
+  }
+
+  /// Same effect as pressing "enable" in Quick Menu settings > Quick Actions:
+  /// moves the button to the end of the active list, right before "Deactivated:".
+  static Future<void> _enableQuickActionButton(String key) async {
+    final List<String> saved = List<String>.of(Boxes().topBarWidgets);
+    saved.remove(key);
+    int marker = saved.indexOf('Deactivated:');
+    if (marker < 0) {
+      saved.add('Deactivated:');
+      marker = saved.length - 1;
+    }
+    saved.insert(marker, key);
+    await Boxes.updateSettings('topBarWidgets', saved);
   }
 
   // == Helpers ================================================================

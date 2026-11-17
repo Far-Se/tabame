@@ -15,7 +15,7 @@ import '../platform/windows/tabamewin32_api.dart';
 // tabamewin32 import removed - shell context menu now uses win32 5.x directly.
 // See win32_context_menu_bridge.dart.
 
-import '../models/classes/boxes/quick_menu_box.dart';
+import '../models/classes/boxes.dart';
 import '../models/globals.dart';
 import '../models/classes/saved_maps.dart';
 import '../models/settings.dart';
@@ -351,7 +351,8 @@ class _ActionsPanelScaffoldState extends State<ActionsPanelScaffold> {
                                 fontSize: Design.baseFontSize + 3,
                                 color: tokens.design == LauncherDesign.thermal ||
                                         tokens.design == LauncherDesign.satin ||
-                                        tokens.design == LauncherDesign.groundGlass
+                                        tokens.design == LauncherDesign.groundGlass ||
+                                        tokens.design == LauncherDesign.lodestone
                                     ? tokens.dim
                                     : tokens.onSurface.withAlpha(70),
                               ),

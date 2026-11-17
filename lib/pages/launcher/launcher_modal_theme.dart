@@ -11,6 +11,7 @@ import 'launcher_design_builder.dart';
 import 'widgets/capillary_surface.dart';
 import 'widgets/thermal_surface.dart';
 import 'widgets/ground_glass_surface.dart';
+import 'widgets/lodestone_surface.dart';
 import 'widgets/satin_surface.dart';
 import 'widgets/ukiyoe_surface.dart';
 import 'widgets/liquid_metal_surface.dart';
@@ -113,6 +114,12 @@ class LauncherModalTokens {
           spacing: letterSpacing ?? 0,
         ).copyWith(height: height),
       LauncherDesign.groundGlass => GroundGlassTokens.font(
+          size: fontSize ?? 14,
+          color: color ?? onSurface,
+          weight: fontWeight ?? FontWeight.w500,
+          spacing: letterSpacing ?? 0,
+        ).copyWith(height: height),
+      LauncherDesign.lodestone => LodestoneTokens.font(
           size: fontSize ?? 14,
           color: color ?? onSurface,
           weight: fontWeight ?? FontWeight.w500,
@@ -360,6 +367,7 @@ class LauncherModalFrame extends StatelessWidget {
       LauncherDesign.satin => Colors.transparent,
       LauncherDesign.thermal => Colors.transparent,
       LauncherDesign.groundGlass => Colors.transparent,
+      LauncherDesign.lodestone => Colors.transparent,
       LauncherDesign.capillary => Colors.transparent,
       LauncherDesign.opticalGlass => Colors.transparent,
       LauncherDesign.liquidMetal => Colors.transparent,
@@ -426,6 +434,10 @@ class LauncherModalFrame extends StatelessWidget {
       LauncherDesign.glass => <Widget>[
           _buildGlassSheen(),
           _buildGlassTopEdge(),
+        ],
+      // No row reports a pole here, so the needles stay at rest.
+      LauncherDesign.lodestone => <Widget>[
+          _fill(const LodestoneSurface(child: SizedBox.expand())),
         ],
       _ => const <Widget>[],
     };
@@ -716,6 +728,11 @@ class LauncherModalHeader extends StatelessWidget {
           color: Color.alphaBlend(accent.withValues(alpha: 0.1), tokens.surface),
           borderRadius: BorderRadius.circular(tokens.controlRadius),
           border: Border.all(color: accent.withValues(alpha: 0.35)),
+        ).withLauncherCorners(),
+      LauncherDesign.lodestone => BoxDecoration(
+          color: LodestoneTokens.selection,
+          borderRadius: BorderRadius.circular(tokens.controlRadius),
+          border: Border.all(color: accent.withValues(alpha: 0.5)),
         ).withLauncherCorners(),
       _ => BoxDecoration(
           color: accent.withAlpha(28),

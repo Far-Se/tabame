@@ -50,6 +50,7 @@ enum QuickMenuDesigns {
   liquidMetal,
   opticalGlass,
   lamp,
+  voidDesign,
   ;
 
   String get displayName => switch (this) {
@@ -63,6 +64,7 @@ enum QuickMenuDesigns {
         QuickMenuDesigns.tui => 'TUI',
         QuickMenuDesigns.crt => 'CRT',
         QuickMenuDesigns.superMario => 'SuperMario',
+        QuickMenuDesigns.voidDesign => 'Void',
         _ => name.toUpperCaseFirst(),
       };
 }
@@ -112,7 +114,8 @@ enum LauncherDesign {
   ukiyoe,
   ivoryGrove,
   liquidGlass,
-  groundGlass;
+  groundGlass,
+  lodestone;
 
   String get displayName => switch (this) {
         LauncherDesign.liquidGlass => 'Liquid Glass',
@@ -866,6 +869,32 @@ class DesignSettings {
           entryFontFamily: 'Outfit',
           entryFontWeight: 500,
           borderRadius: 12,
+          baseFontSize: 13,
+        ),
+      ),
+      LauncherDesign.lodestone.displayName: LauncherDesignThemeSet(
+        lightTheme: defaultThemeColors(
+          background: const Color(0xFFEDEFF1),
+          textColor: const Color(0xFF14181C),
+          accentColor: const Color(0xFFCC3A17),
+          gradientAlpha: 0,
+          uiFontFamily: 'Instrument Sans',
+          uiFontWeight: 500,
+          entryFontFamily: 'Instrument Sans',
+          entryFontWeight: 500,
+          borderRadius: 10,
+          baseFontSize: 13,
+        ),
+        darkTheme: defaultThemeColors(
+          background: const Color(0xFF0E1114),
+          textColor: const Color(0xFFE6E9EC),
+          accentColor: const Color(0xFFFF6B45),
+          gradientAlpha: 0,
+          uiFontFamily: 'Instrument Sans',
+          uiFontWeight: 500,
+          entryFontFamily: 'Instrument Sans',
+          entryFontWeight: 500,
+          borderRadius: 10,
           baseFontSize: 13,
         ),
       ),
@@ -2044,6 +2073,32 @@ class DesignSettings {
           entryFontFamily: 'IBM Plex Sans',
           entryFontWeight: 600,
           borderRadius: 16,
+          baseFontSize: 10,
+        ),
+      ),
+      QuickMenuDesigns.voidDesign.displayName: QMDesignThemeSet(
+        lightTheme: defaultThemeColors(
+          background: const Color(0xFFE8ECEA),
+          textColor: const Color(0xFF222B2A),
+          accentColor: const Color(0xFF2B7264),
+          gradientAlpha: 40,
+          uiFontFamily: 'Atkinson Hyperlegible Next',
+          uiFontWeight: 500,
+          entryFontFamily: 'Atkinson Hyperlegible Next',
+          entryFontWeight: 600,
+          borderRadius: 14,
+          baseFontSize: 10,
+        ),
+        darkTheme: defaultThemeColors(
+          background: const Color(0xFF1D2126),
+          textColor: const Color(0xFFDCE1E3),
+          accentColor: const Color(0xFF86C9B3),
+          gradientAlpha: 40,
+          uiFontFamily: 'Atkinson Hyperlegible Next',
+          uiFontWeight: 500,
+          entryFontFamily: 'Atkinson Hyperlegible Next',
+          entryFontWeight: 600,
+          borderRadius: 14,
           baseFontSize: 10,
         ),
       ),

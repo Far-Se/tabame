@@ -946,6 +946,7 @@ class LauncherState extends State<Launcher>
               LauncherDesign.satin => SatinTokens.dim,
               LauncherDesign.thermal => ThermalTokens.dim,
               LauncherDesign.groundGlass => GroundGlassTokens.dim,
+              LauncherDesign.lodestone => LodestoneTokens.dim,
               LauncherDesign.capillary => CapillaryTokens.resolve(isDark).dim,
               LauncherDesign.omarchy => OmarchyTokens.dim,
               LauncherDesign.newCast => RaycastTokens.muted(isDark),

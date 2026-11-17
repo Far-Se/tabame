@@ -11,6 +11,7 @@ import '../launcher_design.dart';
 import '../widgets/capillary_surface.dart';
 import '../widgets/thermal_surface.dart';
 import '../widgets/ground_glass_surface.dart';
+import '../widgets/lodestone_surface.dart';
 import '../widgets/radiant_surface.dart';
 import '../widgets/ukiyoe_surface.dart';
 import '../widgets/liquid_metal_surface.dart';
@@ -48,6 +49,7 @@ part 'designs/terminal_result_row.dart';
 part 'designs/terminal2_result_row.dart';
 part 'designs/thermal_result_row.dart';
 part 'designs/ground_glass_result_row.dart';
+part 'designs/lodestone_result_row.dart';
 part 'designs/satin_result_row.dart';
 part 'designs/toon_result_row.dart';
 part 'designs/transit_result_row.dart';
@@ -125,6 +127,7 @@ class LauncherResultRow extends StatelessWidget {
       LauncherDesign.satin => _buildSatin(context),
       LauncherDesign.thermal => _buildThermal(context),
       LauncherDesign.groundGlass => _buildGroundGlass(context),
+      LauncherDesign.lodestone => _buildLodestone(context),
       LauncherDesign.capillary => _buildCapillary(context),
       LauncherDesign.liquidMetal => _buildLiquidMetal(context),
       LauncherDesign.opticalGlass => _buildOpticalGlass(context),

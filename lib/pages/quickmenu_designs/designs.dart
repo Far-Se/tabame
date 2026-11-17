@@ -44,6 +44,7 @@ import 'design_terminal.dart';
 import 'design_terminal2.dart';
 import 'design_tui.dart';
 import 'design_vector.dart';
+import 'design_void.dart';
 import 'design_winamp.dart';
 import 'design_windows_98.dart';
 import 'design_windows_xp.dart';
@@ -160,6 +161,7 @@ class _LoadQuickMenuDesignState extends State<LoadQuickMenuDesign> with QuickMen
       QuickMenuDesigns.switchboard => MainMenuSwitchboardWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.orbit => MainMenuOrbitWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.lamp => MainMenuLampWidget(key: ValueKey<int>(_refreshCounter)),
+      QuickMenuDesigns.voidDesign => MainMenuVoidWidget(key: ValueKey<int>(_refreshCounter)),
       QuickMenuDesigns.ivoryGrove ||
       QuickMenuDesigns.ukiyoe ||
       QuickMenuDesigns.radiant ||
